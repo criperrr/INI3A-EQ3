@@ -1,0 +1,20 @@
+# MacOS file that should be ignored by git
+.DS_Store
+
+**/node_modules/
+
+src/frontend/.expo/
+src/frontend/dist/
+src/frontend/web-build/
+src/frontend/.metro/
+
+.env
+.env*.local
+
+# TypeScript
+*.tsbuildinfo
+src/frontend/expo-env.d.ts
+
+# Native folders
+src/frontend/android/
+src/frontend/ios/
