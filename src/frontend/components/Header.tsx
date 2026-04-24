@@ -1,47 +1,59 @@
+import React from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { BlurView } from "expo-blur";
-import React from "react";
-
-//icons
 import { Ionicons } from "@expo/vector-icons";
+
+const COLORS = {
+  darkBlue: "#273462",
+  cyan: "rgba(56, 189, 248, 0.4)",
+};
 
 export interface PossibleHeaderItems {
   title?: string;
-  menu?: true;
-  profile?: true;
-  cart?: true;
-  sideBar?: true;
+  menu?: boolean;
+  profile?: boolean;
+  cart?: boolean;
+  sideBar?: boolean;
 }
 
-export default function Header(items: PossibleHeaderItems) {
+export default function Header({ title, menu, profile, cart, sideBar }: PossibleHeaderItems) {
+  const ICON_SIZE = 26;
+
   return (
-    <BlurView intensity={30} tint="light" style={styles.blurContainer}>
+    <BlurView intensity={40} tint="light" style={styles.blurContainer}>
       <View style={styles.container}>
-        <Text style={styles.title}>{items.title}</Text>
-        <View style={styles.itemsContainer}>
-          {items.cart && (
-            <TouchableOpacity>
-              <Ionicons name="cart" size={48} color="white" />
-            </TouchableOpacity>
-          )}
-          {items.profile && (
-            <TouchableOpacity>
-              <Ionicons name="person" size={48} color="white" />
-            </TouchableOpacity>
-          )}
-          {items.menu && (
-            <TouchableOpacity>
-              <Ionicons name="menu" size={48} color="white" />
-            </TouchableOpacity>
-          )}
-        </View>
+
+        {/* Lado Esquerdo */}
         <View style={styles.sideBarContainer}>
-          {items.sideBar && (
-            <TouchableOpacity>
-              <Ionicons name="list" size={48} color="white" />
+          {sideBar && (
+            <TouchableOpacity activeOpacity={0.7}>
+              <Ionicons name="menu-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Centro - Título */}
+        {title && <Text style={styles.title}>{title}</Text>}
+
+        {/* Lado Direito - Ações */}
+        <View style={styles.itemsContainer}>
+          {cart && (
+            <TouchableOpacity activeOpacity={0.7}>
+              <Ionicons name="cart-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
+            </TouchableOpacity>
+          )}
+          {profile && (
+            <TouchableOpacity activeOpacity={0.7}>
+              <Ionicons name="person-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
+            </TouchableOpacity>
+          )}
+          {menu && (
+            <TouchableOpacity activeOpacity={0.7}>
+              <Ionicons name="ellipsis-vertical" size={ICON_SIZE} color={COLORS.darkBlue} />
+            </TouchableOpacity>
+          )}
+        </View>
+
       </View>
     </BlurView>
   );
@@ -50,41 +62,41 @@ export default function Header(items: PossibleHeaderItems) {
 const styles = StyleSheet.create({
   blurContainer: {
     position: "absolute",
-    top: 20,
+    top: 40, // Afastado do topo para não conflitar com a barra de status do celular
     left: 16,
     right: 16,
-    borderRadius: 24,
+    borderRadius: 20,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.4)",
+    borderColor: "rgba(255, 255, 255, 0.6)",
     zIndex: 10,
   },
   container: {
     height: 60,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    flexDirection: "row", // Facilita o alinhamento de itens esq/centro/dir
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 20,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "rgba(56, 189, 248, 0.2)",
-  },
-  itemsContainer: {
-    position: "absolute",
-    right: 20,
-    flexDirection: "row",
-    gap: 15,
+    paddingHorizontal: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.3)", // Leve clareamento para destacar o vidro
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.cyan,
   },
   title: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: COLORS.darkBlue,
+    fontSize: 18,
     fontWeight: "700",
     letterSpacing: 0.5,
-    textShadowColor: "rgba(0, 0, 0, 0.3)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   sideBarContainer: {
     position: "absolute",
-    left: 20,
+    left: 16,
+    justifyContent: "center",
+  },
+  itemsContainer: {
+    position: "absolute",
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
 });

@@ -1,164 +1,286 @@
-import { View, StyleSheet, Text , TouchableOpacity, ScrollView  } from "react-native";
+import React from "react";
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import React from "react";
 
 export default function Index() {
   return (
-      <View style={styles.container}>
-        <Header menu profile cart sideBar />
+    <View style={styles.container}>
+      <Header menu profile cart sideBar />
 
-        <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-          {/* Header */}
-          <View style={styles.headerSection}>
-            <Text style={styles.title}>Olá, Usuario!</Text>
-            <Text style={styles.subtitle}>O que procura hoje?</Text>
+        {/* Cabeçalho e Busca */}
+        <View style={styles.heroSection}>
+          <Text style={styles.heroTitle}>O preço justo no{"\n"}comércio do seu bairro.</Text>
+
+          <View style={styles.searchBarSkeleton}>
+            <Text style={styles.searchTextSkeleton}>Buscar tomate, leite, fralda...</Text>
+            <View style={styles.searchButtonSkeleton} />
           </View>
+        </View>
 
-          {/* Grid de Botões */}
-          <View style={styles.grid}>
+        {/* Destaque da Comunidade */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Oferta Validada</Text>
+          <TouchableOpacity style={[styles.card, styles.primaryCard]} activeOpacity={0.9}>
+            <View style={styles.placeholderImage} />
+            <Text style={styles.cardTitleWhite}>Tomate Carmem (1kg)</Text>
+            <Text style={styles.cardSubtitleWhite}>Preço validado por 98% da comunidade local e aprovado pelo filtro estatístico.</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Botão Principal*/}
-            <TouchableOpacity style={[styles.card, styles.primaryCard]} activeOpacity={0.8}>
-              <Text style={styles.cardTitleWhite}>Explorar Produtos</Text>
-              <Text style={styles.cardSubtitleWhite}>Acesse nosso catálogo completo</Text>
-            </TouchableOpacity>
+        {/* Feed de Atividades */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Atualizações na Região (Raio 5km)</Text>
+          <View style={styles.listContainer}>
 
-            {/* Botão   */}
-            <TouchableOpacity style={[styles.card, styles.gamificationCard]} activeOpacity={0.8}>
-              <Text style={styles.cardTitleDark}>Suas Recompensas</Text>
-              <Text style={styles.cardSubtitleDark}>Você acumulou 500 XP!</Text>
-            </TouchableOpacity>
+            {/* Item Validado */}
+            <View style={styles.listItem}>
+              <View style={styles.avatarSkeleton} />
+              <View style={styles.listItemTextContainer}>
+                <Text style={styles.listItemTitle}>Leite Integral (1L) - R$ 4,89</Text>
+                <Text style={styles.listItemSubtitle}>Confirmado há 10 min por João (Nível 3)</Text>
+              </View>
+            </View>
 
-            {/* Linha com dois botões menores lado a lado */}
-            <View style={styles.row}>
-              {/* Botão Secundário - Azul Escuro com acento Ciano */}
-              <TouchableOpacity style={[styles.smallCard, styles.secondaryCard]} activeOpacity={0.8}>
-                <Text style={styles.smallCardText}>Histórico</Text>
-                <View style={styles.accentLine} />
-              </TouchableOpacity>
-
-              {/* Botão Secundário - Azul Escuro com acento Ciano */}
-              <TouchableOpacity style={[styles.smallCard, styles.secondaryCard]} activeOpacity={0.8}>
-                <Text style={styles.smallCardText}>Suporte</Text>
-                <View style={styles.accentLine} />
-              </TouchableOpacity>
+            {/* Item em Análise */}
+            <View style={styles.listItem}>
+              <View style={[styles.avatarSkeleton, { backgroundColor: COLORS.yellow }]} />
+              <View style={styles.listItemTextContainer}>
+                <Text style={styles.listItemTitle}>Óleo de Soja (900ml) - Em Análise</Text>
+                <Text style={styles.listItemSubtitle}>Enviado para quarentena há 25 min.</Text>
+              </View>
             </View>
 
           </View>
-        </ScrollView>
+        </View>
 
-        <Footer />
-      </View>
+        {/* Status e Gamificação */}
+        <View style={styles.section}>
+          <TouchableOpacity style={[styles.card, styles.profileCard]} activeOpacity={0.9}>
+            <Text style={styles.cardTitleDark}>Sua Reputação</Text>
+            <Text style={styles.cardSubtitleDark}>Você tem 350 XP. Faltam 150 pontos para desbloquear a auditoria de preços em Quarentena!</Text>
+            <View style={styles.progressBarSkeleton}>
+              <View style={styles.progressFillSkeleton} />
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Navegação por Categorias */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Navegar por Categorias</Text>
+          <View style={styles.row}>
+            <TouchableOpacity style={[styles.smallCard, styles.secondaryCard]} activeOpacity={0.8}>
+              <Text style={styles.smallCardText}>Hortifrúti</Text>
+              <View style={styles.accentLine} />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.smallCard, styles.secondaryCard]} activeOpacity={0.8}>
+              <Text style={styles.smallCardText}>Padaria</Text>
+              <View style={styles.accentLine} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      </ScrollView>
+
+      <Footer />
+    </View>
   );
 }
 
 const COLORS = {
-  yellow: "#FFC107",      // Gamificação, alertas, calor
-  beige: "#DDD6C4",       // Fundo de página, neutralidade
-  darkBlue: "#273462",    // Textos, sofisticação, fundos de contraste
-  vibrantBlue: "#0062CC", // Botões principais, destaques
-  cyan: "#38BDF8",        // Detalhes secundários, acentos
+  yellow: "#FFC107",
+  beige: "#DDD6C4",
+  darkBlue: "#273462",
+  vibrantBlue: "#0062CC",
+  cyan: "#38BDF8",
+  white: "#FFFFFF",
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.beige, // Fundo neutro e calmo conforme a paleta
+    backgroundColor: COLORS.beige,
   },
   content: {
-    flexGrow: 1,
-    padding: 24, // Espaçamento generoso para respiro visual (design moderno)
+      flexGrow: 1,
+      paddingHorizontal: 20,
+      paddingTop: 120,
+      paddingBottom: 100,
+    },
+
+  // Busca
+  heroSection: {
+    marginBottom: 30,
   },
-  headerSection: {
-    marginBottom: 32,
-    marginTop: 10,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: COLORS.darkBlue, // Contraste forte e sofisticado para o texto
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: "900",
     color: COLORS.darkBlue,
-    opacity: 0.7, // Deixa o subtítulo um pouco mais suave
+    marginBottom: 20,
   },
-  grid: {
-    width: "100%",
+  searchBarSkeleton: {
+    flexDirection: "row",
+    backgroundColor: COLORS.white,
+    borderRadius: 30,
+    padding: 8,
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
+  searchTextSkeleton: {
+    color: "#A0A0A0",
+    marginLeft: 15,
+  },
+  searchButtonSkeleton: {
+    backgroundColor: COLORS.vibrantBlue,
+    width: 80,
+    height: 35,
+    borderRadius: 20,
+  },
+
+  // Layout Base
+  section: {
+    marginBottom: 30,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.darkBlue,
+    marginBottom: 12,
+  },
+
+  // Cards
   card: {
     width: "100%",
     padding: 24,
-    borderRadius: 16, // Bordas arredondadas são essenciais no design moderno
-    marginBottom: 16,
-    // Sombras para dar profundidade (funciona em iOS e Android)
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    borderRadius: 20,
+    shadowColor: COLORS.darkBlue,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
   },
   primaryCard: {
-    backgroundColor: COLORS.vibrantBlue, // Foco principal da interface
+    backgroundColor: COLORS.darkBlue,
   },
-  gamificationCard: {
-    backgroundColor: COLORS.yellow, // Alerta e gamificação (XP)
+  profileCard: {
+    backgroundColor: COLORS.yellow,
+  },
+  placeholderImage: {
+    width: "100%",
+    height: 150,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 12,
+    marginBottom: 15,
   },
   cardTitleWhite: {
-    color: "#FFFFFF",
-    fontSize: 20,
+    color: COLORS.white,
+    fontSize: 22,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardSubtitleWhite: {
-    color: "#FFFFFF",
+    color: COLORS.white,
     fontSize: 14,
-    opacity: 0.9,
+    opacity: 0.8,
   },
   cardTitleDark: {
     color: COLORS.darkBlue,
     fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   cardSubtitleDark: {
     color: COLORS.darkBlue,
     fontSize: 14,
     fontWeight: "500",
+    opacity: 0.8,
   },
+
+  // Feed de Atividades
+  listContainer: {
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    padding: 15,
+  },
+  listItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F0F0F0",
+  },
+  avatarSkeleton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.beige,
+    marginRight: 12,
+  },
+  listItemTextContainer: {
+    flex: 1,
+  },
+  listItemTitle: {
+    color: COLORS.darkBlue,
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  listItemSubtitle: {
+    color: "#888",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  // Grid de Categorias
   row: {
     flexDirection: "row",
-    justifyContent: "space-between", // Separa os dois botões menores
-    marginTop: 8,
+    justifyContent: "space-between",
   },
   smallCard: {
-    width: "48%", // Ocupa quase metade da tela, deixando um espaço no meio
+    width: "48%",
     padding: 20,
     borderRadius: 16,
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: COLORS.darkBlue,
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   secondaryCard: {
-    backgroundColor: COLORS.darkBlue, // Fundo escuro tecnológico
+    backgroundColor: COLORS.white,
   },
   smallCardText: {
-    color: COLORS.beige,
+    color: COLORS.darkBlue,
     fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 12,
   },
   accentLine: {
     width: 30,
     height: 4,
-    backgroundColor: COLORS.cyan, // Ciano usado como detalhe secundário/acento
+    backgroundColor: COLORS.vibrantBlue,
     borderRadius: 2,
   },
+
+  // Barras de Progresso
+  progressBarSkeleton: {
+    height: 8,
+    backgroundColor: "rgba(0,0,0,0.1)",
+    borderRadius: 4,
+    marginTop: 15,
+  },
+  progressFillSkeleton: {
+    width: "60%",
+    height: "100%",
+    backgroundColor: COLORS.darkBlue,
+    borderRadius: 4,
+  }
 });
