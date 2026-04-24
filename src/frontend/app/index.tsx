@@ -25,7 +25,7 @@ export default function Index() {
               <Text style={styles.cardSubtitleWhite}>Acesse nosso catálogo completo</Text>
             </TouchableOpacity>
 
-            {/* Botão  */}
+            {/* Botão   */}
             <TouchableOpacity style={[styles.card, styles.gamificationCard]} activeOpacity={0.8}>
               <Text style={styles.cardTitleDark}>Suas Recompensas</Text>
               <Text style={styles.cardSubtitleDark}>Você acumulou 500 XP!</Text>
@@ -160,5 +160,5 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: COLORS.cyan, // Ciano usado como detalhe secundário/acento
     borderRadius: 2,
-  }
+  },
 });
