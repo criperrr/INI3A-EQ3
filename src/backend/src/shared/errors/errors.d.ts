@@ -3,6 +3,12 @@ interface LoginCredentials {
     password: string
 }
 
+export interface InvalidField {
+    field: string,
+    message: string,
+    code: string, // not http code, a custom internal one
+}
+
 export abstract class ApiError extends Error {
     httpCode: number;
     textCode: string;
@@ -11,6 +17,15 @@ export abstract class ApiError extends Error {
         super(message);
         this.httpCode = httpCode;
         this.textCode = textCode;
+    }
+}
+
+export class MultipleApiError extends Error {
+    fields: InvalidField[]; 
+    
+    constructor(fields: InvalidField[], httpCode: number = 400){
+        super("Multiple empty or invalid fields");
+        this.fields = fields;
     }
 }
 
