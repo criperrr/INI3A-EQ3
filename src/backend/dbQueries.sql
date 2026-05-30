@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS ocurrencygis;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;   -- fuzzy/trigram search (PRD: Should Have)
 CREATE EXTENSION IF NOT EXISTS unaccent;  -- normalize accented chars in search
 
@@ -94,19 +94,19 @@ CREATE TABLE ocurrency (
     volate          BOOLEAN         NOT NULL DEFAULT FALSE
 );
 
-CREATE INDEX idx_post_unresolved    ON post (is_resolved, date) WHERE is_resolved = FALSE;
-CREATE INDEX idx_post_market_date   ON post (market_id,   date DESC);
-CREATE INDEX idx_post_product_date  ON post (product_id,  date DESC);
+CREATE INDEX idx_ocurrency_unresolved    ON ocurrency (is_resolved, date) WHERE is_resolved = FALSE;
+CREATE INDEX idx_ocurrency_market_date   ON ocurrency (market_id,   date DESC);
+CREATE INDEX idx_ocurrency_product_date  ON ocurrency (product_id,  date DESC);
 
 CREATE TABLE cured (
     user_id   INT         NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-    post_id   INT         NOT NULL REFERENCES post(id)   ON DELETE CASCADE,
+    ocurrency_id   INT         NOT NULL REFERENCES ocurrency(id)   ON DELETE CASCADE,
     verdict   BOOLEAN     NOT NULL,   -- TRUE = upvote / trustworthy; FALSE = downvote
     date      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    PRIMARY KEY (user_id, post_id)
+    PRIMARY KEY (user_id, ocurrency_id)
 );
 
-CREATE INDEX idx_cured_post_date ON cured (post_id, date ASC);
+CREATE INDEX idx_cured_ocurrency_date ON cured (ocurrency_id, date ASC);
 
 CREATE TABLE cart (
     id         SERIAL PRIMARY KEY,

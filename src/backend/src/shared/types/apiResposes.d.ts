@@ -10,5 +10,5 @@ export interface ApiFailure {
     code: string,
     success: false,
     errors: any[],
-    field?: string
+    field?: string // ? field?
 }

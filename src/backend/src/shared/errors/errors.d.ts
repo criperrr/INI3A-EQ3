@@ -32,13 +32,13 @@ export class MultipleApiError extends Error {
 export class BadRequestError extends ApiError {
 
     constructor(message: string, textCode: string = 'BAD_REQUEST') {
-        super(404, textCode, message);
+        super(400, textCode, message);
     }
 }
 
 export class BadAuthorizationError extends ApiError {
 
     constructor(message: string, textCode: string = 'BAD_AUTHORIZATION') {
-        super(404, textCode, message);
+        super(401, textCode, message);
     }
 }
