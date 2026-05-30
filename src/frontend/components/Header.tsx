@@ -1,102 +1,69 @@
 import React from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
-import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 
 const COLORS = {
-  darkBlue: "#273462",
-  cyan: "rgba(56, 189, 248, 0.4)",
+    darkBlue: "#273462",
+    white: "#FFFFFF",
 };
 
-export interface PossibleHeaderItems {
-  title?: string;
-  menu?: boolean;
-  profile?: boolean;
-  cart?: boolean;
-  sideBar?: boolean;
+interface HeaderProps {
+    onPressMenu?: () => void;
 }
 
-export default function Header({ title, menu, profile, cart, sideBar }: PossibleHeaderItems) {
-  const ICON_SIZE = 26;
-
-  return (
-    <BlurView intensity={40} tint="light" style={styles.blurContainer}>
-      <View style={styles.container}>
-
-        {/* Lado Esquerdo */}
-        <View style={styles.sideBarContainer}>
-          {sideBar && (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Ionicons name="menu-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
+export default function Header({ onPressMenu }: HeaderProps) {
+    return (
+        <View style={styles.container}>
+            {/* Menu Sanduíche */}
+            <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.iconButton}
+                onPress={onPressMenu}
+            >
+                <Ionicons name="menu-outline" size={26} color={COLORS.darkBlue} />
             </TouchableOpacity>
-          )}
+
+            {/* Identidade Centralizada */}
+            <View style={styles.logoContainer}>
+                <Text style={styles.logoText}>PResco</Text>
+            </View>
+
+            {/* Ícone de Configurações */}
+            <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
+                <Ionicons name="settings-outline" size={24} color={COLORS.darkBlue} />
+            </TouchableOpacity>
         </View>
-
-        {/* Centro - Título */}
-        {title && <Text style={styles.title}>{title}</Text>}
-
-        {/* Lado Direito - Ações */}
-        <View style={styles.itemsContainer}>
-          {cart && (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Ionicons name="cart-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
-            </TouchableOpacity>
-          )}
-          {profile && (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Ionicons name="person-outline" size={ICON_SIZE} color={COLORS.darkBlue} />
-            </TouchableOpacity>
-          )}
-          {menu && (
-            <TouchableOpacity activeOpacity={0.7}>
-              <Ionicons name="ellipsis-vertical" size={ICON_SIZE} color={COLORS.darkBlue} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-      </View>
-    </BlurView>
-  );
+    );
 }
 
 const styles = StyleSheet.create({
-  blurContainer: {
-    position: "absolute",
-    top: 40, // Afastado do topo para não conflitar com a barra de status do celular
-    left: 16,
-    right: 16,
-    borderRadius: 20,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.6)",
-    zIndex: 10,
-  },
-  container: {
-    height: 60,
-    flexDirection: "row", // Facilita o alinhamento de itens esq/centro/dir
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.3)", // Leve clareamento para destacar o vidro
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cyan,
-  },
-  title: {
-    color: COLORS.darkBlue,
-    fontSize: 18,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  sideBarContainer: {
-    position: "absolute",
-    left: 16,
-    justifyContent: "center",
-  },
-  itemsContainer: {
-    position: "absolute",
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
+    container: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 100,
+        paddingTop: 45,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        paddingHorizontal: 20,
+        backgroundColor: COLORS.white,
+        borderBottomWidth: 1,
+        borderBottomColor: "#EAEAEA",
+        zIndex: 10,
+    },
+    iconButton: {
+        padding: 6,
+    },
+    logoContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    logoText: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: COLORS.darkBlue,
+        letterSpacing: 0.5,
+    },
 });

@@ -1,88 +1,117 @@
 import React from "react";
-import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router"; // <-- Importamos o hook de rotas do Expo
 
 const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
-  white: "#FFFFFF",
-  beige: "#DDD6C4",
-  cyan: "#38BDF8",
+    vibrantBlue: "#0062CC",
+    white: "#FFFFFF",
+    gray: "#8E8E93",
 };
 
-export default function Footer() {
-  const ICON_SIZE = 24;
+interface FooterProps {
+    activeTab?: "home" | "search" | "map" | "profile";
+}
 
-  return (
-    <View style={styles.container}>
+export default function Footer({ activeTab = "home" }: FooterProps) {
+    const router = useRouter(); // <-- Inicializamos o router
 
-      {/* Botão Início */}
-      <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-        <Ionicons name="home" size={ICON_SIZE} color={COLORS.vibrantBlue} />
-        <Text style={[styles.navText, { color: COLORS.vibrantBlue }]}>Início</Text>
-      </TouchableOpacity>
+    return (
+        <View style={styles.container}>
+            {/* Ícone 1: Casa (Index / Home) */}
+            <TouchableOpacity
+                style={styles.navItem}
+                activeOpacity={0.7}
+                onPress={() => router.push("/")} // Navega para app/index.tsx
+            >
+                {activeTab === "home" ? (
+                    <View style={styles.activeCircle}>
+                        <Ionicons name="home" size={24} color={COLORS.white} />
+                    </View>
+                ) : (
+                    <Ionicons name="home-outline" size={26} color={COLORS.gray} />
+                )}
+            </TouchableOpacity>
 
-      {/* Botão Principal de Ação (Adicionar Preço) */}
-      <TouchableOpacity style={styles.mainActionButton} activeOpacity={0.8}>
-        <Ionicons name="add" size={32} color={COLORS.white} />
-      </TouchableOpacity>
+            {/* Ícone 2: Busca (Search) */}
+            <TouchableOpacity
+                style={styles.navItem}
+                activeOpacity={0.7}
+                onPress={() => router.push("/search")} // Navega para app/search.tsx
+            >
+                {activeTab === "search" ? (
+                    <View style={styles.activeCircle}>
+                        <Ionicons name="search" size={24} color={COLORS.white} />
+                    </View>
+                ) : (
+                    <Ionicons name="search-outline" size={26} color={COLORS.gray} />
+                )}
+            </TouchableOpacity>
 
-      {/* Botão Reputação/Gamificação */}
-      <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-        <Ionicons name="trophy-outline" size={ICON_SIZE} color={COLORS.beige} />
-        <Text style={styles.navText}>Ranking</Text>
-      </TouchableOpacity>
+            {/* Ícone 3: Mapa (Map) */}
+            <TouchableOpacity
+                style={styles.navItem}
+                activeOpacity={0.7}
+                onPress={() => router.push("/map")} // Navega para app/map.tsx
+            >
+                {activeTab === "map" ? (
+                    <View style={styles.activeCircle}>
+                        <Ionicons name="map" size={24} color={COLORS.white} />
+                    </View>
+                ) : (
+                    <Ionicons name="map-outline" size={26} color={COLORS.gray} />
+                )}
+            </TouchableOpacity>
 
-    </View>
-  );
+            {/* Ícone 4: Perfil (Profile) */}
+            <TouchableOpacity
+                style={styles.navItem}
+                activeOpacity={0.7}
+                onPress={() => router.push("/profile")} // Navega para app/profile.tsx
+            >
+                {activeTab === "profile" ? (
+                    <View style={styles.activeCircle}>
+                        <Ionicons name="person" size={24} color={COLORS.white} />
+                    </View>
+                ) : (
+                    <Ionicons name="person-outline" size={26} color={COLORS.gray} />
+                )}
+            </TouchableOpacity>
+        </View>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-    backgroundColor: COLORS.darkBlue,
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    height: 80, // Altura fixa confortável
-    paddingBottom: 15, // Espaço para a barra de home do iPhone/Android modernos
-    borderTopRightRadius: 24,
-    borderTopLeftRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 10,
-  },
-  navItem: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    marginTop: 10,
-  },
-  navText: {
-    color: COLORS.beige,
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 4,
-  },
-  // O botão central fica flutuando para dar destaque à ação de cadastrar preço
-  mainActionButton: {
-    width: 60,
-    height: 60,
-    backgroundColor: COLORS.vibrantBlue,
-    borderRadius: 30,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -30, // Faz o botão "vazar" para fora do footer
-    borderWidth: 4,
-    borderColor: COLORS.beige, // Cria um anel combinando com o fundo do app
-    shadowColor: COLORS.vibrantBlue,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 8,
-  },
+    container: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        alignItems: "center",
+        backgroundColor: COLORS.white,
+        position: "absolute",
+        bottom: 0,
+        width: "100%",
+        height: 85,
+        paddingBottom: 20,
+        borderTopWidth: 1,
+        borderTopColor: "#EAEAEA",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 5,
+        zIndex: 10,
+    },
+    navItem: {
+        alignItems: "center",
+        justifyContent: "center",
+        flex: 1,
+    },
+    activeCircle: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: COLORS.vibrantBlue,
+        alignItems: "center",
+        justifyContent: "center",
+    },
 });
