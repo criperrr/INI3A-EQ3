@@ -29,14 +29,14 @@ export class MultipleApiError extends Error {
     }
 }
 
-export class BadRequestError extends ApiError {
+export class BadRequest extends ApiError {
 
     constructor(message: string, textCode: string = 'BAD_REQUEST') {
         super(400, textCode, message);
     }
 }
 
-export class BadAuthorizationError extends ApiError {
+export class Unauthorized extends ApiError {
 
     constructor(message: string, textCode: string = 'BAD_AUTHORIZATION') {
         super(401, textCode, message);

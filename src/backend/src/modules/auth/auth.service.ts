@@ -1,4 +1,4 @@
-
+import { db } from '../../shared/database/database';
 
 // !REFACTOR
 
@@ -12,24 +12,11 @@
  */
 
 import type { LoginCredentials } from '../../shared/errors/errors';
-import { BadAuthorizationError, BadRequestError } from '../../shared/errors/errors';
+import { Unauthorized, BadRequest } from '../../shared/errors/errors';
 import type { Response, Request } from 'express';
 
-async function normalizeLogin(req: Request, res: Response, next: Function) {
-    const keys: Array<string> = ['name', 'password'];
-    let obj: LoginCredentials = {} as LoginCredentials;
-    keys.forEach(el => {
-        const reqValue = req.body[el]
-        if (!reqValue) throw new BadRequestError(`expected: ${el} in json body.`);
-        obj[el as keyof LoginCredentials] = reqValue;
-    });
-    req.body = obj;
-
-    return next();
-}
-
 async function login(req: Request, res: Response, next: Function) {
-    if (!req.headers.authorization) throw new BadAuthorizationError('expected authorization field.');
+    if (!req.headers.authorization) throw new Unauthorized('expected authorization field.');
     const bruteToken = req.headers.authorization.split(' ');
     let token: string = '';
     if (bruteToken.length > 1) {
@@ -37,5 +24,7 @@ async function login(req: Request, res: Response, next: Function) {
         token = bruteToken[1];
     }
     else if (bruteToken.length === 1) if(bruteToken[0]) token = bruteToken[0];
-    else throw new BadRequestError('expected valid bearer structure.');
+    else throw new BadRequest('expected valid bearer structure.');
+
+    // !NEED Regis
 }

@@ -7,7 +7,7 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.20.0"
+    "pg": "^8.21.0"
   },
   "scripts": {
     "dev": "tsx --watch ./src/app.ts"
