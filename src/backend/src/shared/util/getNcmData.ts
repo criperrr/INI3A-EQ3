@@ -85,8 +85,8 @@ const parseObject = (obj: RawNcmData): ProcessedNcmData => {
 
     return {
         ...rest,
-        data_inicio: formatDate(dataInicio),
-        data_fim: formatDate(dataFim),
+        data_inicio: formatDate(dataInicio as string ),
+        data_fim: formatDate(dataFim as string),
         tipo_ato: tipoAtoIni,
         numero_ato: numeroAtoIni,
         ano_ato: anoAtoIni,
