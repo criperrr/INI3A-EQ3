@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 const COLORS = {
@@ -25,6 +25,10 @@ export default function Header({ onPressMenu }: HeaderProps) {
 
             {/* Identidade Centralizada */}
             <View style={styles.logoContainer}>
+                <Image
+                    source={require("./images/logo-presco.png")}
+                    style={styles.logoImage}
+                />
                 <Text style={styles.logoText}>PResco</Text>
             </View>
 
@@ -59,6 +63,12 @@ const styles = StyleSheet.create({
     logoContainer: {
         flexDirection: "row",
         alignItems: "center",
+    },
+    logoImage: {
+        width: 50,
+        height: 50,
+        resizeMode: "contain",
+        marginRight: 8, // Espaçamento entre a logo e o texto "PResco"
     },
     logoText: {
         fontSize: 22,

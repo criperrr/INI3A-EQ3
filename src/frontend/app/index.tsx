@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+import Header from "../components/Header"; // Ajuste o caminho do import se necessário
+import Footer from "../components/Footer";
+import Sidebar from "../components/Sidebar";
 import { Ionicons } from "@expo/vector-icons";
 
 const COLORS = {
@@ -37,26 +37,22 @@ export default function Index() {
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-                {/* 1. Carrossel de Anúncios / Banners */}
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.carouselContainer}
-                >
-                    <View style={styles.bannerCard}>
+                {/* 1. Banner Retangular e Paginação (Bolinhas) */}
+                <View style={styles.bannerSection}>
+                    <View style={styles.bannerCardFull}>
                         <View style={styles.imagePlaceholderLarge} />
                         <Text style={styles.bannerTitle}>Legumes da Horta</Text>
                         <Text style={styles.bannerSubtitle}>Desconto em itens selecionados</Text>
                         <Text style={styles.bannerLink}>Ver Ofertas</Text>
                     </View>
 
-                    <View style={styles.bannerCard}>
-                        <View style={[styles.imagePlaceholderLarge, { backgroundColor: COLORS.lightBlue }]} />
-                        <Text style={styles.bannerTitle}>Frutas Tropicais</Text>
-                        <Text style={styles.bannerSubtitle}>Nova remessa chegando</Text>
-                        <Text style={styles.bannerLink}>Comprar</Text>
+                    {/* Bolinhas de Paginação */}
+                    <View style={styles.paginationContainer}>
+                        <View style={[styles.dot, styles.activeDot]} />
+                        <View style={styles.dot} />
+                        <View style={styles.dot} />
                     </View>
-                </ScrollView>
+                </View>
 
                 {/* 2. Barra Central com os 4 Botões */}
                 <View style={styles.centralMenuBar}>
@@ -74,7 +70,7 @@ export default function Index() {
                     </TouchableOpacity>
                 </View>
 
-                {/* 3. Seção e Grid de Produtos */}
+                {/* 3. Seção e Grid de Produtos (Agora com 2 colunas) */}
                 <View style={styles.productsSection}>
                     <Text style={styles.sectionTitle}>Produtos</Text>
 
@@ -109,14 +105,13 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
 
-    // Carrossel
-    carouselContainer: {
+    // Banner Retangular
+    bannerSection: {
         paddingHorizontal: 16,
-        gap: 12,
         marginBottom: 20,
     },
-    bannerCard: {
-        width: 170,
+    bannerCardFull: {
+        width: "100%", // Ocupa toda a largura disponível
         backgroundColor: COLORS.white,
         borderRadius: 16,
         padding: 12,
@@ -139,13 +134,31 @@ const styles = StyleSheet.create({
         fontSize: 11,
         color: "#64748B",
         marginTop: 2,
-        height: 32,
     },
     bannerLink: {
         fontSize: 12,
         fontWeight: "600",
         color: COLORS.vibrantBlue,
         marginTop: 6,
+    },
+    paginationContainer: {
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        marginTop: 12,
+        gap: 8,
+    },
+    dot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: "#D9D9D9",
+    },
+    activeDot: {
+        backgroundColor: COLORS.vibrantBlue, // Bolinha ativa com a cor principal do app
+        width: 10,
+        height: 10,
+        borderRadius: 5,
     },
 
     // Barra Central Menu
@@ -187,10 +200,10 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     productItem: {
-        width: "30.5%", // Garante 3 colunas perfeitamente alinhadas
+        width: "48%", // Alterado para 2 colunas perfeitas
         backgroundColor: COLORS.white,
         borderRadius: 14,
-        padding: 8,
+        padding: 12, // Aumentei um pouco o padding para ficar mais elegante
         alignItems: "center",
         borderWidth: 1,
         borderColor: "#EAEAEA",
@@ -204,7 +217,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     productName: {
-        fontSize: 12,
+        fontSize: 14, // Aumentei levemente a fonte para combinar com o card maior
         fontWeight: "600",
         color: COLORS.darkBlue,
         textAlign: "center",

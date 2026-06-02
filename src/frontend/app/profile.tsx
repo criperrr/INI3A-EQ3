@@ -92,7 +92,7 @@ export default function ProfileScreen() {
                         <Text style={styles.levelProgressNumber}>268/320</Text>
                     </View>
                     <View style={styles.progressBarTrack}>
-                        <View style={[styles.progressBarFill, { width: "${(268 / 320) * 100}%" }]} />
+                        <View style={[styles.progressBarFill, { width: `${(268 / 320) * 100}%` }]} />
                     </View>
                 </View>
 
