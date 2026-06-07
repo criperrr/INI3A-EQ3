@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
-import Header from "../components/Header"; // Ajuste o caminho do import se necessário
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+
+import Header from "../components/Header";
 import Footer from "../components/Footer";
 import Sidebar from "../components/Sidebar";
-import { Ionicons } from "@expo/vector-icons";
 
 const COLORS = {
     darkBlue: "#273462",
@@ -13,86 +15,98 @@ const COLORS = {
     background: "#F4F6F9",
 };
 
-export default function Index() {
-    // Estado para controlar o menu lateral
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+const MOCK_PRODUCTS = [
+    { id: 1, name: "Pão Artesanal" },
+    { id: 2, name: "Leite Fresco" },
+    { id: 3, name: "Frutas Orgânicas" },
+    { id: 4, name: "Arroz Integral" },
+    { id: 5, name: "Frutas Tropicais" },
+    { id: 6, name: "Legumes Selecionados" },
+];
 
-    // Mock estrutural dos produtos para o Grid
-    const products = [
-        { id: 1, name: "Pão Artesanal" },
-        { id: 2, name: "Leite Fresco" },
-        { id: 3, name: "Frutas Orgânicas" },
-        { id: 4, name: "Arroz Integral" },
-        { id: 5, name: "Frutas Tropicais" },
-        { id: 6, name: "Legumes Selecionados" },
-    ];
+const MENU_ICONS = [
+    "cart-outline",
+    "nutrition-outline",
+    "book-outline",
+    "logo-foursquare",
+] as const;
+
+export default function Index() {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
+
+    const handleProductPress = () => {
+        router.push("/productDetails");
+    };
 
     return (
         <View style={styles.container}>
-            {/* Header agora recebe a ação de abrir o menu */}
             <Header onPressMenu={() => setIsMenuOpen(true)} />
-
-            {/* Sidebar controlada pelo estado da tela */}
             <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-                {/* 1. Banner Retangular e Paginação (Bolinhas) */}
-                <View style={styles.bannerSection}>
-                    <View style={styles.bannerCardFull}>
-                        <View style={styles.imagePlaceholderLarge} />
-                        <Text style={styles.bannerTitle}>Legumes da Horta</Text>
-                        <Text style={styles.bannerSubtitle}>Desconto em itens selecionados</Text>
-                        <Text style={styles.bannerLink}>Ver Ofertas</Text>
-                    </View>
-
-                    {/* Bolinhas de Paginação */}
-                    <View style={styles.paginationContainer}>
-                        <View style={[styles.dot, styles.activeDot]} />
-                        <View style={styles.dot} />
-                        <View style={styles.dot} />
-                    </View>
-                </View>
-
-                {/* 2. Barra Central com os 4 Botões */}
-                <View style={styles.centralMenuBar}>
-                    <TouchableOpacity style={styles.centralButton}>
-                        <Ionicons name="cart-outline" size={24} color={COLORS.darkBlue} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.centralButton}>
-                        <Ionicons name="nutrition-outline" size={24} color={COLORS.darkBlue} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.centralButton}>
-                        <Ionicons name="book-outline" size={24} color={COLORS.darkBlue} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.centralButton}>
-                        <Ionicons name="logo-foursquare" size={24} color={COLORS.darkBlue} />
-                    </TouchableOpacity>
-                </View>
-
-                {/* 3. Seção e Grid de Produtos (Agora com 2 colunas) */}
-                <View style={styles.productsSection}>
-                    <Text style={styles.sectionTitle}>Produtos</Text>
-
-                    <View style={styles.productGrid}>
-                        {products.map((product) => (
-                            <View key={product.id} style={styles.productItem}>
-                                <View style={styles.imagePlaceholderSquare} />
-                                <Text style={styles.productName} numberOfLines={2}>
-                                    {product.name}
-                                </Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
+                <Banner />
+                <ActionMenu />
+                <ProductGrid onProductPress={handleProductPress} />
             </ScrollView>
 
-            {/* Footer configurado para indicar que estamos na Home */}
             <Footer activeTab="home" />
         </View>
     );
 }
+
+// --- Componentes Internos para organizar a UI ---
+
+const Banner = () => (
+    <View style={styles.bannerSection}>
+        <View style={styles.bannerCardFull}>
+            <View style={styles.imagePlaceholderLarge} />
+            <Text style={styles.bannerTitle}>Legumes da Horta</Text>
+            <Text style={styles.bannerSubtitle}>Desconto em itens selecionados</Text>
+            <Text style={styles.bannerLink}>Ver Ofertas</Text>
+        </View>
+
+        <View style={styles.paginationContainer}>
+            <View style={[styles.dot, styles.activeDot]} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+        </View>
+    </View>
+);
+
+const ActionMenu = () => (
+    <View style={styles.centralMenuBar}>
+        {MENU_ICONS.map((icon, index) => (
+            <TouchableOpacity key={index} style={styles.centralButton}>
+                <Ionicons name={icon} size={24} color={COLORS.darkBlue} />
+            </TouchableOpacity>
+        ))}
+    </View>
+);
+
+const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => (
+    <View style={styles.productsSection}>
+        <Text style={styles.sectionTitle}>Produtos</Text>
+
+        <View style={styles.productGrid}>
+            {MOCK_PRODUCTS.map((product) => (
+                <TouchableOpacity
+                    key={product.id}
+                    style={styles.productItem}
+                    activeOpacity={0.8}
+                    onPress={onProductPress}
+                >
+                    <View style={styles.imagePlaceholderSquare} />
+                    <Text style={styles.productName} numberOfLines={2}>
+                        {product.name}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+        </View>
+    </View>
+);
+
+// --- Estilos ---
 
 const styles = StyleSheet.create({
     container: {
@@ -105,13 +119,12 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
 
-    // Banner Retangular
     bannerSection: {
         paddingHorizontal: 16,
         marginBottom: 20,
     },
     bannerCardFull: {
-        width: "100%", // Ocupa toda a largura disponível
+        width: "100%",
         backgroundColor: COLORS.white,
         borderRadius: 16,
         padding: 12,
@@ -155,13 +168,12 @@ const styles = StyleSheet.create({
         backgroundColor: "#D9D9D9",
     },
     activeDot: {
-        backgroundColor: COLORS.vibrantBlue, // Bolinha ativa com a cor principal do app
+        backgroundColor: COLORS.vibrantBlue,
         width: 10,
         height: 10,
         borderRadius: 5,
     },
 
-    // Barra Central Menu
     centralMenuBar: {
         flexDirection: "row",
         backgroundColor: COLORS.white,
@@ -183,7 +195,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
 
-    // Grid de Produtos
     productsSection: {
         paddingHorizontal: 16,
     },
@@ -200,10 +211,10 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     productItem: {
-        width: "48%", // Alterado para 2 colunas perfeitas
+        width: "48%",
         backgroundColor: COLORS.white,
         borderRadius: 14,
-        padding: 12, // Aumentei um pouco o padding para ficar mais elegante
+        padding: 12,
         alignItems: "center",
         borderWidth: 1,
         borderColor: "#EAEAEA",
@@ -217,7 +228,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     productName: {
-        fontSize: 14, // Aumentei levemente a fonte para combinar com o card maior
+        fontSize: 14,
         fontWeight: "600",
         color: COLORS.darkBlue,
         textAlign: "center",

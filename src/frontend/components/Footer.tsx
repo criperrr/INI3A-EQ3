@@ -7,70 +7,76 @@ const COLORS = {
     vibrantBlue: "#0062CC",
     white: "#FFFFFF",
     gray: "#8E8E93",
+    centerDarkBg: "#2C2C2E",
 };
 
+type TabKey = "home" | "search" | "registerProduct" | "map" | "profile";
+
 interface FooterProps {
-    activeTab?: "home" | "search" | "registerProduct" | "map" | "profile";
+    activeTab?: TabKey;
 }
 
-export default function Footer({ activeTab = "home" }: FooterProps) {
+interface TabConfig {
+    key: TabKey;
+    icon: keyof typeof Ionicons.glyphMap;
+    activeIcon: keyof typeof Ionicons.glyphMap;
+    route: string;
+    isCenter?: boolean;
+}
+
+const NAV_TABS: TabConfig[] = [
+    { key: "home", icon: "home-outline", activeIcon: "home", route: "/" },
+    { key: "search", icon: "search-outline", activeIcon: "search", route: "/search" },
+    { key: "registerProduct", icon: "add", activeIcon: "add", route: "/scannerProduct", isCenter: true },
+    { key: "map", icon: "map-outline", activeIcon: "map", route: "/map" },
+    { key: "profile", icon: "person-outline", activeIcon: "person", route: "/profile" },
+];
+
+export default function Footer({ activeTab }: FooterProps) {
     const router = useRouter();
 
     return (
         <View style={styles.container}>
-            {/* Ícone 1: Casa */}
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={() => router.push("/")}>
-                {activeTab === "home" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="home" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="home-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+            {NAV_TABS.map((tab) => {
+                const isActive = activeTab === tab.key;
 
-            {/* Ícone 2: Busca */}
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={() => router.push("/search")}>
-                {activeTab === "search" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="search" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="search-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+                if (tab.isCenter) {
+                    return (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={styles.centerItem}
+                            activeOpacity={0.8}
+                            onPress={() => router.push(tab.route as any)}
+                        >
+                            <View style={[styles.centerCircle, isActive && styles.centerCircleActive]}>
+                                <Ionicons name={tab.icon} size={32} color={COLORS.white} />
+                            </View>
+                        </TouchableOpacity>
+                    );
+                }
 
-            {/* Ícone 3: Central (Adicionar Produto) */}
-            <TouchableOpacity style={styles.centerItem} activeOpacity={0.8} onPress={() => router.push("/registerProduct")}>
-                <View style={[styles.centerCircle, activeTab === "registerProduct" && styles.centerCircleActive]}>
-                    <Ionicons name="add" size={32} color={COLORS.white} />
-                </View>
-            </TouchableOpacity>
-
-            {/* Ícone 4: Mapa */}
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={() => router.push("/map")}>
-                {activeTab === "map" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="map" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="map-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
-
-            {/* Ícone 5: Perfil */}
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={() => router.push("/profile")}>
-                {activeTab === "profile" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="person" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="person-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+                return (
+                    <TouchableOpacity
+                        key={tab.key}
+                        style={styles.navItem}
+                        activeOpacity={0.7}
+                        onPress={() => router.push(tab.route as any)}
+                    >
+                        {isActive ? (
+                            <View style={styles.activeCircle}>
+                                <Ionicons name={tab.activeIcon} size={24} color={COLORS.white} />
+                            </View>
+                        ) : (
+                            <Ionicons name={tab.icon} size={26} color={COLORS.gray} />
+                        )}
+                    </TouchableOpacity>
+                );
+            })}
         </View>
     );
 }
+
+// --- Estilos ---
 
 const styles = StyleSheet.create({
     container: {
@@ -114,10 +120,10 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: "#2c2c2e", // Cor escura para destacar como no mockup
+        backgroundColor: COLORS.centerDarkBg,
         alignItems: "center",
         justifyContent: "center",
-        marginTop: -30, // Puxa o botão para fora do footer
+        marginTop: -30,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
@@ -125,6 +131,6 @@ const styles = StyleSheet.create({
         elevation: 8,
     },
     centerCircleActive: {
-        backgroundColor: COLORS.vibrantBlue, // Muda de cor se estiver na tela de registro
+        backgroundColor: COLORS.vibrantBlue,
     }
 });

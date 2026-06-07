@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Callout } from "react-native-maps";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
@@ -14,56 +15,45 @@ const COLORS = {
     grayText: "#64748B",
 };
 
+const INITIAL_REGION = {
+    latitude: -23.55052,
+    longitude: -46.633308,
+    latitudeDelta: 0.015,
+    longitudeDelta: 0.0124,
+};
+
+const MOCK_MARKERS = [
+    { id: 1, title: "Union Market", coordinate: { latitude: -23.55052, longitude: -46.633308 } },
+    { id: 2, title: "Mercado Central", coordinate: { latitude: -23.55500, longitude: -46.635000 } },
+    { id: 3, title: "Hortifruti", coordinate: { latitude: -23.54800, longitude: -46.630000 } }
+];
+
+const FILTER_OPTIONS = [
+    { id: "type", label: "Tipo de Loja", icon: "storefront-outline" },
+    { id: "distance", label: "Distância", icon: "navigate-outline" },
+    { id: "hours", label: "Horário", icon: "time-outline" }
+] as const;
+
 export default function MapScreen() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-    // Região inicial do mapa (mock)
-    const initialRegion = {
-        latitude: -23.55052,
-        longitude: -46.633308,
-        latitudeDelta: 0.015,
-        longitudeDelta: 0.0124,
-    };
-
-    // Marcadores baseados no protótipo
-    const markers = [
-        {
-            id: 1,
-            title: "Union Market",
-            coordinate: { latitude: -23.55052, longitude: -46.633308 },
-        },
-        {
-            id: 2,
-            title: "Mercado Central",
-            coordinate: { latitude: -23.55500, longitude: -46.635000 },
-        },
-        {
-            id: 3,
-            title: "Hortifruti",
-            coordinate: { latitude: -23.54800, longitude: -46.630000 },
-        }
-    ];
-
     return (
         <View style={styles.container}>
-            {/* Header e Sidebar integrados */}
             <Header onPressMenu={() => setIsMenuOpen(true)} />
             <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-            {/* Container Principal do Mapa */}
             <View style={styles.mapContainer}>
                 <MapView
                     style={styles.map}
-                    initialRegion={initialRegion}
-                    showsUserLocation={true}
+                    initialRegion={INITIAL_REGION}
+                    showsUserLocation
                 >
-                    {markers.map((marker) => (
+                    {MOCK_MARKERS.map((marker) => (
                         <Marker
                             key={marker.id}
                             coordinate={marker.coordinate}
                             pinColor={COLORS.darkBlue}
                         >
-                            {/* Tooltip do marcador */}
                             <Callout tooltip>
                                 <View style={styles.calloutContainer}>
                                     <Text style={styles.calloutText}>{marker.title}</Text>
@@ -73,26 +63,16 @@ export default function MapScreen() {
                     ))}
                 </MapView>
 
-                {/* Botões de Filtro Flutuantes */}
                 <View style={styles.filtersWrapper}>
-                    <TouchableOpacity style={styles.filterCard} activeOpacity={0.8}>
-                        <Ionicons name="storefront-outline" size={24} color={COLORS.darkBlue} />
-                        <Text style={styles.filterText}>Tipo de Loja</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.filterCard} activeOpacity={0.8}>
-                        <Ionicons name="navigate-outline" size={24} color={COLORS.darkBlue} />
-                        <Text style={styles.filterText}>Distância</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={styles.filterCard} activeOpacity={0.8}>
-                        <Ionicons name="time-outline" size={24} color={COLORS.darkBlue} />
-                        <Text style={styles.filterText}>Horário</Text>
-                    </TouchableOpacity>
+                    {FILTER_OPTIONS.map((filter) => (
+                        <TouchableOpacity key={filter.id} style={styles.filterCard} activeOpacity={0.8}>
+                            <Ionicons name={filter.icon} size={24} color={COLORS.darkBlue} />
+                            <Text style={styles.filterText}>{filter.label}</Text>
+                        </TouchableOpacity>
+                    ))}
                 </View>
             </View>
 
-            {/* Footer com a aba de mapa ativa */}
             <Footer activeTab="map" />
         </View>
     );
@@ -105,20 +85,18 @@ const styles = StyleSheet.create({
     },
     mapContainer: {
         flex: 1,
-        paddingTop: 100, // Espaço para o Header não cobrir os filtros
-        paddingBottom: 90, // Espaço para o Footer
+        paddingTop: 100,
+        paddingBottom: 90,
     },
     map: {
         ...StyleSheet.absoluteFillObject,
     },
-
-    // Filtros Flutuantes
     filtersWrapper: {
         flexDirection: "row",
         justifyContent: "space-between",
         paddingHorizontal: 16,
-        marginTop: 16, // Afasta um pouco do Header
-        zIndex: 10, // Garante que fique sobre o mapa
+        marginTop: 16,
+        zIndex: 10,
     },
     filterCard: {
         backgroundColor: COLORS.white,
@@ -127,12 +105,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         alignItems: "center",
         justifyContent: "center",
-        width: "30%", // Divide o espaço igualmente entre os 3
+        width: "30%",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3, // Sombra para Android
+        elevation: 3,
     },
     filterText: {
         fontSize: 12,
@@ -141,8 +119,6 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontWeight: "500",
     },
-
-    // Estilo do Tooltip (Callout) do Marcador
     calloutContainer: {
         backgroundColor: COLORS.white,
         borderRadius: 8,

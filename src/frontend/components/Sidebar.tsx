@@ -1,7 +1,19 @@
 import React from "react";
-import { StyleSheet, View, Text, TouchableOpacity, Dimensions } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, Dimensions, Image } from "react-native";
 
 const { width, height } = Dimensions.get("window");
+
+const COLORS = {
+    darkBlue: "#273462",
+    background: "#F4F6F9",
+    overlay: "rgba(0, 0, 0, 0.4)",
+};
+
+const MENU_LINKS = [
+    { id: "account", label: "Minha Conta" },
+    { id: "settings", label: "Configurações" },
+    { id: "help", label: "Ajuda" },
+];
 
 interface SidebarProps {
     isOpen: boolean;
@@ -13,43 +25,50 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     return (
         <View style={styles.overlay}>
-            {/* Área de fechar ao tocar fora do menu */}
             <TouchableOpacity style={styles.blurTouch} activeOpacity={1} onPress={onClose} />
 
-            {/* Painel do Menu Lateral */}
             <View style={styles.menuPanel}>
-
-                {/* Topo do Menu - Placeholder do Ipê Amarelo */}
-                <View style={styles.treeSection}>
-                    <View style={styles.ipePlaceholder} />
-                    <Text style={styles.treeText}>PResco</Text>
-                </View>
-
-                {/* Links de Opções */}
-                <View style={styles.linksContainer}>
-                    <TouchableOpacity style={styles.linkItem}>
-                        <Text style={styles.linkText}>Minha Conta</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.linkItem}>
-                        <Text style={styles.linkText}>Configurações</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.linkItem}>
-                        <Text style={styles.linkText}>Ajuda</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Canto Inferior Esquerdo - Onde ficará a Ararinha Curiosa */}
-                <View style={styles.ararinhaContainer}>
-                    <View style={styles.ararinhaPlaceholder}>
-                        {/* Texto representativo até a inserção da imagem final */}
-                        <Text style={styles.ararinhaText}>🦜</Text>
-                    </View>
-                </View>
-
+                <SidebarHeader />
+                <NavigationLinks />
+                <SidebarDecor />
             </View>
         </View>
     );
 }
+
+// --- Componentes Internos ---
+
+const SidebarHeader = () => (
+    <View style={styles.treeSection}>
+        {/* Placeholder preparado para a imagem local do Ipê */}
+        {/* <Image source={require('../assets/seu-galho-ipe.png')} style={styles.ipeImage} resizeMode="contain" /> */}
+        <View style={styles.ipePlaceholder} />
+
+        <Text style={styles.treeText}>PResco</Text>
+    </View>
+);
+
+const NavigationLinks = () => (
+    <View style={styles.linksContainer}>
+        {MENU_LINKS.map((link) => (
+            <TouchableOpacity key={link.id} style={styles.linkItem} activeOpacity={0.7}>
+                <Text style={styles.linkText}>{link.label}</Text>
+            </TouchableOpacity>
+        ))}
+    </View>
+);
+
+const SidebarDecor = () => (
+    <View style={styles.ararinhaContainer}>
+        {/* Placeholder preparado para a imagem local da Arara */}
+        {/* <Image source={require('../assets/sua-arara.png')} style={styles.ararinhaImage} resizeMode="contain" /> */}
+        <View style={styles.ararinhaPlaceholder}>
+            <Text style={styles.ararinhaText}>🦜</Text>
+        </View>
+    </View>
+);
+
+// --- Estilos ---
 
 const styles = StyleSheet.create({
     overlay: {
@@ -58,7 +77,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.4)",
+        backgroundColor: COLORS.overlay,
         flexDirection: "row",
         zIndex: 100,
     },
@@ -68,32 +87,42 @@ const styles = StyleSheet.create({
         height: height,
     },
     menuPanel: {
-        width: width * 0.72, // Ocupa em torno de 72% da largura da tela
+        width: width * 0.72,
         height: "100%",
-        backgroundColor: "#F4F6F9", // Tom claro de fundo do menu
-        paddingTop: 60,
+        backgroundColor: COLORS.background,
+        paddingTop: 40,
         paddingHorizontal: 24,
         borderTopRightRadius: 24,
         borderBottomRightRadius: 24,
         position: "relative",
+        overflow: "hidden",
     },
+
+    // Header e Ipê
     treeSection: {
         marginBottom: 40,
         alignItems: "flex-start",
     },
     ipePlaceholder: {
-        width: 90,
-        height: 90,
-        borderRadius: 45,
-        backgroundColor: "#FFD700", // Cor base amarela representando o ipê
-        opacity: 0.8,
-        marginBottom: 12,
+        width: 130,
+        height: 100,
+        marginBottom: 8,
+        marginLeft: -10,
+        backgroundColor: "transparent",
+    },
+    ipeImage: {
+        width: 130,
+        height: 100,
+        marginBottom: 8,
+        marginLeft: -10,
     },
     treeText: {
-        fontSize: 20,
+        fontSize: 22,
         fontWeight: "bold",
-        color: "#273462",
+        color: COLORS.darkBlue,
     },
+
+    // Navegação
     linksContainer: {
         gap: 20,
     },
@@ -103,27 +132,31 @@ const styles = StyleSheet.create({
     linkText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#273462",
+        color: COLORS.darkBlue,
     },
+
+    // Decoração da Arara
     ararinhaContainer: {
         position: "absolute",
-        bottom: 0,
-        left: 0,
-        width: 110,
-        height: 110,
+        bottom: -15,
+        left: -20,
+        width: 140,
+        height: 140,
         justifyContent: "flex-end",
         alignItems: "flex-start",
     },
     ararinhaPlaceholder: {
-        width: 80,
-        height: 80,
-        backgroundColor: "transparent",
+        width: 140,
+        height: 140,
         justifyContent: "center",
         alignItems: "center",
-        marginLeft: -10, // Efeito de saindo de fora da tela lateral
-        marginBottom: 10,
     },
     ararinhaText: {
         fontSize: 42,
+    },
+    ararinhaImage: {
+        width: 140,
+        height: 140,
+        opacity: 0.9,
     },
 });

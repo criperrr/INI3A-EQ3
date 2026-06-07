@@ -12,30 +12,19 @@ const COLORS = {
     lightGray: "#E2E8F0",
 };
 
-const DEFAULT_AVATAR = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
-
-export default function RegisterUser() {
+export default function LoginScreen() {
     const router = useRouter();
-    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-
-    // Estados independentes para mostrar/ocultar as senhas
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    const handleSaveUser = () => {
-        if (password !== confirmPassword) {
-            console.log("As senhas não coincidem!");
-            return;
-        }
-        console.log("Mock Cadastro efetuado com sucesso!");
-        router.push("/profile");
+    const handleLogin = () => {
+        console.log("Mock Login efetuado com sucesso!");
+        router.replace("/");
     };
 
-    const handleGoToLogin = () => {
-        router.back();
+    const handleGoToRegister = () => {
+        router.push("/registerUser");
     };
 
     return (
@@ -48,17 +37,8 @@ export default function RegisterUser() {
                 <HeaderLogo />
 
                 <View style={styles.formContainer}>
-                    <Text style={styles.welcomeText}>Crie sua conta</Text>
-                    <Text style={styles.subtitleText}>Preencha seus dados para começar.</Text>
-
-                    <AvatarPicker imageUri={DEFAULT_AVATAR} />
-
-                    <InputField
-                        icon="person-outline"
-                        placeholder="Nome Completo"
-                        value={name}
-                        onChangeText={setName}
-                    />
+                    <Text style={styles.welcomeText}>Bem-vindo de volta!</Text>
+                    <Text style={styles.subtitleText}>Faça login para continuar no PResco.</Text>
 
                     <InputField
                         icon="mail-outline"
@@ -69,27 +49,22 @@ export default function RegisterUser() {
                     />
 
                     <PasswordField
-                        placeholder="Crie uma senha"
                         value={password}
                         onChangeText={setPassword}
                         showPassword={showPassword}
                         toggleShowPassword={() => setShowPassword(!showPassword)}
                     />
 
-                    <PasswordField
-                        placeholder="Confirme sua senha"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        showPassword={showConfirmPassword}
-                        toggleShowPassword={() => setShowConfirmPassword(!showConfirmPassword)}
-                    />
+                    <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
+                        <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+                    </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.saveButton} activeOpacity={0.8} onPress={handleSaveUser}>
-                        <Text style={styles.saveButtonText}>Cadastrar</Text>
+                    <TouchableOpacity style={styles.loginButton} activeOpacity={0.8} onPress={handleLogin}>
+                        <Text style={styles.loginButtonText}>Entrar</Text>
                     </TouchableOpacity>
                 </View>
 
-                <FooterLinks onGoToLogin={handleGoToLogin} />
+                <FooterLinks onGoToRegister={handleGoToRegister} />
 
             </ScrollView>
         </KeyboardAvoidingView>
@@ -110,17 +85,6 @@ const HeaderLogo = () => (
     </View>
 );
 
-const AvatarPicker = ({ imageUri }: { imageUri: string }) => (
-    <View style={styles.avatarContainer}>
-        <View style={styles.avatarWrapper}>
-            <Image source={{ uri: imageUri }} style={styles.avatarImage} />
-            <TouchableOpacity style={styles.cameraBadge} activeOpacity={0.8}>
-                <Ionicons name="camera" size={16} color={COLORS.white} />
-            </TouchableOpacity>
-        </View>
-    </View>
-);
-
 const InputField = ({ icon, placeholder, value, onChangeText, keyboardType = "default" }: any) => (
     <View style={styles.inputContainer}>
         <Ionicons name={icon} size={20} color={COLORS.grayText} style={styles.inputIcon} />
@@ -136,12 +100,12 @@ const InputField = ({ icon, placeholder, value, onChangeText, keyboardType = "de
     </View>
 );
 
-const PasswordField = ({ placeholder, value, onChangeText, showPassword, toggleShowPassword }: any) => (
+const PasswordField = ({ value, onChangeText, showPassword, toggleShowPassword }: any) => (
     <View style={styles.inputContainer}>
         <Ionicons name="lock-closed-outline" size={20} color={COLORS.grayText} style={styles.inputIcon} />
         <TextInput
             style={styles.input}
-            placeholder={placeholder}
+            placeholder="Sua senha"
             placeholderTextColor={COLORS.grayText}
             value={value}
             onChangeText={onChangeText}
@@ -153,11 +117,11 @@ const PasswordField = ({ placeholder, value, onChangeText, showPassword, toggleS
     </View>
 );
 
-const FooterLinks = ({ onGoToLogin }: { onGoToLogin: () => void }) => (
+const FooterLinks = ({ onGoToRegister }: { onGoToRegister: () => void }) => (
     <View style={styles.footerContainer}>
-        <Text style={styles.footerText}>Já tem uma conta? </Text>
-        <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7}>
-            <Text style={styles.loginText}>Entrar</Text>
+        <Text style={styles.footerText}>Não tem uma conta? </Text>
+        <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
+            <Text style={styles.registerText}>Cadastre-se</Text>
         </TouchableOpacity>
     </View>
 );
@@ -173,12 +137,12 @@ const styles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: "center",
         paddingHorizontal: 24,
-        paddingTop: 40,
+        paddingTop: 60,
         paddingBottom: 40,
     },
     logoContainer: {
         alignItems: "center",
-        marginBottom: 32,
+        marginBottom: 40,
     },
     logoCircle: {
         width: 100,
@@ -221,46 +185,11 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: COLORS.darkBlue,
         marginBottom: 8,
-        textAlign: "center",
     },
     subtitleText: {
         fontSize: 14,
         color: COLORS.grayText,
         marginBottom: 24,
-        textAlign: "center",
-    },
-    avatarContainer: {
-        alignItems: "center",
-        marginBottom: 24,
-    },
-    avatarWrapper: {
-        position: "relative",
-    },
-    avatarImage: {
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: COLORS.background,
-        borderWidth: 2,
-        borderColor: COLORS.lightGray,
-    },
-    cameraBadge: {
-        position: "absolute",
-        bottom: 0,
-        right: 0,
-        backgroundColor: COLORS.vibrantBlue,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        alignItems: "center",
-        justifyContent: "center",
-        borderWidth: 2,
-        borderColor: COLORS.white,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 3,
-        elevation: 3,
     },
     inputContainer: {
         flexDirection: "row",
@@ -285,20 +214,28 @@ const styles = StyleSheet.create({
     eyeIcon: {
         padding: 8,
     },
-    saveButton: {
+    forgotPassword: {
+        alignSelf: "flex-end",
+        marginBottom: 24,
+    },
+    forgotPasswordText: {
+        color: COLORS.vibrantBlue,
+        fontSize: 14,
+        fontWeight: "600",
+    },
+    loginButton: {
         backgroundColor: COLORS.vibrantBlue,
         height: 56,
         borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 8,
         shadowColor: COLORS.vibrantBlue,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
-    saveButtonText: {
+    loginButtonText: {
         color: COLORS.white,
         fontSize: 16,
         fontWeight: "bold",
@@ -313,7 +250,7 @@ const styles = StyleSheet.create({
         color: COLORS.grayText,
         fontSize: 15,
     },
-    loginText: {
+    registerText: {
         color: COLORS.vibrantBlue,
         fontSize: 15,
         fontWeight: "bold",

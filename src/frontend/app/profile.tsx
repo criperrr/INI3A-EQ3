@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
@@ -14,121 +16,159 @@ const COLORS = {
     grayText: "#64748B",
     lightGray: "#E2E8F0",
     greenProgress: "#4CAF50",
+    jungleBg: "#2D4A36",
+    redLogout: "#D32F2F",
+};
+
+// --- Mocks & Helpers ---
+
+const MOCK_USER = {
+    name: "Caleb Jensen",
+    role: "Product Analyst",
+    avatarUri: "https://randomuser.me/api/portraits/men/32.jpg",
+    level: 20,
+    currentXp: 268,
+    maxXp: 320,
+    stats: {
+        following: 173,
+        products: 994,
+        followers: 213,
+    }
+};
+
+const MOCK_CONTRIBUTIONS = Array.from({ length: 18 }, () =>
+    Array.from({ length: 4 }, () => Math.floor(Math.random() * 4))
+);
+
+const getGridColor = (intensity: number) => {
+    switch (intensity) {
+        case 1: return "#A5D6A7";
+        case 2: return "#4CAF50";
+        case 3: return "#1B5E20";
+        default: return "#E2E8F0";
+    }
 };
 
 export default function ProfileScreen() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const router = useRouter();
 
-    // Mock para gerar os quadradinhos do gráfico de contribuição
-    const contributionWeeks = Array.from({ length: 18 }, () =>
-        Array.from({ length: 4 }, () => Math.floor(Math.random() * 4))
-    );
-
-    // Define a cor do quadrinho baseado na intensidade (0 a 3)
-    const getGridColor = (intensity: number) => {
-        switch (intensity) {
-            case 1: return "#A5D6A7";
-            case 2: return "#4CAF50";
-            case 3: return "#1B5E20";
-            default: return "#E2E8F0";
-        }
+    const handleLogout = () => {
+        // Lógica provisória de navegação: "replace" destrói o histórico da home
+        // impedindo que o usuário volte para cá usando o botão de voltar do celular.
+        console.log("Mock Logout efetuado!");
+        router.replace("/login");
     };
 
     return (
         <View style={styles.container}>
-            {/* Header e Sidebar */}
             <Header onPressMenu={() => setIsMenuOpen(true)} />
             <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <ProfileHeader user={MOCK_USER} />
+                <StatsCard stats={MOCK_USER.stats} />
+                <LevelProgress currentXp={MOCK_USER.currentXp} maxXp={MOCK_USER.maxXp} level={MOCK_USER.level} />
+                <ContributionHistory contributions={MOCK_CONTRIBUTIONS} />
 
-                {/* Banner de fundo e Avatar */}
-                <View style={styles.profileHeaderContainer}>
-                    {/* Banner estilizado da selva/folhas */}
-                    <View style={styles.jungleBanner}>
-                        <Ionicons name="leaf" size={120} color="#1E3A27" style={styles.bannerLeafIconLeft} />
-                        <Ionicons name="leaf" size={90} color="#152E1E" style={styles.bannerLeafIconRight} />
-                    </View>
-
-                    {/* Container do Avatar com borda dourada */}
-                    <View style={styles.avatarWrapper}>
-                        <Image
-                            source={{ uri: "https://randomuser.me/api/portraits/men/32.jpg" }}
-                            style={styles.avatarImage}
-                        />
-                        {/* Badge de Nível */}
-                        <View style={styles.levelBadge}>
-                            <Text style={styles.levelBadgeText}>20</Text>
-                        </View>
-                    </View>
-
-                    {/* Nome e Cargo */}
-                    <Text style={styles.userName}>Caleb Jensen</Text>
-                    <Text style={styles.userRole}>Product Analyst</Text>
-                </View>
-
-                {/* Card de Estatísticas */}
-                <View style={styles.statsCard}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>173</Text>
-                        <Text style={styles.statLabel}>Seguindo</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>994</Text>
-                        <Text style={styles.statLabel}>Produtos</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>213</Text>
-                        <Text style={styles.statLabel}>Seguidores</Text>
-                    </View>
-                </View>
-
-                {/* Seção de Progresso do Nível */}
-                <View style={styles.levelSection}>
-                    <View style={styles.levelInfoRow}>
-                        <Text style={styles.levelText}>Levl. 20</Text>
-                        <Text style={styles.levelProgressNumber}>268/320</Text>
-                    </View>
-                    <View style={styles.progressBarTrack}>
-                        <View style={[styles.progressBarFill, { width: `${(268 / 320) * 100}%` }]} />
-                    </View>
-                </View>
-
-                {/* Seção de Conquistas e Contribuições */}
-                <View style={styles.achievementsSection}>
-                    <Text style={styles.sectionTitle}>Minhas Conquistas</Text>
-
-                    <View style={styles.contributionsCard}>
-                        <Text style={styles.contributionsTitle}>Histórico de contribuições</Text>
-                        <Text style={styles.contributionsSubtitle}>Últimos 75 dias</Text>
-
-                        {/* Grade estilo GitHub */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
-                            <View style={styles.contributionGrid}>
-                                {contributionWeeks.map((week, weekIndex) => (
-                                    <View key={weekIndex} style={styles.gridColumn}>
-                                        {week.map((intensity, dayIndex) => (
-                                            <View
-                                                key={dayIndex}
-                                                style={[styles.gridSquare, { backgroundColor: getGridColor(intensity) }]}
-                                            />
-                                        ))}
-                                    </View>
-                                ))}
-                            </View>
-                        </ScrollView>
-                    </View>
-                </View>
-
+                <LogoutButton onPress={handleLogout} />
             </ScrollView>
 
-            {/* Footer com a aba profile ativa */}
             <Footer activeTab="profile" />
         </View>
     );
 }
+
+// --- Componentes Internos ---
+
+const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => (
+    <View style={styles.profileHeaderContainer}>
+        <View style={styles.jungleBanner}>
+            <Ionicons name="leaf" size={120} color="#1E3A27" style={styles.bannerLeafIconLeft} />
+            <Ionicons name="leaf" size={90} color="#152E1E" style={styles.bannerLeafIconRight} />
+        </View>
+
+        <View style={styles.avatarWrapper}>
+            <Image source={{ uri: user.avatarUri }} style={styles.avatarImage} />
+            <View style={styles.levelBadge}>
+                <Text style={styles.levelBadgeText}>{user.level}</Text>
+            </View>
+        </View>
+
+        <Text style={styles.userName}>{user.name}</Text>
+        <Text style={styles.userRole}>{user.role}</Text>
+    </View>
+);
+
+const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => (
+    <View style={styles.statsCard}>
+        <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.following}</Text>
+            <Text style={styles.statLabel}>Seguindo</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.products}</Text>
+            <Text style={styles.statLabel}>Produtos</Text>
+        </View>
+        <View style={styles.statDivider} />
+        <View style={styles.statItem}>
+            <Text style={styles.statValue}>{stats.followers}</Text>
+            <Text style={styles.statLabel}>Seguidores</Text>
+        </View>
+    </View>
+);
+
+const LevelProgress = ({ currentXp, maxXp, level }: { currentXp: number, maxXp: number, level: number }) => {
+    const progressPercentage = (currentXp / maxXp) * 100;
+
+    return (
+        <View style={styles.levelSection}>
+            <View style={styles.levelInfoRow}>
+                <Text style={styles.levelText}>Levl. {level}</Text>
+                <Text style={styles.levelProgressNumber}>{currentXp}/{maxXp}</Text>
+            </View>
+            <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+            </View>
+        </View>
+    );
+};
+
+const ContributionHistory = ({ contributions }: { contributions: number[][] }) => (
+    <View style={styles.achievementsSection}>
+        <Text style={styles.sectionTitle}>Minhas Conquistas</Text>
+
+        <View style={styles.contributionsCard}>
+            <Text style={styles.contributionsTitle}>Histórico de contribuições</Text>
+            <Text style={styles.contributionsSubtitle}>Últimos 75 dias</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
+                <View style={styles.contributionGrid}>
+                    {contributions.map((week, weekIndex) => (
+                        <View key={weekIndex} style={styles.gridColumn}>
+                            {week.map((intensity, dayIndex) => (
+                                <View
+                                    key={dayIndex}
+                                    style={[styles.gridSquare, { backgroundColor: getGridColor(intensity) }]}
+                                />
+                            ))}
+                        </View>
+                    ))}
+                </View>
+            </ScrollView>
+        </View>
+    </View>
+);
+
+const LogoutButton = ({ onPress }: { onPress: () => void }) => (
+    <TouchableOpacity style={styles.logoutButton} activeOpacity={0.8} onPress={onPress}>
+        <Ionicons name="log-out-outline" size={20} color={COLORS.redLogout} />
+        <Text style={styles.logoutText}>Sair da Conta</Text>
+    </TouchableOpacity>
+);
+
+// --- Estilos ---
 
 const styles = StyleSheet.create({
     container: {
@@ -137,11 +177,10 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        paddingTop: 80, // Ajustado para integrar com o fundo do banner
+        paddingTop: 80,
         paddingBottom: 110,
     },
 
-    // Cabeçalho do Perfil e Banner
     profileHeaderContainer: {
         alignItems: "center",
         marginBottom: 16,
@@ -149,7 +188,7 @@ const styles = StyleSheet.create({
     jungleBanner: {
         width: "100%",
         height: 150,
-        backgroundColor: "#2D4A36", // Tom verde escuro floresta do mockup
+        backgroundColor: COLORS.jungleBg,
         position: "absolute",
         top: 0,
         overflow: "hidden",
@@ -167,7 +206,7 @@ const styles = StyleSheet.create({
         opacity: 0.15,
     },
     avatarWrapper: {
-        marginTop: 80, // Faz o avatar sobrepor o banner
+        marginTop: 80,
         position: "relative",
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
@@ -180,7 +219,8 @@ const styles = StyleSheet.create({
         height: 110,
         borderRadius: 55,
         borderWidth: 4,
-        borderColor: COLORS.amber, // Borda dourada/amarela
+        borderColor: COLORS.amber,
+        backgroundColor: COLORS.white,
     },
     levelBadge: {
         position: "absolute",
@@ -210,7 +250,6 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
 
-    // Card de Estatísticas
     statsCard: {
         flexDirection: "row",
         backgroundColor: COLORS.white,
@@ -243,7 +282,6 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.lightGray,
     },
 
-    // Barra de Progresso de Nível
     levelSection: {
         marginHorizontal: 16,
         marginBottom: 24,
@@ -275,7 +313,6 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
 
-    // Seção de Conquistas e Histórico
     achievementsSection: {
         paddingHorizontal: 16,
     },
@@ -317,5 +354,29 @@ const styles = StyleSheet.create({
         width: 11,
         height: 11,
         borderRadius: 2,
+    },
+
+    logoutButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.white,
+        marginHorizontal: 16,
+        marginTop: 24,
+        paddingVertical: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#FFEBEB",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 2,
+        gap: 8,
+    },
+    logoutText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: COLORS.redLogout,
     },
 });

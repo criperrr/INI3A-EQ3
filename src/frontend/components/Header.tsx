@@ -9,12 +9,12 @@ const COLORS = {
 
 interface HeaderProps {
     onPressMenu?: () => void;
+    onPressSettings?: () => void;
 }
 
-export default function Header({ onPressMenu }: HeaderProps) {
+export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
     return (
         <View style={styles.container}>
-            {/* Menu Sanduíche */}
             <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.iconButton}
@@ -23,22 +23,32 @@ export default function Header({ onPressMenu }: HeaderProps) {
                 <Ionicons name="menu-outline" size={26} color={COLORS.darkBlue} />
             </TouchableOpacity>
 
-            {/* Identidade Centralizada */}
-            <View style={styles.logoContainer}>
-                <Image
-                    source={require("./images/logo-presco.png")}
-                    style={styles.logoImage}
-                />
-                <Text style={styles.logoText}>PResco</Text>
-            </View>
+            <LogoBrand />
 
-            {/* Ícone de Configurações */}
-            <TouchableOpacity activeOpacity={0.7} style={styles.iconButton}>
+            <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.iconButton}
+                onPress={onPressSettings}
+            >
                 <Ionicons name="settings-outline" size={24} color={COLORS.darkBlue} />
             </TouchableOpacity>
         </View>
     );
 }
+
+// --- Componentes Internos ---
+
+const LogoBrand = () => (
+    <View style={styles.logoContainer}>
+        <Image
+            source={require("./images/logo-presco.png")}
+            style={styles.logoImage}
+        />
+        <Text style={styles.logoText}>PResco</Text>
+    </View>
+);
+
+// --- Estilos ---
 
 const styles = StyleSheet.create({
     container: {
@@ -68,7 +78,7 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         resizeMode: "contain",
-        marginRight: 8, // Espaçamento entre a logo e o texto "PResco"
+        marginRight: 8,
     },
     logoText: {
         fontSize: 22,
