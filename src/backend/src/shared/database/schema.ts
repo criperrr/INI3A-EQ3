@@ -1,4 +1,4 @@
-import { pgTable, check, integer, varchar, unique, serial, index, foreignKey, text, smallint, boolean, timestamp, numeric, primaryKey, pgView, pgEnum } from "drizzle-orm/pg-core"
+import { pgTable, check, integer, varchar, unique, serial, index, foreignKey, text, smallint, boolean, timestamp, numeric, primaryKey, pgView, pgEnum, date } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { customType } from 'drizzle-orm/pg-core';
 
@@ -13,14 +13,9 @@ export const statusRec = pgEnum("status_rec", ['SAT', 'INS', 'NC', 'NAC'])
 //	MUITAS querys terão que utilizar .raw, o que, sendo um problema, não é tão grande dado que provavelmente existe uma grande integração no 
 //Query Builder não sendo necessário criar uma query GIGANTE.
 
-interface Point{
-    lat: number,
-    lng: number
-}
 
 export const geography = customType<{ data: Point }>({
     dataType() {
-    
         return 'geography'; 
     },
     toDriver(point: Point): string {
@@ -61,13 +56,13 @@ export const user = pgTable("user", {
     name: varchar({ length: 100 }).notNull(),
     email: varchar({ length: 255 }).notNull(),
     passHash: varchar("pass_hash", { length: 255 }).notNull(),
-    refreshToken: text("refresh_token"),
-    age: smallint(),
-    points: integer().default(0).notNull(),
-    dangerFlag: boolean("danger_flag").default(false).notNull(),
+    //refreshToken: text("refresh_token"),
+    birthdate: date(), 
+    points: integer().default(0).notNull().default(0),
+    dangerFlag: boolean("danger_flag").default(false).notNull().default(false),
     // TODO: failed to parse database type 'geography'
     location: geography("location"),
-    roleId: integer("role_id").notNull(),
+    roleId: integer("role_id").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 }, (table) => [
@@ -79,7 +74,6 @@ export const user = pgTable("user", {
             name: "user_role_id_fkey"
         }),
     unique("user_email_key").on(table.email),
-    check("user_age_check", sql`(age > 0) AND (age < 120)`),
     check("user_points_check", sql`points >= 0`),
 ]);
 

@@ -1,5 +1,5 @@
 {
-  "id": "578d439c-542e-421b-84cb-459d54562f4b",
+  "id": "7f06d312-2668-4c7d-bf61-3560c462e85c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -206,15 +206,13 @@
               "expression": "ocurrency_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops"
+              "nulls": "last"
             },
             {
               "expression": "date",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "int4_ops"
+              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -283,7 +281,7 @@
         },
         "location": {
           "name": "location",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": true
         },
@@ -418,8 +416,7 @@
               "expression": "market_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             },
             {
               "expression": "created_at",
@@ -441,8 +438,7 @@
               "expression": "product_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "timestamptz_ops"
+              "nulls": "last"
             },
             {
               "expression": "created_at",
@@ -464,8 +460,7 @@
               "expression": "is_resolved",
               "isExpression": false,
               "asc": true,
-              "nulls": "last",
-              "opclass": "bool_ops"
+              "nulls": "last"
             },
             {
               "expression": "created_at",
@@ -476,7 +471,7 @@
             }
           ],
           "isUnique": false,
-          "where": "(is_resolved = false)",
+          "where": "is_resolved = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -862,15 +857,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "refresh_token": {
-          "name": "refresh_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "age": {
-          "name": "age",
-          "type": "smallint",
+        "birthdate": {
+          "name": "birthdate",
+          "type": "date",
           "primaryKey": false,
           "notNull": false
         },
@@ -890,7 +879,7 @@
         },
         "location": {
           "name": "location",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
@@ -898,7 +887,8 @@
           "name": "role_id",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -1086,25 +1076,25 @@
       "columns": {
         "f_table_catalog": {
           "name": "f_table_catalog",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
         "f_table_schema": {
           "name": "f_table_schema",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
         "f_table_name": {
           "name": "f_table_name",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
         "f_geography_column": {
           "name": "f_geography_column",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
@@ -1143,19 +1133,19 @@
         },
         "f_table_schema": {
           "name": "f_table_schema",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
         "f_table_name": {
           "name": "f_table_name",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },
         "f_geometry_column": {
           "name": "f_geometry_column",
-          "type": "GEOGRAPHY(POINT, 4326)",
+          "type": "geography",
           "primaryKey": false,
           "notNull": false
         },

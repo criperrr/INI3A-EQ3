@@ -1,9 +1,10 @@
-import { Router, Request, Response } from "express";
+import { Router } from "express";
+import * as controller from './auth.controller';
 
 const r = Router();
 
-r.get("/login", (req: Request, res: Response) => {
-    res.status(200).json({ message: "not implemented" });
-});
+r.post('/register', controller.register);
+
+
 
 export default r;

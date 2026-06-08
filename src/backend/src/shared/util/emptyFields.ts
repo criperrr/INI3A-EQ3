@@ -1,5 +1,6 @@
 import { MultipleApiError } from "@/shared/errors/errors";
 
+
 export default function verifyEmptyFields(fields: Record<string, string>): void {
     let emptyFields: Array<string> = [];
     for (const key in fields) {
