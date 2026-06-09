@@ -19,6 +19,16 @@ interface HandlerCreateUserDTO {
   email: string;
 }
 
+interface HandlerUpdateUserStrictDTO {
+  name: string,
+  password: string,
+  email: string,
+  birthdate: string,
+  location: string
+}
+
+type HandlerUpdateUserDTO = AtLeastOne<HandlerUpdateUserStrictDTO>;
+
 interface UpdateUserStrictDTO {
   name: string;
   passHash: string;

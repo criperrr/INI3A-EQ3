@@ -1,9 +1,8 @@
-
-    enum ErrorCodes {
-      jtiConflict,
-      internalDatabaseConflict,
-      internalRedisConflict
-    }
+enum ErrorCodes {
+  jtiConflict,
+  internalDatabaseConflict,
+  internalRedisConflict,
+}
 // BASIC ERROR CLASSES ---------------
 
 import { type ErrorItem } from "../util/response.helper";
@@ -11,18 +10,18 @@ import { type ErrorItem } from "../util/response.helper";
 export abstract class ApiError extends Error {
   httpCode: number;
   textCode: string;
-  field: string
+  field: string;
 
   constructor(
     httpCode: number,
     textCode: string,
     message: string,
-    field: string = 'NONE'
+    field: string = "NONE",
   ) {
     super(message);
     this.httpCode = httpCode;
     this.textCode = textCode;
-    this.field = field
+    this.field = field;
   }
 }
 
@@ -50,19 +49,27 @@ export class Unauthorized extends ApiError {
     super(401, textCode, message);
   }
 }
+
+export class NotFound extends ApiError {
+  constructor(message: string, textCode: string = "NOT_FOUND") {
+    super(404, textCode, message);
+  }
+}
+
+export class Conflict extends ApiError {
+  constructor(message: string, textCode: string = "CONFLICT") {
+    super(409, textCode, message);
+  }
+}
 // -------------------------------------
 
 // INTERNAL SERVER ERRORS --------------
 export class InternalError extends ApiError {
-  message: string;
   internalCode: ErrorCodes;
-  stack: string;
 
-  constructor(e: Error, internalCode: ErrorCodes, message?: string) {
-    super(500, "INTERNAL_ERROR", "Internal error");
-    this.message = message ?? e.message;
+  constructor(e: Error, internalCode: ErrorCodes, message: string) {
+    super(500, "INTERNAL_ERROR", message);
     this.internalCode = internalCode;
-    this.stack = e.stack ?? "No stack found in Error type";
   }
 }
 
@@ -74,7 +81,7 @@ export class JTIrefused extends InternalError {
   }
 }
 
-export class DatabaseInternalError extends InternalError{
+export class DatabaseInternalError extends InternalError {
   constructor(message: string, e: Error = new Error()) {
     super(e, ErrorCodes.internalDatabaseConflict, message);
   }
@@ -83,6 +90,59 @@ export class DatabaseInternalError extends InternalError{
 export class RedisInternalError extends InternalError {
   constructor(message: string, e: Error = new Error()) {
     super(e, ErrorCodes.internalRedisConflict, message);
-  };
+  }
 }
+// -------------------------------------
+
+// FORMAT - HELPERS --------------------
+
+export function parseDatabaseError(e: any, message: string): never{
+  if (e && typeof e === "object" && "code" in e) {
+    switch (e.code) {
+      case "23505": {
+        if (e.detail?.includes("email")) {
+          throw new Conflict(
+            "DATABASE: This email address is already registered.",
+          );
+        }
+        throw new Conflict(
+          "DATABASE: A record with these unique details already exists.",
+        );
+      }
+
+      case "23503": {
+        if (e.detail?.includes("role_id")) {
+          throw new BadRequest(
+            "DATABASE: The provided role ID does not exist.",
+          );
+        }
+        throw new BadRequest(
+          "DATABASE: Provided relational reference is invalid.",
+        );
+      }
+      case "23502": {
+        const missingColumn = e.column ? ` [${e.column}]` : "";
+        throw new BadRequest(
+          `DATABASE: Required field is missing or empty${missingColumn}.`,
+        );
+      }
+      case "22001": {
+        throw new BadRequest(
+          "DATABASE: String length exceeds the maximum allowed limit for this field.",
+        );
+      }
+      case "22P02": {
+        throw new BadRequest(
+          "DATABASE: Invalid data format provided for the requested operation.",
+        );
+      }
+      default: {
+        throw new DatabaseInternalError(message);
+        }
+    }
+  }
+  else throw new DatabaseInternalError(message);
+
+}
+
 // -------------------------------------

@@ -20,7 +20,7 @@ async function connectRedis(): Promise<void> {
   else console.log("REDIS: Already connected.");
 }
 
-async function invalidateJWT(target: JwtInvalidateInfo): Promise<void> {
+async function invalidateJWT(target: Jwt.JwtInvalidateInfo): Promise<void> {
   const id = target.jti;
   const ex = target.ex;
 
@@ -31,14 +31,39 @@ async function verifyJTI(jti: string): Promise<number> {
   return redisClient.exists(jti);
 };
 
-async function setRefreshToken(refreshInfo: RefreshInfo) {
+async function setRefreshToken(
+  refreshInfo: RefreshToken.RefreshInfo | RefreshToken.RefreshRecharge,
+) {
+
   const id = refreshInfo.id;
   const token = refreshInfo.refreshToken;
   const ex = refreshInfo.ex;
 
-  await redisClient.set(`refresh:${token}`, id, { EX: ex });
+  if ("oldRefreshToken" in refreshInfo) {
+    const oldRefreshToken = refreshInfo.oldRefreshToken;
+    const multi = redisClient.multi();
+    multi.set(`refresh:${token}`, id, { EX: ex });
+    multi.del(`refresh:${oldRefreshToken}`);
+    await multi.exec();
+  }
+  else await redisClient.set(`refresh:${token}`, id, { EX: ex });
 } 
 
-export { redisClient, connectRedis, invalidateJWT, verifyJTI, setRefreshToken };
+async function destroyRefreshToken(refreshToken: string) {
+  
+}
+
+async function getUserIdByRefreshToken(refreshToken: string){
+  return redisClient.get(`refresh:${refreshToken}`);
+}
+
+export {
+  redisClient,
+  connectRedis,
+  invalidateJWT,
+  verifyJTI,
+  setRefreshToken,
+  getUserIdByRefreshToken,
+};
 
 

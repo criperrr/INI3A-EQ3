@@ -1,23 +1,36 @@
-import * as jwt from 'jsonwebtoken'
+import * as jwt from "jsonwebtoken";
 
-declare global{
-  interface JwtInvalidateInfo {
-  jti: string;
-  ex: number;
-}
+declare global {
+  namespace RefreshToken {
+    interface RefreshInfo {
+      id: string;
+      refreshToken: string;
+      ex: number;
+    }
 
-interface RefreshInfo {
-  id: string;
-  refreshToken: string;
-  ex: number;
-}
-namespace Jwt{
-interface JwtPayload extends jwt.JwtPayload{
-  id: number;
-  name: string;
-  email: string;
-  roleId: number;
-}
-}
+    type RefreshRecharge = RefreshInfo & {
+      oldRefreshToken: string
+    }
 
+    namespace Handlers{
+      interface RefreshInfo {
+        refreshToken: string;
+      }
+    }
+    
+  }
+
+  namespace Jwt {
+    interface JwtPayload extends jwt.JwtPayload {
+      id: number;
+      name: string;
+      email: string;
+      roleId: number;
+    }
+
+    interface JwtInvalidateInfo {
+      jti: string;
+      ex: number;
+    }
+  }
 }
