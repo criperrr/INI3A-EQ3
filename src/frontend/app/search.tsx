@@ -3,9 +3,7 @@ import { View, StyleSheet, Text, TextInput, ScrollView, TouchableOpacity } from 
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+
 
 const COLORS = {
     darkBlue: "#273462",
@@ -36,15 +34,12 @@ export default function SearchScreen() {
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <SearchBar value={searchText} onChangeText={setSearchText} />
                 <ProductResultsGrid products={MOCK_SEARCH_PRODUCTS} onProductPress={handleProductPress} />
             </ScrollView>
 
-            <Footer activeTab="search" />
+
         </View>
     );
 }

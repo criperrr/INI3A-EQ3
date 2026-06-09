@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COLORS = {
     vibrantBlue: "#0062CC",
@@ -10,7 +11,7 @@ const COLORS = {
     centerDarkBg: "#2C2C2E",
 };
 
-type TabKey = "home" | "search" | "registerProduct" | "map" | "profile";
+export type TabKey = "home" | "search" | "registerProduct" | "map" | "profile";
 
 interface FooterProps {
     activeTab?: TabKey;
@@ -34,9 +35,20 @@ const NAV_TABS: TabConfig[] = [
 
 export default function Footer({ activeTab }: FooterProps) {
     const router = useRouter();
+    const insets = useSafeAreaInsets();
+
+    // Calcula o espaçamento ideal para a barra de navegação do iPhone vs Android
+    const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
+    const dynamicHeight = 60 + dynamicPaddingBottom;
 
     return (
-        <View style={styles.container}>
+        <View style={[
+            styles.container,
+            {
+                height: dynamicHeight,
+                paddingBottom: dynamicPaddingBottom
+            }
+        ]}>
             {NAV_TABS.map((tab) => {
                 const isActive = activeTab === tab.key;
 
@@ -76,19 +88,12 @@ export default function Footer({ activeTab }: FooterProps) {
     );
 }
 
-// --- Estilos ---
-
 const styles = StyleSheet.create({
     container: {
         flexDirection: "row",
         justifyContent: "space-around",
         alignItems: "center",
         backgroundColor: COLORS.white,
-        position: "absolute",
-        bottom: 0,
-        width: "100%",
-        height: 85,
-        paddingBottom: 20,
         borderTopWidth: 1,
         borderTopColor: "#EAEAEA",
         shadowColor: "#000",
@@ -96,12 +101,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 5,
         elevation: 5,
-        zIndex: 10,
     },
     navItem: {
         alignItems: "center",
         justifyContent: "center",
         flex: 1,
+        height: "100%",
     },
     activeCircle: {
         width: 46,
@@ -115,6 +120,7 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
+        height: "100%",
     },
     centerCircle: {
         width: 60,
@@ -123,7 +129,7 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.centerDarkBg,
         alignItems: "center",
         justifyContent: "center",
-        marginTop: -30,
+        transform: [{ translateY: -18 }], // Mantém o botão central elegantemente suspenso para cima
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,

@@ -1,11 +1,8 @@
-import React, { useState } from "react";
+
+import React from "react";
 import { View, StyleSheet, Text, ScrollView, Image, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
 
 const COLORS = {
     darkBlue: "#273462",
@@ -50,21 +47,15 @@ const getGridColor = (intensity: number) => {
 };
 
 export default function ProfileScreen() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
     const handleLogout = () => {
-        // Lógica provisória de navegação: "replace" destrói o histórico da home
-        // impedindo que o usuário volte para cá usando o botão de voltar do celular.
         console.log("Mock Logout efetuado!");
         router.replace("/login");
     };
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <ProfileHeader user={MOCK_USER} />
                 <StatsCard stats={MOCK_USER.stats} />
@@ -73,8 +64,6 @@ export default function ProfileScreen() {
 
                 <LogoutButton onPress={handleLogout} />
             </ScrollView>
-
-            <Footer activeTab="profile" />
         </View>
     );
 }
@@ -143,20 +132,18 @@ const ContributionHistory = ({ contributions }: { contributions: number[][] }) =
             <Text style={styles.contributionsTitle}>Histórico de contribuições</Text>
             <Text style={styles.contributionsSubtitle}>Últimos 75 dias</Text>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.gridScroll}>
-                <View style={styles.contributionGrid}>
-                    {contributions.map((week, weekIndex) => (
-                        <View key={weekIndex} style={styles.gridColumn}>
-                            {week.map((intensity, dayIndex) => (
-                                <View
-                                    key={dayIndex}
-                                    style={[styles.gridSquare, { backgroundColor: getGridColor(intensity) }]}
-                                />
-                            ))}
-                        </View>
-                    ))}
-                </View>
-            </ScrollView>
+            <View style={styles.contributionGrid}>
+                {contributions.map((week, weekIndex) => (
+                    <View key={weekIndex} style={styles.gridColumn}>
+                        {week.map((intensity, dayIndex) => (
+                            <View
+                                key={dayIndex}
+                                style={[styles.gridSquare, { backgroundColor: getGridColor(intensity) }]}
+                            />
+                        ))}
+                    </View>
+                ))}
+            </View>
         </View>
     </View>
 );
@@ -177,10 +164,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        paddingTop: 80,
-        paddingBottom: 110,
     },
-
     profileHeaderContainer: {
         alignItems: "center",
         marginBottom: 16,
@@ -249,7 +233,6 @@ const styles = StyleSheet.create({
         color: COLORS.grayText,
         marginTop: 2,
     },
-
     statsCard: {
         flexDirection: "row",
         backgroundColor: COLORS.white,
@@ -281,7 +264,6 @@ const styles = StyleSheet.create({
         height: 30,
         backgroundColor: COLORS.lightGray,
     },
-
     levelSection: {
         marginHorizontal: 16,
         marginBottom: 24,
@@ -312,7 +294,6 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.greenProgress,
         borderRadius: 5,
     },
-
     achievementsSection: {
         paddingHorizontal: 16,
     },
@@ -339,23 +320,20 @@ const styles = StyleSheet.create({
         color: COLORS.grayText,
         marginBottom: 14,
     },
-    gridScroll: {
-        paddingVertical: 4,
-    },
     contributionGrid: {
         flexDirection: "row",
-        gap: 4,
+        gap: 4, // Espaço horizontal entre as colunas
     },
     gridColumn: {
+        flex: 1, // Faz com que as colunas dividam o espaço disponível igualmente
         flexDirection: "column",
-        gap: 4,
+        gap: 4, // Espaço vertical entre os quadradinhos
     },
     gridSquare: {
-        width: 11,
-        height: 11,
+        width: "100%", // O quadradinho ganha a largura total calculada pela coluna flexível
         borderRadius: 2,
+        aspectRatio: 1, // Força a altura a ser idêntica à largura dinâmica
     },
-
     logoutButton: {
         flexDirection: "row",
         alignItems: "center",

@@ -2,9 +2,6 @@ import React, { useState } from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import Sidebar from "../components/Sidebar";
 import ProductCard from "../components/productCard";
 
 const COLORS = {
@@ -37,8 +34,7 @@ export default function ScannerConfirmation() {
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.cardWrapper}>
@@ -57,7 +53,6 @@ export default function ScannerConfirmation() {
                 </View>
             </ScrollView>
 
-            <Footer />
         </View>
     );
 }

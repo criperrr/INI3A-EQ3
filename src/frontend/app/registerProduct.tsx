@@ -3,9 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity, ScrollView, TextInput } from 
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import Sidebar from "../components/Sidebar";
+
 import ProductCard from "../components/productCard";
 
 const COLORS = {
@@ -40,8 +38,7 @@ export default function RegisterProduct() {
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.cardWrapper}>
@@ -61,7 +58,7 @@ export default function RegisterProduct() {
                 </View>
             </ScrollView>
 
-            <Footer activeTab="registerProduct" />
+
         </View>
     );
 }
@@ -112,7 +109,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        paddingTop: 120,
+        paddingTop: 10,
         paddingBottom: 100,
         paddingHorizontal: 20,
         justifyContent: "center",

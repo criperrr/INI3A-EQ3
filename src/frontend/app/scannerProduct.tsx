@@ -3,9 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import Sidebar from "../components/Sidebar";
 
 const COLORS = {
     white: "#FFFFFF",
@@ -28,8 +25,6 @@ export default function ScannerProduct() {
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
             {!permission.granted ? (
                 <PermissionNotice onRequestPermission={requestPermission} />
@@ -48,7 +43,6 @@ export default function ScannerProduct() {
                 </CameraView>
             )}
 
-            <Footer activeTab="registerProduct" />
         </View>
     );
 }
@@ -92,7 +86,6 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: 100,
     },
     permissionContainer: {
         flex: 1,

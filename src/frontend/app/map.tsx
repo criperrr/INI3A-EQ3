@@ -3,9 +3,7 @@ import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Callout } from "react-native-maps";
 
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
+
 
 const COLORS = {
     darkBlue: "#273462",
@@ -39,8 +37,7 @@ export default function MapScreen() {
 
     return (
         <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+
 
             <View style={styles.mapContainer}>
                 <MapView
@@ -73,7 +70,6 @@ export default function MapScreen() {
                 </View>
             </View>
 
-            <Footer activeTab="map" />
         </View>
     );
 }
