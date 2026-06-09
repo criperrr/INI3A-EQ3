@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        paddingTop: 120,
+        paddingTop: 10,
         paddingBottom: 100,
         paddingHorizontal: 20,
         justifyContent: "center",
@@ -112,6 +112,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.grayText,
         marginBottom: 4,
+        fontWeight: "bold"
     },
     priceValue: {
         fontSize: 18,

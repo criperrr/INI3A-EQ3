@@ -81,8 +81,6 @@ const styles = StyleSheet.create({
     },
     mapContainer: {
         flex: 1,
-        paddingTop: 100,
-        paddingBottom: 90,
     },
     map: {
         ...StyleSheet.absoluteFillObject,

@@ -1,6 +1,8 @@
-import React from "react";
-import { StyleSheet, View, Text, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { View, StyleSheet, TouchableOpacity, Image, Text } from "react-native";
+// 1. Importa o hook para lidar com a área segura
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COLORS = {
     darkBlue: "#273462",
@@ -13,8 +15,12 @@ interface HeaderProps {
 }
 
 export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
+    // 2. Captura os espaçamentos do sistema (iOS / Android)
+    const insets = useSafeAreaInsets();
+
     return (
-        <View style={styles.container}>
+        // 3. Aplica o insets.top dinamicamente somado a um respiro interno (8px)
+        <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.iconButton}
@@ -36,8 +42,6 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
     );
 }
 
-// --- Componentes Internos ---
-
 const LogoBrand = () => (
     <View style={styles.logoContainer}>
         <Image
@@ -48,20 +52,14 @@ const LogoBrand = () => (
     </View>
 );
 
-// --- Estilos ---
-
 const styles = StyleSheet.create({
     container: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 100,
-        paddingTop: 45,
+        // height: 70, <- Removido para permitir que o Header cresça com o Notch
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
         paddingHorizontal: 20,
+        paddingBottom: 12, // Mantém o espaçamento inferior fixo e limpo
         backgroundColor: COLORS.white,
         borderBottomWidth: 1,
         borderBottomColor: "#EAEAEA",

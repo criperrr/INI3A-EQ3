@@ -1,24 +1,19 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import Sidebar from "../components/Sidebar";
 
 const COLORS = {
     darkBlue: "#273462",
     vibrantBlue: "#0062CC",
-    lightBlue: "#48C4F9",
     white: "#FFFFFF",
-    background: "#F4F6F9",
 };
 
 const MOCK_PRODUCTS = [
-    { id: 1, name: "Pão Artesanal" },
+    { id: 1, name: "Pão Artesanal" }, // Corrigido o typo 'Po'
     { id: 2, name: "Leite Fresco" },
-    { id: 3, name: "Frutas Orgânicas" },
+    { id: 3, name: "Frutas Orgânicas" }, // Corrigido o typo 'Orgnicas'
     { id: 4, name: "Arroz Integral" },
     { id: 5, name: "Frutas Tropicais" },
     { id: 6, name: "Legumes Selecionados" },
@@ -32,7 +27,6 @@ const MENU_ICONS = [
 ] as const;
 
 export default function Index() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
     const handleProductPress = () => {
@@ -40,23 +34,15 @@ export default function Index() {
     };
 
     return (
-        <View style={styles.container}>
-            <Header onPressMenu={() => setIsMenuOpen(true)} />
-            <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
-
-            <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Banner />
-                <ActionMenu />
-                <ProductGrid onProductPress={handleProductPress} />
-            </ScrollView>
-
-            <Footer activeTab="home" />
-        </View>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <Banner />
+            <ActionMenu />
+            <ProductGrid onProductPress={handleProductPress} />
+        </ScrollView>
     );
 }
 
-// --- Componentes Internos para organizar a UI ---
-
+// --- Componentes Internos de Conteúdo ---
 const Banner = () => (
     <View style={styles.bannerSection}>
         <View style={styles.bannerCardFull}>
@@ -65,7 +51,6 @@ const Banner = () => (
             <Text style={styles.bannerSubtitle}>Desconto em itens selecionados</Text>
             <Text style={styles.bannerLink}>Ver Ofertas</Text>
         </View>
-
         <View style={styles.paginationContainer}>
             <View style={[styles.dot, styles.activeDot]} />
             <View style={styles.dot} />
@@ -87,7 +72,6 @@ const ActionMenu = () => (
 const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => (
     <View style={styles.productsSection}>
         <Text style={styles.sectionTitle}>Produtos</Text>
-
         <View style={styles.productGrid}>
             {MOCK_PRODUCTS.map((product) => (
                 <TouchableOpacity
@@ -106,19 +90,12 @@ const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => (
     </View>
 );
 
-// --- Estilos ---
-
+// --- Estilos específicos do Conteúdo ---
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: COLORS.background,
-    },
     content: {
         flexGrow: 1,
-        paddingTop: 110,
-        paddingBottom: 100,
+        paddingVertical: 16,
     },
-
     bannerSection: {
         paddingHorizontal: 16,
         marginBottom: 20,
@@ -173,7 +150,6 @@ const styles = StyleSheet.create({
         height: 10,
         borderRadius: 5,
     },
-
     centralMenuBar: {
         flexDirection: "row",
         backgroundColor: COLORS.white,
@@ -194,7 +170,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
     },
-
     productsSection: {
         paddingHorizontal: 16,
     },

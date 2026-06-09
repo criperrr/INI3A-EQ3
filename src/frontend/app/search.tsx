@@ -94,8 +94,7 @@ const styles = StyleSheet.create({
     },
     content: {
         flexGrow: 1,
-        paddingTop: 110,
-        paddingBottom: 110,
+        paddingTop: 10,
         paddingHorizontal: 16,
     },
 
