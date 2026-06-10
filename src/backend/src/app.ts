@@ -7,8 +7,8 @@ import { globalErrorHandling } from "./shared/middlewares/errorHandler";
 
 
 const app = express();
-
-app.get("/", apiStatus);
+ 
+app.get("/api", apiStatus);
 app.use(express.json());
 app.use("/api/v1", entryRouter);
 app.use(authRouter);

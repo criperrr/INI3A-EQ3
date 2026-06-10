@@ -1,9 +1,9 @@
 import type express from "express";
 
-import { BadRequest, Unauthorized } from "../../shared/errors/errors";
+import { BadRequest, Unauthorized } from "@/shared/errors/errors";
 import * as service from "./entry.service";
-import { dispatchJSON } from "../../shared/util/response.helper";
-import { SuccessCodes } from "../../shared/util/response.helper";
+import { dispatchJSON } from "@/shared/util/response.helper";
+import { SuccessCodes } from "@/shared/util/response.helper";
 
 export const register: Handlers.CreateUser = async function (
   req,

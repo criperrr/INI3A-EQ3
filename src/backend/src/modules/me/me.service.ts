@@ -1,14 +1,11 @@
-import jwt from "jsonwebtoken";
-import { hash } from "../../shared/hash/bcrypt";
-import crypto from "crypto";
+import { hash } from "@/shared/hash/bcrypt";
 import * as repository from "./me.repository";
 import {
-  DatabaseInternalError,
-  RedisInternalError,
   NotFound,
   ApiError,
   parseDatabaseError
-} from "../../shared/errors/errors";
+} from "@/shared/errors/errors";
+import type { UpdateUserDTO } from "@/shared/types/database";
 
 
 export async function deleteSession(id: number) {

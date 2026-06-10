@@ -1,5 +1,6 @@
-import { db } from "../../shared/database/database";
-import * as schema from "../../shared/database/schema";
+import type { CreateUserDTO } from "@/shared/types/database";
+import { db } from "@/shared/database/database";
+import * as schema from "@/shared/database/schema";
 import { eq, sql } from "drizzle-orm";
 
 const User = schema.user;

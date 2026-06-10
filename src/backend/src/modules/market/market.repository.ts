@@ -1,5 +1,6 @@
-import { db } from '../../shared/database/database';
-import * as schema from '../../shared/database/schema';
+import { db } from '@/shared/database/database';
+import * as schema from '@/shared/database/schema';
+import type { CreateMarketDTO, Point, UpdateMarketDTO } from '@/shared/types/database';
 import { eq, sql } from "drizzle-orm";
 
 const Market = schema.market;

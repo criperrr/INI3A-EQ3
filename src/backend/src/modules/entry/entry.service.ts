@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { hash } from "../../shared/hash/bcrypt";
+import { hash } from "@/shared/hash/bcrypt";
 import crypto from "crypto";
 import * as repository from "./entry.repository";
 import {
@@ -9,10 +9,11 @@ import {
   Unauthorized,
   ApiError,
   NotFound
-} from "../../shared/errors/errors";
+} from "@/shared/errors/errors";
 
 
-import { setRefreshToken, getUserIdByRefreshToken } from "../../shared/redis/server";
+import { setRefreshToken, getUserIdByRefreshToken } from "@/shared/redis/server";
+import type { HandlerCreateUserDTO } from "@/shared/types/database";
 
 export const register = async function register(
   bruteUser: HandlerCreateUserDTO,

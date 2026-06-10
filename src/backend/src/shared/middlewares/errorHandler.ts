@@ -1,17 +1,13 @@
 import { ApiError, MultipleApiError, InternalError } from "../errors/errors";
-import type { Response, Request } from "express";
 import type express from "express";
-import {
-  singleError,
-  multipleErrors,
-  errorFormat,
-} from "../util/response.helper";
+import { multipleErrors, errorFormat } from "@/shared/util/response.helper";
+import type { ErrorRequestHandler } from "express";
 
-export async function globalErrorHandling(
-  err: Error,
-  req: express.Request,
-  res: express.Response,
-  next: Function,
+export const globalErrorHandling: ErrorRequestHandler = function (
+  err,
+  req,
+  res,
+  next,
 ) {
   if (err instanceof ApiError) {
     return res
@@ -20,7 +16,9 @@ export async function globalErrorHandling(
   }
 
   if (err instanceof InternalError) {
-    return res.status(err.httpCode).json(errorFormat(err.message, err.textCode, err.field, err.httpCode));
+    return res
+      .status(err.httpCode)
+      .json(errorFormat(err.message, err.textCode, err.field, err.httpCode));
   }
 
   if (err instanceof MultipleApiError)
@@ -31,4 +29,4 @@ export async function globalErrorHandling(
   return res
     .status(500)
     .json(errorFormat(err.message, "INTERNAL", "NONE", 500));
-}
+};

@@ -15,7 +15,7 @@
     "zod": "^4.4.3"
   },
   "scripts": {
-    "dev": "tsx --watch ./src/app.ts",
+    "dev": "tsx --watch ./src/server.ts",
     "start": "tsx ./src/server.ts"
   },
   "devDependencies": {
