@@ -1,20 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Settings,
+    StyleSheet,
+    View,
+    Text,
+    ScrollView,
+    TouchableOpacity,
+    TextInput,
+    Switch,
+    Modal,
+    Share,
+    Alert
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    Settings, // Este é o ícone
     Sun,
     Moon,
     Bell,
     Lock,
     User,
-    Globe,
     Save,
     X,
     Shield,
-    Info,
     Download,
     Trash2,
     AlertCircle,
-} from 'lucide-react';
+} from 'lucide-react-native';
+import { useTheme } from '../content/themeContent';
 
 interface SettingsState {
     theme: 'light' | 'dark';
@@ -39,6 +51,7 @@ const DEFAULT_SETTINGS: SettingsState = {
     dataCollection: false,
 };
 
+// Alterado para SettingsScreen para evitar conflito com o ícone "Settings"
 const SettingsScreen: React.FC = () => {
     const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
     const [isSaved, setIsSaved] = useState(false);
@@ -48,64 +61,44 @@ const SettingsScreen: React.FC = () => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
-    // Load settings from localStorage on component mount
     useEffect(() => {
-        const savedSettings = localStorage.getItem(STORAGE_KEY);
-        if (savedSettings) {
+        const loadSettings = async () => {
             try {
-                setSettings(JSON.parse(savedSettings));
+                const savedSettings = await AsyncStorage.getItem(STORAGE_KEY);
+                if (savedSettings) {
+                    setSettings(JSON.parse(savedSettings));
+                }
             } catch (error) {
                 console.error('Erro ao carregar configurações:', error);
-                setSettings(DEFAULT_SETTINGS);
             }
-        }
+        };
+        loadSettings();
     }, []);
 
     const handleSettingChange = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
-        setSettings((prev) => ({
-            ...prev,
-            [key]: value,
-        }));
+        setSettings((prev) => ({ ...prev, [key]: value }));
+
+
+        if (key === 'theme') {
+            setGlobalTheme(value as 'light' | 'dark');
+        }
+
         setIsSaved(false);
         setPasswordError('');
     };
 
-    const handleThemeChange = () => {
-        handleSettingChange('theme', settings.theme === 'light' ? 'dark' : 'light');
+    const handleLanguageSelect = () => {
+        Alert.alert("Selecionar Idioma", "Escolha seu idioma preferido:", [
+            { text: "Português (Brasil)", onPress: () => handleSettingChange('language', 'pt-BR') },
+            { text: "English (US)", onPress: () => handleSettingChange('language', 'en-US') },
+            { text: "Español", onPress: () => handleSettingChange('language', 'es-ES') },
+            { text: "Cancelar", style: "cancel" }
+        ]);
     };
 
-    const handleNotificationsChange = () => {
-        handleSettingChange('notifications', !settings.notifications);
-    };
-
-    const handleEmailNotificationsChange = () => {
-        handleSettingChange('emailNotifications', !settings.emailNotifications);
-    };
-
-    const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        handleSettingChange('language', e.target.value);
-    };
-
-    const handlePrivacyChange = (privacy: 'public' | 'private') => {
-        handleSettingChange('privacy', privacy);
-    };
-
-    const handleAutoSaveChange = () => {
-        handleSettingChange('autoSave', !settings.autoSave);
-    };
-
-    const handleTwoFactorChange = () => {
-        handleSettingChange('twoFactorAuth', !settings.twoFactorAuth);
-    };
-
-    const handleDataCollectionChange = () => {
-        handleSettingChange('dataCollection', !settings.dataCollection);
-    };
-
-    const handleSave = () => {
+    const handleSave = async () => {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-            console.log('Configurações salvas:', settings);
+            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
             setIsSaved(true);
             setTimeout(() => setIsSaved(false), 3000);
         } catch (error) {
@@ -113,9 +106,9 @@ const SettingsScreen: React.FC = () => {
         }
     };
 
-    const handleReset = () => {
+    const handleReset = async () => {
         setSettings(DEFAULT_SETTINGS);
-        localStorage.removeItem(STORAGE_KEY);
+        await AsyncStorage.removeItem(STORAGE_KEY);
         setIsSaved(false);
         setPasswordError('');
     };
@@ -132,548 +125,343 @@ const SettingsScreen: React.FC = () => {
         }
         if (newPassword !== confirmPassword) {
             setPasswordError('As senhas não coincidem');
-            return;
+        } else {
+            Alert.alert("Sucesso", "Senha alterada com sucesso!");
+            setNewPassword('');
+            setConfirmPassword('');
+            setChangePasswordOpen(false);
         }
-        console.log('Senha alterada com sucesso');
-        setNewPassword('');
-        setConfirmPassword('');
-        setChangePasswordOpen(false);
-        setIsSaved(true);
-        setTimeout(() => setIsSaved(false), 3000);
     };
 
-    const handleDeleteAccount = () => {
-        console.log('Conta deletada');
-        localStorage.removeItem(STORAGE_KEY);
+    const handleDeleteAccount = async () => {
+        await AsyncStorage.removeItem(STORAGE_KEY);
         setDeleteModalOpen(false);
+        Alert.alert("Conta deletada", "Sua conta foi removida.");
     };
 
-    const handleExportSettings = () => {
+    const handleExportSettings = async () => {
         const dataStr = JSON.stringify(settings, null, 2);
-        const element = document.createElement('a');
-        element.setAttribute(
-            'href',
-            'data:text/plain;charset=utf-8,' + encodeURIComponent(dataStr)
-        );
-        element.setAttribute('download', 'configuracoes.json');
-        element.style.display = 'none';
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
+        try {
+            await Share.share({
+                message: dataStr,
+                title: 'Configurações PResco',
+            });
+        } catch (error) {
+            console.error('Erro ao exportar:', error);
+        }
     };
 
     const isDark = settings.theme === 'dark';
+    const themeStyles = isDark ? darkTheme : lightTheme;
+    const { setGlobalTheme } = useTheme();
 
     return (
-        <div
-            className={`min-h-screen transition-colors duration-300 ${
-                isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
-            }`}
-        >
+        <ScrollView style={[styles.container, themeStyles.bg]}>
             {/* Header */}
-            <div
-                className={`border-b ${
-                    isDark ? 'border-gray-800 bg-gray-800' : 'border-gray-200 bg-white'
-                } shadow-sm sticky top-0 z-10`}
-            >
-                <div className="max-w-4xl mx-auto px-6 py-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Settings size={32} className="text-blue-600" />
-                            <h1 className="text-3xl font-bold">Configurações</h1>
-                        </div>
-                        {isSaved && (
-                            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-                                <span className="text-sm font-medium">✓ Salvo com sucesso</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <View style={[styles.header, themeStyles.headerBg]}>
+                <View style={styles.headerTitleContainer}>
+                    <Settings size={28} color="#2563EB" />
+                    <Text style={[styles.headerTitle, themeStyles.text]}>Configurações</Text>
+                </View>
+                {isSaved && (
+                    <View style={styles.savedAlert}>
+                        <Text style={styles.savedAlertText}>✓ Salvo</Text>
+                    </View>
+                )}
+            </View>
 
             {/* Content */}
-            <div className="max-w-4xl mx-auto px-6 py-8">
-                <div className="space-y-6">
-                    {/* Appearance Section */}
-                    <section
-                        className={`p-6 rounded-lg border ${
-                            isDark
-                                ? 'border-gray-700 bg-gray-800'
-                                : 'border-gray-200 bg-white'
-                        }`}
-                    >
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            {isDark ? (
-                                <Moon size={24} className="text-blue-600" />
-                            ) : (
-                                <Sun size={24} className="text-blue-600" />
-                            )}
-                            Aparência
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Tema</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        {settings.theme === 'light' ? 'Claro' : 'Escuro'}
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleThemeChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.theme === 'light'
-                                            ? 'bg-blue-600'
-                                            : 'bg-gray-600'
-                                    }`}
-                                >
-                  <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                          settings.theme === 'light'
-                              ? 'translate-x-1'
-                              : 'translate-x-7'
-                      }`}
-                  />
-                                </button>
-                            </div>
+            <View style={styles.content}>
 
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Idioma</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Selecione seu idioma preferido
-                                    </p>
-                                </div>
-                                <select
-                                    value={settings.language}
-                                    onChange={handleLanguageChange}
-                                    className={`px-4 py-2 rounded-lg border transition-colors ${
-                                        isDark
-                                            ? 'border-gray-600 bg-gray-700 text-white'
-                                            : 'border-gray-300 bg-white text-gray-900'
-                                    } focus:outline-none focus:ring-2 focus:ring-blue-600`}
-                                >
-                                    <option value="pt-BR">Português (Brasil)</option>
-                                    <option value="pt-PT">Português (Portugal)</option>
-                                    <option value="en-US">English (US)</option>
-                                    <option value="es-ES">Español</option>
-                                    <option value="fr-FR">Français</option>
-                                </select>
-                            </div>
-                        </div>
-                    </section>
+                {/* Appearance Section */}
+                <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+                    <View style={styles.sectionHeader}>
+                        {isDark ? <Moon size={22} color="#2563EB" /> : <Sun size={22} color="#2563EB" />}
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Aparência</Text>
+                    </View>
 
-                    {/* Notifications Section */}
-                    <section
-                        className={`p-6 rounded-lg border ${
-                            isDark
-                                ? 'border-gray-700 bg-gray-800'
-                                : 'border-gray-200 bg-white'
-                        }`}
-                    >
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <Bell size={24} className="text-blue-600" />
-                            Notificações
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Notificações Push</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Receba notificações no seu dispositivo
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleNotificationsChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.notifications ? 'bg-blue-600' : 'bg-gray-400'
-                                    }`}
-                                >
-                  <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                          settings.notifications
-                              ? 'translate-x-7'
-                              : 'translate-x-1'
-                      }`}
-                  />
-                                </button>
-                            </div>
+                    <View style={styles.row}>
+                        <View>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Tema Escuro</Text>
+                            <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                                {isDark ? 'Ativado' : 'Desativado'}
+                            </Text>
+                        </View>
+                        <Switch
+                            value={isDark}
+                            onValueChange={() => handleSettingChange('theme', isDark ? 'light' : 'dark')}
+                        />
+                    </View>
 
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Notificações por Email</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Receba atualizações por email
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleEmailNotificationsChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.emailNotifications
-                                            ? 'bg-blue-600'
-                                            : 'bg-gray-400'
-                                    }`}
-                                >
-                  <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                          settings.emailNotifications
-                              ? 'translate-x-7'
-                              : 'translate-x-1'
-                      }`}
-                  />
-                                </button>
-                            </div>
+                    <TouchableOpacity style={styles.row} onPress={handleLanguageSelect}>
+                        <View>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Idioma</Text>
+                            <Text style={[styles.rowSubLabel, themeStyles.subText]}>{settings.language}</Text>
+                        </View>
+                        <Text style={styles.linkText}>Alterar</Text>
+                    </TouchableOpacity>
+                </View>
 
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Salvamento Automático</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Salve automaticamente suas alterações
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleAutoSaveChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.autoSave ? 'bg-blue-600' : 'bg-gray-400'
-                                    }`}
-                                >
-                  <span
-                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                          settings.autoSave ? 'translate-x-7' : 'translate-x-1'
-                      }`}
-                  />
-                                </button>
-                            </div>
-                        </div>
-                    </section>
+                {/* Notifications Section */}
+                <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+                    <View style={styles.sectionHeader}>
+                        <Bell size={22} color="#2563EB" />
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Notificações</Text>
+                    </View>
 
-                    {/* Privacy Section */}
-                    <section
-                        className={`p-6 rounded-lg border ${
-                            isDark
-                                ? 'border-gray-700 bg-gray-800'
-                                : 'border-gray-200 bg-white'
-                        }`}
-                    >
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <Lock size={24} className="text-blue-600" />
-                            Privacidade
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Perfil Privado</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Mantenha seu perfil privado
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => handlePrivacyChange('private')}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                        settings.privacy === 'private'
-                                            ? 'bg-blue-600 text-white'
-                                            : isDark
-                                                ? 'bg-gray-700 text-gray-300'
-                                                : 'bg-gray-200 text-gray-700'
-                                    }`}
-                                >
-                                    {settings.privacy === 'private' ? '✓ Privado' : 'Privado'}
-                                </button>
-                            </div>
+                    <View style={styles.row}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Notificações Push</Text>
+                        </View>
+                        <Switch
+                            value={settings.notifications}
+                            onValueChange={() => handleSettingChange('notifications', !settings.notifications)}
+                        />
+                    </View>
 
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Perfil Público</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Permita que outros vejam seu perfil
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => handlePrivacyChange('public')}
-                                    className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                                        settings.privacy === 'public'
-                                            ? 'bg-blue-600 text-white'
-                                            : isDark
-                                                ? 'bg-gray-700 text-gray-300'
-                                                : 'bg-gray-200 text-gray-700'
-                                    }`}
-                                >
-                                    {settings.privacy === 'public' ? '✓ Público' : 'Público'}
-                                </button>
-                            </div>
-                        </div>
-                    </section>
+                    <View style={styles.row}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Notificações por Email</Text>
+                        </View>
+                        <Switch
+                            value={settings.emailNotifications}
+                            onValueChange={() => handleSettingChange('emailNotifications', !settings.emailNotifications)}
+                        />
+                    </View>
 
-                    {/* Security Section */}
-                    <section
-                        className={`p-6 rounded-lg border ${
-                            isDark
-                                ? 'border-gray-700 bg-gray-800'
-                                : 'border-gray-200 bg-white'
-                        }`}
-                    >
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <Shield size={24} className="text-blue-600" />
-                            Segurança
-                        </h2>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Autenticação de Dois Fatores</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Adicione uma camada extra de segurança
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleTwoFactorChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.twoFactorAuth ? 'bg-blue-600' : 'bg-gray-400'
-                                    }`}
-                                >
-                   <span
-                       className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                           settings.twoFactorAuth ? 'translate-x-7' : 'translate-x-1'
-                       }`}
-                   />
-                                </button>
-                            </div>
+                    <View style={styles.row}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Salvamento Automático</Text>
+                        </View>
+                        <Switch
+                            value={settings.autoSave}
+                            onValueChange={() => handleSettingChange('autoSave', !settings.autoSave)}
+                        />
+                    </View>
+                </View>
 
-                            <div className="flex items-center justify-between p-4 rounded-lg bg-opacity-50">
-                                <div>
-                                    <p className="font-medium mb-1">Coleta de Dados</p>
-                                    <p
-                                        className={`text-sm ${
-                                            isDark ? 'text-gray-400' : 'text-gray-600'
-                                        }`}
-                                    >
-                                        Permitir coleta de dados para melhorar serviços
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={handleDataCollectionChange}
-                                    className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-                                        settings.dataCollection ? 'bg-blue-600' : 'bg-gray-400'
-                                    }`}
-                                >
-                   <span
-                       className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                           settings.dataCollection ? 'translate-x-7' : 'translate-x-1'
-                       }`}
-                   />
-                                </button>
-                            </div>
-                        </div>
-                    </section>
+                {/* Privacy Section */}
+                <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+                    <View style={styles.sectionHeader}>
+                        <Lock size={22} color="#2563EB" />
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Privacidade</Text>
+                    </View>
 
-                    {/* Account Section */}
-                    <section
-                        className={`p-6 rounded-lg border ${
-                            isDark
-                                ? 'border-gray-700 bg-gray-800'
-                                : 'border-gray-200 bg-white'
-                        }`}
-                    >
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                            <User size={24} className="text-blue-600" />
-                            Conta
-                        </h2>
-                        <div className="space-y-4">
-                            <button
-                                onClick={() => setChangePasswordOpen(true)}
-                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                                    isDark
-                                        ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                                }`}
-                            >
-                                Alterar Senha
-                            </button>
-                            <button
-                                onClick={() => setDeleteModalOpen(true)}
-                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                                    isDark
-                                        ? 'bg-red-900 hover:bg-red-800 text-red-100'
-                                        : 'bg-red-100 hover:bg-red-200 text-red-900'
-                                }`}
-                            >
-                                Deletar Conta
-                            </button>
-                            <button
-                                onClick={handleExportSettings}
-                                className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-                                    isDark
-                                        ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
-                                }`}
-                            >
-                                <Download size={18} />
-                                Exportar Configurações
-                            </button>
-                        </div>
-                    </section>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-4 pt-4">
-                        <button
-                            onClick={handleSave}
-                            className="flex-1 py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                    <View style={styles.privacyContainer}>
+                        <TouchableOpacity
+                            style={[styles.privacyButton, settings.privacy === 'private' ? styles.btnBlue : themeStyles.btnToggleOff]}
+                            onPress={() => handleSettingChange('privacy', 'private')}
                         >
-                            <Save size={20} />
-                            Salvar Configurações
-                        </button>
-                        <button
-                            onClick={handleReset}
-                            className={`flex-1 py-3 px-6 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                                isDark
-                                    ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
-                            }`}
+                            <Text style={settings.privacy === 'private' ? styles.textWhite : themeStyles.text}>
+                                {settings.privacy === 'private' ? '✓ Privado' : 'Privado'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.privacyButton, settings.privacy === 'public' ? styles.btnBlue : themeStyles.btnToggleOff]}
+                            onPress={() => handleSettingChange('privacy', 'public')}
                         >
-                            <X size={20} />
-                            Resetar
-                        </button>
-                    </div>
-                </div>
-            </div>
+                            <Text style={settings.privacy === 'public' ? styles.textWhite : themeStyles.text}>
+                                {settings.privacy === 'public' ? '✓ Público' : 'Público'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Security Section */}
+                <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+                    <View style={styles.sectionHeader}>
+                        <Shield size={22} color="#2563EB" />
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Segurança</Text>
+                    </View>
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Autenticação de Dois Fatores</Text>
+                        </View>
+                        <Switch
+                            value={settings.twoFactorAuth}
+                            onValueChange={() => handleSettingChange('twoFactorAuth', !settings.twoFactorAuth)}
+                        />
+                    </View>
+
+                    <View style={styles.row}>
+                        <View style={{ flex: 1, paddingRight: 10 }}>
+                            <Text style={[styles.rowLabel, themeStyles.text]}>Coleta de Dados</Text>
+                        </View>
+                        <Switch
+                            value={settings.dataCollection}
+                            onValueChange={() => handleSettingChange('dataCollection', !settings.dataCollection)}
+                        />
+                    </View>
+                </View>
+
+                {/* Account Section */}
+                <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+                    <View style={styles.sectionHeader}>
+                        <User size={22} color="#2563EB" />
+                        <Text style={[styles.sectionTitle, themeStyles.text]}>Conta</Text>
+                    </View>
+
+                    <TouchableOpacity style={[styles.actionBtn, themeStyles.btnToggleOff]} onPress={() => setChangePasswordOpen(true)}>
+                        <Text style={[styles.actionBtnText, themeStyles.text]}>Alterar Senha</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.actionBtn, styles.btnRedLight]} onPress={() => setDeleteModalOpen(true)}>
+                        <Text style={styles.textRed}>Deletar Conta</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]} onPress={handleExportSettings}>
+                        <Download size={16} color={isDark ? "#FFF" : "#000"} style={{ marginRight: 8 }} />
+                        <Text style={[styles.actionBtnText, themeStyles.text]}>Exportar Configurações</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* CORRIGIDO: div alterada para View */}
+                <View style={styles.footerActions}>
+                    <TouchableOpacity style={[styles.submitBtn, styles.btnBlue]} onPress={handleSave}>
+                        <Save size={18} color="#FFF" style={{ marginRight: 6 }} />
+                        <Text style={styles.textWhite}>Salvar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={[styles.submitBtn, themeStyles.btnToggleOff]} onPress={handleReset}>
+                        <X size={18} color={isDark ? "#FFF" : "#000"} style={{ marginRight: 6 }} />
+                        <Text style={themeStyles.text}>Resetar</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
 
             {/* Change Password Modal */}
-            {changePasswordOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div
-                        className={`rounded-lg shadow-xl max-w-md w-full p-6 ${
-                            isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-                        }`}
-                    >
-                        <h3 className="text-xl font-bold mb-4">Alterar Senha</h3>
-                        <div className="space-y-4">
-                            <input
-                                type="password"
-                                placeholder="Nova Senha"
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                className={`w-full px-4 py-2 rounded-lg border transition-colors ${
-                                    isDark
-                                        ? 'border-gray-600 bg-gray-700 text-white'
-                                        : 'border-gray-300 bg-white text-gray-900'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-600`}
-                            />
-                            <input
-                                type="password"
-                                placeholder="Confirmar Senha"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className={`w-full px-4 py-2 rounded-lg border transition-colors ${
-                                    isDark
-                                        ? 'border-gray-600 bg-gray-700 text-white'
-                                        : 'border-gray-300 bg-white text-gray-900'
-                                } focus:outline-none focus:ring-2 focus:ring-blue-600`}
-                            />
-                            {passwordError && (
-                                <div className="flex items-center gap-2 p-3 bg-red-100 text-red-800 rounded-lg">
-                                    <AlertCircle size={18} />
-                                    <span className="text-sm">{passwordError}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="flex gap-3 pt-6">
-                            <button
-                                onClick={() => {
-                                    setChangePasswordOpen(false);
-                                    setNewPassword('');
-                                    setConfirmPassword('');
-                                    setPasswordError('');
-                                }}
-                                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                                    isDark
-                                        ? 'bg-gray-700 hover:bg-gray-600'
-                                        : 'bg-gray-200 hover:bg-gray-300'
-                                }`}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleChangePassword}
-                                className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-                            >
-                                Alterar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <Modal transparent visible={changePasswordOpen} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, themeStyles.card]}>
+                        <Text style={[styles.modalTitle, themeStyles.text]}>Alterar Senha</Text>
+                        <TextInput
+                            secureTextEntry
+                            placeholder="Nova Senha"
+                            placeholderTextColor="#9CA3AF"
+                            value={newPassword}
+                            onChangeText={setNewPassword}
+                            style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                        />
+                        <TextInput
+                            secureTextEntry
+                            placeholder="Confirmar Senha"
+                            placeholderTextColor="#9CA3AF"
+                            value={confirmPassword}
+                            onChangeText={setConfirmPassword}
+                            style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                        />
+                        {passwordError ? (
+                            <View style={styles.errorContainer}>
+                                <AlertCircle size={16} color="#991B1B" />
+                                <Text style={styles.errorText}>{passwordError}</Text>
+                            </View>
+                        ) : null}
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={[styles.modalBtn, themeStyles.btnToggleOff]} onPress={() => { setChangePasswordOpen(false); setPasswordError(''); }}>
+                                <Text style={themeStyles.text}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalBtn, styles.btnBlue]} onPress={handleChangePassword}>
+                                <Text style={styles.textWhite}>Alterar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             {/* Delete Account Modal */}
-            {deleteModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div
-                        className={`rounded-lg shadow-xl max-w-md w-full p-6 ${
-                            isDark ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
-                        }`}
-                    >
-                        <div className="flex items-center gap-3 mb-4">
-                            <AlertCircle size={28} className="text-red-600" />
-                            <h3 className="text-xl font-bold">Deletar Conta</h3>
-                        </div>
-                        <p className={`mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                            Tem certeza que deseja deletar sua conta? Esta ação é irreversível e
-                            todos os seus dados serão perdidos.
-                        </p>
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setDeleteModalOpen(false)}
-                                className={`flex-1 py-3 px-4 rounded-lg font-medium transition-colors ${
-                                    isDark
-                                        ? 'bg-gray-700 hover:bg-gray-600'
-                                        : 'bg-gray-200 hover:bg-gray-300'
-                                }`}
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleDeleteAccount}
-                                className="flex-1 py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
-                            >
-                                <Trash2 size={18} />
-                                Deletar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+            <Modal transparent visible={deleteModalOpen} animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, themeStyles.card]}>
+                        <View style={styles.rowCenter}>
+                            <AlertCircle size={24} color="#DC2626" />
+                            <Text style={[styles.modalTitle, { marginLeft: 8 }, themeStyles.text]}>Deletar Conta</Text>
+                        </View>
+                        <Text style={[styles.modalDescription, themeStyles.subText]}>
+                            Tem certeza que deseja deletar sua conta? Esta ação é irreversível e todos os seus dados serão perdidos.
+                        </Text>
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity style={[styles.modalBtn, themeStyles.btnToggleOff]} onPress={() => setDeleteModalOpen(false)}>
+                                <Text style={themeStyles.text}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalBtn, styles.btnRed]} onPress={handleDeleteAccount}>
+                                <Trash2 size={16} color="#FFF" style={{ marginRight: 4 }} />
+                                <Text style={styles.textWhite}>Deletar</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        </ScrollView>
     );
 };
 
-export default SettingsScreen;
+const lightTheme = StyleSheet.create({
+    bg: { backgroundColor: '#F9FAFB' },
+    headerBg: { backgroundColor: '#FFFFFF', borderBottomColor: '#E5E7EB' },
+    card: { backgroundColor: '#FFFFFF' },
+    border: { borderColor: '#E5E7EB' },
+    text: { color: '#111827' },
+    subText: { color: '#6B7280' },
+    btnToggleOff: { backgroundColor: '#E5E7EB' },
+    inputBg: { backgroundColor: '#F3F4F6', borderColor: '#E5E7EB' }
+});
 
+const darkTheme = StyleSheet.create({
+    bg: { backgroundColor: '#111827' },
+    headerBg: { backgroundColor: '#1F2937', borderBottomColor: '#374151' },
+    card: { backgroundColor: '#1F2937' },
+    border: { borderColor: '#374151' },
+    text: { color: '#FFFFFF' },
+    subText: { color: '#9CA3AF' },
+    btnToggleOff: { backgroundColor: '#374151' },
+    inputBg: { backgroundColor: '#111827', borderColor: '#374151' }
+});
+
+const styles = StyleSheet.create({
+    container: { flex: 1 },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 20,
+        borderBottomWidth: 1,
+    },
+    headerTitleContainer: { flexDirection: 'row', alignItems: 'center' },
+    headerTitle: { fontSize: 22, fontWeight: 'bold', marginLeft: 10 },
+    savedAlert: { backgroundColor: '#D1FAE5', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 6 },
+    savedAlertText: { color: '#065F46', fontSize: 12, fontWeight: '600' },
+    content: { padding: 16 },
+    section: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 16 },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', marginLeft: 8 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' },
+    rowLabel: { fontSize: 16, fontWeight: '500' },
+    rowSubLabel: { fontSize: 13, marginTop: 2 },
+    linkText: { color: '#2563EB', fontWeight: '600' },
+    privacyContainer: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    privacyButton: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+    actionBtn: { width: '100%', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginBottom: 10 },
+    actionBtnText: { fontWeight: '500' },
+    rowCenter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    btnBlue: { backgroundColor: '#2563EB' },
+    btnRed: { backgroundColor: '#DC2626' },
+    btnRedLight: { backgroundColor: '#FEE2E2' },
+    textWhite: { color: '#FFFFFF', fontWeight: '600' },
+    textRed: { color: '#991B1B', fontWeight: '600' },
+    footerActions: { flexDirection: 'row', gap: 12, marginTop: 8, marginBottom: 30 },
+    submitBtn: { flex: 1, paddingVertical: 14, borderRadius: 8, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    modalContent: { width: '100%', maxWidth: 400, padding: 20, borderRadius: 12, elevation: 5 },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 14 },
+    modalDescription: { fontSize: 14, marginBottom: 20, lineHeight: 20 },
+    input: { width: '100%', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, fontSize: 16 },
+    errorContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEE2E2', padding: 10, borderRadius: 8, marginBottom: 12 },
+    errorText: { color: '#991B1B', fontSize: 13, marginLeft: 6 },
+    modalButtons: { flexDirection: 'row', gap: 10, marginTop: 8 },
+    modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' }
+});
+
+export default SettingsScreen;

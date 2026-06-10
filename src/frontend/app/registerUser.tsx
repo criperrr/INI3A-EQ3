@@ -45,7 +45,6 @@ export default function RegisterUser() {
         >
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                <HeaderLogo />
 
                 <View style={styles.formContainer}>
                     <Text style={styles.welcomeText}>Crie sua conta</Text>
@@ -97,18 +96,6 @@ export default function RegisterUser() {
 }
 
 // --- Componentes Internos ---
-
-const HeaderLogo = () => (
-    <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-            <Image
-                source={require("../components/images/logo-presco.png")}
-                style={styles.logoImage}
-            />
-        </View>
-        <Text style={styles.brandName}>PResco</Text>
-    </View>
-);
 
 const AvatarPicker = ({ imageUri }: { imageUri: string }) => (
     <View style={styles.avatarContainer}>

@@ -15,7 +15,7 @@ const COLORS = {
 const MOCK_PRODUCT = {
     category: "Produto",
     name: "Cebola Granel 1kg",
-    imageUri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR_6g5TzMhG8B1U0_bA85f_9P1bAnp68wF6-g&s",
+    imageUrl: "https://www.confianca.com.br/ccstore/v1/images/?source=/file/v484523792576810974/products/1144880.1.jpg&height=940&width=940",
     lastPrice: "R$ 7,75",
     pricePerUnit: "R$ 7,75 kg",
 };
@@ -34,7 +34,7 @@ export default function ProductDetails() {
                     <ProductCard
                         category={MOCK_PRODUCT.category}
                         name={MOCK_PRODUCT.name}
-                        imageUri={MOCK_PRODUCT.imageUri}
+                        imageUri={MOCK_PRODUCT.imageUrl}
                     >
                         <PriceDetails />
                         <PriceChart />
@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
     cardWrapper: {
         width: "100%",
         alignItems: "center",
+
     },
 
     detailsContainer: {
@@ -133,6 +134,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 2,
         elevation: 1,
+        overflow: "hidden",
     },
     chartWrapperInner: {
         flexDirection: "row",

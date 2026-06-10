@@ -34,7 +34,7 @@ export default function LoginScreen() {
         >
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-                <HeaderLogo />
+
 
                 <View style={styles.formContainer}>
                     <Text style={styles.welcomeText}>Bem-vindo de volta!</Text>
@@ -73,17 +73,7 @@ export default function LoginScreen() {
 
 // --- Componentes Internos ---
 
-const HeaderLogo = () => (
-    <View style={styles.logoContainer}>
-        <View style={styles.logoCircle}>
-            <Image
-                source={require("../components/images/logo-presco.png")}
-                style={styles.logoImage}
-            />
-        </View>
-        <Text style={styles.brandName}>PResco</Text>
-    </View>
-);
+
 
 const InputField = ({ icon, placeholder, value, onChangeText, keyboardType = "default" }: any) => (
     <View style={styles.inputContainer}>

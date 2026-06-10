@@ -1,8 +1,7 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
+import React, { useState, useCallback } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
-
 
 const COLORS = {
     white: "#FFFFFF",
@@ -11,38 +10,73 @@ const COLORS = {
 };
 
 export default function ScannerProduct() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [permission, requestPermission] = useCameraPermissions();
+    const [scanned, setScanned] = useState(false);
     const router = useRouter();
+
+    // Reseta o estado do scanner sempre que a tela ganha foco
+    useFocusEffect(
+        useCallback(() => {
+            setScanned(false);
+        }, [])
+    );
 
     if (!permission) {
         return <View style={styles.container} />;
     }
 
-    const handleSimulateScan = () => {
-        router.push("/scannerConfirmation");
+    // 1. O expo-camera detecta o código usando ML Kit/Apple Vision e dispara esta função
+    const handleBarcodeScanned = ({ data }: { data: string }) => {
+        // Trava para não ler o mesmo código 50 vezes por segundo
+        if (scanned) return;
+        setScanned(true);
+
+        // 2. Exibe o resultado direto na tela para você validar o teste
+        Alert.alert(
+            "Leitura Bem-Sucedida! 🚀",
+            `O ML Kit leu o seguinte código:\n\n${data}`,
+            [
+                {
+                    text: "Escanear Novamente",
+                    onPress: () => setScanned(false)
+                },
+                {
+                    text: "Testar Redirecionamento",
+                    onPress: () => {
+                        // Se quiser testar o fluxo de telas com dados falsos:
+                        router.push({
+                            pathname: "/scannerConfirmation",
+                            params: {
+                                category: "Categoria Teste",
+                                name: "Produto Teste Mockado",
+                                imageUri: "https://via.placeholder.com/150",
+                                lastPrice: "R$ 99,90",
+                                barcode: data
+                            }
+                        });
+                    }
+                }
+            ]
+        );
     };
 
     return (
         <View style={styles.container}>
-
             {!permission.granted ? (
                 <PermissionNotice onRequestPermission={requestPermission} />
             ) : (
-                <CameraView style={styles.cameraBackground} facing="back">
+                <CameraView
+                    style={styles.cameraBackground}
+                    facing="back"
+                    barcodeScannerSettings={{
+                        barcodeTypes: ["ean13", "ean8", "code128", "qr"],
+                    }}
+                    onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+                >
                     <ScannerInstructions />
                     <ScannerViewFinder />
-
-                    <TouchableOpacity
-                        style={styles.tempButton}
-                        activeOpacity={0.8}
-                        onPress={handleSimulateScan}
-                    >
-                        <Text style={styles.tempButtonText}>Simular Scan</Text>
-                    </TouchableOpacity>
                 </CameraView>
             )}
-
         </View>
     );
 }
@@ -168,24 +202,6 @@ const styles = StyleSheet.create({
         backgroundColor: "red",
         opacity: 0.6,
     },
-    tempButton: {
-        position: "absolute",
-        bottom: 120,
-        backgroundColor: COLORS.white,
-        paddingVertical: 15,
-        paddingHorizontal: 25,
-        borderRadius: 30,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 8,
-    },
-    tempButtonText: {
-        color: COLORS.vibrantBlue,
-        fontWeight: "bold",
-        fontSize: 16,
-    },
     tempButtonStatic: {
         backgroundColor: COLORS.vibrantBlue,
         paddingVertical: 15,
@@ -196,5 +212,5 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         fontWeight: "bold",
         fontSize: 16,
-    },
+    }
 });

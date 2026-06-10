@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 import ProductCard from "../components/productCard";
 
@@ -13,37 +13,43 @@ const COLORS = {
     grayText: "#64748B",
 };
 
-const MOCK_PRODUCT = {
-    category: "Produto Encontrado",
-    name: "Filé de Salmão fresco com pele Bandeja 300g",
-    imageUri: "https://img.freepik.com/fotos-premium/file-de-salmao-cru-fresco-no-fundo-branco-isolado_89814-118.jpg",
-    lastPrice: "R$ 29,90 / R$ 99,67 Kg",
-};
-
 interface ActionButtonsProps {
     onConfirm: () => void;
     onCancel: () => void;
 }
 
 export default function ScannerConfirmation() {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const router = useRouter();
 
-    const handleConfirm = () => router.push("/registerProduct");
+    const params = useLocalSearchParams();
+
+    const product = {
+        category: (params.category as string) || "Produto Encontrado",
+        name: (params.name as string) || "Nome indisponível",
+        imageUri: (params.imageUri as string) || "https://via.placeholder.com/150",
+        lastPrice: (params.lastPrice as string) || "Preço não informado",
+        barcode: (params.barcode as string) || ""
+    };
+
+    const handleConfirm = () => {
+        router.push({
+            pathname: "/registerProduct",
+            params: { barcode: product.barcode }
+        });
+    };
+
     const handleCancel = () => router.back();
 
     return (
         <View style={styles.container}>
-
-
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 <View style={styles.cardWrapper}>
                     <ProductCard
-                        category={MOCK_PRODUCT.category}
-                        name={MOCK_PRODUCT.name}
-                        imageUri={MOCK_PRODUCT.imageUri}
+                        category={product.category}
+                        name={product.name}
+                        imageUri={product.imageUri}
                     >
-                        <PriceDetails lastPrice={MOCK_PRODUCT.lastPrice} />
+                        <PriceDetails lastPrice={product.lastPrice} />
 
                         <ActionButtons
                             onConfirm={handleConfirm}
@@ -52,7 +58,6 @@ export default function ScannerConfirmation() {
                     </ProductCard>
                 </View>
             </ScrollView>
-
         </View>
     );
 }
