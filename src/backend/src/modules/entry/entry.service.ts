@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { hash } from "@/shared/hash/bcrypt";
+import { hash } from "@/shared/util/bcrypt";
 import crypto from "crypto";
 import * as repository from "./entry.repository";
 import {
@@ -8,16 +8,16 @@ import {
   parseDatabaseError,
   Unauthorized,
   ApiError,
-  NotFound
+  NotFound,
 } from "@/shared/errors/errors";
 
+import {
+  setRefreshToken,
+  getUserIdByRefreshToken,
+} from "@/shared/redis/server";
+import type { UpdateUserRequest } from "@/shared/types/apiResponse";
 
-import { setRefreshToken, getUserIdByRefreshToken } from "@/shared/redis/server";
-import type { HandlerCreateUserDTO } from "@/shared/types/database";
-
-export const register = async function register(
-  bruteUser: HandlerCreateUserDTO,
-) {
+export const register = async function register(bruteUser: UpdateUserRequest) {
   const { email, name } = bruteUser;
   const user = {
     email,
@@ -26,11 +26,8 @@ export const register = async function register(
   };
 
   let userReturned: Jwt.JwtPayload[]; //aqui ja funciona já
-  try {
-    userReturned = await repository.createUser(user);
-  } catch (e) {
-    parseDatabaseError(e, "DATABASE: conflict on user creation.");
-  }
+
+  userReturned = await repository.createUser(user);
 
   if (!userReturned[0])
     throw new DatabaseInternalError("DATABASE: user was not created");

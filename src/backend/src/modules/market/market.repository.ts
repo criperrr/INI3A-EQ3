@@ -1,23 +1,37 @@
-import { db } from '@/shared/database/database';
-import * as schema from '@/shared/database/schema';
-import type { CreateMarketDTO, Point, UpdateMarketDTO } from '@/shared/types/database';
+import { db } from "@/shared/database/database";
+import * as schema from "@/shared/database/schema";
+import type {
+  CreateMarketDTO,
+  Point,
+  UpdateMarketDTO,
+} from "@/shared/types/database";
 import { eq, sql } from "drizzle-orm";
 
 const Market = schema.market;
 
 export async function createMarket(market: CreateMarketDTO) {
-  return db.insert(Market).values(market).returning({
-    id: Market.id,
-    name: Market.name,
-    location: sql`${Market.location}`,
-  });
+  return db
+    .insert(Market)
+    .values(market)
+    .returning({
+      id: Market.id,
+      name: Market.name,
+      location: sql`${Market.location}`,
+    });
 }
 
-export async function  updateMarket(id: string | number, market: UpdateMarketDTO) {
-  return db.update(Market).set(market).returning({
-    name: Market.name,
-    email: Market.id,
-  }).where(eq(Market.id, Number(id)));
+export async function updateMarket(
+  id: string | number,
+  market: UpdateMarketDTO,
+) {
+  return db
+    .update(Market)
+    .set(market)
+    .returning({
+      name: Market.name,
+      email: Market.id,
+    })
+    .where(eq(Market.id, Number(id)));
 }
 
 export async function deleteMarket(id: string | number) {

@@ -5,6 +5,11 @@ export interface Point {
 
 // vai ter outra interface pro admin criar o user
 
+// helper
+export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> &
+  U[keyof U];
+
+
 //Interface que mandamos para o bd
 export interface CreateUserDTO {
   name: string;
@@ -12,37 +17,21 @@ export interface CreateUserDTO {
   email: string;
 }
 
-//Interface nos middlewares/controllers/services
-export interface HandlerCreateUserDTO {
+
+//isso vai ser usado no banco
+export interface UpdateUserDTO {
   name: string;
-  password: string;
+  passHash: string;
   email: string;
+  birthdate: string;
+  location: Point;
+  password?: string
 }
-
-export interface HandlerUpdateUserStrictDTO {
-  name: string,
-  password: string,
-  email: string,
-  birthdate: string,
-  location: string
-}
-
-export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> & U[keyof U];
 
 /*
  * A MAIORIA DOS HANDLERS IRÃO DESAPARECER APÓS USARMOS O ZOD
  */
 
-export type HandlerUpdateUserDTO = AtLeastOne<HandlerUpdateUserStrictDTO>;
-
-export interface UpdateUserStrictDTO {
-  name: string;
-  passHash: string;
-  email: string;
-  birthdate: string;
-}
-
-export type UpdateUserDTO = AtLeastOne<UpdateUserStrictDTO>;
 
 export interface UserDTO {
   name: string;
@@ -51,9 +40,9 @@ export interface UserDTO {
   location: Point;
 }
 
-export interface CreateMarketDTO{
-  name: string,
-  location: Point
+export interface MarketDTO {
+  name: string;
+  location: Point;
 }
 
-export type UpdateMarketDTO = CreateMarketDTO
+export type UpdateMarketDTO = AtLeastOne<MarketDTO>;

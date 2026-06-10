@@ -1,4 +1,8 @@
 import { RequestHandler } from "express";
+import {
+  UpdateUserRequest,
+  CreateUserRequest,
+} from "@/shared/types/apiRequest";
 
 declare global {
   namespace Express {
@@ -9,9 +13,12 @@ declare global {
 
   //namespace de handlers do express
   namespace Handlers {
-    export type CreateUser = RequestHandler<{}, any, HandlerCreateUserDTO>;
-    export type UpdateUser = RequestHandler<{}, any, HandlerUpdateUserDTO>;
-    export type RechargeSession = RequestHandler<{}, any, RefreshToken.Handlers.RefreshInfo>;
+    export type CreateUser = RequestHandler<{}, any, CreateUserRequest>;
+    export type UpdateUser = RequestHandler<{}, any, AtLeastOne<UpdateUserRequest>>;
+    export type RechargeSession = RequestHandler<
+      {},
+      any,
+      RefreshToken.Handlers.RefreshInfo
+    >;
   }
-
 }

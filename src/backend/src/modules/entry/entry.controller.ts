@@ -2,14 +2,10 @@ import type express from "express";
 
 import { BadRequest, Unauthorized } from "@/shared/errors/errors";
 import * as service from "./entry.service";
-import { dispatchJSON } from "@/shared/util/response.helper";
+import { dispatchSuccess } from "@/shared/util/response.helper";
 import { SuccessCodes } from "@/shared/util/response.helper";
 
-export const register: Handlers.CreateUser = async function (
-  req,
-  res,
-  _next,
-) {
+export const register: Handlers.CreateUser = async function (req, res, _next) {
   const { email, name, password } = req.body;
   const user = {
     email,
@@ -25,12 +21,16 @@ export const register: Handlers.CreateUser = async function (
     refreshToken,
   };
 
-  return dispatchJSON(responseBody, SuccessCodes.created, res);
+  return dispatchSuccess(SuccessCodes.created, res, responseBody);
 };
 
-export const refreshSession: Handlers.RechargeSession = async function (req, res, next) {
+export const refreshSession: Handlers.RechargeSession = async function (
+  req,
+  res,
+  next,
+) {
   const { refreshToken } = req.body;
   const payload = await service.rechargeJWT(refreshToken);
 
-  dispatchJSON(payload, SuccessCodes.found, res);
-}
+  return dispatchSuccess(SuccessCodes.ok, res, payload);
+};

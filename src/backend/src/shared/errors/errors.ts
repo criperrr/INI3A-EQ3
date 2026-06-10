@@ -1,27 +1,34 @@
-enum ErrorCodes {
+enum InternalErrorCodes {
   jtiConflict,
   internalDatabaseConflict,
   internalRedisConflict,
+  unknown,
 }
+
+enum ErrorCodes {}
+
+export interface ErrorItem {
+  message: string; 
+  code: string;
+  field?: string;
+}
+
 // BASIC ERROR CLASSES ---------------
-
-import { type ErrorItem } from "../util/response.helper";
-
 export abstract class ApiError extends Error {
   httpCode: number;
   textCode: string;
-  field: string;
+  field?: string;
 
   constructor(
     httpCode: number,
     textCode: string,
     message: string,
-    field: string = "NONE",
+    field?: string,
   ) {
     super(message);
     this.httpCode = httpCode;
     this.textCode = textCode;
-    this.field = field;
+    if (field) this.field = field;
   }
 }
 
@@ -39,13 +46,18 @@ export class MultipleApiError extends Error {
 
 // API GENERIC ERRORS --------------
 export class BadRequest extends ApiError {
-  constructor(message: string, textCode: string = "BAD_REQUEST") {
-    super(400, textCode, message);
+  constructor(
+    message: string,
+    textCode: string = "BAD_REQUEST",
+    scope?: string,
+  ) {
+    scope = scope?.toUpperCase();
+    super(400, textCode, `${scope ? `${scope}: ${message}` : message}`);
   }
 }
 
 export class Unauthorized extends ApiError {
-  constructor(message: string, textCode: string = "BAD_AUTHORIZATION") {
+  constructor(message: string, textCode: string = "UNAUTHORIZED") {
     super(401, textCode, message);
   }
 }
@@ -61,88 +73,114 @@ export class Conflict extends ApiError {
     super(409, textCode, message);
   }
 }
+
+export class HttpInternalServerError extends ApiError {
+  constructor(
+    message: string = "An unexpected error occurred on the server.",
+    textCode: string = "INTERNAL_SERVER_ERROR",
+  ) {
+    super(500, textCode, message);
+    this.name = "HttpInternalServerError";
+    throw new InternalSystemError(
+      this,
+      InternalErrorCodes.unknown,
+      "no message; generic error.",
+    );
+  }
+}
+
 // -------------------------------------
 
 // INTERNAL SERVER ERRORS --------------
-export class InternalError extends ApiError {
-  internalCode: ErrorCodes;
+export class InternalSystemError extends Error {
+  readonly internalMessage: string;
+  readonly internalCode: InternalErrorCodes;
+  readonly cause: Error;
+  readonly timestamp: Date;
 
-  constructor(e: Error, internalCode: ErrorCodes, message: string) {
-    super(500, "INTERNAL_ERROR", message);
+  constructor(
+    cause: Error,
+    internalCode: InternalErrorCodes,
+    internalMessage: string,
+  ) {
+    super(internalMessage, { cause });
+    this.name = new.target.name;
+    this.internalMessage = internalMessage;
     this.internalCode = internalCode;
+    this.cause = cause;
+    this.timestamp = new Date();
   }
 }
 
-export class JTIrefused extends InternalError {
-  constructor(jti: number | string, message: string = "", e?: Error) {
-    if (!e) e = new Error(message);
-    message = `JWT: ${jti} key refused`;
-    super(e, ErrorCodes.jtiConflict, message);
+export class JTIrefused extends Unauthorized {
+  readonly jti: string;
+  constructor(
+    jti: string,
+    message: string = "Token identity (JTI) has been revoked.",
+  ) {
+    super(`${message} [jti=${jti}]`, "JTI_REFUSED");
+    this.jti = jti;
   }
 }
 
-export class DatabaseInternalError extends InternalError {
+export class DatabaseInternalError extends InternalSystemError {
   constructor(message: string, e: Error = new Error()) {
-    super(e, ErrorCodes.internalDatabaseConflict, message);
+    super(e, InternalErrorCodes.internalDatabaseConflict, message);
   }
 }
 
-export class RedisInternalError extends InternalError {
+export class RedisInternalError extends InternalSystemError {
   constructor(message: string, e: Error = new Error()) {
-    super(e, ErrorCodes.internalRedisConflict, message);
+    super(e, InternalErrorCodes.internalRedisConflict, message);
   }
 }
 // -------------------------------------
 
 // FORMAT - HELPERS --------------------
 
-export function parseDatabaseError(e: any, message: string): never{
+export function parseDatabaseError(e: any, message: string): never {
   if (e && typeof e === "object" && "code" in e) {
     switch (e.code) {
       case "23505": {
         if (e.detail?.includes("email")) {
-          throw new Conflict(
-            "DATABASE: This email address is already registered.",
-          );
+          throw new Conflict("This email address is already registered.");
         }
         throw new Conflict(
-          "DATABASE: A record with these unique details already exists.",
+          "A record with these unique details already exists.",
         );
       }
 
       case "23503": {
         if (e.detail?.includes("role_id")) {
           throw new BadRequest(
-            "DATABASE: The provided role ID does not exist.",
+            "The provided role ID does not exist.",
+            "role-id",
           );
         }
-        throw new BadRequest(
-          "DATABASE: Provided relational reference is invalid.",
-        );
+        throw new BadRequest("Provided relational reference is invalid.");
       }
       case "23502": {
         const missingColumn = e.column ? ` [${e.column}]` : "";
         throw new BadRequest(
-          `DATABASE: Required field is missing or empty${missingColumn}.`,
+          `Required field is missing or empty.`,
+          missingColumn,
         );
       }
       case "22001": {
         throw new BadRequest(
-          "DATABASE: String length exceeds the maximum allowed limit for this field.",
+          "String length exceeds the maximum allowed limit for this field.",
         );
       }
       case "22P02": {
         throw new BadRequest(
-          "DATABASE: Invalid data format provided for the requested operation.",
+          "Invalid data format provided for the requested operation.",
         );
       }
       default: {
         throw new DatabaseInternalError(message);
-        }
+      }
     }
-  }
-  else throw new DatabaseInternalError(message);
-
+  } else throw new DatabaseInternalError(message);
 }
 
 // -------------------------------------

@@ -1,32 +1,42 @@
-import { ApiError, MultipleApiError, InternalError } from "../errors/errors";
-import type express from "express";
-import { multipleErrors, errorFormat } from "@/shared/util/response.helper";
+import {
+  ApiError,
+  MultipleApiError,
+  InternalSystemError,
+} from "@/shared/errors/errors";
 import type { ErrorRequestHandler } from "express";
+import { multipleErrors, failure } from "@/shared/util/response.helper";
 
 export const globalErrorHandling: ErrorRequestHandler = function (
   err,
-  req,
+  _,
   res,
-  next,
+  __,
 ) {
+  if (err instanceof MultipleApiError) {
+    return res
+      .status(err.httpCode)
+      .json(multipleErrors(err.fields, err.httpCode));
+  }
+
   if (err instanceof ApiError) {
     return res
       .status(err.httpCode)
-      .json(errorFormat(err.message, err.textCode, err.field, err.httpCode));
+      .json(failure(err.message, err.textCode, err.field, err.httpCode));
   }
 
-  if (err instanceof InternalError) {
+  if (err instanceof InternalSystemError) {
     return res
-      .status(err.httpCode)
-      .json(errorFormat(err.message, err.textCode, err.field, err.httpCode));
+      .status(500)
+      .json(
+        failure(err.internalMessage, "INTERNAL_SERVER_ERROR", undefined, 500),
+      );
   }
-
-  if (err instanceof MultipleApiError)
-    //Cria sua logica ai camaforte, fiz baseado  na minha própria classe
-
-    return res.status(err.httpCode).json(multipleErrors(err.fields));
+  
+  console.log(err)
 
   return res
     .status(500)
-    .json(errorFormat(err.message, "INTERNAL", "NONE", 500));
+    .json(
+      failure(err?.message ?? "Unexpected error", "INTERNAL", undefined, 500),
+    );
 };

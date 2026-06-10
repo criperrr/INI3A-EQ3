@@ -9,15 +9,14 @@ declare global {
     }
 
     type RefreshRecharge = RefreshInfo & {
-      oldRefreshToken: string
-    }
+      oldRefreshToken: string;
+    };
 
-    namespace Handlers{
+    namespace Handlers {
       interface RefreshInfo {
         refreshToken: string;
       }
     }
-    
   }
 
   namespace Jwt {

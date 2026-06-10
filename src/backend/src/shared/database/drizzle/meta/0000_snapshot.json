@@ -41,9 +41,7 @@
         "badge_name_key": {
           "name": "badge_name_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -85,12 +83,8 @@
           "name": "cart_user_id_fkey",
           "tableFrom": "cart",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -131,12 +125,8 @@
           "name": "cart_product_cart_id_fkey",
           "tableFrom": "cart_product",
           "tableTo": "cart",
-          "columnsFrom": [
-            "cart_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["cart_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -144,12 +134,8 @@
           "name": "cart_product_product_id_fkey",
           "tableFrom": "cart_product",
           "tableTo": "product",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -157,10 +143,7 @@
       "compositePrimaryKeys": {
         "cart_product_pkey": {
           "name": "cart_product_pkey",
-          "columns": [
-            "product_id",
-            "cart_id"
-          ]
+          "columns": ["product_id", "cart_id"]
         }
       },
       "uniqueConstraints": {},
@@ -226,12 +209,8 @@
           "name": "cured_user_id_fkey",
           "tableFrom": "cured",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -239,12 +218,8 @@
           "name": "cured_ocurrency_id_fkey",
           "tableFrom": "cured",
           "tableTo": "ocurrency",
-          "columnsFrom": [
-            "ocurrency_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ocurrency_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -252,10 +227,7 @@
       "compositePrimaryKeys": {
         "cured_pkey": {
           "name": "cured_pkey",
-          "columns": [
-            "user_id",
-            "ocurrency_id"
-          ]
+          "columns": ["user_id", "ocurrency_id"]
         }
       },
       "uniqueConstraints": {},
@@ -482,12 +454,8 @@
           "name": "ocurrency_user_id_fkey",
           "tableFrom": "ocurrency",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -495,12 +463,8 @@
           "name": "ocurrency_market_id_fkey",
           "tableFrom": "ocurrency",
           "tableTo": "market",
-          "columnsFrom": [
-            "market_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["market_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -508,12 +472,8 @@
           "name": "ocurrency_product_id_fkey",
           "tableFrom": "ocurrency",
           "tableTo": "product",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -674,9 +634,7 @@
         "role_name_key": {
           "name": "role_name_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -711,12 +669,8 @@
           "name": "role_scope_role_id_fkey",
           "tableFrom": "role_scope",
           "tableTo": "role",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -724,12 +678,8 @@
           "name": "role_scope_scope_id_fkey",
           "tableFrom": "role_scope",
           "tableTo": "scope",
-          "columnsFrom": [
-            "scope_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["scope_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -737,10 +687,7 @@
       "compositePrimaryKeys": {
         "role_scope_pkey": {
           "name": "role_scope_pkey",
-          "columns": [
-            "scope_id",
-            "role_id"
-          ]
+          "columns": ["scope_id", "role_id"]
         }
       },
       "uniqueConstraints": {},
@@ -772,9 +719,7 @@
         "scope_scope_name_key": {
           "name": "scope_scope_name_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "scope_name"
-          ]
+          "columns": ["scope_name"]
         }
       },
       "policies": {},
@@ -944,12 +889,8 @@
           "name": "user_role_id_fkey",
           "tableFrom": "user",
           "tableTo": "role",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -959,9 +900,7 @@
         "user_email_key": {
           "name": "user_email_key",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -1007,12 +946,8 @@
           "name": "user_badge_user_id_fkey",
           "tableFrom": "user_badge",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1020,12 +955,8 @@
           "name": "user_badge_badge_id_fkey",
           "tableFrom": "user_badge",
           "tableTo": "badge",
-          "columnsFrom": [
-            "badge_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["badge_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1033,10 +964,7 @@
       "compositePrimaryKeys": {
         "user_badge_pkey": {
           "name": "user_badge_pkey",
-          "columns": [
-            "user_id",
-            "badge_id"
-          ]
+          "columns": ["user_id", "badge_id"]
         }
       },
       "uniqueConstraints": {},
@@ -1059,12 +987,7 @@
     "public.status_rec": {
       "name": "status_rec",
       "schema": "public",
-      "values": [
-        "SAT",
-        "INS",
-        "NC",
-        "NAC"
-      ]
+      "values": ["SAT", "INS", "NC", "NAC"]
     }
   },
   "schemas": {},

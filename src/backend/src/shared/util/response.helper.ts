@@ -1,95 +1,68 @@
-export interface ErrorItem {
-  message: string;
-  code: string;
-  field?: string;
-}
+import type { ErrorItem } from "../errors/errors";
+import type {
+  ApiMultipleErrors,
+  ApiSuccess,
+  ApiFailure,
+} from "../types/apiResponse";
 
-export enum SuccessCodes {
-  created = 201,
-  found = 200,
-  ok = 200,
-  noResponse = 204,
-}
+export { SuccessCodes } from "../types/apiResponse";
+export type {
+  ApiSuccess,
+  ApiFailure,
+  ApiMultipleErrors,
+  ApiResponse,
+} from "../types/apiResponse";
 
 export function multipleErrors(
   errors: ErrorItem[],
   status: number = 400,
-): ApiFailure {
+): ApiMultipleErrors {
   if (!errors || errors.length === 0) {
     throw new Error("At least one error must be provided");
   }
 
-  const firstError = errors[0];
-  if (!firstError) {
-    throw new Error("Invalid error object");
-  }
-
-  const response: ApiFailure = {
-    status,
+  return {
     success: false,
-    message: firstError.message,
-    code: firstError.code,
+    status,
     errors,
   };
-
-  if (firstError.field) {
-    response.field = firstError.field;
-  }
-
-  return response;
 }
 
-export function success<T = any>(data?: T): ApiSuccess<T> {
+export function failure(
+  message: string,
+  textCode: string,
+  field?: string,
+  status: number = 400,
+): ApiFailure {
+  return {
+    success: false,
+    status,
+    message,
+    textCode,
+    ...(field && { field }), 
+  };
+}
+
+// nao precisa de dispatch failure pq o error handler meio que faz o trabalho de montar a resposta ja
+export function success<T = any>(code: number, data?: T): ApiSuccess<T> {
   if (data === undefined) {
     return {
-      status: 200,
+      status: code,
       success: true,
     } as ApiSuccess<T>;
   }
 
   return {
-    status: 200,
+    status: code,
     success: true,
     data,
   };
 }
 
-export function singleError(
-  message: string,
-  code: string,
-  field?: string,
-  status: number = 400,
-): ApiFailure {
-  return failure([{ message, code, ...(field && { field }) }], status);
-}
-
-export function errorFormat(
-  message: string,
-  textCode: string,
-  field: string,
-  status: number  = 400
-):ApiFail {
-  return {
-    success: false,
-    error: {
-      field,
-      message,
-      textCode
-    },
-    status
-  }
-}
-
-export function dispatchJSON(
-  data: any,
-  code: SuccessCodes,
+export function dispatchSuccess<T = any>(
+  code: number,
   res: import("express").Response,
+  data?: T,
 ) {
-  const dispatchObj = {
-    success: true,
-    data,
-    code,
-  };
-
-  return res.status(code).json(dispatchObj);
+  return res.status(code).json(success<T>(code, data));
 }

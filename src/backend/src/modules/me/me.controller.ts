@@ -1,14 +1,12 @@
 import type express from "express";
-import { BadRequest, Unauthorized } from "@/shared/errors/errors";
 import * as service from "./me.service";
-import { dispatchJSON } from "@/shared/util/response.helper";
+import { dispatchSuccess } from "@/shared/util/response.helper";
 import { SuccessCodes } from "@/shared/util/response.helper";
 
 /**
  * ADICIONAR VALIDAÇÃO DE BODY, A MAIORIA DOS ERROS DE BAD REQUEST CAEM DE FORMA GENERICA,
  * JA BAIXEI O ZOD, QUANDO TIVERMOS TEMPO É SÓ CRIAR UM ARQUIVO .type-secure.ts (é um exemplo de nome só)
  */
-
 
 export async function deleteMySession(
   req: express.Request,
@@ -17,13 +15,15 @@ export async function deleteMySession(
 ) {
   const userId = req.user.id;
 
-  if(typeof userId !== 'number')
-
-  await service.deleteSession(userId);
-  return dispatchJSON({}, SuccessCodes.noResponse, res);
+  if (typeof userId !== "number") await service.deleteSession(userId);
+  return dispatchSuccess(SuccessCodes.noContent, res);
 }
 
-export const updateMySession: Handlers.UpdateUser = async function (req, res, next) {
+export const updateMySession: Handlers.UpdateUser = async function (
+  req,
+  res,
+  next,
+) {
   const id = req.user.id;
   const { email, password, name, birthdate, location } = req.body;
   const userReturned = await service.updateSession(id, {
@@ -33,7 +33,7 @@ export const updateMySession: Handlers.UpdateUser = async function (req, res, ne
     birthdate,
     location,
   });
-  return dispatchJSON(userReturned, SuccessCodes.ok, res);
+  return dispatchSuccess(SuccessCodes.ok, res, userReturned);
 };
 
 export async function getMySession(
@@ -44,5 +44,5 @@ export async function getMySession(
   const id = req.user.id;
   const userReturned = await service.getMe(id);
 
-  return dispatchJSON(userReturned, SuccessCodes.found, res);
-};
+  return dispatchSuccess(SuccessCodes.ok, res, userReturned);
+}

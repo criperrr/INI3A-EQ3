@@ -1,9 +1,9 @@
 import type express from "express";
 
-import { BadRequest, Unauthorized } from "../../shared/errors/errors";
+import { BadRequest, Unauthorized } from "@/shared/errors/errors";
 import * as service from "./auth.service";
-import { dispatchJSON } from "../../shared/util/response.helper";
-import { SuccessCodes } from "../../shared/util/response.helper";
+import { dispatchSuccess } from "@/shared/util/response.helper";
+import { SuccessCodes } from "@/shared/util/response.helper";
 
 function temp() {}
 
@@ -26,4 +26,3 @@ export async function authenticateSession(
   req.user = payload;
   return next();
 }
-
