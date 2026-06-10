@@ -27,6 +27,10 @@ interface HandlerUpdateUserStrictDTO {
   location: string
 }
 
+/***
+ * A MAIORIA DOS HANDLERS IRÃO DESAPARECER APÓS USARMOS O ZOD
+ */
+
 type HandlerUpdateUserDTO = AtLeastOne<HandlerUpdateUserStrictDTO>;
 
 interface UpdateUserStrictDTO {
@@ -44,3 +48,10 @@ interface UserDTO {
   role_id: number;
   location: Point;
 }
+
+interface CreateMarketDTO{
+  name: string,
+  location: Point
+}
+
+type UpdateMarketDTO = CreateMarketDTO

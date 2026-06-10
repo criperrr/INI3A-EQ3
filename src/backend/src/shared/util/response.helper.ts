@@ -63,6 +63,23 @@ export function singleError(
   return failure([{ message, code, ...(field && { field }) }], status);
 }
 
+export function errorFormat(
+  message: string,
+  textCode: string,
+  field: string,
+  status: number  = 400
+):ApiFail {
+  return {
+    success: false,
+    error: {
+      field,
+      message,
+      textCode
+    },
+    status
+  }
+}
+
 export function dispatchJSON(
   data: any,
   code: SuccessCodes,

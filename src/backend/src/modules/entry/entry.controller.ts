@@ -5,37 +5,32 @@ import * as service from "./entry.service";
 import { dispatchJSON } from "../../shared/util/response.helper";
 import { SuccessCodes } from "../../shared/util/response.helper";
 
-
-export async function deleteMySession(
-  req: express.Request,
-  res: express.Response,
-  _next: Function,
+export const register: Handlers.CreateUser = async function (
+  req,
+  res,
+  _next,
 ) {
-  const userId = req.user.id;
-  await service.deleteSession(userId);
-  return dispatchJSON({}, SuccessCodes.noResponse, res);
-}
-
-export const updateMySession: Handlers.UpdateUser = async function (req, res, next) {
-  const id = req.user.id;
-  const { email, password, name, birthdate, location } = req.body;
-  const userReturned = await service.updateSession(id, {
+  const { email, name, password } = req.body;
+  const user = {
     email,
-    password,
     name,
-    birthdate,
-    location,
-  });
-  return dispatchJSON(userReturned, SuccessCodes.ok, res);
+    password,
+  };
+
+  const { userReturned, jwt, refreshToken } = await service.register(user);
+
+  const responseBody = {
+    user: userReturned,
+    jwt,
+    refreshToken,
+  };
+
+  return dispatchJSON(responseBody, SuccessCodes.created, res);
 };
 
-export async function getMySession(
-  req: express.Request,
-  res: express.Response,
-  _next: Function,
-) {
-  const id = req.user.id;
-  const userReturned = await service.getMe(id);
+export const refreshSession: Handlers.RechargeSession = async function (req, res, next) {
+  const { refreshToken } = req.body;
+  const payload = await service.rechargeJWT(refreshToken);
 
-  return dispatchJSON(userReturned, SuccessCodes.found, res);
-};
+  dispatchJSON(payload, SuccessCodes.found, res);
+}

@@ -14,13 +14,13 @@ export const statusRec = pgEnum("status_rec", ['SAT', 'INS', 'NC', 'NAC'])
 //Query Builder não sendo necessário criar uma query GIGANTE.
 
 
-export const geography = customType<{ data: Point }>({
-    dataType() {
-        return 'geography'; 
-    },
-    toDriver(point: Point): string {
-        return `SRID=4326;POINT(${point.lng} ${point.lat})`;
-    }
+export const geography = customType<{ data: Point; driverData: string }>({
+  dataType() {
+    return "geography";
+  },
+  toDriver(point: Point): string {
+    return `SRID=4326;POINT(${point.lng} ${point.lat})`;
+  },
 });
 
 // ****************************
