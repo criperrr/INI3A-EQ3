@@ -1,41 +1,20 @@
+import jwt from "jsonwebtoken";
+import { JTIrefused, Unauthorized } from "@/shared/errors/errors";
+import { verifyJTI } from "@/shared/redis/server";
 
+export async function authenticateSession(token: string) {
+  const secret = process.env.JWT_SECRET;
 
-// !REFACTOR
+  let payload: Jwt.JwtPayload;
+  try {
+    payload = jwt.verify(token, secret as string) as Jwt.JwtPayload;
+  } catch {
+    throw new Unauthorized("Invalid or expired token.", "INVALID_TOKEN");
+  }
 
-/**
- * 200-300 (OK)
- * {succes:true, data: { ... }, textCode: CONSTANT}
- * 
- * 400+ (OK)
- * {success:false, error: { ... }, textCode: CONSTANT}
- * 
- */
+  const jti = String(payload.jti);
+  const isValid = await verifyJTI(jti);
+  if (!isValid) throw new JTIrefused(jti);
 
-import type { LoginCredentials } from '../../shared/errors/errors';
-import { BadAuthorizationError, BadRequestError } from '../../shared/errors/errors';
-import type { Response, Request } from 'express';
-
-async function normalizeLogin(req: Request, res: Response, next: Function) {
-    const keys: Array<string> = ['name', 'password'];
-    let obj: LoginCredentials = {} as LoginCredentials;
-    keys.forEach(el => {
-        const reqValue = req.body[el]
-        if (!reqValue) throw new BadRequestError(`expected: ${el} in json body.`);
-        obj[el as keyof LoginCredentials] = reqValue;
-    });
-    req.body = obj;
-
-    return next();
-}
-
-async function login(req: Request, res: Response, next: Function) {
-    if (!req.headers.authorization) throw new BadAuthorizationError('expected authorization field.');
-    const bruteToken = req.headers.authorization.split(' ');
-    let token: string = '';
-    if (bruteToken.length > 1) {
-        if(bruteToken[1])
-        token = bruteToken[1];
-    }
-    else if (bruteToken.length === 1) if(bruteToken[0]) token = bruteToken[0];
-    else throw new BadRequestError('expected valid bearer structure.');
+  return payload;
 }

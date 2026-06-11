@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1781143667875,
+      "tag": "0000_wide_hitman",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781143673297,
+      "tag": "0001_fix_postgis_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781145792323,
+      "tag": "0002_empty_timeslip",
+      "breakpoints": true
+    }
+  ]
+}

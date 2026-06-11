@@ -3,16 +3,24 @@
   "version": "1.0.0",
   "type": "module",
   "dependencies": {
+    "@libsql/client": "^0.17.3",
+    "@types/redis": "^4.0.10",
+    "bcrypt": "^6.0.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.20.0"
+    "pg": "^8.21.0",
+    "redis": "^6.0.0",
+    "zod": "^4.4.3"
   },
   "scripts": {
-    "dev": "tsx --watch ./src/app.ts"
+    "dev": "tsx --watch ./src/server.ts",
+    "start": "tsx ./src/server.ts",
+    "db:migrate": "tsx ./src/shared/database/migrate.ts"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.20.0",

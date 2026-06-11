@@ -1,9 +1,12 @@
 import { Router } from "express";
+<<<<<<< HEAD
 import type { Request, Response } from "express";
+=======
+import * as controller from "./auth.controller";
+
+>>>>>>> tests
 const r = Router();
 
-r.get("/login", (req: Request, res: Response) => {
-    res.status(200).json({ message: "not implemented" });
-});
+r.use(controller.authenticateSession);
 
 export default r;

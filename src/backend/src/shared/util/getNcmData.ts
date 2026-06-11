@@ -5,42 +5,42 @@
  * Interface para dados brutos retornados pela API SEFAZ
  */
 interface RawNcmData {
-    TIPO_ATO_INI: string;
-    NUMERO_ATO_INI: string;
-    ANO_ATO_INI: string;
-    DATA_INICIO: string;
-    DATA_FIM: string;
-    [key: string]: string;
+  TIPO_ATO_INI: string;
+  NUMERO_ATO_INI: string;
+  ANO_ATO_INI: string;
+  DATA_INICIO: string;
+  DATA_FIM: string;
+  [key: string]: string;
 }
 
 /**
  * Interface para dados processados de NCM (Nomenclatura Comum do MERCOSUL)
  */
 export interface ProcessedNcmData {
-    [key: string]: string | number | boolean;
-    data_inicio: string;
-    data_fim: string;
-    tipo_ato: string;
-    numero_ato: string;
-    ano_ato: string;
-    codigo: string;
-    descricao: string;
+  [key: string]: string | number | boolean;
+  data_inicio: string;
+  data_fim: string;
+  tipo_ato: string;
+  numero_ato: string;
+  ano_ato: string;
+  codigo: string;
+  descricao: string;
 }
 
 /**
  * Interface para resposta da API SEFAZ
  */
 interface SefazApiResponse {
-    Nomenclaturas: RawNcmData[];
+  Nomenclaturas: RawNcmData[];
 }
 
 /**
  * Interface para opções de busca
  */
 interface SearchOptions {
-    term: string;
-    searchInDescription?: boolean;
-    searchInCode?: boolean;
+  term: string;
+  searchInDescription?: boolean;
+  searchInCode?: boolean;
 }
 
 /**
@@ -49,8 +49,8 @@ interface SearchOptions {
  * @returns Data formatada em YYYY-MM-DD
  */
 const formatDate = (date: string): string => {
-    const newDate = new Date(date.split("/").reverse().join("/"));
-    return newDate.toISOString().slice(0, 10);
+  const newDate = new Date(date.split("/").reverse().join("/"));
+  return newDate.toISOString().slice(0, 10);
 };
 
 /**
@@ -59,11 +59,11 @@ const formatDate = (date: string): string => {
  * @returns Objeto com chaves em lowercase
  */
 const convertKeysToLowerCase = (
-    obj: Record<string, string>,
+  obj: Record<string, string>,
 ): Record<string, string> => {
-    return Object.fromEntries(
-        Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]),
-    );
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]),
+  );
 };
 
 /**
@@ -72,25 +72,25 @@ const convertKeysToLowerCase = (
  * @returns Dados processados e normalizados
  */
 const parseObject = (obj: RawNcmData): ProcessedNcmData => {
-    const normalized = convertKeysToLowerCase(obj);
+  const normalized = convertKeysToLowerCase(obj);
 
-    const {
-        tipo_ato_ini: tipoAtoIni,
-        numero_ato_ini: numeroAtoIni,
-        ano_ato_ini: anoAtoIni,
-        data_inicio: dataInicio,
-        data_fim: dataFim,
-        ...rest
-    } = normalized;
+  const {
+    tipo_ato_ini: tipoAtoIni,
+    numero_ato_ini: numeroAtoIni,
+    ano_ato_ini: anoAtoIni,
+    data_inicio: dataInicio,
+    data_fim: dataFim,
+    ...rest
+  } = normalized;
 
-    return {
-        ...rest,
-        data_inicio: formatDate(dataInicio as string ),
-        data_fim: formatDate(dataFim as string),
-        tipo_ato: tipoAtoIni,
-        numero_ato: numeroAtoIni,
-        ano_ato: anoAtoIni,
-    } as ProcessedNcmData;
+  return {
+    ...rest,
+    data_inicio: formatDate(dataInicio as string),
+    data_fim: formatDate(dataFim as string),
+    tipo_ato: tipoAtoIni,
+    numero_ato: numeroAtoIni,
+    ano_ato: anoAtoIni,
+  } as ProcessedNcmData;
 };
 
 /**
@@ -99,21 +99,21 @@ const parseObject = (obj: RawNcmData): ProcessedNcmData => {
  * @throws Error se houver falha na requisição
  */
 const fetchNcmListFromSefaz = async (): Promise<ProcessedNcmData[]> => {
-    const url =
-        "https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json";
+  const url =
+    "https://portalunico.siscomex.gov.br/classif/api/publico/nomenclatura/download/json";
 
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`Erro na requisição SEFAZ: ${response.statusText}`);
-        }
-        const body: SefazApiResponse = await response.json();
-        return body.Nomenclaturas.map(parseObject);
-    } catch (error) {
-        throw new Error(
-            `Falha ao buscar dados NCM: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-        );
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erro na requisição SEFAZ: ${response.statusText}`);
     }
+    const body: SefazApiResponse = await response.json();
+    return body.Nomenclaturas.map(parseObject);
+  } catch (error) {
+    throw new Error(
+      `Falha ao buscar dados NCM: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+    );
+  }
 };
 
 /**
@@ -123,10 +123,10 @@ const fetchNcmListFromSefaz = async (): Promise<ProcessedNcmData[]> => {
  * @returns Verdadeiro se encontrado
  */
 const searchByDescription = (
-    description: string,
-    searchTerm: string,
+  description: string,
+  searchTerm: string,
 ): boolean => {
-    return String(description).toLowerCase().includes(searchTerm.toLowerCase());
+  return String(description).toLowerCase().includes(searchTerm.toLowerCase());
 };
 
 /**
@@ -136,7 +136,7 @@ const searchByDescription = (
  * @returns Verdadeiro se encontrado
  */
 const searchByCode = (code: string, searchTerm: string): boolean => {
-    return code.replace(/\D/g, "").startsWith(searchTerm.replace(/[,.]/, ""));
+  return code.replace(/\D/g, "").startsWith(searchTerm.replace(/[,.]/, ""));
 };
 
 /**
@@ -144,7 +144,7 @@ const searchByCode = (code: string, searchTerm: string): boolean => {
  * @returns Array de dados NCM processados
  */
 export const getNcmData = async (): Promise<ProcessedNcmData[]> => {
-    return await fetchNcmListFromSefaz();
+  return await fetchNcmListFromSefaz();
 };
 
 /**
@@ -154,56 +154,54 @@ export const getNcmData = async (): Promise<ProcessedNcmData[]> => {
  * @returns Array de NCMs filtrados e tempo de execução
  */
 export const searchNcmData = async (
-    searchTerm?: string,
-    options?: Partial<SearchOptions>,
+  searchTerm?: string,
+  options?: Partial<SearchOptions>,
 ): Promise<{
-    data: ProcessedNcmData[];
-    executionTimeMs: number;
+  data: ProcessedNcmData[];
+  executionTimeMs: number;
 }> => {
-    const startTime = Date.now();
+  const startTime = Date.now();
 
-    try {
-        let ncmData = await getNcmData();
+  try {
+    let ncmData = await getNcmData();
 
-        if (searchTerm && searchTerm.trim()) {
-            const searchInDescription = options?.searchInDescription !== false;
-            const searchInCode = options?.searchInCode !== false;
+    if (searchTerm && searchTerm.trim()) {
+      const searchInDescription = options?.searchInDescription !== false;
+      const searchInCode = options?.searchInCode !== false;
 
-            ncmData = ncmData.filter((ncm) => {
-                let matches = false;
+      ncmData = ncmData.filter((ncm) => {
+        let matches = false;
 
-                if (searchInDescription && ncm.descricao) {
-                    matches =
-                        matches ||
-                        searchByDescription(String(ncm.descricao), searchTerm);
-                }
-
-                if (searchInCode && ncm.codigo) {
-                    matches =
-                        matches || searchByCode(String(ncm.codigo), searchTerm);
-                }
-
-                return matches;
-            });
+        if (searchInDescription && ncm.descricao) {
+          matches =
+            matches || searchByDescription(String(ncm.descricao), searchTerm);
         }
 
-        const executionTimeMs = Date.now() - startTime;
+        if (searchInCode && ncm.codigo) {
+          matches = matches || searchByCode(String(ncm.codigo), searchTerm);
+        }
 
-        return {
-            data: ncmData,
-            executionTimeMs,
-        };
-    } catch (error) {
-        throw new Error(
-            `Erro ao buscar dados NCM: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
-        );
+        return matches;
+      });
     }
+
+    const executionTimeMs = Date.now() - startTime;
+
+    return {
+      data: ncmData,
+      executionTimeMs,
+    };
+  } catch (error) {
+    throw new Error(
+      `Erro ao buscar dados NCM: ${error instanceof Error ? error.message : "Erro desconhecido"}`,
+    );
+  }
 };
 
 /**
  * Exporta as funções de busca para uso em outros módulos
  */
 export const ncmUtils = {
-    searchByDescription,
-    searchByCode,
+  searchByDescription,
+  searchByCode,
 };
