@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -6,27 +6,76 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { searchProducts, type Product } from "../services/productService";
 
-const MOCK_SEARCH_PRODUCTS = [
-  { id: 1, name: "Maçã Gala 1kg", price: "R$ 8,99" },
-  { id: 2, name: "Arroz Agulhinha", price: "R$ 25,90" },
-  { id: 3, name: "Arroz Agulhinha", price: "R$ 25,90" },
-  { id: 4, name: "Sabão Líquido 1L", price: "R$ 14,90" },
-  { id: 5, name: "Detergente Neutro", price: "R$ 2,99" },
-  { id: 6, name: "Água Sanitária 2L", price: "R$ 5,49" },
-];
+const COLORS = {
+  vibrantBlue: "#0062CC",
+  error: "#DC2626",
+};
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const router = useRouter();
   const { themeStyles } = useTheme();
 
-  const handleProductPress = () => {
-    router.push("/productDetails");
+  /**
+   * Função de busca com debounce de 300ms conforme PRD (F3).
+   * Cancela o timer anterior a cada nova digitação.
+   */
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchText(text);
+    setError(null);
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    if (!text.trim()) {
+      setProducts([]);
+      setHasSearched(false);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const results = await searchProducts({ q: text.trim() });
+        setProducts(results);
+        setHasSearched(true);
+      } catch {
+        setError("Erro ao buscar produtos. Tente novamente.");
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }, 300);
+  }, []);
+
+  // Limpa o timer ao desmontar
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  const handleProductPress = (product: Product) => {
+    router.push({
+      pathname: "/productDetails",
+      params: { id: product.id, name: product.name },
+    });
   };
 
   return (
@@ -34,12 +83,48 @@ export default function SearchScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <SearchBar value={searchText} onChangeText={setSearchText} />
-        <ProductResultsGrid
-          products={MOCK_SEARCH_PRODUCTS}
-          onProductPress={handleProductPress}
-        />
+        <SearchBar value={searchText} onChangeText={handleSearchChange} />
+
+        {isLoading && (
+          <View style={styles.centerContent}>
+            <ActivityIndicator size="small" color={COLORS.vibrantBlue} />
+          </View>
+        )}
+
+        {error && !isLoading && (
+          <View style={styles.centerContent}>
+            <Ionicons
+              name="alert-circle-outline"
+              size={32}
+              color={COLORS.error}
+            />
+            <Text style={[styles.emptyText, { color: COLORS.error }]}>
+              {error}
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && !error && hasSearched && products.length === 0 && (
+          <View style={styles.centerContent}>
+            <Ionicons
+              name="search-outline"
+              size={48}
+              color={themeStyles.subText.color}
+            />
+            <Text style={[styles.emptyText, themeStyles.subText]}>
+              Nenhum produto encontrado para "{searchText}"
+            </Text>
+          </View>
+        )}
+
+        {!isLoading && products.length > 0 && (
+          <ProductResultsGrid
+            products={products}
+            onProductPress={handleProductPress}
+          />
+        )}
       </ScrollView>
     </View>
   );
@@ -69,11 +154,18 @@ const SearchBar = ({
       />
       <TextInput
         style={[styles.searchInput, themeStyles.text]}
-        placeholder="Buscar produto..."
+        placeholder="Buscar produto por nome ou EAN..."
         placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={onChangeText}
+        autoFocus={false}
+        returnKeyType="search"
       />
+      {value.length > 0 && (
+        <TouchableOpacity onPress={() => onChangeText("")}>
+          <Ionicons name="close-circle" size={18} color={placeholderColor} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -82,10 +174,15 @@ const ProductResultsGrid = ({
   products,
   onProductPress,
 }: {
-  products: typeof MOCK_SEARCH_PRODUCTS;
-  onProductPress: () => void;
+  products: Product[];
+  onProductPress: (product: Product) => void;
 }) => {
   const { themeStyles, isDark } = useTheme();
+
+  const formatPrice = (price?: number | null) => {
+    if (price == null) return "Ver preços";
+    return `R$ ${Number(price).toFixed(2).replace(".", ",")}`;
+  };
 
   return (
     <View style={styles.gridContainer}>
@@ -94,7 +191,7 @@ const ProductResultsGrid = ({
           key={product.id}
           style={[styles.productCard, themeStyles.card, themeStyles.border]}
           activeOpacity={0.8}
-          onPress={onProductPress}
+          onPress={() => onProductPress(product)}
         >
           <View style={[styles.productImagePlaceholder, themeStyles.inputBg]}>
             <Ionicons
@@ -111,9 +208,17 @@ const ProductResultsGrid = ({
             >
               {product.name}
             </Text>
-            <Text style={[styles.productPrice, themeStyles.text]}>
-              {product.price}
+            <Text style={[styles.productPrice, { color: COLORS.vibrantBlue }]}>
+              {formatPrice(product.best_price)}
             </Text>
+            {product.market_name && (
+              <Text
+                style={[styles.marketName, themeStyles.subText]}
+                numberOfLines={1}
+              >
+                {product.market_name}
+              </Text>
+            )}
           </View>
         </TouchableOpacity>
       ))}
@@ -141,6 +246,17 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, height: "100%" },
+  centerContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    maxWidth: 280,
+  },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -174,5 +290,13 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     minHeight: 36,
   },
-  productPrice: { fontSize: 15, fontWeight: "bold" },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  marketName: {
+    fontSize: 11,
+    marginTop: 2,
+    textAlign: "center",
+  },
 });

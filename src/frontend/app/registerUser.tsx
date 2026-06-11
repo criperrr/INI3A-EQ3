@@ -9,14 +9,18 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useAuth } from "../context/AuthContext";
+import { ApiRequestError } from "../services/api";
 
 const COLORS = {
   vibrantBlue: "#0062CC",
   white: "#FFFFFF",
+  error: "#DC2626",
 };
 
 const DEFAULT_AVATAR =
@@ -25,21 +29,56 @@ const DEFAULT_AVATAR =
 export default function RegisterUser() {
   const router = useRouter();
   const { themeStyles } = useTheme();
+  const { register } = useAuth();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSaveUser = () => {
-    if (password !== confirmPassword) {
-      console.log("As senhas não coincidem!");
+  const clearError = () => setError(null);
+
+  const handleSaveUser = async () => {
+    if (!name.trim() || !email.trim() || !password) {
+      setError("Preencha todos os campos.");
       return;
     }
-    console.log("Mock Cadastro efetuado com sucesso!");
-    router.push("/profile");
+
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await register(name.trim(), email.trim(), password);
+      router.replace("/");
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        if (err.status === 409) {
+          setError("Este e-mail já está cadastrado.");
+        } else if (err.status === 400) {
+          setError(err.message || "Dados inválidos. Verifique os campos.");
+        } else {
+          setError(err.message || "Erro ao cadastrar. Tente novamente.");
+        }
+      } else {
+        setError("Erro de conexão. Verifique sua internet.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoToLogin = () => {
@@ -71,20 +110,20 @@ export default function RegisterUser() {
             icon="person-outline"
             placeholder="Nome Completo"
             value={name}
-            onChangeText={setName}
+            onChangeText={(t: string) => { setName(t); clearError(); }}
           />
           <InputField
             icon="mail-outline"
             placeholder="Seu e-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t: string) => { setEmail(t); clearError(); }}
             keyboardType="email-address"
           />
 
           <PasswordField
             placeholder="Crie uma senha"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t: string) => { setPassword(t); clearError(); }}
             showPassword={showPassword}
             toggleShowPassword={() => setShowPassword(!showPassword)}
           />
@@ -92,19 +131,35 @@ export default function RegisterUser() {
           <PasswordField
             placeholder="Confirme sua senha"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(t: string) => { setConfirmPassword(t); clearError(); }}
             showPassword={showConfirmPassword}
             toggleShowPassword={() =>
               setShowConfirmPassword(!showConfirmPassword)
             }
           />
 
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color={COLORS.error}
+              />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleSaveUser}
+            disabled={isLoading}
           >
-            <Text style={styles.saveButtonText}>Cadastrar</Text>
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.saveButtonText}>Cadastrar</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -278,6 +333,18 @@ const styles = StyleSheet.create({
   inputIcon: { marginRight: 12 },
   input: { flex: 1, fontSize: 16, height: "100%" },
   eyeIcon: { padding: 8 },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    flex: 1,
+  },
   saveButton: {
     backgroundColor: COLORS.vibrantBlue,
     height: 56,
@@ -290,6 +357,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: COLORS.white,

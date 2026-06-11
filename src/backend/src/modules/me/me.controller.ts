@@ -1,7 +1,7 @@
 import type express from "express";
+import type { NextFunction } from "express";
 import * as service from "./me.service";
-import { dispatchSuccess } from "@/shared/util/response.helper";
-import { SuccessCodes } from "@/shared/util/response.helper";
+import { dispatchSuccess, SuccessCodes } from "@/shared/util/response.helper";
 
 /**
  * ADICIONAR VALIDAÇÃO DE BODY, A MAIORIA DOS ERROS DE BAD REQUEST CAEM DE FORMA GENERICA,
@@ -11,11 +11,11 @@ import { SuccessCodes } from "@/shared/util/response.helper";
 export async function deleteMySession(
   req: express.Request,
   res: express.Response,
-  _next: Function,
+  _next: NextFunction,
 ) {
   const userId = req.user.id;
 
-  if (typeof userId !== "number") await service.deleteSession(userId);
+  if (typeof userId === "number") await service.deleteSession(userId);
   return dispatchSuccess(SuccessCodes.noContent, res);
 }
 
@@ -39,7 +39,7 @@ export const updateMySession: Handlers.UpdateUser = async function (
 export async function getMySession(
   req: express.Request,
   res: express.Response,
-  _next: Function,
+  _next: NextFunction,
 ) {
   const id = req.user.id;
   const userReturned = await service.getMe(id);

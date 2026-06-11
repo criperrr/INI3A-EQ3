@@ -9,7 +9,7 @@ export async function createMarket(market: CreateMarketRequest) {
     return (await repository.createMarket(market))[0];
   }
   catch (e) {
-    if (!(e instanceof ApiError)) throw e;
+    if (e instanceof ApiError) throw e;
     throw new DatabaseInternalError('market was not created');
   }
 }

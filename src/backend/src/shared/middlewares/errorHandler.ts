@@ -32,11 +32,16 @@ export const globalErrorHandling: ErrorRequestHandler = function (
       );
   }
   
-  console.log(err)
+  console.error(err);
 
   return res
     .status(500)
     .json(
-      failure(err?.message ?? "Unexpected error", "INTERNAL", undefined, 500),
+      failure(
+        "An unexpected error occurred on the server.",
+        "INTERNAL_SERVER_ERROR",
+        undefined,
+        500,
+      ),
     );
 };

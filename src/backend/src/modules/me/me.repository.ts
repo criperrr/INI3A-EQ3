@@ -23,15 +23,14 @@ export async function deleteUser(id: string | number) {
   return (await db.delete(User).where(eq(User.id, Number(id)))).rowCount;
 }
 
-//sem credenciais
 export async function getUser(id: string | number) {
   return db
     .select({
       id: User.id,
       name: User.name,
-      email: User.name,
+      email: User.email,
       birthdate: User.birthdate,
-      location: sql`ST_AsGeoJson(${User.location})`,
+      location: sql`ST_AsGeoJSON(${User.location})`,
     })
     .from(User)
     .where(eq(User.id, Number(id)));

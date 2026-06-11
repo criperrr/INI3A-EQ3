@@ -4,8 +4,14 @@ import { connectRedis } from "./shared/redis/server";
 
 const PORT = process.env.SERVER_PORT || 3333;
 
-app.listen(PORT, async () => {
-  console.log("listening to " + PORT);
-  console.log("Connecting to redis");
+async function bootstrap() {
   await connectRedis();
+  app.listen(Number(PORT), "0.0.0.0", () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}
+
+bootstrap().catch((err) => {
+  console.error("Fatal error on startup:", err);
+  process.exit(1);
 });

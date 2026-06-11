@@ -8,26 +8,59 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useAuth } from "../context/AuthContext";
+import { ApiRequestError } from "../services/api";
 
 const COLORS = {
   vibrantBlue: "#0062CC",
   white: "#FFFFFF",
+  error: "#DC2626",
 };
 
 export default function LoginScreen() {
   const router = useRouter();
   const { themeStyles, isDark } = useTheme();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = () => {
-    console.log("Mock Login efetuado com sucesso!");
-    router.replace("/");
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError("Preencha e-mail e senha.");
+      return;
+    }
+
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await login(email.trim(), password);
+      router.replace("/");
+    } catch (err) {
+      if (err instanceof ApiRequestError) {
+        if (
+          err.textCode === "INVALID_CREDENTIALS" ||
+          err.status === 401
+        ) {
+          setError("E-mail ou senha incorretos.");
+        } else {
+          setError(err.message || "Erro ao fazer login. Tente novamente.");
+        }
+      } else {
+        setError("Erro de conexão. Verifique sua internet.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoToRegister = () => {
@@ -57,7 +90,10 @@ export default function LoginScreen() {
             icon="mail-outline"
             placeholder="Seu e-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(t: string) => {
+              setEmail(t);
+              setError(null);
+            }}
             keyboardType="email-address"
             themeStyles={themeStyles}
             isDark={isDark}
@@ -65,23 +101,42 @@ export default function LoginScreen() {
 
           <PasswordField
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(t: string) => {
+              setPassword(t);
+              setError(null);
+            }}
             showPassword={showPassword}
             toggleShowPassword={() => setShowPassword(!showPassword)}
             themeStyles={themeStyles}
             isDark={isDark}
           />
 
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons
+                name="alert-circle-outline"
+                size={16}
+                color={COLORS.error}
+              />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+
           <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
             <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleLogin}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>Entrar</Text>
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -226,6 +281,18 @@ const styles = StyleSheet.create({
   eyeIcon: {
     padding: 8,
   },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: 13,
+    flex: 1,
+  },
   forgotPassword: {
     alignSelf: "flex-end",
     marginBottom: 24,
@@ -246,6 +313,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: COLORS.white,

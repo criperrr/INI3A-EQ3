@@ -1,16 +1,12 @@
 import { createClient } from "redis";
-import { LibSQLSession } from "drizzle-orm/libsql";
-import type { Jwt } from "jsonwebtoken";
+
 
 const redisClient = createClient({
   url: process.env.REDIS_URL || "redis://localhost:6379",
-  socket: {
-    tls: true,
-  },
 });
 
 redisClient.on("error", (e) => {
-  console.log("REDIS: Error on redis connection.", e);
+  console.error("REDIS: Error on redis connection.", e);
   process.exit(1);
 });
 
@@ -29,7 +25,7 @@ async function invalidateJWT(target: Jwt.JwtInvalidateInfo): Promise<void> {
 }
 
 async function verifyJTI(jti: string): Promise<number> {
-  return redisClient.exists(jti);
+  return redisClient.exists(`blacklist:${jti}`);
 }
 
 async function setRefreshToken(
@@ -48,7 +44,9 @@ async function setRefreshToken(
   } else await redisClient.set(`refresh:${token}`, id, { EX: ex });
 }
 
-async function destroyRefreshToken(refreshToken: string) {}
+async function destroyRefreshToken(refreshToken: string) {
+  await redisClient.del(`refresh:${refreshToken}`);
+}
 
 async function getUserIdByRefreshToken(refreshToken: string) {
   return redisClient.get(`refresh:${refreshToken}`);
@@ -61,4 +59,5 @@ export {
   verifyJTI,
   setRefreshToken,
   getUserIdByRefreshToken,
+  destroyRefreshToken,
 };

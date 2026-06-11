@@ -1,16 +1,14 @@
 import type express from "express";
+import type { NextFunction } from "express";
 
-import { BadRequest, Unauthorized } from "@/shared/errors/errors";
+import { Unauthorized } from "@/shared/errors/errors";
 import * as service from "./auth.service";
-import { dispatchSuccess } from "@/shared/util/response.helper";
-import { SuccessCodes } from "@/shared/util/response.helper";
-
-function temp() {}
+import { dispatchSuccess, SuccessCodes } from "@/shared/util/response.helper";
 
 export async function authenticateSession(
   req: express.Request,
   _res: express.Response,
-  next: Function,
+  next: NextFunction,
 ) {
   if (!req.headers.authorization)
     throw new Unauthorized("REQUEST: expected authorization field");
@@ -18,9 +16,12 @@ export async function authenticateSession(
   let token: string = "";
   if (bruteToken.length > 1) {
     if (bruteToken[1]) token = bruteToken[1];
-  } else if (bruteToken.length === 1)
+  } else if (bruteToken.length === 1) {
     if (bruteToken[0]) token = bruteToken[0];
     else throw new Unauthorized("REQUEST: expected valid bearer structure");
+  } else {
+    throw new Unauthorized("REQUEST: expected valid bearer structure");
+  }
 
   const payload = await service.authenticateSession(token);
   req.user = payload;

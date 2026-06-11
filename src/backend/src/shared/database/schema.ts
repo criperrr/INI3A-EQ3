@@ -97,8 +97,8 @@ export const user = pgTable(
     passHash: varchar("pass_hash", { length: 255 }).notNull(),
     //refreshToken: text("refresh_token"),
     birthdate: date(),
-    points: integer().default(0).notNull().default(0),
-    dangerFlag: boolean("danger_flag").default(false).notNull().default(false),
+    points: integer().default(0).notNull(),
+    dangerFlag: boolean("danger_flag").default(false).notNull(),
     // TODO: failed to parse database type 'geography'
     location: geography("location"),
     roleId: integer("role_id").notNull().default(1),

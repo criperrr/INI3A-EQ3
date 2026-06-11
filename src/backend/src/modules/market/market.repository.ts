@@ -23,14 +23,13 @@ export async function createMarket(market: CreateMarketDTO) {
 export async function updateMarket(id: number | string,
   market: UpdateMarketDTO
 ) {
-
   return db
     .update(Market)
     .set(market)
     .returning({
-      id: Market.name,
-      name: Market.id,
-      location: sql`ST_AsGeoJson(${Market.location})`,
+      id: Market.id,
+      name: Market.name,
+      location: sql`ST_AsGeoJSON(${Market.location})`,
     })
     .where(eq(Market.id, Number(id)));
 }
@@ -44,7 +43,7 @@ export async function getMarket(id: string | number) {
     .select({
       id: Market.id,
       name: Market.name,
-      location: sql`${Market.location}`,
+      location: sql`ST_AsGeoJSON(${Market.location})`,
     })
     .from(Market)
     .where(eq(Market.id, Number(id)));
@@ -55,7 +54,7 @@ export async function getAllMarkets() {
     .select({
       id: Market.id,
       name: Market.name,
-      location: sql`${Market.location}`,
+      location: sql`ST_AsGeoJSON(${Market.location})`,
     })
     .from(Market);
 }

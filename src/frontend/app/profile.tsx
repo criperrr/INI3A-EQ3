@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -6,26 +6,20 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent";
+import { useAuth } from "../context/AuthContext";
+import { getMe, type UserProfile } from "../services/meService";
 
 const COLORS = {
   amber: "#FFC107",
   greenProgress: "#4CAF50",
   jungleBg: "#2D4A36",
   redLogout: "#D32F2F",
-};
-
-const MOCK_USER = {
-  name: "Caleb Jensen",
-  role: "Product Analyst",
-  avatarUri: "https://randomuser.me/api/portraits/men/32.jpg",
-  level: 20,
-  currentXp: 268,
-  maxXp: 320,
-  stats: { following: 173, products: 994, followers: 213 },
+  vibrantBlue: "#0062CC",
 };
 
 const MOCK_CONTRIBUTIONS = Array.from({ length: 18 }, () =>
@@ -48,11 +42,67 @@ const getGridColor = (intensity: number, isDark: boolean) => {
 export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles } = useTheme();
+  const { user: authUser, logout } = useAuth();
 
-  const handleLogout = () => {
-    console.log("Mock Logout efetuado!");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadProfile() {
+      try {
+        const data = await getMe();
+        setProfile(data);
+      } catch {
+        // Fallback: usa dados do contexto de autenticação
+        if (authUser) {
+          setProfile({
+            id: authUser.id,
+            name: authUser.name,
+            email: authUser.email,
+            roleId: authUser.roleId,
+          });
+        } else {
+          setError("Não foi possível carregar o perfil.");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadProfile();
+  }, [authUser]);
+
+  const handleLogout = async () => {
+    await logout();
     router.replace("/login");
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.centeredContainer, themeStyles.bg]}>
+        <ActivityIndicator size="large" color={COLORS.vibrantBlue} />
+      </View>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <View style={[styles.centeredContainer, themeStyles.bg]}>
+        <Text style={[{ color: COLORS.redLogout, marginBottom: 16 }]}>
+          {error || "Perfil não encontrado."}
+        </Text>
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={{ color: COLORS.vibrantBlue }}>Sair</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const points = profile.points ?? 0;
+  const maxPoints = Math.max(points + 100, 500);
+  const progressPercentage = Math.min((points / maxPoints) * 100, 100);
+  const level = Math.floor(points / 100) + 1;
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
@@ -60,12 +110,13 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader user={MOCK_USER} />
-        <StatsCard stats={MOCK_USER.stats} />
+        <ProfileHeader user={profile} level={level} />
+        <StatsCard points={points} email={profile.email} />
         <LevelProgress
-          currentXp={MOCK_USER.currentXp}
-          maxXp={MOCK_USER.maxXp}
-          level={MOCK_USER.level}
+          currentPoints={points}
+          maxPoints={maxPoints}
+          level={level}
+          progressPercentage={progressPercentage}
         />
         <ContributionHistory contributions={MOCK_CONTRIBUTIONS} />
         <LogoutButton onPress={handleLogout} />
@@ -76,7 +127,13 @@ export default function ProfileScreen() {
 
 // --- Componentes Internos ---
 
-const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => {
+const ProfileHeader = ({
+  user,
+  level,
+}: {
+  user: UserProfile;
+  level: number;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.profileHeaderContainer}>
@@ -96,27 +153,33 @@ const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => {
       </View>
 
       <View style={styles.avatarWrapper}>
-        <Image source={{ uri: user.avatarUri }} style={styles.avatarImage} />
+        <View style={styles.avatarPlaceholder}>
+          <Ionicons name="person" size={50} color="#FFFFFF" />
+        </View>
         <View style={styles.levelBadge}>
-          <Text style={styles.levelBadgeText}>{user.level}</Text>
+          <Text style={styles.levelBadgeText}>{level}</Text>
         </View>
       </View>
 
       <Text style={[styles.userName, themeStyles.text]}>{user.name}</Text>
-      <Text style={[styles.userRole, themeStyles.subText]}>{user.role}</Text>
+      <Text style={[styles.userRole, themeStyles.subText]}>{user.email}</Text>
     </View>
   );
 };
 
-const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
+const StatsCard = ({
+  points,
+  email,
+}: {
+  points: number;
+  email: string;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={[styles.statsCard, themeStyles.card, themeStyles.border]}>
       <View style={styles.statItem}>
-        <Text style={[styles.statValue, themeStyles.text]}>
-          {stats.following}
-        </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Seguindo</Text>
+        <Text style={[styles.statValue, themeStyles.text]}>{points}</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>Pontos</Text>
       </View>
       <View
         style={[
@@ -125,10 +188,8 @@ const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
         ]}
       />
       <View style={styles.statItem}>
-        <Text style={[styles.statValue, themeStyles.text]}>
-          {stats.products}
-        </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Produtos</Text>
+        <Text style={[styles.statValue, themeStyles.text]}>0</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>Preços</Text>
       </View>
       <View
         style={[
@@ -137,33 +198,34 @@ const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
         ]}
       />
       <View style={styles.statItem}>
-        <Text style={[styles.statValue, themeStyles.text]}>
-          {stats.followers}
-        </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Seguidores</Text>
+        <Text style={[styles.statValue, themeStyles.text]}>0</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>Badges</Text>
       </View>
     </View>
   );
 };
 
 const LevelProgress = ({
-  currentXp,
-  maxXp,
+  currentPoints,
+  maxPoints,
   level,
+  progressPercentage,
 }: {
-  currentXp: number;
-  maxXp: number;
+  currentPoints: number;
+  maxPoints: number;
   level: number;
+  progressPercentage: number;
 }) => {
   const { themeStyles } = useTheme();
-  const progressPercentage = (currentXp / maxXp) * 100;
 
   return (
     <View style={styles.levelSection}>
       <View style={styles.levelInfoRow}>
-        <Text style={[styles.levelText, themeStyles.text]}>Levl. {level}</Text>
+        <Text style={[styles.levelText, themeStyles.text]}>
+          Nível {level}
+        </Text>
         <Text style={[styles.levelProgressNumber, themeStyles.subText]}>
-          {currentXp}/{maxXp}
+          {currentPoints}/{maxPoints} pts
         </Text>
       </View>
       <View style={[styles.progressBarTrack, themeStyles.inputBg]}>
@@ -238,6 +300,12 @@ const LogoutButton = ({ onPress }: { onPress: () => void }) => {
 // --- Estilos ---
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centeredContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
   content: { flexGrow: 1 },
   profileHeaderContainer: { alignItems: "center", marginBottom: 16 },
   jungleBanner: {
@@ -269,12 +337,15 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 6,
   },
-  avatarImage: {
+  avatarPlaceholder: {
     width: 110,
     height: 110,
     borderRadius: 55,
     borderWidth: 4,
     borderColor: COLORS.amber,
+    backgroundColor: "#4B5563",
+    alignItems: "center",
+    justifyContent: "center",
   },
   levelBadge: {
     position: "absolute",
@@ -333,6 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginHorizontal: 16,
     marginTop: 24,
+    marginBottom: 24,
     paddingVertical: 16,
     borderRadius: 16,
     borderWidth: 1,

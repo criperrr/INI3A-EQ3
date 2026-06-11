@@ -13,8 +13,8 @@ export async function authenticateSession(token: string) {
   }
 
   const jti = String(payload.jti);
-  const isValid = await verifyJTI(jti);
-  if (!isValid) throw new JTIrefused(jti);
+  const isBlacklisted = await verifyJTI(jti);
+  if (isBlacklisted) throw new JTIrefused(jti);
 
   return payload;
 }

@@ -139,10 +139,11 @@ export class RedisInternalError extends InternalSystemError {
 // FORMAT - HELPERS --------------------
 
 export function parseDatabaseError(e: any, message: string): never {
-  if (e && typeof e === "object" && "code" in e) {
-    switch (e.code) {
+  const dbError = e && typeof e === "object" && "cause" in e ? (e.cause ?? e) : e;
+  if (dbError && typeof dbError === "object" && "code" in dbError) {
+    switch (dbError.code) {
       case "23505": {
-        if (e.detail?.includes("email")) {
+        if (dbError.detail?.includes("email")) {
           throw new Conflict("This email address is already registered.");
         }
         throw new Conflict(
@@ -151,7 +152,7 @@ export function parseDatabaseError(e: any, message: string): never {
       }
 
       case "23503": {
-        if (e.detail?.includes("role_id")) {
+        if (dbError.detail?.includes("role_id")) {
           throw new BadRequest(
             "The provided role ID does not exist.",
             "role-id",
@@ -160,7 +161,7 @@ export function parseDatabaseError(e: any, message: string): never {
         throw new BadRequest("Provided relational reference is invalid.");
       }
       case "23502": {
-        const missingColumn = e.column ? ` [${e.column}]` : "";
+        const missingColumn = dbError.column ? ` [${dbError.column}]` : "";
         throw new BadRequest(
           `Required field is missing or empty.`,
           missingColumn,
@@ -177,10 +178,10 @@ export function parseDatabaseError(e: any, message: string): never {
         );
       }
       default: {
-        throw new DatabaseInternalError(message);
+        throw new DatabaseInternalError(message, e);
       }
     }
-  } else throw new DatabaseInternalError(message);
+  } else throw new DatabaseInternalError(message, e);
 }
 
 // -------------------------------------

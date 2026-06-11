@@ -17,7 +17,10 @@
   "scripts": {
     "dev": "tsx --watch ./src/server.ts",
     "start": "tsx ./src/server.ts",
-    "db:migrate": "tsx ./src/shared/database/migrate.ts"
+    "db:migrate": "tsx ./src/shared/database/migrate.ts",
+    "db:seed": "tsx ./src/shared/database/seed.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -27,5 +30,11 @@
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
+  },
+  "allowScripts": {
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.27.7": true,
+    "bcrypt@6.0.0": true
   }
 }
