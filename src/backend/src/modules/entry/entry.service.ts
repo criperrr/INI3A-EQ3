@@ -15,9 +15,9 @@ import {
   setRefreshToken,
   getUserIdByRefreshToken,
 } from "@/shared/redis/server";
-import type { UpdateUserRequest } from "@/shared/types/apiResponse";
+import type { CreateUserRequest } from "../../shared/types/apiResponse";
 
-export const register = async function register(bruteUser: UpdateUserRequest) {
+export const register = async function register(bruteUser: CreateUserRequest) {
   const { email, name } = bruteUser;
   const user = {
     email,
@@ -30,7 +30,7 @@ export const register = async function register(bruteUser: UpdateUserRequest) {
   userReturned = await repository.createUser(user);
 
   if (!userReturned[0])
-    throw new DatabaseInternalError("DATABASE: user was not created");
+    throw new DatabaseInternalError("user was not created");
 
   const refreshToken = crypto.randomBytes(32).toString("hex");
 
@@ -45,7 +45,7 @@ export const register = async function register(bruteUser: UpdateUserRequest) {
       ex: 30 * 24 * 3600,
     });
   } catch (e) {
-    throw new RedisInternalError("REDIS: error on refresh_token definition");
+    throw new RedisInternalError("error on refresh_token definition");
   }
 
   return {
@@ -59,7 +59,7 @@ export async function rechargeJWT(refreshToken: string) {
   let id: string | null;
   try {
     id = await getUserIdByRefreshToken(refreshToken);
-    if (!id) throw new Unauthorized("API: invalid refresh_token");
+    if (!id) throw new Unauthorized("invalid refresh_token");
   } catch (e) {
     if (e instanceof ApiError) throw e;
     throw new RedisInternalError(
@@ -71,10 +71,10 @@ export async function rechargeJWT(refreshToken: string) {
   try {
     userReturned = await repository.getUser(id);
   } catch (e) {
-    parseDatabaseError(e, "DATABASE: conflict on getting user");
+    parseDatabaseError(e, "conflict on getting user");
   }
 
-  if (!userReturned[0]) throw new NotFound("DATABASE: user was not created");
+  if (!userReturned[0]) throw new NotFound("user was not created");
 
   const refreshTokenRecharge = crypto.randomBytes(32).toString("hex");
 
@@ -90,7 +90,7 @@ export async function rechargeJWT(refreshToken: string) {
       oldRefreshToken: refreshToken,
     });
   } catch (e) {
-    throw new RedisInternalError("REDIS: error on refresh_token redefinition");
+    throw new RedisInternalError("error on refresh_token redefinition");
   }
 
   return {

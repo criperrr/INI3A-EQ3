@@ -16,7 +16,8 @@
   },
   "scripts": {
     "dev": "tsx --watch ./src/server.ts",
-    "start": "tsx ./src/server.ts"
+    "start": "tsx ./src/server.ts",
+    "db:migrate": "tsx ./src/shared/database/migrate.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

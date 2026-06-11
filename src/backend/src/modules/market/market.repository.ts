@@ -16,20 +16,21 @@ export async function createMarket(market: CreateMarketDTO) {
     .returning({
       id: Market.id,
       name: Market.name,
-      location: sql`${Market.location}`,
+      location: sql`ST_AsGeoJson(${Market.location})`,
     });
 }
 
-export async function updateMarket(
-  id: string | number,
-  market: UpdateMarketDTO,
+export async function updateMarket(id: number | string,
+  market: UpdateMarketDTO
 ) {
+
   return db
     .update(Market)
     .set(market)
     .returning({
-      name: Market.name,
-      email: Market.id,
+      id: Market.name,
+      name: Market.id,
+      location: sql`ST_AsGeoJson(${Market.location})`,
     })
     .where(eq(Market.id, Number(id)));
 }
@@ -59,17 +60,19 @@ export async function getAllMarkets() {
     .from(Market);
 }
 
-export async function getRadiusLocationMarkets(coord: Point, radius: number) {
+export async function getMarketsByRadius(coord: Point, radius: number) {
+  const wktPoint = `POINT(${coord.lng} ${coord.lat})`;
+
   return db
     .select({
       id: Market.id,
       name: Market.name,
-      location: sql`${Market.location}`,
+      location: sql`ST_AsGeoJson(${Market.location})`,
     })
     .from(Market).where(sql`
       ST_DWithin(
-      ST_SetSRID(${coord}, 4326),
-      ST_SetSRID(${Market.location}, 4326),
+      ${Market.location},
+      ST_GeographyFromText(${wktPoint}),
       ${radius}
       )
       `);

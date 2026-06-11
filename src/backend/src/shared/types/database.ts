@@ -3,7 +3,6 @@ export interface Point {
   lng: number;
 }
 
-// vai ter outra interface pro admin criar o user
 
 // helper
 export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> &
@@ -32,7 +31,6 @@ export interface UpdateUserDTO {
  * A MAIORIA DOS HANDLERS IRÃO DESAPARECER APÓS USARMOS O ZOD
  */
 
-
 export interface UserDTO {
   name: string;
   email: string;
@@ -40,9 +38,9 @@ export interface UserDTO {
   location: Point;
 }
 
-export interface MarketDTO {
+export interface CreateMarketDTO {
   name: string;
   location: Point;
 }
 
-export type UpdateMarketDTO = AtLeastOne<MarketDTO>;
+export type UpdateMarketDTO = AtLeastOne<CreateMarketDTO>;

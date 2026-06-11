@@ -2,8 +2,8 @@ import type express from "express";
 
 import { BadRequest, Unauthorized } from "@/shared/errors/errors";
 import * as service from "./entry.service";
-import { dispatchSuccess } from "@/shared/util/response.helper";
-import { SuccessCodes } from "@/shared/util/response.helper";
+import { dispatchSuccess } from "../../shared/util/response.helper";
+import { SuccessCodes } from "../../shared/util/response.helper";
 
 export const register: Handlers.CreateUser = async function (req, res, _next) {
   const { email, name, password } = req.body;

@@ -1,5 +1,6 @@
-import type { AtLeastOne, Point } from "./database";
+import type { AtLeastOne, CreateMarketDTO, Point, UpdateMarketDTO } from "./database";
 
+//User
 export type UpdateUserRequest = AtLeastOne<{
   name: string;
   email: string;
@@ -13,3 +14,13 @@ export interface CreateUserRequest {
   password: string;
   email: string;
 }
+//******************
+
+//Market
+export type CreateMarketRequest = CreateMarketDTO;
+export type UpdateMarketRequest = UpdateMarketDTO;
+
+//******************
+
+
+

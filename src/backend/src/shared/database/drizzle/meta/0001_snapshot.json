@@ -1,6 +1,6 @@
 {
-  "id": "21bb0ab8-2f40-4523-9664-c507f6c6e9c4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "9f58b460-5469-4c44-9b6f-12d974592032",
+  "prevId": "21bb0ab8-2f40-4523-9664-c507f6c6e9c4",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -40,10 +40,10 @@
       "uniqueConstraints": {
         "badge_name_key": {
           "name": "badge_name_key",
-          "nullsNotDistinct": false,
           "columns": [
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -84,15 +84,15 @@
         "cart_user_id_fkey": {
           "name": "cart_user_id_fkey",
           "tableFrom": "cart",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -130,28 +130,28 @@
         "cart_product_cart_id_fkey": {
           "name": "cart_product_cart_id_fkey",
           "tableFrom": "cart_product",
-          "tableTo": "cart",
           "columnsFrom": [
             "cart_id"
           ],
+          "tableTo": "cart",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "cart_product_product_id_fkey": {
           "name": "cart_product_product_id_fkey",
           "tableFrom": "cart_product",
-          "tableTo": "product",
           "columnsFrom": [
             "product_id"
           ],
+          "tableTo": "product",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -216,37 +216,37 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "cured_user_id_fkey": {
           "name": "cured_user_id_fkey",
           "tableFrom": "cured",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "cured_ocurrency_id_fkey": {
           "name": "cured_ocurrency_id_fkey",
           "tableFrom": "cured",
-          "tableTo": "ocurrency",
           "columnsFrom": [
             "ocurrency_id"
           ],
+          "tableTo": "ocurrency",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -306,9 +306,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "gist",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -427,9 +427,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_ocurrency_product_id_created_at_desc": {
           "name": "idx_ocurrency_product_id_created_at_desc",
@@ -449,9 +449,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "idx_ocurrency_unresolved_partial": {
           "name": "idx_ocurrency_unresolved_partial",
@@ -471,51 +471,51 @@
             }
           ],
           "isUnique": false,
-          "where": "is_resolved = false",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "is_resolved = false",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "ocurrency_user_id_fkey": {
           "name": "ocurrency_user_id_fkey",
           "tableFrom": "ocurrency",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "ocurrency_market_id_fkey": {
           "name": "ocurrency_market_id_fkey",
           "tableFrom": "ocurrency",
-          "tableTo": "market",
           "columnsFrom": [
             "market_id"
           ],
+          "tableTo": "market",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "ocurrency_product_id_fkey": {
           "name": "ocurrency_product_id_fkey",
           "tableFrom": "ocurrency",
-          "tableTo": "product",
           "columnsFrom": [
             "product_id"
           ],
+          "tableTo": "product",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -598,10 +598,10 @@
             }
           ],
           "isUnique": false,
-          "where": "(ean IS NOT NULL)",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "(ean IS NOT NULL)",
+          "concurrently": false
         },
         "idx_product_name_trgm": {
           "name": "idx_product_name_trgm",
@@ -615,9 +615,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "gin",
-          "with": {}
+          "concurrently": false
         },
         "idx_product_ncm": {
           "name": "idx_product_ncm",
@@ -631,9 +631,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -673,10 +673,10 @@
       "uniqueConstraints": {
         "role_name_key": {
           "name": "role_name_key",
-          "nullsNotDistinct": false,
           "columns": [
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -710,28 +710,28 @@
         "role_scope_role_id_fkey": {
           "name": "role_scope_role_id_fkey",
           "tableFrom": "role_scope",
-          "tableTo": "role",
           "columnsFrom": [
             "role_id"
           ],
+          "tableTo": "role",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "role_scope_scope_id_fkey": {
           "name": "role_scope_scope_id_fkey",
           "tableFrom": "role_scope",
-          "tableTo": "scope",
           "columnsFrom": [
             "scope_id"
           ],
+          "tableTo": "scope",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -771,10 +771,10 @@
       "uniqueConstraints": {
         "scope_scope_name_key": {
           "name": "scope_scope_name_key",
-          "nullsNotDistinct": false,
           "columns": [
             "scope_name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -870,9 +870,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "gist",
-          "with": {}
+          "concurrently": false
         },
         "idx_user_role_id": {
           "name": "idx_user_role_id",
@@ -886,34 +886,34 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "user_role_id_fkey": {
           "name": "user_role_id_fkey",
           "tableFrom": "user",
-          "tableTo": "role",
           "columnsFrom": [
             "role_id"
           ],
+          "tableTo": "role",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "user_email_key": {
           "name": "user_email_key",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -954,28 +954,28 @@
         "user_badge_user_id_fkey": {
           "name": "user_badge_user_id_fkey",
           "tableFrom": "user_badge",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "user_badge_badge_id_fkey": {
           "name": "user_badge_badge_id_fkey",
           "tableFrom": "user_badge",
-          "tableTo": "badge",
           "columnsFrom": [
             "badge_id"
           ],
+          "tableTo": "badge",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {
@@ -1016,10 +1016,10 @@
     }
   },
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

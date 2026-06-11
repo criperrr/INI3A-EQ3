@@ -4,7 +4,7 @@ import * as schema from "./schema";
 
 if (!process.env.DATABASE_URL)
   throw new Error("INTERNAL: DATABASE_URL NOT DEFINED");
-const pool = new Pool({
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 

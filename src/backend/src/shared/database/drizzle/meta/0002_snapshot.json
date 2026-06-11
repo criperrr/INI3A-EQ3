@@ -1,6 +1,6 @@
 {
-  "id": "21bb0ab8-2f40-4523-9664-c507f6c6e9c4",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "5702f034-dce9-4fc5-9d2d-653483ac0c01",
+  "prevId": "9f58b460-5469-4c44-9b6f-12d974592032",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -661,6 +661,13 @@
         },
         "min_points": {
           "name": "min_points",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "authority": {
+          "name": "authority",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
