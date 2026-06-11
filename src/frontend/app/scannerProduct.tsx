@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useTheme } from "../content/themeContent";
+import { getProductByBarcode } from "../services/productService";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -12,12 +13,14 @@ const COLORS = {
 export default function ScannerProduct() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const router = useRouter();
   const { themeStyles } = useTheme();
 
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
+      setIsFetching(false);
     }, []),
   );
 
@@ -25,32 +28,51 @@ export default function ScannerProduct() {
     return <View style={[styles.container, themeStyles.bg]} />;
   }
 
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    if (scanned || isFetching) return;
     setScanned(true);
+    setIsFetching(true);
 
-    Alert.alert(
-      "Leitura Bem-Sucedida! :)",
-      `O ML Kit leu o seguinte código:\n\n${data}`,
-      [
-        { text: "Escanear Novamente", onPress: () => setScanned(false) },
-        {
-          text: "Testar Redirecionamento",
-          onPress: () => {
-            router.push({
-              pathname: "/scannerConfirmation",
-              params: {
-                category: "Categoria Teste",
-                name: "Produto Teste Mockado",
-                imageUri: "https://via.placeholder.com/150",
-                lastPrice: "R$ 99,90",
-                barcode: data,
-              },
-            });
-          },
+    try {
+      const product = await getProductByBarcode(data);
+      // Product found (or created from Open Food Facts) -> go to confirmation
+      router.push({
+        pathname: "/scannerConfirmation",
+        params: {
+          id: product.id,
+          name: product.name,
+          imageUri: product.icon || "https://via.placeholder.com/150",
+          barcode: data,
+          description: product.description || "",
         },
-      ],
-    );
+      });
+    } catch (err: any) {
+      // Product not found in local DB and Open Food Facts -> go to manual registration
+      if (err.status === 404) {
+        Alert.alert(
+          "Produto Não Encontrado",
+          "Este produto não existe no catálogo do Presco nem na base do Open Food Facts. Deseja cadastrá-lo manualmente?",
+          [
+            { text: "Cancelar", style: "cancel", onPress: () => setScanned(false) },
+            {
+              text: "Cadastrar",
+              onPress: () => {
+                router.push({
+                  pathname: "/registerProduct",
+                  params: { barcode: data },
+                });
+              },
+            },
+          ]
+        );
+      } else {
+        Alert.alert("Erro na Leitura", "Não foi possível verificar o produto. Tente novamente.", [
+          { text: "OK", onPress: () => setScanned(false) }
+        ]);
+      }
+    } finally {
+      setIsFetching(false);
+    }
   };
 
   return (
@@ -64,8 +86,14 @@ export default function ScannerProduct() {
           barcodeScannerSettings={{
             barcodeTypes: ["ean13", "ean8", "code128", "qr"],
           }}
-          onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+          onBarcodeScanned={scanned || isFetching ? undefined : handleBarcodeScanned}
         >
+          {isFetching && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color={COLORS.white} />
+              <Text style={styles.loadingText}>Buscando informações...</Text>
+            </View>
+          )}
           <ScannerInstructions />
           <ScannerViewFinder />
         </CameraView>
@@ -121,6 +149,19 @@ const ScannerViewFinder = () => (
 const styles = StyleSheet.create({
   container: { flex: 1 },
   cameraBackground: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  loadingText: {
+    color: "#FFFFFF",
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
   permissionContainer: {
     flex: 1,
     alignItems: "center",

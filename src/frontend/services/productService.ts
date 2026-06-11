@@ -12,6 +12,19 @@ export interface Product {
   distance_m?: number | null;
 }
 
+export interface Offer {
+  ocurrency_id: number;
+  price: string;
+  market_id: number;
+  market_name: string;
+  distance_m: number | null;
+  created_at: string;
+}
+
+export interface ProductDetailResponse extends Product {
+  offers: Offer[];
+}
+
 export interface SearchProductsParams {
   q: string;
   lat?: number;
@@ -38,10 +51,27 @@ export async function searchProducts(
 }
 
 /**
- * Retorna detalhes de um produto específico por ID.
+ * Retorna detalhes de um produto específico por ID, incluindo ofertas de preço locais.
  */
-export async function getProduct(id: number): Promise<Product> {
-  return request<Product>(`/api/v1/products/${id}`);
+export async function getProduct(
+  id: number,
+  lat?: number,
+  lng?: number,
+): Promise<ProductDetailResponse> {
+  const query = new URLSearchParams();
+  if (lat != null) query.set("lat", String(lat));
+  if (lng != null) query.set("lng", String(lng));
+
+  const queryString = query.toString() ? `?${query.toString()}` : "";
+  return request<ProductDetailResponse>(`/api/v1/products/${id}${queryString}`);
+}
+
+/**
+ * Busca detalhes de um produto específico por código de barras (EAN).
+ * Se não existir no banco de dados local, a API tenta buscar via Open Food Facts.
+ */
+export async function getProductByBarcode(ean: string): Promise<Product> {
+  return request<Product>(`/api/v1/products/barcode/${ean}`);
 }
 
 /**

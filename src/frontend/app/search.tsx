@@ -7,6 +7,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,7 +53,12 @@ export default function SearchScreen() {
 
     debounceRef.current = setTimeout(async () => {
       try {
-        const results = await searchProducts({ q: text.trim() });
+        const results = await searchProducts({
+          q: text.trim(),
+          lat: -23.55052,
+          lng: -46.633308,
+          radius: 5000,
+        });
         setProducts(results);
         setHasSearched(true);
       } catch {
@@ -193,13 +199,17 @@ const ProductResultsGrid = ({
           activeOpacity={0.8}
           onPress={() => onProductPress(product)}
         >
-          <View style={[styles.productImagePlaceholder, themeStyles.inputBg]}>
-            <Ionicons
-              name="image-outline"
-              size={32}
-              color={isDark ? "#4B5563" : "#CBD5E1"}
-            />
-          </View>
+          {product.icon ? (
+            <Image source={{ uri: product.icon }} style={styles.productImage} />
+          ) : (
+            <View style={[styles.productImagePlaceholder, themeStyles.inputBg]}>
+              <Ionicons
+                name="image-outline"
+                size={32}
+                color={isDark ? "#4B5563" : "#CBD5E1"}
+              />
+            </View>
+          )}
 
           <View style={styles.productInfo}>
             <Text
@@ -282,6 +292,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: "center",
     justifyContent: "center",
+  },
+  productImage: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    marginBottom: 12,
+    resizeMode: "cover",
   },
   productInfo: { alignItems: "center" },
   productName: {

@@ -27,17 +27,23 @@ export default function ScannerConfirmation() {
   const { themeStyles } = useTheme();
 
   const product = {
-    category: (params.category as string) || "Produto Encontrado",
+    id: (params.id as string) || "",
+    category: "Produto Identificado",
     name: (params.name as string) || "Nome indisponível",
     imageUri: (params.imageUri as string) || "https://via.placeholder.com/150",
-    lastPrice: (params.lastPrice as string) || "Preço não informado",
+    lastPrice: "Escanear para registrar preço",
     barcode: (params.barcode as string) || "",
   };
 
   const handleConfirm = () => {
     router.push({
       pathname: "/registerProduct",
-      params: { barcode: product.barcode },
+      params: { 
+        id: product.id,
+        name: product.name,
+        imageUri: product.imageUri,
+        barcode: product.barcode,
+      },
     });
   };
 
