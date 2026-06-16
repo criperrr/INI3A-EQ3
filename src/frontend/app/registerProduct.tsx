@@ -33,6 +33,7 @@ export default function RegisterProduct() {
   const [price, setPrice] = useState("");
   const [productName, setProductName] = useState(name);
   const [productDescription, setProductDescription] = useState("");
+  const [productTags, setProductTags] = useState("");
   const [markets, setMarkets] = useState<Market[]>([]);
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null);
   const [showMarketModal, setShowMarketModal] = useState(false);
@@ -78,6 +79,7 @@ export default function RegisterProduct() {
           name: productName.trim(),
           ean: barcode || undefined,
           description: productDescription.trim() || undefined,
+          tags: productTags.trim() || undefined,
         });
         finalProductId = newProduct.id;
       }
@@ -142,6 +144,17 @@ export default function RegisterProduct() {
                     placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
                     value={productDescription}
                     onChangeText={setProductDescription}
+                  />
+
+                  <Text style={[styles.inputLabel, themeStyles.subText]}>
+                    Tags (separadas por vírgula):
+                  </Text>
+                  <TextInput
+                    style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                    placeholder="Ex: sabonete, dove, higiene"
+                    placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                    value={productTags}
+                    onChangeText={setProductTags}
                   />
                 </>
               )}

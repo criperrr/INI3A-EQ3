@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import supertest from "supertest";
 import app from "../app";
 import * as service from "../modules/product/product.service";
+import { NotFound } from "../shared/errors/errors";
 import * as repository from "../modules/product/product.repository";
 
 // Mock the service layer directly to test routing, controller and integration logic
@@ -85,14 +86,7 @@ describe("Product API Endpoints", () => {
     });
 
     it("should return 404 if product barcode is not found anywhere", async () => {
-      vi.mocked(service.getProductByBarcode).mockRejectedValueOnce(
-        new Error("Product with barcode 123 not found in local catalog or Open Food Facts.")
-      );
-
-      // Set name on error or handle it as api error
-      const errorMock = new Error("Product with barcode 123 not found in local catalog or Open Food Facts.");
-      (errorMock as any).httpCode = 404;
-      (errorMock as any).textCode = "NOT_FOUND";
+      const errorMock = new NotFound("Product with barcode 123 not found in local catalog or Open Food Facts.");
       vi.mocked(service.getProductByBarcode).mockRejectedValueOnce(errorMock);
 
       const res = await supertest(app)

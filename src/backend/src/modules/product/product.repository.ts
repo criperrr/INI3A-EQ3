@@ -10,6 +10,7 @@ export interface ProductDetails {
   ean: string | null;
   description: string | null;
   icon: string | null;
+  tags: string | null;
   createdAt: string;
 }
 
@@ -31,6 +32,7 @@ export async function createProduct(product: {
   ncm?: string;
   description?: string;
   icon?: string;
+  tags?: string;
 }) {
   const results = await db.insert(Product).values(product).returning();
   return results[0];
@@ -123,10 +125,18 @@ export async function searchProducts(
           p.ean,
           p.icon,
           p.description,
-          similarity(p.name, ${query}) AS sim
+          p.tags,
+          (
+            COALESCE(similarity(p.name, ${query}), 0) * 0.6 + 
+            COALESCE(similarity(COALESCE(p.tags, ''), ${query}), 0) * 0.4
+          ) AS relevance
         FROM product p
-        WHERE similarity(p.name, ${query}) > 0.2 OR p.ean = ${query}
-        ORDER BY similarity(p.name, ${query}) DESC
+        WHERE similarity(p.name, ${query}) > 0.1
+           OR similarity(COALESCE(p.tags, ''), ${query}) > 0.1
+           OR p.ean = ${query}
+           OR p.tags ILIKE ${'%' + query + '%'}
+           OR p.name ILIKE ${'%' + query + '%'}
+        ORDER BY relevance DESC
         LIMIT ${limit}
       )
       SELECT 
@@ -135,9 +145,17 @@ export async function searchProducts(
         mp.ean,
         mp.icon,
         mp.description,
+        mp.tags,
         o_best.value AS best_price,
         o_best.market_name,
-        o_best.distance_m
+        o_best.distance_m,
+        COALESCE(o_stats.occurrences_count, 0) AS occurrences_count,
+        COALESCE(o_stats.total_upvotes, 0) AS total_upvotes,
+        (
+          mp.relevance * 100 + 
+          COALESCE(o_stats.occurrences_count, 0) * 10 + 
+          COALESCE(o_stats.total_upvotes, 0)
+        ) AS final_rank
       FROM matched_products mp
       LEFT JOIN LATERAL (
         SELECT 
@@ -153,7 +171,16 @@ export async function searchProducts(
         ORDER BY o.value ASC
         LIMIT 1
       ) o_best ON true
-      ORDER BY mp.sim DESC
+      LEFT JOIN (
+        SELECT 
+          product_id,
+          CAST(COUNT(*) AS integer) AS occurrences_count,
+          CAST(COALESCE(SUM(upvote_count), 0) AS integer) AS total_upvotes
+        FROM ocurrency
+        WHERE is_suspended = false
+        GROUP BY product_id
+      ) o_stats ON o_stats.product_id = mp.id
+      ORDER BY final_rank DESC
     `);
     return results.rows as unknown as any[];
   } else {
@@ -165,10 +192,18 @@ export async function searchProducts(
           p.ean,
           p.icon,
           p.description,
-          similarity(p.name, ${query}) AS sim
+          p.tags,
+          (
+            COALESCE(similarity(p.name, ${query}), 0) * 0.6 + 
+            COALESCE(similarity(COALESCE(p.tags, ''), ${query}), 0) * 0.4
+          ) AS relevance
         FROM product p
-        WHERE similarity(p.name, ${query}) > 0.2 OR p.ean = ${query}
-        ORDER BY similarity(p.name, ${query}) DESC
+        WHERE similarity(p.name, ${query}) > 0.1
+           OR similarity(COALESCE(p.tags, ''), ${query}) > 0.1
+           OR p.ean = ${query}
+           OR p.tags ILIKE ${'%' + query + '%'}
+           OR p.name ILIKE ${'%' + query + '%'}
+        ORDER BY relevance DESC
         LIMIT ${limit}
       )
       SELECT 
@@ -177,9 +212,17 @@ export async function searchProducts(
         mp.ean,
         mp.icon,
         mp.description,
+        mp.tags,
         o_best.value AS best_price,
         o_best.market_name,
-        CAST(NULL AS double precision) AS distance_m
+        CAST(NULL AS double precision) AS distance_m,
+        COALESCE(o_stats.occurrences_count, 0) AS occurrences_count,
+        COALESCE(o_stats.total_upvotes, 0) AS total_upvotes,
+        (
+          mp.relevance * 100 + 
+          COALESCE(o_stats.occurrences_count, 0) * 10 + 
+          COALESCE(o_stats.total_upvotes, 0)
+        ) AS final_rank
       FROM matched_products mp
       LEFT JOIN LATERAL (
         SELECT 
@@ -193,7 +236,16 @@ export async function searchProducts(
         ORDER BY o.value ASC
         LIMIT 1
       ) o_best ON true
-      ORDER BY mp.sim DESC
+      LEFT JOIN (
+        SELECT 
+          product_id,
+          CAST(COUNT(*) AS integer) AS occurrences_count,
+          CAST(COALESCE(SUM(upvote_count), 0) AS integer) AS total_upvotes
+        FROM ocurrency
+        WHERE is_suspended = false
+        GROUP BY product_id
+      ) o_stats ON o_stats.product_id = mp.id
+      ORDER BY final_rank DESC
     `);
     return results.rows as unknown as any[];
   }

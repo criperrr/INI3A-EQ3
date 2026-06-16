@@ -56,7 +56,7 @@ export const spatialRefSys = pgTable(
     authName: varchar("auth_name", { length: 256 }),
     authSrid: integer("auth_srid"),
     srtext: varchar({ length: 2048 }),
-    proj4Text: varchar({ length: 2048 }),
+    proj4text: varchar("proj4text", { length: 2048 }),
   },
   (table) => [
     check("spatial_ref_sys_srid_check", sql`(srid > 0) AND (srid <= 998999)`),
@@ -230,6 +230,7 @@ export const product = pgTable(
     name: varchar({ length: 200 }).notNull(),
     description: text(),
     icon: text(),
+    tags: text(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),

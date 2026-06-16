@@ -56,3 +56,34 @@ export const refreshSession: Handlers.RechargeSession = async function (
 
   return dispatchSuccess(SuccessCodes.ok, res, payload);
 };
+
+export const createEntry = async function (
+  req: any,
+  res: any,
+  next: any,
+) {
+  try {
+    const { marketId, productId, value } = req.body;
+    const userId = req.user?.id;
+
+    if (!marketId || !productId || !value) {
+      throw new BadRequest("marketId, productId and value are required.", "MISSING_FIELDS");
+    }
+
+    const numericValue = Number(value);
+    if (isNaN(numericValue) || numericValue <= 0) {
+      throw new BadRequest("Value must be a valid number greater than 0.", "INVALID_VALUE");
+    }
+
+    const newEntry = await service.createEntry({
+      userId,
+      marketId,
+      productId,
+      value: numericValue,
+    });
+
+    return dispatchSuccess(SuccessCodes.created, res, newEntry);
+  } catch (error) {
+    return next(error);
+  }
+};

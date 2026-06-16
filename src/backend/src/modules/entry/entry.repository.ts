@@ -33,3 +33,13 @@ export async function getUserByEmail(email: string) {
     .from(User)
     .where(eq(User.email, email));
 }
+
+export async function createOcurrency(data: {
+  userId: number;
+  marketId: number;
+  productId: number;
+  value: string;
+}) {
+  const result = await db.insert(schema.ocurrency).values(data).returning();
+  return result[0];
+}

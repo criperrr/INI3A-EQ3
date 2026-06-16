@@ -7,6 +7,7 @@ export interface Product {
   ncm?: string | null;
   description?: string | null;
   icon?: string | null;
+  tags?: string | null;
   best_price?: number | null;
   market_name?: string | null;
   distance_m?: number | null;
@@ -82,6 +83,7 @@ export async function createProduct(payload: {
   ean?: string;
   ncm?: string;
   description?: string;
+  tags?: string;
 }): Promise<Product> {
   return request<Product>("/api/v1/products", {
     method: "POST",

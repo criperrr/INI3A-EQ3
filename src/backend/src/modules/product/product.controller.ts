@@ -87,7 +87,7 @@ export async function getById(req: Request, res: Response, next: NextFunction) {
  */
 export async function create(req: Request, res: Response, next: NextFunction) {
   try {
-    const { name, ean, ncm, description, icon } = req.body;
+    const { name, ean, ncm, description, icon, tags } = req.body;
     if (!name || !name.trim()) {
       throw new BadRequest("Product name is required.", "MISSING_NAME");
     }
@@ -98,6 +98,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
       ncm: ncm?.trim(),
       description: description?.trim(),
       icon: icon?.trim(),
+      tags: tags?.trim(),
     });
 
     return dispatchSuccess(SuccessCodes.created, res, newProduct);

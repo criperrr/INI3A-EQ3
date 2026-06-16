@@ -151,3 +151,22 @@ export async function rechargeJWT(refreshToken: string) {
     jwt: jwtToken,
   };
 }
+
+export async function createEntry(payload: {
+  userId: number;
+  marketId: number;
+  productId: number;
+  value: number;
+}) {
+  try {
+    const result = await repository.createOcurrency({
+      userId: payload.userId,
+      marketId: Number(payload.marketId),
+      productId: Number(payload.productId),
+      value: String(payload.value),
+    });
+    return result;
+  } catch (error) {
+    parseDatabaseError(error, "Database error when creating price occurrence.");
+  }
+}

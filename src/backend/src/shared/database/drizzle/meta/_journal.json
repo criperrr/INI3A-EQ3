@@ -22,6 +22,13 @@
       "when": 1781145792323,
       "tag": "0002_empty_timeslip",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1781280000000,
+      "tag": "0003_add_product_tags",
+      "breakpoints": true
     }
   ]
 }

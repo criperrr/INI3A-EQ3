@@ -53,6 +53,20 @@ async function seed() {
 
   console.log("✅ Badges inseridos.");
 
+  // Mercado Global Padrão
+  const existingMarkets = await db.select().from(schema.market).limit(1);
+  if (existingMarkets.length === 0) {
+    await db
+      .insert(schema.market)
+      .values({
+        name: "Mercado Global Padrão",
+        location: { lat: -23.55052, lng: -46.633308 },
+      });
+    console.log("✅ Mercado Global Padrão inserido.");
+  } else {
+    console.log("✅ Mercado já existente no banco.");
+  }
+
   console.log("🎉 Seed concluído com sucesso!");
 }
 

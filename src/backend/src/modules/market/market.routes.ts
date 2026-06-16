@@ -1,8 +1,12 @@
 import { Router } from "express";
+import * as controller from "./market.controller";
 
 const r = Router();
 
-// TODO: Implementar rotas de mercados (GET / e GET /:id)
-// Referência: GET /api/v1/markets?lat=&lng=&radius=
+r.get("/", controller.list);
+r.get("/:id", controller.getById);
+r.post("/", controller.create);
+r.put("/:id", controller.update);
+r.delete("/:id", controller.remove);
 
 export default r;

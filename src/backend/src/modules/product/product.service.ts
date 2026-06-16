@@ -69,6 +69,7 @@ export async function createProduct(payload: {
   ncm?: string;
   description?: string;
   icon?: string;
+  tags?: string;
 }) {
   return repository.createProduct(payload);
 }
