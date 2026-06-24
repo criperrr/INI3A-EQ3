@@ -8,7 +8,7 @@ enum InternalErrorCodes {
 enum ErrorCodes {}
 
 export interface ErrorItem {
-  message: string; 
+  message: string;
   code: string;
   field?: string;
 }
@@ -32,7 +32,7 @@ export abstract class ApiError extends Error {
   }
 }
 
-export class MultipleApiError extends Error {
+export class MultipleApiError extends ApiError {
   fields: ErrorItem[];
   httpCode: number;
 
@@ -75,13 +75,15 @@ export class Conflict extends ApiError {
 }
 
 export class HttpInternalServerError extends ApiError {
+  internalError: InternalSystemError;
+
   constructor(
     message: string = "An unexpected error occurred on the server.",
     textCode: string = "INTERNAL_SERVER_ERROR",
   ) {
     super(500, textCode, message);
     this.name = "HttpInternalServerError";
-    throw new InternalSystemError(
+    this.internalError = new InternalSystemError(
       this,
       InternalErrorCodes.unknown,
       "no message; generic error.",
@@ -89,6 +91,16 @@ export class HttpInternalServerError extends ApiError {
   }
 }
 
+export class JTIrefused extends Unauthorized {
+  readonly jti: string;
+  constructor(
+    jti: string,
+    message: string = "Token identity (JTI) has been revoked.",
+  ) {
+    super(`${message} [jti=${jti}]`, "JTI_REFUSED");
+    this.jti = jti;
+  }
+}
 // -------------------------------------
 
 // INTERNAL SERVER ERRORS --------------
@@ -111,18 +123,6 @@ export class InternalSystemError extends Error {
     this.timestamp = new Date();
   }
 }
-
-export class JTIrefused extends Unauthorized {
-  readonly jti: string;
-  constructor(
-    jti: string,
-    message: string = "Token identity (JTI) has been revoked.",
-  ) {
-    super(`${message} [jti=${jti}]`, "JTI_REFUSED");
-    this.jti = jti;
-  }
-}
-
 export class DatabaseInternalError extends InternalSystemError {
   constructor(message: string, e: Error = new Error()) {
     super(e, InternalErrorCodes.internalDatabaseConflict, message);
@@ -134,10 +134,10 @@ export class RedisInternalError extends InternalSystemError {
     super(e, InternalErrorCodes.internalRedisConflict, message);
   }
 }
+
 // -------------------------------------
 
 // FORMAT - HELPERS --------------------
-
 export function parseDatabaseError(e: any, message: string): never {
   if (e && typeof e === "object" && "code" in e) {
     switch (e.code) {

@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { hash } from "@/shared/util/bcrypt";
 import crypto from "crypto";
-import * as repository from "./entry.repository";
+import { UserRepository } from "@/shared/database/repositories/user.repository";
 import {
   DatabaseInternalError,
   RedisInternalError,
@@ -11,36 +11,25 @@ import {
   NotFound,
 } from "@/shared/errors/errors";
 
-import {
-  setRefreshToken,
-  getUserIdByRefreshToken,
-} from "@/shared/redis/server";
 import type { CreateUserRequest } from "../../shared/types/apiResponse";
+import { AuthRepository } from "@/shared/database/repositories/auth.repository";
 
-export const register = async function register(bruteUser: CreateUserRequest) {
-  const { email, name } = bruteUser;
-  const user = {
-    email,
-    name,
-    passHash: await hash(bruteUser.password),
-  };
+export const register = async function register(user: CreateUserRequest) {
+  const { email, name } = user;
 
-  let userReturned: Jwt.JwtPayload[]; //aqui ja funciona já
+  let userReturned = await UserRepository.createUser({...user, passHash: await hash(user.password)});
 
-  userReturned = await repository.createUser(user);
-
-  if (!userReturned[0])
-    throw new DatabaseInternalError("user was not created");
+  if (!userReturned) throw new DatabaseInternalError("user was not created");
 
   const refreshToken = crypto.randomBytes(32).toString("hex");
 
-  const jwtToken = jwt.sign(userReturned[0], process.env.JWT_SECRET!, {
+  const jwtToken = jwt.sign(userReturned, process.env.JWT_SECRET!, {
     expiresIn: 2 * 24 * 3600,
   });
 
   try {
-    await setRefreshToken({
-      id: String(userReturned[0].id),
+    await AuthRepository.setRefreshToken({
+      id: String(userReturned.id),
       refreshToken: refreshToken,
       ex: 30 * 24 * 3600,
     });
@@ -57,9 +46,12 @@ export const register = async function register(bruteUser: CreateUserRequest) {
 
 export async function rechargeJWT(refreshToken: string) {
   let id: string | null;
+  let user;
   try {
-    id = await getUserIdByRefreshToken(refreshToken);
+    id = await AuthRepository.getUserIdByRefreshToken(refreshToken);
     if (!id) throw new Unauthorized("invalid refresh_token");
+    user = await UserRepository.getUser(id);
+    if (!user) throw new Unauthorized("no user found");
   } catch (e) {
     if (e instanceof ApiError) throw e;
     throw new RedisInternalError(
@@ -67,34 +59,35 @@ export async function rechargeJWT(refreshToken: string) {
     );
   }
 
-  let userReturned: Jwt.JwtPayload[];
-  try {
-    userReturned = await repository.getUser(id);
-  } catch (e) {
-    parseDatabaseError(e, "conflict on getting user");
-  }
-
-  if (!userReturned[0]) throw new NotFound("user was not created");
+  let {
+    passHash,
+    birthdate,
+    points,
+    dangerFlag,
+    location,
+    roleId,
+    ...userReturned
+  } = user;
 
   const refreshTokenRecharge = crypto.randomBytes(32).toString("hex");
 
-  const jwtToken = jwt.sign(userReturned[0], process.env.JWT_SECRET!, {
+  const jwtToken = jwt.sign(userReturned, process.env.JWT_SECRET!, {
     expiresIn: 2 * 24 * 3600,
   });
 
   try {
-    await setRefreshToken({
-      id: String(userReturned[0].id),
+    await AuthRepository.setRefreshToken({
+      id: String(userReturned.id),
       refreshToken: refreshTokenRecharge,
       ex: 30 * 24 * 3600,
       oldRefreshToken: refreshToken,
     });
   } catch (e) {
-    throw new RedisInternalError("error on refresh_token redefinition");
+    throw new RedisInternalError("Error while refreshing token");
   }
 
   return {
-    userReturned: userReturned[0],
+    userReturned: userReturned,
     refreshToken: refreshTokenRecharge,
     jwt: jwtToken,
   };

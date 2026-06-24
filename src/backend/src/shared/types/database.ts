@@ -7,6 +7,7 @@ export interface Point {
 // helper
 export type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> &
   U[keyof U];
+export type Nullable<T> = { [K in keyof T]: T[K] | null };
 
 
 //Interface que mandamos para o bd

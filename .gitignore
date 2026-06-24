@@ -18,3 +18,9 @@ src/frontend/expo-env.d.ts
 # Native folders
 src/frontend/android/
 src/frontend/ios/
+
+
+# personal annotations
+.notes/
+src/backend/.notes
+src/frontend/.notes

@@ -1,7 +1,7 @@
 export enum Roles{
   default,
   supporter,
-  healer,
+  curator,
   admin,
   manager
 }

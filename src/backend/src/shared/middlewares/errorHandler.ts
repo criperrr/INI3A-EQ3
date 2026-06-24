@@ -19,20 +19,18 @@ export const globalErrorHandling: ErrorRequestHandler = function (
   }
 
   if (err instanceof ApiError) {
+    if ("internalError" in err) console.log(err["internalError"]); // tem que melhorar o logging dps, pra ficar safado
     return res
       .status(err.httpCode)
       .json(failure(err.message, err.textCode, err.field, err.httpCode));
   }
 
   if (err instanceof InternalSystemError) {
+    console.log(err);
     return res
       .status(500)
-      .json(
-        failure(err.internalMessage, "INTERNAL_SERVER_ERROR", undefined, 500),
-      );
+      .json(failure("Internal Api Error", "INTERNAL_SERVER_ERROR"));
   }
-  
-  console.log(err)
 
   return res
     .status(500)

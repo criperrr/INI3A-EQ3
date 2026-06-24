@@ -1,4 +1,4 @@
-import * as repository from './market.repository';
+import * as repository from '../../shared/database/repositories/market.repository';
 import { NotFound, ApiError, parseDatabaseError, BadRequest, DatabaseInternalError } from "@/shared/errors/errors";
 import type { CreateMarketRequest, UpdateMarketRequest } from '@/shared/types/apiRequest';
 import type { UpdateUserRequest } from "@/shared/types/apiResponse";
