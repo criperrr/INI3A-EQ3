@@ -3,12 +3,13 @@ import type {
   CreateUserDTO,
   UpdateUserDTO,
 } from "@/shared/types/database";
-import * as schema from "@/shared/database/schema";
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { SelectedFieldsFlat } from "drizzle-orm/pg-core";
 import { NotFound } from "@/shared/errors/errors";
 import { db } from "../database";
+import * as schema from "@/shared/database/schema";
+import type { SelectResultField } from "drizzle-orm/query-builders/select.types";
 
 const User = schema.user;
 
@@ -26,7 +27,9 @@ class UserRepositoryClass {
     user: CreateUserDTO,
     returning: T = defaultUserFields as unknown as T,
   ) {
-    return this.db.insert(User).values(user).returning(returning);
+    type Row = { [K in keyof T]: SelectResultField<T[K], true> };
+    const result = await this.db.insert(User).values(user).returning(returning) as unknown as Row[];
+    return result[0];
   }
 
   async getUser(id: string | number) {

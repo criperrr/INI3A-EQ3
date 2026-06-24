@@ -33,11 +33,12 @@ export abstract class ApiError extends Error {
 }
 
 export class MultipleApiError extends ApiError {
+  // maybe bad request
   fields: ErrorItem[];
   httpCode: number;
 
   constructor(fields: ErrorItem[], httpCode: number = 400) {
-    super("Multiple empty or invalid fields");
+    super(httpCode, "MULTIPLE_FIELD_ERROR", "Multiple empty or invalid fields");
     this.fields = fields;
     this.httpCode = httpCode;
   }
@@ -51,8 +52,11 @@ export class BadRequest extends ApiError {
     textCode: string = "BAD_REQUEST",
     scope?: string,
   ) {
-    scope = scope?.toUpperCase();
-    super(400, textCode, `${scope ? `${scope}: ${message}` : message}`);
+    super(
+      400,
+      textCode,
+      `${scope ? `${scope.toUpperCase()}: ${message}` : message}`,
+    );
   }
 }
 
@@ -77,11 +81,12 @@ export class Conflict extends ApiError {
 export class HttpInternalServerError extends ApiError {
   internalError: InternalSystemError;
 
-  constructor(
-    message: string = "An unexpected error occurred on the server.",
-    textCode: string = "INTERNAL_SERVER_ERROR",
-  ) {
-    super(500, textCode, message);
+  constructor() {
+    super(
+      500,
+      "INTERNAL_SERVER_ERROR",
+      "An unexpected error occurred on the server.",
+    );
     this.name = "HttpInternalServerError";
     this.internalError = new InternalSystemError(
       this,
@@ -139,10 +144,11 @@ export class RedisInternalError extends InternalSystemError {
 
 // FORMAT - HELPERS --------------------
 export function parseDatabaseError(e: any, message: string): never {
-  if (e && typeof e === "object" && "code" in e) {
-    switch (e.code) {
+  if (e) {
+    console.log("heitor")
+    switch (e.cause.code) {
       case "23505": {
-        if (e.detail?.includes("email")) {
+        if (e.cause?.includes("user_email_key")) {
           throw new Conflict("This email address is already registered.");
         }
         throw new Conflict(

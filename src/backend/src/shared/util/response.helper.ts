@@ -32,7 +32,7 @@ export function failure(
   message: string,
   textCode: string,
   field?: string,
-  status: number = 400,
+  status: number = 500,
 ): ApiFailure {
   return {
     success: false,

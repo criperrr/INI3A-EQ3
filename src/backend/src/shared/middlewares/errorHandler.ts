@@ -31,10 +31,10 @@ export const globalErrorHandling: ErrorRequestHandler = function (
       .status(500)
       .json(failure("Internal Api Error", "INTERNAL_SERVER_ERROR"));
   }
+  console.log(err);
+
 
   return res
     .status(500)
-    .json(
-      failure(err?.message ?? "Unexpected error", "INTERNAL", undefined, 500),
-    );
+    .json(failure("Internal Api Error", "INTERNAL_SERVER_ERROR"));
 };

@@ -13,11 +13,17 @@ import {
 
 import type { CreateUserRequest } from "../../shared/types/apiResponse";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
+import * as schema from "@/shared/database/schema";
+
+const User = schema.user;
 
 export const register = async function register(user: CreateUserRequest) {
   const { email, name } = user;
 
-  let userReturned = await UserRepository.createUser({...user, passHash: await hash(user.password)});
+  let userReturned = await UserRepository.createUser(
+    { ...user, passHash: await hash(user.password) },
+    { id: User.id },
+  );
 
   if (!userReturned) throw new DatabaseInternalError("user was not created");
 
@@ -38,7 +44,7 @@ export const register = async function register(user: CreateUserRequest) {
   }
 
   return {
-    userReturned: userReturned[0],
+    userReturned: userReturned,
     refreshToken,
     jwt: jwtToken,
   };
