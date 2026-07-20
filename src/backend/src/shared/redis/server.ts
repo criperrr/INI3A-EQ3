@@ -1,7 +1,4 @@
 import { createClient } from "redis";
-import { LibSQLSession } from "drizzle-orm/libsql";
-import type { Jwt } from "jsonwebtoken";
-import { JTIrefused } from "../errors/errors";
 
 const redisClient = createClient({
   url: process.env.REDIS_URL || "redis://localhost:6379",

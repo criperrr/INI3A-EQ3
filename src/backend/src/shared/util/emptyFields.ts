@@ -1,4 +1,4 @@
-import { MultipleApiError } from "@/shared/errors/errors";
+import { MultipleApiError } from "../errors/errors";
 
 // usaremos o zod
 

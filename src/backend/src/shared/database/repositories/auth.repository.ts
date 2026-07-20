@@ -1,7 +1,6 @@
-import { JTIrefused } from "@/shared/errors/errors";
-import { redisClient } from "@/shared/redis/server";
+import { JTIrefused } from "../../errors/errors";
+import { redisClient } from "../../redis/server";
 class AuthenticationRespositoryClass {
-
   // coloca o token numa blacklist em tempo de execucao
   async invalidateJWT(target: Jwt.JwtInvalidateInfo): Promise<void> {
     const id = target.jti;
@@ -33,9 +32,8 @@ class AuthenticationRespositoryClass {
     } else await redisClient.set(`refresh:${token}`, id, { EX: ex });
   }
 
-  
   async destroyRefreshToken(refreshToken: string) {}
-  
+
   async getUserIdByRefreshToken(refreshToken: string) {
     return redisClient.get(`refresh:${refreshToken}`);
   }

@@ -1,70 +1,28 @@
-import jwt from "jsonwebtoken";
-import {
-  Unauthorized,
-  NotFound,
-  ApiError,
-  parseDatabaseError,
-} from "@/shared/errors/errors";
-import { hash } from "@/shared/util/bcrypt";
-import type { UpdateUserRequest } from "@/shared/types/apiResponse";
-import type { AtLeastOne, UpdateUserDTO } from "@/shared/types/database";
-import {
-  UserRepository,
-  AuthRepository,
-} from "@/shared/database/repositories/repositories.index";
-const secret = process.env.JWT_SECRET;
+import * as Repository from "@/shared/types/repositories";
+import { UserRepository } from "@/shared/database/repositories/user.repository";
+import { hash } from "bcrypt";
 
-export class AuthenticationServiceClass {
-  #secret = process.env.JWT_SECRET;
+type CreateUserBody = Pick<Repository.User, "name" | "email"> & {
+  password: string;
+};
 
-  async authenticateSession(token: string) {
-    let payload: Jwt.JwtPayload;
-    try {
-      payload = jwt.verify(token, secret as string) as Jwt.JwtPayload;
-    } catch {
-      throw new Unauthorized("Invalid or expired token.", "INVALID_TOKEN");
+class AuthServiceClass {
+  async createUser(user: CreateUserBody) {
+    const passHash = await hash(user.password, 10);
+
+    const { email, name } = user;
+    const userQuery = {
+      name,
+      email,
+      passHash,
+    };
+
+    const result = await UserRepository.createUser(userQuery);
+    if (!result[0]) {
+      throw new Error();
     }
-    const jti = String(payload.jti);
-    await AuthRepository.verifyJTI(jti);
-
-    return payload;
-  }
-  async deleteSession(id: number) {
-    // Se o user não existe a api não retorna erro
-    try {
-      await UserRepository.deleteUser(id);
-    } catch (e) {
-      parseDatabaseError(e, "DATABASE: error on delete operation");
-    }
-  }
-
-  async updateSession(id: number, partialUser: AtLeastOne<UpdateUserRequest>) {
-    try {
-      let { password, ...userRest } = partialUser;
-      if (password)
-        userRest = {
-          passHash: await hash(password),
-          ...userRest,
-        } as UpdateUserDTO;
-      const user = (await UserRepository.updateUser(id, userRest))[0];
-      if (!user) throw new NotFound("DATABASE: no user was updated.");
-      return user;
-    } catch (e) {
-      if (e instanceof ApiError) throw e;
-      parseDatabaseError(e, "DATABASE: error on update operation");
-    }
-  }
-
-  async getMe(id: number) {
-    try {
-      const user = await UserRepository.getUser(id);
-      if (!user) throw new NotFound("DATABASE: no user was returned.");
-      return user;
-    } catch (e) {
-      if (e instanceof ApiError) throw e;
-      parseDatabaseError(e, "DATABASE: error on get operation");
-    }
+    return result[0];
   }
 }
 
-export const AuthService = new AuthenticationServiceClass();
+export const authService = new AuthServiceClass();

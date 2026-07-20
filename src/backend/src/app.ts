@@ -1,15 +1,14 @@
-import express from "express";
-import authRouter from "./modules/auth/auth.routes";
-import apiStatus from "./modules/status/apiStatus";
-import entryRouter from "./modules/entry/entry.routes";
-import { globalErrorHandling } from "./shared/middlewares/errorHandler";
+import e from "express";
+import { errorHandler } from "@/shared/middlewares/errorHandler";
+import * as authRouter from "@/modules/auth/auth.routes";
+const app = e();
 
-const app = express();
+app.use(e.json());
+app.use("/api/v1", (_, res) => {
+  return res.status(200).json({ message: "API is running!" });
+});
+app.use("/auth", authRouter.default);
 
-app.get("/api", apiStatus);
-app.use(express.json());
-app.use("/api/v1", entryRouter);
-app.use(authRouter);
-app.use(globalErrorHandling);
+app.use(errorHandler);
 
 export default app;

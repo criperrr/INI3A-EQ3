@@ -18,7 +18,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { customType } from "drizzle-orm/pg-core";
-import type { Point } from "../types/database";
+
+// custom type 
+export interface Point {
+  lat: number;
+  lng: number;
+}
 
 export const recoveryMessageStatus = pgEnum("recovery_message_status", [
   "Satisfatório",
@@ -27,8 +32,6 @@ export const recoveryMessageStatus = pgEnum("recovery_message_status", [
   "Não aconteceu",
 ]);
 export const statusRec = pgEnum("status_rec", ["SAT", "INS", "NC", "NAC"]);
-
-// !REFACTOR ****************************
 
 // Criei um tipo custom que permite a comunicação com o POSTGIS e burla o dizzle
 // Em geral isso pode funcionar MAS:
@@ -99,7 +102,6 @@ export const user = pgTable(
     birthdate: date(),
     points: integer().default(0).notNull().default(0),
     dangerFlag: boolean("danger_flag").default(false).notNull().default(false),
-    // TODO: failed to parse database type 'geography'
     location: geography("location"),
     roleId: integer("role_id").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
