@@ -53,16 +53,14 @@ class AuthServiceClass {
   }
 
   async deleteUser(id: number | string) {
-    
     const rowCount = await UserRepository.deleteUser(id);
-    
+
     if (rowCount == 0) {
       throw new Error("internal");
     }
-    
-    return rowCount;
 
-  };
+    return rowCount;
+  }
 
   async getUserById(id: number | string) {
     const result = await UserRepository.getUserById(id);

@@ -8,13 +8,15 @@ class AuthControllerClass{
     try {
       const { email, password, name } = req.body
       const user = await authService.createUser({ name, email, password });
-      
-
       return res.json(success(user)).status(201);
     } catch (e) {
       next(e);
     }
-   }
+  }
+
+  async deleteAccount(req: Api.Request, res: Response, next: NextFunction) {
+    const { id } = req.user;
+  }
 }
 
 export const authController = new AuthControllerClass();

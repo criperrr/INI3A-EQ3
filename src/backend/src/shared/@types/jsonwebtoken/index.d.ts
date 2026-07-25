@@ -1,4 +1,7 @@
 import * as jwt from "jsonwebtoken";
+import type { Request } from "express";
+
+
 
 declare global {
   namespace RefreshToken {
@@ -11,12 +14,6 @@ declare global {
     type RefreshRecharge = RefreshInfo & {
       oldRefreshToken: string;
     };
-
-    namespace Handlers {
-      interface RefreshInfo {
-        refreshToken: string;
-      }
-    }
   }
 
   namespace Jwt {
@@ -32,4 +29,22 @@ declare global {
       ex: number;
     }
   }
+
+ namespace Api {
+    export type Request<
+        Body = any,
+        Params = {},
+        ResBody = any,
+        Query = {},
+        Locals extends Record<string, any> = {}
+    > = Express.Request<
+        Params,
+        ResBody,
+        Body,
+        Query,
+        Locals
+    > & {
+        user: number;
+    }
+}
 }
