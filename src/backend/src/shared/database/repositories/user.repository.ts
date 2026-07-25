@@ -27,10 +27,10 @@ class UserRepositoryClass {
     });
   }
 
-  async updateUser(id: string | number, user: Repository.UpdateUser) {
+  async updateUser(id: string | number, newUser: Repository.UpdateUser) {
     return this.db
       .update(User)
-      .set(user)
+      .set(newUser)
       .returning({
         id: User.id,
         name: User.name,
