@@ -1,117 +1,172 @@
 import React from "react";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router"; // <-- Importamos o hook de rotas do Expo
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../content/themeContent"; // Importação do tema
 
 const COLORS = {
-    vibrantBlue: "#0062CC",
-    white: "#FFFFFF",
-    gray: "#8E8E93",
+  vibrantBlue: "#0062CC",
+  white: "#FFFFFF",
+  gray: "#8E8E93",
+  centerDarkBg: "#2C2C2E",
 };
 
+export type TabKey = "home" | "search" | "registerProduct" | "map" | "profile";
+
 interface FooterProps {
-    activeTab?: "home" | "search" | "map" | "profile";
+  activeTab?: TabKey;
 }
 
-export default function Footer({ activeTab = "home" }: FooterProps) {
-    const router = useRouter(); // <-- Inicializamos o router
+interface TabConfig {
+  key: TabKey;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+  route: string;
+  isCenter?: boolean;
+}
 
-    return (
-        <View style={styles.container}>
-            {/* Ícone 1: Casa (Index / Home) */}
-            <TouchableOpacity
-                style={styles.navItem}
-                activeOpacity={0.7}
-                onPress={() => router.push("/")} // Navega para app/index.tsx
-            >
-                {activeTab === "home" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="home" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="home-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+const NAV_TABS: TabConfig[] = [
+  { key: "home", icon: "home-outline", activeIcon: "home", route: "/" },
+  {
+    key: "search",
+    icon: "search-outline",
+    activeIcon: "search",
+    route: "/search",
+  },
+  {
+    key: "registerProduct",
+    icon: "add",
+    activeIcon: "add",
+    route: "/scannerProduct",
+    isCenter: true,
+  },
+  { key: "map", icon: "map-outline", activeIcon: "map", route: "/map" },
+  {
+    key: "profile",
+    icon: "person-outline",
+    activeIcon: "person",
+    route: "/profile",
+  },
+];
 
-            {/* Ícone 2: Busca (Search) */}
-            <TouchableOpacity
-                style={styles.navItem}
-                activeOpacity={0.7}
-                onPress={() => router.push("/search")} // Navega para app/search.tsx
-            >
-                {activeTab === "search" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="search" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="search-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+export default function Footer({ activeTab }: FooterProps) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { themeStyles, isDark } = useTheme(); // Consumo do tema
 
-            {/* Ícone 3: Mapa (Map) */}
-            <TouchableOpacity
-                style={styles.navItem}
-                activeOpacity={0.7}
-                onPress={() => router.push("/map")} // Navega para app/map.tsx
-            >
-                {activeTab === "map" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="map" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="map-outline" size={26} color={COLORS.gray} />
-                )}
-            </TouchableOpacity>
+  const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
+  const dynamicHeight = 60 + dynamicPaddingBottom;
 
-            {/* Ícone 4: Perfil (Profile) */}
+  return (
+    <View
+      style={[
+        styles.container,
+        themeStyles.headerBg,
+        themeStyles.border,
+        { height: dynamicHeight, paddingBottom: dynamicPaddingBottom },
+      ]}
+    >
+      {NAV_TABS.map((tab) => {
+        const isActive = activeTab === tab.key;
+
+        if (tab.isCenter) {
+          return (
             <TouchableOpacity
-                style={styles.navItem}
-                activeOpacity={0.7}
-                onPress={() => router.push("/profile")} // Navega para app/profile.tsx
+              key={tab.key}
+              style={styles.centerItem}
+              activeOpacity={0.8}
+              onPress={() => router.push(tab.route as any)}
             >
-                {activeTab === "profile" ? (
-                    <View style={styles.activeCircle}>
-                        <Ionicons name="person" size={24} color={COLORS.white} />
-                    </View>
-                ) : (
-                    <Ionicons name="person-outline" size={26} color={COLORS.gray} />
-                )}
+              <View
+                style={[
+                  styles.centerCircle,
+                  isActive
+                    ? styles.centerCircleActive
+                    : isDark
+                      ? { backgroundColor: "#374151" }
+                      : { backgroundColor: COLORS.centerDarkBg },
+                ]}
+              >
+                <Ionicons name={tab.icon} size={32} color={COLORS.white} />
+              </View>
             </TouchableOpacity>
-        </View>
-    );
+          );
+        }
+
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={styles.navItem}
+            activeOpacity={0.7}
+            onPress={() => router.push(tab.route as any)}
+          >
+            {isActive ? (
+              <View style={styles.activeCircle}>
+                <Ionicons
+                  name={tab.activeIcon}
+                  size={24}
+                  color={COLORS.white}
+                />
+              </View>
+            ) : (
+              <Ionicons
+                name={tab.icon}
+                size={26}
+                color={isDark ? "#9CA3AF" : COLORS.gray}
+              />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flexDirection: "row",
-        justifyContent: "space-around",
-        alignItems: "center",
-        backgroundColor: COLORS.white,
-        position: "absolute",
-        bottom: 0,
-        width: "100%",
-        height: 85,
-        paddingBottom: 20,
-        borderTopWidth: 1,
-        borderTopColor: "#EAEAEA",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 5,
-        zIndex: 10,
-    },
-    navItem: {
-        alignItems: "center",
-        justifyContent: "center",
-        flex: 1,
-    },
-    activeCircle: {
-        width: 46,
-        height: 46,
-        borderRadius: 23,
-        backgroundColor: COLORS.vibrantBlue,
-        alignItems: "center",
-        justifyContent: "center",
-    },
+  container: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    borderTopWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  navItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    height: "100%",
+  },
+  activeCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORS.vibrantBlue,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  centerItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    height: "100%",
+  },
+  centerCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ translateY: -18 }],
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  centerCircleActive: { backgroundColor: COLORS.vibrantBlue },
 });
