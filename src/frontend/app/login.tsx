@@ -13,14 +13,11 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
-const COLORS = {
-  vibrantBlue: "#0062CC",
-  white: "#FFFFFF",
-};
+
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles, isDark, accent } = useTheme();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -231,24 +228,24 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: COLORS.vibrantBlue,
+    color: "#2E7D32",
     fontSize: 14,
     fontWeight: "600",
   },
   loginButton: {
-    backgroundColor: COLORS.vibrantBlue,
+    backgroundColor: "#2E7D32",
     height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: COLORS.vibrantBlue,
+    shadowColor: "#2E7D32",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
   loginButtonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
     letterSpacing: 0.5,
@@ -262,7 +259,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   registerText: {
-    color: COLORS.vibrantBlue,
+    color: "#2E7D32",
     fontSize: 15,
     fontWeight: "bold",
   },

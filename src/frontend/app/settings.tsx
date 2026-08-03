@@ -61,7 +61,7 @@ const SettingsScreen: React.FC = () => {
   const [passwordError, setPasswordError] = useState("");
 
   // Trazemos o tema global do contexto
-  const { isDark: globalIsDark, themeStyles, setGlobalTheme } = useTheme();
+  const { isDark: globalIsDark, themeStyles, setGlobalTheme, accent } = useTheme();
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -82,7 +82,6 @@ const SettingsScreen: React.FC = () => {
     value: SettingsState[K],
   ) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
-    // REMOVIDO: setGlobalTheme() daqui. O tema só muda ao salvar.
     setIsSaved(false);
     setPasswordError("");
   };
@@ -169,7 +168,7 @@ const SettingsScreen: React.FC = () => {
       {/* Header */}
       <View style={[styles.header, themeStyles.headerBg]}>
         <View style={styles.headerTitleContainer}>
-          <Settings size={28} color="#2563EB" />
+          <Settings size={28} color={accent} />
           <Text style={[styles.headerTitle, themeStyles.text]}>
             Configurações
           </Text>
@@ -187,9 +186,9 @@ const SettingsScreen: React.FC = () => {
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
             {isSettingsDark ? (
-              <Moon size={22} color="#2563EB" />
+              <Moon size={22} color={accent} />
             ) : (
-              <Sun size={22} color="#2563EB" />
+              <Sun size={22} color={accent} />
             )}
             <Text style={[styles.sectionTitle, themeStyles.text]}>
               Aparência
@@ -207,9 +206,11 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={isSettingsDark}
-              onValueChange={() =>
-                handleSettingChange("theme", isSettingsDark ? "light" : "dark")
-              }
+              onValueChange={() => {
+                const newTheme = isSettingsDark ? "light" : "dark";
+                handleSettingChange("theme", newTheme);
+                setGlobalTheme(newTheme);
+              }}
             />
           </View>
 
@@ -227,7 +228,7 @@ const SettingsScreen: React.FC = () => {
         {/* Notifications Section */}
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
-            <Bell size={22} color="#2563EB" />
+            <Bell size={22} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
               Notificações
             </Text>
@@ -282,7 +283,7 @@ const SettingsScreen: React.FC = () => {
         {/* Privacy Section */}
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
-            <Lock size={22} color="#2563EB" />
+            <Lock size={22} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
               Privacidade
             </Text>
@@ -334,7 +335,7 @@ const SettingsScreen: React.FC = () => {
         {/* Security Section */}
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
-            <Shield size={22} color="#2563EB" />
+            <Shield size={22} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
               Segurança
             </Text>
@@ -372,7 +373,7 @@ const SettingsScreen: React.FC = () => {
         {/* Account Section */}
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
-            <User size={22} color="#2563EB" />
+            <User size={22} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>Conta</Text>
           </View>
 
@@ -562,7 +563,7 @@ const styles = StyleSheet.create({
   },
   rowLabel: { fontSize: 16, fontWeight: "500" },
   rowSubLabel: { fontSize: 13, marginTop: 2 },
-  linkText: { color: "#2563EB", fontWeight: "600" },
+  linkText: { color: "#2E7D32", fontWeight: "600" },
   privacyContainer: { flexDirection: "row", gap: 10, marginTop: 4 },
   privacyButton: {
     flex: 1,
@@ -583,7 +584,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  btnBlue: { backgroundColor: "#2563EB" },
+  btnBlue: { backgroundColor: "#2E7D32" },
   btnRed: { backgroundColor: "#DC2626" },
   btnRedLight: { backgroundColor: "#FEE2E2" },
   textWhite: { color: "#FFFFFF", fontWeight: "600" },

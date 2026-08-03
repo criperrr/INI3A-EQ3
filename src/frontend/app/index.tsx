@@ -16,20 +16,44 @@ import { useTheme } from "../content/themeContent";
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
-const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
-  white: "#FFFFFF",
-};
-
 // --- Mocks ---
 const MOCK_PRODUCTS = [
-  { id: 1, name: "Pão Artesanal" },
-  { id: 2, name: "Leite Fresco" },
-  { id: 3, name: "Frutas Orgânicas" },
-  { id: 4, name: "Arroz Integral" },
-  { id: 5, name: "Frutas Tropicais" },
-  { id: 6, name: "Legumes Selecionados" },
+  {
+    id: 1,
+    name: "Pão Artesanal",
+    image:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+  },
+  {
+    id: 2,
+    name: "Leite Fresco",
+    image:
+      "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Frutas Orgânicas",
+    image:
+      "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=400&fit=crop",
+  },
+  {
+    id: 4,
+    name: "Arroz Integral",
+    image:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+  },
+  {
+    id: 5,
+    name: "Frutas Tropicais",
+    image:
+      "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=400&h=400&fit=crop",
+  },
+  {
+    id: 6,
+    name: "Legumes Selecionados",
+    image:
+      "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=400&fit=crop",
+  },
 ];
 
 const MOCK_BANNERS = [
@@ -38,26 +62,32 @@ const MOCK_BANNERS = [
     title: "Legumes da Horta",
     subtitle: "Desconto em itens selecionados",
     linkText: "Ver Ofertas",
+    image:
+      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&h=400&fit=crop",
   },
   {
     id: "2",
     title: "Frutas Frescas",
     subtitle: "Chegaram hoje do produtor",
     linkText: "Aproveitar",
+    image:
+      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&h=400&fit=crop",
   },
   {
     id: "3",
     title: "Padaria Artesanal",
     subtitle: "Pães quentinhos saindo agora",
     linkText: "Comprar",
+    image:
+      "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=800&h=400&fit=crop",
   },
 ];
 
-const MENU_ICONS = [
-  "cart-outline",
-  "nutrition-outline",
-  "book-outline",
-  "custom-logo",
+const ACTION_TABS = [
+  { id: "markets", label: "Mercados", icon: "storefront-outline", route: "/map" },
+  { id: "products", label: "Produtos", icon: "cart-outline", route: "/search" },
+  { id: "help", label: "Ajuda", icon: "help-buoy-outline", route: "/aboutUs" },
+  { id: "about", label: "Sobre Nós", icon: "leaf-outline", route: "/aboutUs" },
 ];
 
 export default function Index() {
@@ -68,9 +98,7 @@ export default function Index() {
     router.push("/productDetails");
   };
 
-  const handleAboutUsPress = () => {
-    router.push("/aboutUs");
-  };
+
 
   return (
     <ScrollView
@@ -78,7 +106,7 @@ export default function Index() {
       showsVerticalScrollIndicator={false}
     >
       <Banner />
-      <ActionMenu onAboutUsPress={handleAboutUsPress} />
+      <ActionMenu />
       <ProductGrid onProductPress={handleProductPress} />
     </ScrollView>
   );
@@ -86,7 +114,7 @@ export default function Index() {
 
 // --- Componentes Internos com Temas Dinâmicos ---
 const Banner = () => {
-  const { themeStyles } = useTheme();
+  const { themeStyles, accent } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -142,8 +170,10 @@ const Banner = () => {
                 themeStyles.border,
               ]}
             >
-              <View
-                style={[styles.imagePlaceholderLarge, themeStyles.inputBg]}
+              <Image
+                source={{ uri: item.image }}
+                style={styles.bannerImage}
+                resizeMode="cover"
               />
               <Text style={[styles.bannerTitle, themeStyles.text]}>
                 {item.title}
@@ -151,7 +181,9 @@ const Banner = () => {
               <Text style={[styles.bannerSubtitle, themeStyles.subText]}>
                 {item.subtitle}
               </Text>
-              <Text style={styles.bannerLink}>{item.linkText}</Text>
+              <Text style={[styles.bannerLink, { color: accent }]}>
+                {item.linkText}
+              </Text>
             </View>
           </View>
         )}
@@ -161,7 +193,13 @@ const Banner = () => {
         {MOCK_BANNERS.map((_, index) => (
           <View
             key={index}
-            style={[styles.dot, activeIndex === index && styles.activeDot]}
+            style={[
+              styles.dot,
+              activeIndex === index && [
+                styles.activeDot,
+                { backgroundColor: accent },
+              ],
+            ]}
           />
         ))}
       </View>
@@ -169,38 +207,26 @@ const Banner = () => {
   );
 };
 
-const ActionMenu = ({ onAboutUsPress }: { onAboutUsPress: () => void }) => {
+const ActionMenu = () => {
+  const router = useRouter();
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
-      {MENU_ICONS.map((icon, index) => (
+      {ACTION_TABS.map((tab) => (
         <TouchableOpacity
-          key={index}
-          style={[styles.centralButton, themeStyles.inputBg]}
+          key={tab.id}
+          style={styles.tabButton}
           activeOpacity={0.7}
-          onPress={() => {
-            if (icon === "custom-logo") {
-              onAboutUsPress();
-            }
-          }}
+          onPress={() => router.push(tab.route as any)}
         >
-          {icon === "custom-logo" ? (
-            <Image
-              source={
-                isDark
-                  ? require("../components/images/logo-darkmode.png")
-                  : require("../components/images/logo-preta.png")
-              }
-              style={styles.logoIcon}
-              resizeMode="contain"
-            />
-          ) : (
+          <View style={[styles.iconContainer, themeStyles.inputBg]}>
             <Ionicons
-              name={icon as any}
+              name={tab.icon as any}
               size={24}
-              color={isDark ? "#FFFFFF" : COLORS.darkBlue}
+              color={isDark ? "#F0E6D3" : "#1A2E1A"}
             />
-          )}
+          </View>
+          <Text style={[styles.tabLabel, themeStyles.text]}>{tab.label}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -220,8 +246,10 @@ const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => {
             activeOpacity={0.8}
             onPress={onProductPress}
           >
-            <View
-              style={[styles.imagePlaceholderSquare, themeStyles.inputBg]}
+            <Image
+              source={{ uri: product.image }}
+              style={styles.productImage}
+              resizeMode="cover"
             />
             <Text
               style={[styles.productName, themeStyles.text]}
@@ -252,9 +280,9 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
   },
-  imagePlaceholderLarge: {
+  bannerImage: {
     width: "100%",
-    height: 100,
+    height: 120,
     borderRadius: 12,
     marginBottom: 8,
   },
@@ -269,7 +297,6 @@ const styles = StyleSheet.create({
   bannerLink: {
     fontSize: 12,
     fontWeight: "600",
-    color: COLORS.vibrantBlue,
     marginTop: 6,
   },
   paginationContainer: {
@@ -286,7 +313,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#D9D9D9",
   },
   activeDot: {
-    backgroundColor: COLORS.vibrantBlue,
     width: 10,
     height: 10,
     borderRadius: 5,
@@ -301,16 +327,21 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
   },
-  centralButton: {
+  tabButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  iconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  logoIcon: {
-    width: 24,
-    height: 24,
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: "600",
   },
   productsSection: {
     paddingHorizontal: 16,
@@ -334,7 +365,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 4,
   },
-  imagePlaceholderSquare: {
+  productImage: {
     width: "100%",
     aspectRatio: 1,
     borderRadius: 10,

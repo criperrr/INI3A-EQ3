@@ -5,8 +5,8 @@ import MapView, { Marker, Callout } from "react-native-maps";
 import { useTheme } from "../content/themeContent";
 
 const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
+  darkBlue: "#1A2E1A",
+  accent: "#2E7D32",
 };
 
 const INITIAL_REGION = {
@@ -56,7 +56,7 @@ export default function MapScreen() {
               key={marker.id}
               coordinate={marker.coordinate}
 
-              pinColor={isDark ? COLORS.vibrantBlue : COLORS.darkBlue}
+              pinColor={isDark ? COLORS.accent : COLORS.darkBlue}
             >
               <Callout tooltip>
                 <View
@@ -85,7 +85,7 @@ export default function MapScreen() {
               <Ionicons
                 name={filter.icon}
                 size={24}
-                color={isDark ? "#FFFFFF" : COLORS.darkBlue}
+                color={isDark ? "#F0E6D3" : COLORS.darkBlue}
               />
               <Text style={[styles.filterText, themeStyles.text]}>
                 {filter.label}

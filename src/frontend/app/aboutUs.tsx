@@ -10,16 +10,13 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
-const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
-};
+
 
 export default function AboutUs() {
   const router = useRouter();
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles, isDark, accent } = useTheme();
 
-  const iconColor = isDark ? "#FFFFFF" : COLORS.darkBlue;
+  const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   return (
     <ScrollView
@@ -57,7 +54,7 @@ export default function AboutUs() {
           <Ionicons
             name="checkmark-circle-outline"
             size={20}
-            color={COLORS.vibrantBlue}
+            color={accent}
           />
           <Text style={[styles.valueText, themeStyles.text]}>
             <Text style={[styles.valueBold, themeStyles.text]}>
@@ -68,7 +65,7 @@ export default function AboutUs() {
         </View>
 
         <View style={styles.valueItem}>
-          <Ionicons name="leaf-outline" size={20} color={COLORS.vibrantBlue} />
+          <Ionicons name="leaf-outline" size={20} color={accent} />
           <Text style={[styles.valueText, themeStyles.text]}>
             <Text style={[styles.valueBold, themeStyles.text]}>Ética: </Text>
             Compromisso absoluto com o respeito e o usuário.
@@ -79,7 +76,7 @@ export default function AboutUs() {
           <Ionicons
             name="people-outline"
             size={20}
-            color={COLORS.vibrantBlue}
+            color={accent}
           />
           <Text style={[styles.valueText, themeStyles.text]}>
             <Text style={[styles.valueBold, themeStyles.text]}>

@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
 const COLORS = {
-  vibrantBlue: "#0062CC",
+  accent: "#2E7D32",
   white: "#FFFFFF",
 };
 
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: COLORS.vibrantBlue,
+    backgroundColor: COLORS.accent,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -279,13 +279,13 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, height: "100%" },
   eyeIcon: { padding: 8 },
   saveButton: {
-    backgroundColor: COLORS.vibrantBlue,
+    backgroundColor: COLORS.accent,
     height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: COLORS.vibrantBlue,
+    shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -303,5 +303,5 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   footerText: { fontSize: 15 },
-  loginText: { color: COLORS.vibrantBlue, fontSize: 15, fontWeight: "bold" },
+  loginText: { color: COLORS.accent, fontSize: 15, fontWeight: "bold" },
 });

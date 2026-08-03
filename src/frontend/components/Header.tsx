@@ -17,7 +17,7 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
 
-  const iconColor = isDark ? "#FFFFFF" : COLORS.darkBlue;
+const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   return (
     <View
@@ -36,7 +36,7 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
         <Ionicons name="menu-outline" size={26} color={iconColor} />
       </TouchableOpacity>
 
-      <LogoBrand isDark={isDark} themeStyles={themeStyles} />
+      <LogoBrand isDark={isDark} />
 
       <TouchableOpacity
         activeOpacity={0.7}
@@ -49,13 +49,10 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   );
 }
 
-// Passamos propriedades para o componente interno
 const LogoBrand = ({
   isDark,
-  themeStyles,
 }: {
   isDark: boolean;
-  themeStyles: any;
 }) => (
   <View style={styles.logoContainer}>
     <Image
@@ -66,7 +63,6 @@ const LogoBrand = ({
       }
       style={styles.logoImage}
     />
-    <Text style={[styles.logoText, themeStyles.text]}>PResco</Text>
   </View>
 );
 
@@ -84,18 +80,13 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   logoContainer: {
-    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
   },
   logoImage: {
-    width: 50,
-    height: 50,
+    width: 60,
+    height: 60,
     resizeMode: "contain",
-    marginRight: 8,
   },
-  logoText: {
-    fontSize: 22,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
-  },
+
 });

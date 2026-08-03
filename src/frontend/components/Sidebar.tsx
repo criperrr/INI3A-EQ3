@@ -7,6 +7,7 @@ import {
   Dimensions,
   Image,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 
 const { width, height } = Dimensions.get("window");
@@ -16,9 +17,12 @@ const COLORS = {
 };
 
 const MENU_LINKS = [
-  { id: "account", label: "Minha Conta" },
-  { id: "settings", label: "Configurações" },
-  { id: "help", label: "Ajuda" },
+  { id: "account", label: "Minha Conta", route: "/profile" },
+  { id: "markets", label: "Mercados", route: "/map" },
+  { id: "products", label: "Produtos", route: "/productDetails" },
+  { id: "settings", label: "Configurações", route: "/settings" },
+  { id: "help", label: "Ajuda", route: "/aboutUs" },
+  { id: "about", label: "Sobre Nós", route: "/aboutUs" },
 ];
 
 interface SidebarProps {
@@ -27,7 +31,8 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
-  const { themeStyles } = useTheme(); // Consumo do tema
+  const router = useRouter();
+  const { themeStyles, isDark } = useTheme(); // Consumo do tema
 
   if (!isOpen) return null;
 
@@ -41,8 +46,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <View style={[styles.menuPanel, themeStyles.card]}>
         <SidebarHeader themeStyles={themeStyles} />
-        <NavigationLinks themeStyles={themeStyles} />
-        <SidebarDecor />
+        <NavigationLinks themeStyles={themeStyles} router={router} onClose={onClose} />
+        <SidebarDecor isDark={isDark} />
       </View>
     </View>
   );
@@ -56,13 +61,25 @@ const SidebarHeader = ({ themeStyles }: { themeStyles: any }) => (
   </View>
 );
 
-const NavigationLinks = ({ themeStyles }: { themeStyles: any }) => (
+const NavigationLinks = ({
+  themeStyles,
+  router,
+  onClose,
+}: {
+  themeStyles: any;
+  router: any;
+  onClose: () => void;
+}) => (
   <View style={styles.linksContainer}>
     {MENU_LINKS.map((link) => (
       <TouchableOpacity
         key={link.id}
         style={styles.linkItem}
         activeOpacity={0.7}
+        onPress={() => {
+          onClose();
+          router.push(link.route as any);
+        }}
       >
         <Text style={[styles.linkText, themeStyles.text]}>{link.label}</Text>
       </TouchableOpacity>
@@ -70,11 +87,17 @@ const NavigationLinks = ({ themeStyles }: { themeStyles: any }) => (
   </View>
 );
 
-const SidebarDecor = () => (
+const SidebarDecor = ({ isDark }: { isDark: boolean }) => (
   <View style={styles.ararinhaContainer}>
-    <View style={styles.ararinhaPlaceholder}>
-      <Text style={styles.ararinhaText}>🦜</Text>
-    </View>
+    <Image
+      source={
+        isDark
+          ? require("./images/logo-darkmode.png")
+          : require("./images/logo-preta.png")
+      }
+      style={styles.watermarkLogo}
+      resizeMode="contain"
+    />
   </View>
 );
 
@@ -115,18 +138,17 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 16, fontWeight: "600" },
   ararinhaContainer: {
     position: "absolute",
-    bottom: -15,
-    left: -20,
-    width: 140,
-    height: 140,
-    justifyContent: "flex-end",
-    alignItems: "flex-start",
-  },
-  ararinhaPlaceholder: {
-    width: 140,
-    height: 140,
+    bottom: -20,
+    left: -30,
+    width: 160,
+    height: 160,
     justifyContent: "center",
     alignItems: "center",
   },
-  ararinhaText: { fontSize: 42 },
+  watermarkLogo: {
+    width: 160,
+    height: 160,
+    opacity: 0.08,
+    transform: [{ rotate: "-15deg" }],
+  },
 });

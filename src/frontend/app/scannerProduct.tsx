@@ -6,7 +6,7 @@ import { useTheme } from "../content/themeContent";
 
 const COLORS = {
   white: "#FFFFFF",
-  vibrantBlue: "#0062CC",
+  accent: "#2E7D32",
 };
 
 export default function ScannerProduct() {
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   },
   laserLine: { width: "85%", height: 2, backgroundColor: "red", opacity: 0.6 },
   tempButtonStatic: {
-    backgroundColor: COLORS.vibrantBlue,
+    backgroundColor: COLORS.accent,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 
 const COLORS = {
-  vibrantBlue: "#0062CC",
   white: "#FFFFFF",
   gray: "#8E8E93",
   centerDarkBg: "#2C2C2E",
@@ -53,7 +52,7 @@ const NAV_TABS: TabConfig[] = [
 export default function Footer({ activeTab }: FooterProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { themeStyles, isDark } = useTheme(); // Consumo do tema
+  const { themeStyles, isDark, accent } = useTheme();
 
   const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
   const dynamicHeight = 60 + dynamicPaddingBottom;
@@ -82,7 +81,7 @@ export default function Footer({ activeTab }: FooterProps) {
                 style={[
                   styles.centerCircle,
                   isActive
-                    ? styles.centerCircleActive
+                    ? { backgroundColor: accent }
                     : isDark
                       ? { backgroundColor: "#374151" }
                       : { backgroundColor: COLORS.centerDarkBg },
@@ -102,7 +101,7 @@ export default function Footer({ activeTab }: FooterProps) {
             onPress={() => router.push(tab.route as any)}
           >
             {isActive ? (
-              <View style={styles.activeCircle}>
+              <View style={[styles.activeCircle, { backgroundColor: accent }]}>
                 <Ionicons
                   name={tab.activeIcon}
                   size={24}
@@ -145,7 +144,6 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 23,
-    backgroundColor: COLORS.vibrantBlue,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -168,5 +166,5 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  centerCircleActive: { backgroundColor: COLORS.vibrantBlue },
+  centerCircleActive: { backgroundColor: "#2E7D32" },
 });

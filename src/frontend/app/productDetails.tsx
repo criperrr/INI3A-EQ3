@@ -3,9 +3,7 @@ import { View, StyleSheet, Text, ScrollView } from "react-native";
 import ProductCard from "../components/productCard";
 import { useTheme } from "../content/themeContent";
 
-const COLORS = {
-  chartGreen: "#3E6B42",
-};
+
 
 const MOCK_PRODUCT = {
   category: "Produto",
@@ -19,7 +17,7 @@ const MOCK_PRODUCT = {
 const MOCK_PRICE_HISTORY = [45, 30, 55, 40, 35, 42, 48, 65, 50, 32, 40, 52];
 
 export default function ProductDetails() {
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles, isDark, accent } = useTheme();
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
@@ -34,7 +32,7 @@ export default function ProductDetails() {
             imageUri={MOCK_PRODUCT.imageUrl}
           >
             <PriceDetails themeStyles={themeStyles} />
-            <PriceChart themeStyles={themeStyles} isDark={isDark} />
+            <PriceChart themeStyles={themeStyles} accent={accent} />
           </ProductCard>
         </View>
       </ScrollView>
@@ -58,10 +56,10 @@ const PriceDetails = ({ themeStyles }: { themeStyles: any }) => (
 
 const PriceChart = ({
   themeStyles,
-  isDark,
+  accent,
 }: {
   themeStyles: any;
-  isDark: boolean;
+  accent: string;
 }) => (
   <View style={styles.chartSection}>
     <Text style={[styles.chartTitle, themeStyles.text]}>
@@ -78,7 +76,7 @@ const PriceChart = ({
                 styles.chartBar,
                 {
                   height: `${heightValue}%`,
-                  backgroundColor: isDark ? "#4ADE80" : COLORS.chartGreen,
+                  backgroundColor: accent,
                 },
               ]}
             />

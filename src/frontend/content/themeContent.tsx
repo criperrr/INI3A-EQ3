@@ -6,9 +6,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 interface ThemeContextType {
   theme: "light" | "dark";
   isDark: boolean;
+  accent: string;
   themeStyles: typeof lightTheme;
   setGlobalTheme: (newTheme: "light" | "dark") => void;
 }
+
+const ACCENT_LIGHT = "#2E7D32";
+const ACCENT_DARK = "#F5B731";
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
@@ -30,14 +34,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const setGlobalTheme = async (newTheme: "light" | "dark") => {
     setTheme(newTheme);
+    try {
+      const savedSettings = await AsyncStorage.getItem("app_settings");
+      const parsed = savedSettings ? JSON.parse(savedSettings) : {};
+      parsed.theme = newTheme;
+      await AsyncStorage.setItem("app_settings", JSON.stringify(parsed));
+    } catch (error) {
+      console.error("Erro ao persistir tema:", error);
+    }
   };
 
   const isDark = theme === "dark";
   const themeStyles = isDark ? darkTheme : lightTheme;
+  const accent = isDark ? ACCENT_DARK : ACCENT_LIGHT;
 
   return (
     <ThemeContext.Provider
-      value={{ theme, isDark, themeStyles, setGlobalTheme }}
+      value={{ theme, isDark, accent, themeStyles, setGlobalTheme }}
     >
       {children}
     </ThemeContext.Provider>
@@ -51,25 +64,26 @@ export const useTheme = () => {
   return context;
 };
 
-// Seus temas centralizados
+// Tema claro — off-white esverdeado, detalhes em verde
 const lightTheme = StyleSheet.create({
-  bg: { backgroundColor: "#F9FAFB" },
-  headerBg: { backgroundColor: "#FFFFFF", borderBottomColor: "#E5E7EB" },
-  card: { backgroundColor: "#FFFFFF" },
-  border: { borderColor: "#E5E7EB" },
-  text: { color: "#111827" },
-  subText: { color: "#6B7280" },
-  btnToggleOff: { backgroundColor: "#E5E7EB" },
-  inputBg: { backgroundColor: "#F3F4F6", borderColor: "#E5E7EB" },
+  bg: { backgroundColor: "#F5F7F2" },
+  headerBg: { backgroundColor: "#EEF2E8", borderBottomColor: "#D4DCC8" },
+  card: { backgroundColor: "#F0F4EC" },
+  border: { borderColor: "#D4DCC8" },
+  text: { color: "#1A2E1A" },
+  subText: { color: "#5A6B52" },
+  btnToggleOff: { backgroundColor: "#D4DCC8" },
+  inputBg: { backgroundColor: "#E8EDE2", borderColor: "#D4DCC8" },
 });
 
+// Tema escuro — mais saturado, detalhes em amarelo
 const darkTheme = StyleSheet.create({
-  bg: { backgroundColor: "#111827" },
-  headerBg: { backgroundColor: "#1F2937", borderBottomColor: "#374151" },
-  card: { backgroundColor: "#1F2937" },
-  border: { borderColor: "#374151" },
-  text: { color: "#FFFFFF" },
-  subText: { color: "#9CA3AF" },
-  btnToggleOff: { backgroundColor: "#374151" },
-  inputBg: { backgroundColor: "#111827", borderColor: "#374151" },
+  bg: { backgroundColor: "#0D1117" },
+  headerBg: { backgroundColor: "#161B22", borderBottomColor: "#30363D" },
+  card: { backgroundColor: "#1C2333" },
+  border: { borderColor: "#30363D" },
+  text: { color: "#F0E6D3" },
+  subText: { color: "#8B949E" },
+  btnToggleOff: { backgroundColor: "#30363D" },
+  inputBg: { backgroundColor: "#0D1117", borderColor: "#30363D" },
 });

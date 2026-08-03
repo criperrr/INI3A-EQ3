@@ -6,18 +6,55 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
 const MOCK_SEARCH_PRODUCTS = [
-  { id: 1, name: "Maçã Gala 1kg", price: "R$ 8,99" },
-  { id: 2, name: "Arroz Agulhinha", price: "R$ 25,90" },
-  { id: 3, name: "Arroz Agulhinha", price: "R$ 25,90" },
-  { id: 4, name: "Sabão Líquido 1L", price: "R$ 14,90" },
-  { id: 5, name: "Detergente Neutro", price: "R$ 2,99" },
-  { id: 6, name: "Água Sanitária 2L", price: "R$ 5,49" },
+  {
+    id: 1,
+    name: "Maçã Gala 1kg",
+    price: "R$ 8,99",
+    image:
+      "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=400&fit=crop",
+  },
+  {
+    id: 2,
+    name: "Arroz Agulhinha",
+    price: "R$ 25,90",
+    image:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Feijão Carioca",
+    price: "R$ 9,90",
+    image:
+      "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=400&h=400&fit=crop",
+  },
+  {
+    id: 4,
+    name: "Sabão Líquido 1L",
+    price: "R$ 14,90",
+    image:
+      "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&h=400&fit=crop",
+  },
+  {
+    id: 5,
+    name: "Detergente Neutro",
+    price: "R$ 2,99",
+    image:
+      "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=400&h=400&fit=crop",
+  },
+  {
+    id: 6,
+    name: "Água Sanitária 2L",
+    price: "R$ 5,49",
+    image:
+      "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400&h=400&fit=crop",
+  },
 ];
 
 export default function SearchScreen() {
@@ -55,7 +92,7 @@ const SearchBar = ({
   onChangeText: (text: string) => void;
 }) => {
   const { themeStyles, isDark } = useTheme();
-  const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
+  const placeholderColor = isDark ? "#8B949E" : "#5A6B52";
 
   return (
     <View
@@ -85,7 +122,7 @@ const ProductResultsGrid = ({
   products: typeof MOCK_SEARCH_PRODUCTS;
   onProductPress: () => void;
 }) => {
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles } = useTheme();
 
   return (
     <View style={styles.gridContainer}>
@@ -96,13 +133,11 @@ const ProductResultsGrid = ({
           activeOpacity={0.8}
           onPress={onProductPress}
         >
-          <View style={[styles.productImagePlaceholder, themeStyles.inputBg]}>
-            <Ionicons
-              name="image-outline"
-              size={32}
-              color={isDark ? "#4B5563" : "#CBD5E1"}
-            />
-          </View>
+          <Image
+            source={{ uri: product.image }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
 
           <View style={styles.productInfo}>
             <Text
@@ -159,13 +194,11 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
   },
-  productImagePlaceholder: {
+  productImage: {
     width: "100%",
     aspectRatio: 1,
     borderRadius: 12,
     marginBottom: 12,
-    alignItems: "center",
-    justifyContent: "center",
   },
   productInfo: { alignItems: "center" },
   productName: {
