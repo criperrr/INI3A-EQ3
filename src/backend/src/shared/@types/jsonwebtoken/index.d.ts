@@ -6,7 +6,7 @@ import type { Request } from "express";
 declare global {
   namespace RefreshToken {
     interface RefreshInfo {
-      id: string;
+     id: string;
       refreshToken: string;
       ex: number;
     }
