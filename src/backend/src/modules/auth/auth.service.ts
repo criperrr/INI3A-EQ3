@@ -3,6 +3,7 @@ import * as Repositories from "@/shared/types/repositories";
 import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { hash } from "bcrypt";
 import { InternalError } from "@/shared/errors/errors";
+import { signJwt } from "@/shared/util/jwt";
 
 class AuthServiceClass {
   async createUser(user: Services.CreateUser) {
@@ -15,12 +16,18 @@ class AuthServiceClass {
       passHash,
     };
 
-    const result = await UserRepository.createUser(userQuery);
-    if (!result[0]) {
+    const [result] =(await UserRepository.createUser(userQuery));
+
+    if (!result) {
       throw new Error();
     }
 
-    return result[0];
+    const jwt = signJwt({
+      sub: "" + result.id,
+      iss: "presco@comercial.com"
+    })
+
+    return { ...result, jwt };
   }
 
   async updateUser(id: number | string, user: Services.UpdateUser) {

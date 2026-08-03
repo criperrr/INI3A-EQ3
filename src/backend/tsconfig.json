@@ -10,7 +10,7 @@
     "module": "esnext",
     "target": "esnext",
 
-    "types": ["node"],
+    "types": ["node", "jsonwebtoken"],
     "typeRoots": ["./node_modules/@types", "./src/shared/@types"],
 
     // For nodejs:
