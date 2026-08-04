@@ -10,6 +10,7 @@ import {
   Modal,
   Share,
   Alert,
+  Platform,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -25,8 +26,11 @@ import {
   Download,
   Trash2,
   AlertCircle,
+  Palette,
+  Smartphone,
+  Zap,
 } from "lucide-react-native";
-import { useTheme } from "../content/themeContent";
+import { useTheme, MONET_PRESETS } from "../content/themeContent";
 
 interface SettingsState {
   theme: "light" | "dark";
@@ -60,8 +64,20 @@ const SettingsScreen: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
 
-  // Trazemos o tema global do contexto
-  const { isDark: globalIsDark, themeStyles, setGlobalTheme, accent } = useTheme();
+  const {
+    isDark: globalIsDark,
+    themeStyles,
+    setGlobalTheme,
+    accent,
+    amoledEnabled,
+    setAmoledEnabled,
+    monetEnabled,
+    syncWithSystemAndroid,
+    monetSeedColor,
+    setMonetEnabled,
+    setSyncWithSystemAndroid,
+    setMonetSeedColor,
+  } = useTheme();
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -107,7 +123,7 @@ const SettingsScreen: React.FC = () => {
   const handleSave = async () => {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-      setGlobalTheme(settings.theme); // ADICIONADO: Atualiza o tema global apenas no momento de salvar
+      setGlobalTheme(settings.theme);
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);
     } catch (error) {
@@ -118,7 +134,10 @@ const SettingsScreen: React.FC = () => {
   const handleReset = async () => {
     setSettings(DEFAULT_SETTINGS);
     await AsyncStorage.removeItem(STORAGE_KEY);
-    setGlobalTheme(DEFAULT_SETTINGS.theme); // Reseta o tema global também
+    setGlobalTheme(DEFAULT_SETTINGS.theme);
+    setAmoledEnabled(false);
+    setMonetEnabled(false);
+    setSyncWithSystemAndroid(false);
     setIsSaved(false);
     setPasswordError("");
   };
@@ -206,6 +225,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={isSettingsDark}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() => {
                 const newTheme = isSettingsDark ? "light" : "dark";
                 handleSettingChange("theme", newTheme);
@@ -214,6 +234,28 @@ const SettingsScreen: React.FC = () => {
             />
           </View>
 
+          {/* AMOLED Sub-Option (Only visible when Dark Theme is ON) */}
+          {isSettingsDark && (
+            <View style={[styles.row, styles.indentedRow]}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Zap size={16} color={accent} />
+                  <Text style={[styles.rowLabel, themeStyles.text]}>
+                    Preto Puro (AMOLED)
+                  </Text>
+                </View>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                  Fundo 100% preto para economizar bateria em telas AMOLED
+                </Text>
+              </View>
+              <Switch
+                value={amoledEnabled}
+                trackColor={{ false: "#D4DCC8", true: accent }}
+                onValueChange={(val) => setAmoledEnabled(val)}
+              />
+            </View>
+          )}
+
           <TouchableOpacity style={styles.row} onPress={handleLanguageSelect}>
             <View>
               <Text style={[styles.rowLabel, themeStyles.text]}>Idioma</Text>
@@ -221,8 +263,109 @@ const SettingsScreen: React.FC = () => {
                 {settings.language}
               </Text>
             </View>
-            <Text style={styles.linkText}>Alterar</Text>
+            <Text style={[styles.linkText, { color: accent }]}>Alterar</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Material You / Monet Section */}
+        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+          <View style={styles.sectionHeader}>
+            <Palette size={22} color={accent} />
+            <Text style={[styles.sectionTitle, themeStyles.text]}>
+              Material You
+            </Text>
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[styles.rowLabel, themeStyles.text]}>
+                Cores Dinâmicas
+              </Text>
+              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                Gera a paleta de cores a partir de cores semente
+              </Text>
+            </View>
+            <Switch
+              value={monetEnabled}
+              trackColor={{ false: "#D4DCC8", true: accent }}
+              onValueChange={(value) => setMonetEnabled(value)}
+            />
+          </View>
+
+          {monetEnabled && (
+            <View style={styles.monetColorsContainer}>
+              {/* Android System Sync Toggle */}
+              <View style={[styles.row, { borderBottomWidth: 0, paddingVertical: 8 }]}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Smartphone size={16} color={accent} />
+                    <Text style={[styles.rowLabel, themeStyles.text]}>
+                      Sincronizar com o Sistema (Android)
+                    </Text>
+                  </View>
+                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                    Utiliza a paleta de cores do papel de parede do Android
+                  </Text>
+                </View>
+                <Switch
+                  value={syncWithSystemAndroid}
+                  trackColor={{ false: "#D4DCC8", true: accent }}
+                  onValueChange={(val) => setSyncWithSystemAndroid(val)}
+                />
+              </View>
+
+              {/* Seed Color Palette Picker (Only if system sync is off or manual override) */}
+              {!syncWithSystemAndroid && (
+                <View style={{ marginTop: 12 }}>
+                  <Text
+                    style={[
+                      styles.rowSubLabel,
+                      themeStyles.subText,
+                      { marginBottom: 12 },
+                    ]}
+                  >
+                    Escolha a cor semente:
+                  </Text>
+                  <View style={styles.colorGrid}>
+                    {MONET_PRESETS.map((preset) => {
+                      const isSelected = monetSeedColor === preset.hex;
+                      return (
+                        <TouchableOpacity
+                          key={preset.hex}
+                          style={[
+                            styles.colorOption,
+                            { borderColor: isSelected ? accent : "transparent" },
+                          ]}
+                          onPress={() => setMonetSeedColor(preset.hex)}
+                          activeOpacity={0.7}
+                        >
+                          <View
+                            style={[
+                              styles.colorCircle,
+                              { backgroundColor: preset.hex },
+                            ]}
+                          >
+                            {isSelected && (
+                              <Text style={styles.colorCheck}>✓</Text>
+                            )}
+                          </View>
+                          <Text
+                            style={[
+                              styles.colorName,
+                              themeStyles.subText,
+                              isSelected && { color: accent, fontWeight: "700" },
+                            ]}
+                          >
+                            {preset.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Notifications Section */}
@@ -242,6 +385,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={settings.notifications}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() =>
                 handleSettingChange("notifications", !settings.notifications)
               }
@@ -256,6 +400,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={settings.emailNotifications}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() =>
                 handleSettingChange(
                   "emailNotifications",
@@ -273,6 +418,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={settings.autoSave}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() =>
                 handleSettingChange("autoSave", !settings.autoSave)
               }
@@ -294,7 +440,7 @@ const SettingsScreen: React.FC = () => {
               style={[
                 styles.privacyButton,
                 settings.privacy === "private"
-                  ? styles.btnBlue
+                  ? { backgroundColor: accent }
                   : themeStyles.btnToggleOff,
               ]}
               onPress={() => handleSettingChange("privacy", "private")}
@@ -314,7 +460,7 @@ const SettingsScreen: React.FC = () => {
               style={[
                 styles.privacyButton,
                 settings.privacy === "public"
-                  ? styles.btnBlue
+                  ? { backgroundColor: accent }
                   : themeStyles.btnToggleOff,
               ]}
               onPress={() => handleSettingChange("privacy", "public")}
@@ -349,6 +495,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={settings.twoFactorAuth}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() =>
                 handleSettingChange("twoFactorAuth", !settings.twoFactorAuth)
               }
@@ -363,6 +510,7 @@ const SettingsScreen: React.FC = () => {
             </View>
             <Switch
               value={settings.dataCollection}
+              trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() =>
                 handleSettingChange("dataCollection", !settings.dataCollection)
               }
@@ -401,7 +549,6 @@ const SettingsScreen: React.FC = () => {
             ]}
             onPress={handleExportSettings}
           >
-            {/* Adaptando com a cor do tema global */}
             <Download
               size={16}
               color={globalIsDark ? "#FFF" : "#000"}
@@ -415,7 +562,7 @@ const SettingsScreen: React.FC = () => {
 
         <View style={styles.footerActions}>
           <TouchableOpacity
-            style={[styles.submitBtn, styles.btnBlue]}
+            style={[styles.submitBtn, { backgroundColor: accent }]}
             onPress={handleSave}
           >
             <Save size={18} color="#FFF" style={{ marginRight: 6 }} />
@@ -476,7 +623,7 @@ const SettingsScreen: React.FC = () => {
                 <Text style={themeStyles.text}>Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalBtn, styles.btnBlue]}
+                style={[styles.modalBtn, { backgroundColor: accent }]}
                 onPress={handleChangePassword}
               >
                 <Text style={styles.textWhite}>Alterar</Text>
@@ -524,8 +671,6 @@ const SettingsScreen: React.FC = () => {
   );
 };
 
-// ... Estilos não alterados omitidos por brevidade (Mantenha igual ao seu)
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
@@ -561,9 +706,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: "#E5E7EB",
   },
+  indentedRow: {
+    paddingLeft: 12,
+    backgroundColor: "rgba(0, 0, 0, 0.03)",
+    borderRadius: 8,
+    marginVertical: 4,
+    paddingRight: 8,
+  },
   rowLabel: { fontSize: 16, fontWeight: "500" },
   rowSubLabel: { fontSize: 13, marginTop: 2 },
-  linkText: { color: "#2E7D32", fontWeight: "600" },
+  linkText: { fontWeight: "600" },
   privacyContainer: { flexDirection: "row", gap: 10, marginTop: 4 },
   privacyButton: {
     flex: 1,
@@ -584,7 +736,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  btnBlue: { backgroundColor: "#2E7D32" },
   btnRed: { backgroundColor: "#DC2626" },
   btnRedLight: { backgroundColor: "#FEE2E2" },
   textWhite: { color: "#FFFFFF", fontWeight: "600" },
@@ -643,6 +794,43 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
+  },
+  monetColorsContainer: {
+    paddingTop: 8,
+  },
+  colorGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  colorOption: {
+    alignItems: "center",
+    width: 68,
+    padding: 6,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  colorCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  colorCheck: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  colorName: {
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "center",
   },
 });
 

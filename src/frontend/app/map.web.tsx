@@ -15,7 +15,7 @@ export default function MapScreen() {
           color={isDark ? "#F0E6D3" : "#1A2E1A"}
         />
         <Text style={[styles.title, themeStyles.text]}>
-          Mapa indisponível nesta plataforma
+          Mapa indisponível na web
         </Text>
         <Text style={[styles.subtitle, themeStyles.text]}>
           O mapa está disponível apenas no aplicativo móvel.{"\n"}

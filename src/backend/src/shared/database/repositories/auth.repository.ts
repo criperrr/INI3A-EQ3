@@ -1,42 +1,53 @@
-import { JTIrefused } from "../../errors/errors";
 import { redisClient } from "../../redis/server";
-class AuthenticationRespositoryClass {
-  // coloca o token numa blacklist em tempo de execucao
-  async invalidateJWT(target: Jwt.JwtInvalidateInfo): Promise<void> {
-    const id = target.jti;
-    const ex = target.ex;
 
-    await redisClient.set(`blacklist:${id}`, "1", { EX: ex });
+class AuthRepositoryClass {
+  async storeRefreshToken(
+    userId: number | string,
+    refreshToken: string,
+    expirySeconds: number,
+  ): Promise<void> {
+    await redisClient.set(`refresh:${refreshToken}`, String(userId), {
+      EX: expirySeconds,
+    });
   }
 
-  // retorna se o jti existe e lança exceção se não
-  async verifyJTI(jti: string): Promise<number> {
-    const result = await redisClient.exists(jti);
-    if (!result) throw new JTIrefused(jti);
-    return redisClient.exists(jti);
-  }
-
-  async setRefreshToken(
-    refreshInfo: RefreshToken.RefreshInfo | RefreshToken.RefreshRecharge,
-  ) {
-    const id = refreshInfo.id;
-    const token = refreshInfo.refreshToken;
-    const ex = refreshInfo.ex;
-
-    if ("oldRefreshToken" in refreshInfo) {
-      const oldRefreshToken = refreshInfo.oldRefreshToken;
-      const multi = redisClient.multi();
-      multi.set(`refresh:${token}`, id, { EX: ex });
-      multi.del(`refresh:${oldRefreshToken}`);
-      await multi.exec();
-    } else await redisClient.set(`refresh:${token}`, id, { EX: ex });
-  }
-
-  async destroyRefreshToken(refreshToken: string) {}
-
-  async getUserIdByRefreshToken(refreshToken: string) {
+  async getUserIdByRefreshToken(
+    refreshToken: string,
+  ): Promise<string | null> {
     return redisClient.get(`refresh:${refreshToken}`);
+  }
+
+
+  async revokeRefreshToken(refreshToken: string): Promise<void> {
+    await redisClient.del(`refresh:${refreshToken}`);
+  }
+
+  // mata token veio e cria outro
+  async rotateRefreshToken(
+    oldToken: string,
+    newToken: string,
+    userId: number | string,
+    expirySeconds: number,
+  ): Promise<void> {
+    const multi = redisClient.multi();
+    multi.set(`refresh:${newToken}`, String(userId), { EX: expirySeconds });
+    multi.del(`refresh:${oldToken}`);
+    await multi.exec();
+  }
+
+  // bota um access token no blakc list pra nao deixar mais usar ele 
+  async blacklistAccessToken(
+    jti: string,
+    expirySeconds: number,
+  ): Promise<void> {
+    if (expirySeconds <= 0) return;
+    await redisClient.set(`blacklist:${jti}`, "1", { EX: expirySeconds });
+  }
+
+  async isAccessTokenBlacklisted(jti: string): Promise<boolean> {
+    const result = await redisClient.exists(`blacklist:${jti}`);
+    return result === 1;
   }
 }
 
-export const AuthRepository = new AuthenticationRespositoryClass();
+export const AuthRepository = new AuthRepositoryClass();

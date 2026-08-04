@@ -9,10 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useAuth, ApiError } from "../content/authContext";
 
 const COLORS = {
   accent: "#2E7D32",
@@ -24,27 +26,55 @@ const DEFAULT_AVATAR =
 
 export default function RegisterUser() {
   const router = useRouter();
-  const { themeStyles } = useTheme();
+  const { themeStyles, accent } = useTheme();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSaveUser = () => {
-    if (password !== confirmPassword) {
-      console.log("As senhas não coincidem!");
+  const handleSaveUser = async () => {
+    setErrorMessage("");
+
+    if (!name.trim() || !email.trim() || !password || !confirmPassword) {
+      setErrorMessage("Preencha todos os campos.");
       return;
     }
-    console.log("Mock Cadastro efetuado com sucesso!");
-    router.push("/profile");
+
+    if (password !== confirmPassword) {
+      setErrorMessage("As senhas não coincidem.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("A senha deve ter no mínimo 6 caracteres.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await register(name.trim(), email.trim(), password);
+      router.replace("/");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("Erro ao conectar com o servidor.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoToLogin = () => {
     router.back();
   };
+
+  const clearError = () => setErrorMessage("");
 
   return (
     <KeyboardAvoidingView
@@ -65,50 +95,66 @@ export default function RegisterUser() {
             Preencha seus dados para começar.
           </Text>
 
-          <AvatarPicker imageUri={DEFAULT_AVATAR} />
+          {errorMessage !== "" && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
+          <AvatarPicker imageUri={DEFAULT_AVATAR} accent={accent} />
 
           <InputField
             icon="person-outline"
             placeholder="Nome Completo"
             value={name}
-            onChangeText={setName}
+            onChangeText={(text: string) => { setName(text); clearError(); }}
+            editable={!isLoading}
           />
           <InputField
             icon="mail-outline"
             placeholder="Seu e-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text: string) => { setEmail(text); clearError(); }}
             keyboardType="email-address"
+            editable={!isLoading}
           />
 
           <PasswordField
             placeholder="Crie uma senha"
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text: string) => { setPassword(text); clearError(); }}
             showPassword={showPassword}
             toggleShowPassword={() => setShowPassword(!showPassword)}
+            editable={!isLoading}
           />
 
           <PasswordField
             placeholder="Confirme sua senha"
             value={confirmPassword}
-            onChangeText={setConfirmPassword}
+            onChangeText={(text: string) => { setConfirmPassword(text); clearError(); }}
             showPassword={showConfirmPassword}
             toggleShowPassword={() =>
               setShowConfirmPassword(!showConfirmPassword)
             }
+            editable={!isLoading}
           />
 
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, { backgroundColor: accent, shadowColor: accent }, isLoading && styles.saveButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleSaveUser}
+            disabled={isLoading}
           >
-            <Text style={styles.saveButtonText}>Cadastrar</Text>
+            {isLoading ? (
+              <ActivityIndicator color={COLORS.white} size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>Cadastrar</Text>
+            )}
           </TouchableOpacity>
         </View>
 
-        <FooterLinks onGoToLogin={handleGoToLogin} />
+        <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -116,7 +162,7 @@ export default function RegisterUser() {
 
 // --- Componentes Internos ---
 
-const AvatarPicker = ({ imageUri }: { imageUri: string }) => {
+const AvatarPicker = ({ imageUri, accent }: { imageUri: string; accent: string }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.avatarContainer}>
@@ -125,7 +171,7 @@ const AvatarPicker = ({ imageUri }: { imageUri: string }) => {
           source={{ uri: imageUri }}
           style={[styles.avatarImage, themeStyles.border]}
         />
-        <TouchableOpacity style={styles.cameraBadge} activeOpacity={0.8}>
+        <TouchableOpacity style={[styles.cameraBadge, { backgroundColor: accent }]} activeOpacity={0.8}>
           <Ionicons name="camera" size={16} color={COLORS.white} />
         </TouchableOpacity>
       </View>
@@ -139,6 +185,7 @@ const InputField = ({
   value,
   onChangeText,
   keyboardType = "default",
+  editable = true,
 }: any) => {
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
@@ -160,6 +207,7 @@ const InputField = ({
         onChangeText={onChangeText}
         keyboardType={keyboardType}
         autoCapitalize="none"
+        editable={editable}
       />
     </View>
   );
@@ -171,6 +219,7 @@ const PasswordField = ({
   onChangeText,
   showPassword,
   toggleShowPassword,
+  editable = true,
 }: any) => {
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
@@ -191,6 +240,7 @@ const PasswordField = ({
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={!showPassword}
+        editable={editable}
       />
       <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
         <Ionicons
@@ -203,7 +253,7 @@ const PasswordField = ({
   );
 };
 
-const FooterLinks = ({ onGoToLogin }: { onGoToLogin: () => void }) => {
+const FooterLinks = ({ onGoToLogin, accent }: { onGoToLogin: () => void; accent: string }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.footerContainer}>
@@ -211,7 +261,7 @@ const FooterLinks = ({ onGoToLogin }: { onGoToLogin: () => void }) => {
         Já tem uma conta?{" "}
       </Text>
       <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7}>
-        <Text style={styles.loginText}>Entrar</Text>
+        <Text style={[styles.loginText, { color: accent }]}>Entrar</Text>
       </TouchableOpacity>
     </View>
   );
@@ -245,6 +295,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   subtitleText: { fontSize: 14, marginBottom: 24, textAlign: "center" },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 14,
+    flex: 1,
+  },
   avatarContainer: { alignItems: "center", marginBottom: 24 },
   avatarWrapper: { position: "relative" },
   avatarImage: { width: 100, height: 100, borderRadius: 50, borderWidth: 2 },
@@ -290,6 +354,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: COLORS.white,

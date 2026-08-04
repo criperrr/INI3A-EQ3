@@ -1,6 +1,18 @@
-import "dotenv/config"
+import "dotenv/config";
 import app from "@/app";
+import { connectRedis } from "@/shared/redis/server";
 
-app.listen(process.env.SERVER_PORT, () => {
-  console.log("pnies")
-})
+const PORT = process.env.SERVER_PORT || 3000;
+
+async function bootstrap() {
+  await connectRedis();
+
+  app.listen(PORT, () => {
+    console.log(`SERVER: Running on port ${PORT}`);
+  });
+}
+
+bootstrap().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});

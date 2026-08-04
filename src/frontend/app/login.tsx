@@ -8,23 +8,46 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useAuth, ApiError } from "../content/authContext";
 
 
 
 export default function LoginScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = () => {
-    console.log("Mock Login efetuado com sucesso!");
-    router.replace("/");
+  const handleLogin = async () => {
+    setErrorMessage("");
+
+    if (!email.trim() || !password) {
+      setErrorMessage("Preencha todos os campos.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await login(email.trim(), password);
+      router.replace("/");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("Erro ao conectar com o servidor.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoToRegister = () => {
@@ -50,41 +73,62 @@ export default function LoginScreen() {
             Faça login para continuar no PResco.
           </Text>
 
+          {errorMessage !== "" && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          )}
+
           <InputField
             icon="mail-outline"
             placeholder="Seu e-mail"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text: string) => {
+              setEmail(text);
+              setErrorMessage("");
+            }}
             keyboardType="email-address"
             themeStyles={themeStyles}
             isDark={isDark}
+            editable={!isLoading}
           />
 
           <PasswordField
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text: string) => {
+              setPassword(text);
+              setErrorMessage("");
+            }}
             showPassword={showPassword}
             toggleShowPassword={() => setShowPassword(!showPassword)}
             themeStyles={themeStyles}
             isDark={isDark}
+            editable={!isLoading}
           />
 
           <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
-            <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
+            <Text style={[styles.forgotPasswordText, { color: accent }]}>Esqueceu a senha?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, { backgroundColor: accent, shadowColor: accent }, isLoading && styles.loginButtonDisabled]}
             activeOpacity={0.8}
             onPress={handleLogin}
+            disabled={isLoading}
           >
-            <Text style={styles.loginButtonText}>Entrar</Text>
+            {isLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.loginButtonText}>Entrar</Text>
+            )}
           </TouchableOpacity>
         </View>
 
         <FooterLinks
           onGoToRegister={handleGoToRegister}
           themeStyles={themeStyles}
+          accent={accent}
         />
       </ScrollView>
     </KeyboardAvoidingView>
@@ -101,6 +145,7 @@ const InputField = ({
   keyboardType = "default",
   themeStyles,
   isDark,
+  editable = true,
 }: any) => (
   <View style={[styles.inputContainer, themeStyles.inputBg]}>
     <Ionicons
@@ -117,6 +162,7 @@ const InputField = ({
       onChangeText={onChangeText}
       keyboardType={keyboardType}
       autoCapitalize="none"
+      editable={editable}
     />
   </View>
 );
@@ -128,6 +174,7 @@ const PasswordField = ({
   toggleShowPassword,
   themeStyles,
   isDark,
+  editable = true,
 }: any) => (
   <View style={[styles.inputContainer, themeStyles.inputBg]}>
     <Ionicons
@@ -143,6 +190,7 @@ const PasswordField = ({
       value={value}
       onChangeText={onChangeText}
       secureTextEntry={!showPassword}
+      editable={editable}
     />
     <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
       <Ionicons
@@ -157,16 +205,18 @@ const PasswordField = ({
 const FooterLinks = ({
   onGoToRegister,
   themeStyles,
+  accent,
 }: {
   onGoToRegister: () => void;
   themeStyles: any;
+  accent: string;
 }) => (
   <View style={styles.footerContainer}>
     <Text style={[styles.footerText, themeStyles.subText]}>
       Não tem uma conta?{" "}
     </Text>
     <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
-      <Text style={styles.registerText}>Cadastre-se</Text>
+      <Text style={[styles.registerText, { color: accent }]}>Cadastre-se</Text>
     </TouchableOpacity>
   </View>
 );
@@ -203,6 +253,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 24,
   },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 14,
+    flex: 1,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -228,21 +292,21 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: "#2E7D32",
     fontSize: 14,
     fontWeight: "600",
   },
   loginButton: {
-    backgroundColor: "#2E7D32",
     height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#2E7D32",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: "#FFFFFF",
@@ -259,7 +323,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   registerText: {
-    color: "#2E7D32",
     fontSize: 15,
     fontWeight: "bold",
   },

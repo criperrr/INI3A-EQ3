@@ -27,6 +27,12 @@ class UserRepositoryClass {
     });
   }
 
+  async getUserByEmail(email: string) {
+    return this.db.query.user.findFirst({
+      where: (user, { eq }) => eq(user.email, email),
+    });
+  }
+
   async updateUser(id: string | number, newUser: Repository.UpdateUser) {
     return this.db
       .update(User)

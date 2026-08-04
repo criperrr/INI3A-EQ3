@@ -4,6 +4,7 @@ import { StyleSheet, View, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Slot, usePathname, router } from "expo-router";
 import { ThemeProvider, useTheme } from "../content/themeContent";
+import { AuthProvider } from "../content/authContext";
 import Header from "../components/Header";
 import Footer, { TabKey } from "../components/Footer";
 import Sidebar from "../components/Sidebar";
@@ -23,6 +24,10 @@ function LayoutContent() {
     return "home";
   };
 
+  // Hide header/footer on auth screens
+  const isAuthScreen =
+    pathname === "/login" || pathname === "/registerUser";
+
   return (
     <View style={[styles.container, themeStyles.bg]}>
       <StatusBar
@@ -30,15 +35,19 @@ function LayoutContent() {
         backgroundColor="transparent"
         translucent
       />
-      <Header
-        onPressMenu={() => setIsMenuOpen(true)}
-        onPressSettings={() => router.push("/settings")}
-      />
-      <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      {!isAuthScreen && (
+        <Header
+          onPressMenu={() => setIsMenuOpen(true)}
+          onPressSettings={() => router.push("/settings")}
+        />
+      )}
+      {!isAuthScreen && (
+        <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      )}
       <View style={styles.contentWrapper}>
         <Slot />
       </View>
-      <Footer activeTab={getActiveTab()} />
+      {!isAuthScreen && <Footer activeTab={getActiveTab()} />}
     </View>
   );
 }
@@ -47,7 +56,9 @@ export default function Layout() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <LayoutContent />
+        <AuthProvider>
+          <LayoutContent />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

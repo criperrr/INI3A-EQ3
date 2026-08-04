@@ -1,12 +1,9 @@
 import * as jwt from "jsonwebtoken";
-import type { Request } from "express";
-
-
 
 declare global {
   namespace RefreshToken {
     interface RefreshInfo {
-     id: string;
+      id: string;
       refreshToken: string;
       ex: number;
     }
@@ -30,21 +27,22 @@ declare global {
     }
   }
 
- namespace Api {
+  namespace Api {
     export type Request<
-        Body = any,
-        Params = {},
-        ResBody = any,
-        Query = {},
-        Locals extends Record<string, any> = {}
-    > = Express.Request<
-        Params,
-        ResBody,
-        Body,
-        Query,
-        Locals
-    > & {
-        user: number;
-    }
-}
+      Body = any,
+      Params = {},
+      ResBody = any,
+      Query = {},
+      Locals extends Record<string, any> = {},
+    > = Express.Request<Params, ResBody, Body, Query, Locals> & {
+      user: {
+        id: number;
+        email: string;
+        name: string;
+        roleId: number;
+        jti: string;
+        exp: number;
+      };
+    };
+  }
 }
