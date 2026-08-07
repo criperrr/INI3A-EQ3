@@ -108,14 +108,20 @@ export default function RegisterUser() {
             icon="person-outline"
             placeholder="Nome Completo"
             value={name}
-            onChangeText={(text: string) => { setName(text); clearError(); }}
+            onChangeText={(text: string) => {
+              setName(text);
+              clearError();
+            }}
             editable={!isLoading}
           />
           <InputField
             icon="mail-outline"
             placeholder="Seu e-mail"
             value={email}
-            onChangeText={(text: string) => { setEmail(text); clearError(); }}
+            onChangeText={(text: string) => {
+              setEmail(text);
+              clearError();
+            }}
             keyboardType="email-address"
             editable={!isLoading}
           />
@@ -123,7 +129,10 @@ export default function RegisterUser() {
           <PasswordField
             placeholder="Crie uma senha"
             value={password}
-            onChangeText={(text: string) => { setPassword(text); clearError(); }}
+            onChangeText={(text: string) => {
+              setPassword(text);
+              clearError();
+            }}
             showPassword={showPassword}
             toggleShowPassword={() => setShowPassword(!showPassword)}
             editable={!isLoading}
@@ -132,7 +141,10 @@ export default function RegisterUser() {
           <PasswordField
             placeholder="Confirme sua senha"
             value={confirmPassword}
-            onChangeText={(text: string) => { setConfirmPassword(text); clearError(); }}
+            onChangeText={(text: string) => {
+              setConfirmPassword(text);
+              clearError();
+            }}
             showPassword={showConfirmPassword}
             toggleShowPassword={() =>
               setShowConfirmPassword(!showConfirmPassword)
@@ -141,7 +153,11 @@ export default function RegisterUser() {
           />
 
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: accent, shadowColor: accent }, isLoading && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              { backgroundColor: accent, shadowColor: accent },
+              isLoading && styles.saveButtonDisabled,
+            ]}
             activeOpacity={0.8}
             onPress={handleSaveUser}
             disabled={isLoading}
@@ -162,7 +178,13 @@ export default function RegisterUser() {
 
 // --- Componentes Internos ---
 
-const AvatarPicker = ({ imageUri, accent }: { imageUri: string; accent: string }) => {
+const AvatarPicker = ({
+  imageUri,
+  accent,
+}: {
+  imageUri: string;
+  accent: string;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.avatarContainer}>
@@ -171,7 +193,10 @@ const AvatarPicker = ({ imageUri, accent }: { imageUri: string; accent: string }
           source={{ uri: imageUri }}
           style={[styles.avatarImage, themeStyles.border]}
         />
-        <TouchableOpacity style={[styles.cameraBadge, { backgroundColor: accent }]} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={[styles.cameraBadge, { backgroundColor: accent }]}
+          activeOpacity={0.8}
+        >
           <Ionicons name="camera" size={16} color={COLORS.white} />
         </TouchableOpacity>
       </View>
@@ -253,7 +278,13 @@ const PasswordField = ({
   );
 };
 
-const FooterLinks = ({ onGoToLogin, accent }: { onGoToLogin: () => void; accent: string }) => {
+const FooterLinks = ({
+  onGoToLogin,
+  accent,
+}: {
+  onGoToLogin: () => void;
+  accent: string;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.footerContainer}>

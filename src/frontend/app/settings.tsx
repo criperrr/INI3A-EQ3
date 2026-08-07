@@ -238,7 +238,9 @@ const SettingsScreen: React.FC = () => {
           {isSettingsDark && (
             <View style={[styles.row, styles.indentedRow]}>
               <View style={{ flex: 1, paddingRight: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View
+                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
+                >
                   <Zap size={16} color={accent} />
                   <Text style={[styles.rowLabel, themeStyles.text]}>
                     Preto Puro (AMOLED)
@@ -295,9 +297,20 @@ const SettingsScreen: React.FC = () => {
           {monetEnabled && (
             <View style={styles.monetColorsContainer}>
               {/* Android System Sync Toggle */}
-              <View style={[styles.row, { borderBottomWidth: 0, paddingVertical: 8 }]}>
+              <View
+                style={[
+                  styles.row,
+                  { borderBottomWidth: 0, paddingVertical: 8 },
+                ]}
+              >
                 <View style={{ flex: 1, paddingRight: 10 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
                     <Smartphone size={16} color={accent} />
                     <Text style={[styles.rowLabel, themeStyles.text]}>
                       Sincronizar com o Sistema (Android)
@@ -334,7 +347,9 @@ const SettingsScreen: React.FC = () => {
                           key={preset.hex}
                           style={[
                             styles.colorOption,
-                            { borderColor: isSelected ? accent : "transparent" },
+                            {
+                              borderColor: isSelected ? accent : "transparent",
+                            },
                           ]}
                           onPress={() => setMonetSeedColor(preset.hex)}
                           activeOpacity={0.7}
@@ -353,7 +368,10 @@ const SettingsScreen: React.FC = () => {
                             style={[
                               styles.colorName,
                               themeStyles.subText,
-                              isSelected && { color: accent, fontWeight: "700" },
+                              isSelected && {
+                                color: accent,
+                                fontWeight: "700",
+                              },
                             ]}
                           >
                             {preset.name}
