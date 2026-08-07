@@ -18,10 +18,11 @@ const COLORS = {
 
 const MENU_LINKS = [
   { id: "account", label: "Minha Conta", route: "/profile" },
-  { id: "markets", label: "Mercados", route: "/map" },
-  { id: "products", label: "Produtos", route: "/productDetails" },
+  // Alteração aqui: enviando para a raiz com o parâmetro view
+  { id: "markets", label: "Mercados", route: "/?view=markets" },
+  { id: "products", label: "Produtos", route: "/?view=products" },
   { id: "settings", label: "Configurações", route: "/settings" },
-  { id: "help", label: "Ajuda", route: "/aboutUs" },
+  { id: "help", label: "Ajuda", route: "/helpUser" },
   { id: "about", label: "Sobre Nós", route: "/aboutUs" },
 ];
 
@@ -46,7 +47,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <View style={[styles.menuPanel, themeStyles.card]}>
         <SidebarHeader themeStyles={themeStyles} />
-        <NavigationLinks themeStyles={themeStyles} router={router} onClose={onClose} />
+        <NavigationLinks
+          themeStyles={themeStyles}
+          router={router}
+          onClose={onClose}
+        />
         <SidebarDecor isDark={isDark} />
       </View>
     </View>

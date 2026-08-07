@@ -242,14 +242,23 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     // 2. If Monet is enabled with Android System Sync
     if (syncWithSystemAndroid && Platform.OS === "android") {
-      const systemAccent = PlatformColor("@android:color/system_accent1_500");
       const seedHex = ANDROID_SYSTEM_ACCENT_FALLBACK;
       const palette = generateMonetPalette(seedHex, isDark && amoledEnabled);
       const styles = buildThemeFromPalette(palette, isDark ? "dark" : "light");
 
+      // Verify if Android version is 12 (API 31) or above to support Material You dynamic colors
+      const supportsDynamicColor =
+          typeof Platform.Version === "number"
+              ? Platform.Version >= 31
+              : parseInt(String(Platform.Version), 10) >= 31;
+
+      const fallbackAccent = isDark ? palette.dark.accent : palette.light.accent;
+
       return {
         themeStyles: styles,
-        accent: systemAccent || (isDark ? palette.dark.accent : palette.light.accent),
+        accent: supportsDynamicColor
+            ? PlatformColor("@android:color/system_accent1_500")
+            : fallbackAccent,
       };
     }
 
@@ -262,25 +271,25 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [isDark, amoledEnabled, monetEnabled, syncWithSystemAndroid, monetSeedColor]);
 
   return (
-    <ThemeContext.Provider
-      value={{
-        theme,
-        isDark,
-        amoledEnabled,
-        accent,
-        themeStyles,
-        monetEnabled,
-        syncWithSystemAndroid,
-        monetSeedColor,
-        setGlobalTheme,
-        setAmoledEnabled,
-        setMonetEnabled,
-        setSyncWithSystemAndroid,
-        setMonetSeedColor,
-      }}
-    >
-      {children}
-    </ThemeContext.Provider>
+      <ThemeContext.Provider
+          value={{
+            theme,
+            isDark,
+            amoledEnabled,
+            accent,
+            themeStyles,
+            monetEnabled,
+            syncWithSystemAndroid,
+            monetSeedColor,
+            setGlobalTheme,
+            setAmoledEnabled,
+            setMonetEnabled,
+            setSyncWithSystemAndroid,
+            setMonetSeedColor,
+          }}
+      >
+        {children}
+      </ThemeContext.Provider>
   );
 };
 

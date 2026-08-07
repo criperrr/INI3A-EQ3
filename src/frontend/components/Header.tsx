@@ -17,7 +17,7 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
 
-const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
+  const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   return (
     <View
@@ -49,11 +49,7 @@ const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
   );
 }
 
-const LogoBrand = ({
-  isDark,
-}: {
-  isDark: boolean;
-}) => (
+const LogoBrand = ({ isDark }: { isDark: boolean }) => (
   <View style={styles.logoContainer}>
     <Image
       source={
@@ -88,5 +84,4 @@ const styles = StyleSheet.create({
     height: 60,
     resizeMode: "contain",
   },
-
 });
