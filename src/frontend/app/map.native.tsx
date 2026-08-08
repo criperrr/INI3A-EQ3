@@ -55,7 +55,6 @@ export default function MapScreen() {
             <Marker
               key={marker.id}
               coordinate={marker.coordinate}
-
               pinColor={isDark ? COLORS.accent : COLORS.darkBlue}
             >
               <Callout tooltip>

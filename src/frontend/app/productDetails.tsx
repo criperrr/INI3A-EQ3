@@ -3,8 +3,6 @@ import { View, StyleSheet, Text, ScrollView } from "react-native";
 import ProductCard from "../components/productCard";
 import { useTheme } from "../content/themeContent";
 
-
-
 const MOCK_PRODUCT = {
   category: "Produto",
   name: "Cebola Granel 1kg",

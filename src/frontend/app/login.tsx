@@ -15,8 +15,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useAuth, ApiError } from "../content/authContext";
 
-
-
 export default function LoginScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
@@ -108,11 +106,17 @@ export default function LoginScreen() {
           />
 
           <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
-            <Text style={[styles.forgotPasswordText, { color: accent }]}>Esqueceu a senha?</Text>
+            <Text style={[styles.forgotPasswordText, { color: accent }]}>
+              Esqueceu a senha?
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.loginButton, { backgroundColor: accent, shadowColor: accent }, isLoading && styles.loginButtonDisabled]}
+            style={[
+              styles.loginButton,
+              { backgroundColor: accent, shadowColor: accent },
+              isLoading && styles.loginButtonDisabled,
+            ]}
             activeOpacity={0.8}
             onPress={handleLogin}
             disabled={isLoading}

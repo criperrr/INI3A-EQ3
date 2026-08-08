@@ -10,8 +10,6 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
-
-
 export default function AboutUs() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
@@ -51,11 +49,7 @@ export default function AboutUs() {
         <Text style={[styles.cardTitle, themeStyles.text]}>Nossos Valores</Text>
 
         <View style={styles.valueItem}>
-          <Ionicons
-            name="checkmark-circle-outline"
-            size={20}
-            color={accent}
-          />
+          <Ionicons name="checkmark-circle-outline" size={20} color={accent} />
           <Text style={[styles.valueText, themeStyles.text]}>
             <Text style={[styles.valueBold, themeStyles.text]}>
               Transparência:{" "}
@@ -73,11 +67,7 @@ export default function AboutUs() {
         </View>
 
         <View style={styles.valueItem}>
-          <Ionicons
-            name="people-outline"
-            size={20}
-            color={accent}
-          />
+          <Ionicons name="people-outline" size={20} color={accent} />
           <Text style={[styles.valueText, themeStyles.text]}>
             <Text style={[styles.valueBold, themeStyles.text]}>
               Veracidade:{" "}

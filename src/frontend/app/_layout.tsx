@@ -25,8 +25,7 @@ function LayoutContent() {
   };
 
   // Hide header/footer on auth screens
-  const isAuthScreen =
-    pathname === "/login" || pathname === "/registerUser";
+  const isAuthScreen = pathname === "/login" || pathname === "/registerUser";
 
   return (
     <View style={[styles.container, themeStyles.bg]}>

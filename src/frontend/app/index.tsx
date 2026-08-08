@@ -9,15 +9,31 @@ import {
   FlatList,
   Dimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
+// Adicionado useLocalSearchParams na importação
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
+// --- Tipagens (TypeScript) ---
+type TabType = {
+  id: string;
+  label: string;
+  icon: string;
+  actionType: string;
+  actionValue: string;
+};
+
+type GridItemType = {
+  id: number;
+  name: string;
+  image: string;
+};
+
 // --- Mocks ---
-const MOCK_PRODUCTS = [
+const MOCK_PRODUCTS: GridItemType[] = [
   {
     id: 1,
     name: "Pão Artesanal",
@@ -56,6 +72,33 @@ const MOCK_PRODUCTS = [
   },
 ];
 
+const MOCK_MARKETS: GridItemType[] = [
+  {
+    id: 1,
+    name: "Mercado Central",
+    image:
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+  },
+  {
+    id: 2,
+    name: "Quitanda da Esquina",
+    image:
+      "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Supermercado Viva",
+    image:
+      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
+  },
+  {
+    id: 4,
+    name: "Armazém Orgânico",
+    image:
+      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
+  },
+];
+
 const MOCK_BANNERS = [
   {
     id: "1",
@@ -83,22 +126,66 @@ const MOCK_BANNERS = [
   },
 ];
 
-const ACTION_TABS = [
-  { id: "markets", label: "Mercados", icon: "storefront-outline", route: "/map" },
-  { id: "products", label: "Produtos", icon: "cart-outline", route: "/search" },
-  { id: "help", label: "Ajuda", icon: "help-buoy-outline", route: "/aboutUs" },
-  { id: "about", label: "Sobre Nós", icon: "leaf-outline", route: "/aboutUs" },
+const ACTION_TABS: TabType[] = [
+  {
+    id: "markets",
+    label: "Mercados",
+    icon: "storefront-outline",
+    actionType: "view",
+    actionValue: "markets",
+  },
+  {
+    id: "products",
+    label: "Produtos",
+    icon: "cart-outline",
+    actionType: "view",
+    actionValue: "products",
+  },
+  {
+    id: "help",
+    label: "Ajuda",
+    icon: "help-buoy-outline",
+    actionType: "route",
+    actionValue: "/helpUser",
+  },
+  {
+    id: "about",
+    label: "Sobre Nós",
+    icon: "leaf-outline",
+    actionType: "route",
+    actionValue: "/aboutUs",
+  },
 ];
 
 export default function Index() {
   const router = useRouter();
+  const { view } = useLocalSearchParams<{ view?: string }>(); // Pega os parâmetros da URL
   const { themeStyles } = useTheme();
 
-  const handleProductPress = () => {
+  const [activeView, setActiveView] = useState("products");
+
+  // Novo useEffect: Lê o parâmetro vindo da Sidebar e altera a view na hora
+  useEffect(() => {
+    if (view === "markets" || view === "products") {
+      setActiveView(view);
+    }
+  }, [view]);
+
+  const handleItemPress = () => {
     router.push("/productDetails");
   };
 
+  const handleTabAction = (tab: TabType) => {
+    if (tab.actionType === "view") {
+      setActiveView(tab.actionValue);
+    } else if (tab.actionType === "route") {
+      router.push(tab.actionValue as any);
+    }
+  };
 
+  const gridData = activeView === "products" ? MOCK_PRODUCTS : MOCK_MARKETS;
+  const gridTitle =
+    activeView === "products" ? "Produtos" : "Mercados Próximos";
 
   return (
     <ScrollView
@@ -106,13 +193,16 @@ export default function Index() {
       showsVerticalScrollIndicator={false}
     >
       <Banner />
-      <ActionMenu />
-      <ProductGrid onProductPress={handleProductPress} />
+      <ActionMenu onTabPress={handleTabAction} />
+      <ItemsGrid
+        title={gridTitle}
+        data={gridData}
+        onItemPress={handleItemPress}
+      />
     </ScrollView>
   );
 }
 
-// --- Componentes Internos com Temas Dinâmicos ---
 const Banner = () => {
   const { themeStyles, accent } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -207,8 +297,7 @@ const Banner = () => {
   );
 };
 
-const ActionMenu = () => {
-  const router = useRouter();
+const ActionMenu = ({ onTabPress }: { onTabPress: (tab: TabType) => void }) => {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
@@ -217,7 +306,7 @@ const ActionMenu = () => {
           key={tab.id}
           style={styles.tabButton}
           activeOpacity={0.7}
-          onPress={() => router.push(tab.route as any)}
+          onPress={() => onTabPress(tab)}
         >
           <View style={[styles.iconContainer, themeStyles.inputBg]}>
             <Ionicons
@@ -233,21 +322,29 @@ const ActionMenu = () => {
   );
 };
 
-const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => {
+const ItemsGrid = ({
+  title,
+  data,
+  onItemPress,
+}: {
+  title: string;
+  data: GridItemType[];
+  onItemPress: () => void;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.productsSection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>Produtos</Text>
+      <Text style={[styles.sectionTitle, themeStyles.text]}>{title}</Text>
       <View style={styles.productGrid}>
-        {MOCK_PRODUCTS.map((product) => (
+        {data.map((item) => (
           <TouchableOpacity
-            key={product.id}
+            key={item.id}
             style={[styles.productItem, themeStyles.card, themeStyles.border]}
             activeOpacity={0.8}
-            onPress={onProductPress}
+            onPress={onItemPress}
           >
             <Image
-              source={{ uri: product.image }}
+              source={{ uri: item.image }}
               style={styles.productImage}
               resizeMode="cover"
             />
@@ -255,7 +352,7 @@ const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => {
               style={[styles.productName, themeStyles.text]}
               numberOfLines={2}
             >
-              {product.name}
+              {item.name}
             </Text>
           </TouchableOpacity>
         ))}
@@ -266,14 +363,8 @@ const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => {
 
 // --- Estilos ---
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    paddingVertical: 16,
-  },
-  bannerSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
+  content: { flexGrow: 1, paddingVertical: 16 },
+  bannerSection: { paddingHorizontal: 16, marginBottom: 20 },
   bannerCardFull: {
     width: "100%",
     borderRadius: 16,
@@ -286,19 +377,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 8,
   },
-  bannerTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  bannerSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  bannerLink: {
-    fontSize: 12,
-    fontWeight: "600",
-    marginTop: 6,
-  },
+  bannerTitle: { fontSize: 14, fontWeight: "bold" },
+  bannerSubtitle: { fontSize: 11, marginTop: 2 },
+  bannerLink: { fontSize: 12, fontWeight: "600", marginTop: 6 },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -306,17 +387,8 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#D9D9D9",
-  },
-  activeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D9D9D9" },
+  activeDot: { width: 10, height: 10, borderRadius: 5 },
   centralMenuBar: {
     flexDirection: "row",
     marginHorizontal: 16,
@@ -327,11 +399,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
   },
-  tabButton: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-  },
+  tabButton: { alignItems: "center", justifyContent: "center", gap: 6 },
   iconContainer: {
     width: 48,
     height: 48,
@@ -339,18 +407,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  tabLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  productsSection: {
-    paddingHorizontal: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 14,
-  },
+  tabLabel: { fontSize: 11, fontWeight: "600" },
+  productsSection: { paddingHorizontal: 16 },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 14 },
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -371,9 +430,5 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 8,
   },
-  productName: {
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
+  productName: { fontSize: 14, fontWeight: "600", textAlign: "center" },
 });
