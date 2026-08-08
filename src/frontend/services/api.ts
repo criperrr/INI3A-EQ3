@@ -105,6 +105,7 @@ async function apiRequest<T = any>(
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    "Bypass-Tunnel-Reminder": "true",
     ...(options.headers as Record<string, string>),
   };
 
@@ -112,21 +113,36 @@ async function apiRequest<T = any>(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  // Define um timeout de 15 segundos para a requisição
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 15000);
 
-  // If 401 and we haven't retried yet, try refreshing the token
-  if (response.status === 401 && retry) {
-    const refreshed = await tryRefreshToken();
+  try {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(id);
 
-    if (refreshed) {
-      return apiRequest<T>(endpoint, options, false);
+    // If 401 and we haven't retried yet, try refreshing the token
+    if (response.status === 401 && retry) {
+      const refreshed = await tryRefreshToken();
+
+      if (refreshed) {
+        return apiRequest<T>(endpoint, options, false);
+      }
     }
-  }
 
-  return handleResponse<T>(response);
+    return handleResponse<T>(response);
+  } catch (error: any) {
+    clearTimeout(id);
+    if (error.name === "AbortError") {
+      throw new ApiError(408, "TIMEOUT", "A requisição demorou muito para responder.");
+    }
+    throw error;
+  }
 }
 
 export { apiRequest, ApiError, STORAGE_KEYS, BASE_URL };

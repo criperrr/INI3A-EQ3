@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import React, { useState, useCallback, useRef } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useTheme } from "../content/themeContent";
+import { apiRequest } from "../services/api";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -12,12 +13,16 @@ const COLORS = {
 export default function ScannerProduct() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const isProcessing = useRef(false);
   const router = useRouter();
   const { themeStyles } = useTheme();
 
   useFocusEffect(
     useCallback(() => {
       setScanned(false);
+      setLoading(false);
+      isProcessing.current = false;
     }, []),
   );
 
@@ -25,32 +30,92 @@ export default function ScannerProduct() {
     return <View style={[styles.container, themeStyles.bg]} />;
   }
 
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    if (scanned) return;
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    if (isProcessing.current) return;
+    isProcessing.current = true;
     setScanned(true);
+    setLoading(true);
 
-    Alert.alert(
-      "Leitura Bem-Sucedida! :)",
-      `O ML Kit leu o seguinte código:\n\n${data}`,
-      [
-        { text: "Escanear Novamente", onPress: () => setScanned(false) },
-        {
-          text: "Testar Redirecionamento",
-          onPress: () => {
-            router.push({
-              pathname: "/scannerConfirmation",
-              params: {
-                category: "Categoria Teste",
-                name: "Produto Teste Mockado",
-                imageUri: "https://via.placeholder.com/150",
-                lastPrice: "R$ 99,90",
-                barcode: data,
-              },
-            });
-          },
+    try {
+      // Pequeno log para debugar o escaneamento
+      console.log(`Buscando produto para o código: ${data}`);
+      const product = await apiRequest(`/products/barcode/${data}`);
+      
+      setLoading(false);
+      
+      router.push({
+        pathname: "/scannerConfirmation",
+        params: {
+          category: product?.category || "Categoria Não Encontrada",
+          name: product?.name || "Produto Não Encontrado",
+          imageUri: product?.imageUri || "https://via.placeholder.com/150",
+          lastPrice: product?.lastPrice || "Preço não informado",
+          barcode: data,
         },
-      ],
-    );
+      });
+    } catch (error: any) {
+      setLoading(false);
+      
+      const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
+      const isNetworkError = error?.message?.includes("Network request failed") || error?.message?.includes("fetch");
+      const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;
+
+      if (isTimeout || isNetworkError || isTunnelError) {
+        const errorMsg = isTunnelError 
+          ? "O túnel (localtunnel) está indisponível. O backend pode não estar rodando ou o túnel caiu." 
+          : "Não foi possível conectar ao servidor. Verifique se o backend e o túnel estão online.";
+          
+        Alert.alert(
+          "Erro de Conexão",
+          errorMsg,
+          [
+            { 
+              text: "Tentar Novamente", 
+              onPress: () => {
+                setTimeout(() => {
+                  setScanned(false);
+                  isProcessing.current = false;
+                }, 1500);
+              } 
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Produto Não Encontrado",
+          "O código de barras não foi encontrado na base de dados. Deseja cadastrá-lo manualmente?",
+          [
+            { 
+              text: "Escanear Novamente", 
+              onPress: () => {
+                // Delay artificial para que o usuário tire o celular do código de barras
+                setTimeout(() => {
+                  setScanned(false);
+                  isProcessing.current = false;
+                }, 1500);
+              }, 
+              style: "cancel" 
+            },
+            { 
+              text: "Cadastrar Manual", 
+              onPress: () => {
+                isProcessing.current = false;
+                router.push({
+                  pathname: "/scannerConfirmation",
+                  params: {
+                    category: "Sem Categoria",
+                    name: "Novo Produto",
+                    imageUri: "https://via.placeholder.com/150",
+                    lastPrice: "Preço não informado",
+                    barcode: data,
+                  },
+                });
+              } 
+            }
+          ]
+        );
+      }
+    }
   };
 
   return (
@@ -66,8 +131,17 @@ export default function ScannerProduct() {
           }}
           onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         >
-          <ScannerInstructions />
-          <ScannerViewFinder />
+          {loading ? (
+             <View style={styles.loadingOverlay}>
+               <ActivityIndicator size="large" color={COLORS.accent} />
+               <Text style={styles.loadingText}>Buscando produto...</Text>
+             </View>
+          ) : (
+             <>
+               <ScannerInstructions />
+               <ScannerViewFinder />
+             </>
+          )}
         </CameraView>
       )}
     </View>
@@ -121,6 +195,8 @@ const ScannerViewFinder = () => (
 const styles = StyleSheet.create({
   container: { flex: 1 },
   cameraBackground: { flex: 1, alignItems: "center", justifyContent: "center" },
+  loadingOverlay: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", width: "100%" },
+  loadingText: { color: COLORS.white, marginTop: 16, fontSize: 16, fontWeight: "bold" },
   permissionContainer: {
     flex: 1,
     alignItems: "center",

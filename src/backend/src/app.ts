@@ -2,6 +2,7 @@ import e from "express";
 import cors from "cors";
 import { errorHandler } from "@/shared/middlewares/errorHandler";
 import authRouter from "@/modules/auth/auth.routes";
+import productRouter from "@/modules/product/product.routes";
 
 const app = e();
 
@@ -13,6 +14,7 @@ app.use("/api/v1", (_, res) => {
 });
 
 app.use("/auth", authRouter);
+app.use("/products", productRouter);
 
 app.use(errorHandler);
 
