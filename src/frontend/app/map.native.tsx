@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
+import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
 
 // --- Constantes e Opções dos Filtros ---
@@ -366,6 +367,7 @@ export default function MapScreen() {
 
     return (
         <View style={[styles.container, themeStyles.bg]}>
+            <Stack.Screen options={{ gestureEnabled: false }} />
             <View style={styles.mapContainer}>
                 <MapView
                     ref={mapRef}

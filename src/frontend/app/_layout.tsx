@@ -1,8 +1,9 @@
 // app/_layout.tsx
 import React, { useState } from "react";
-import { StyleSheet, View, StatusBar } from "react-native";
+import { StyleSheet, View, StatusBar, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Slot, usePathname, router } from "expo-router";
+import { Stack, usePathname, router } from "expo-router";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider, useTheme } from "../content/themeContent";
 import { AuthProvider } from "../content/authContext";
 import Header from "../components/Header";
@@ -44,7 +45,13 @@ function LayoutContent() {
         <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       )}
       <View style={styles.contentWrapper}>
-        <Slot />
+        <Stack screenOptions={{ 
+          headerShown: false, 
+          gestureEnabled: Platform.OS !== 'web', 
+          gestureDirection: 'horizontal',
+          animation: 'slide_from_right',
+          fullScreenGestureEnabled: true
+        }} />
       </View>
       {!isAuthScreen && <Footer activeTab={getActiveTab()} />}
     </View>
@@ -53,13 +60,15 @@ function LayoutContent() {
 
 export default function Layout() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <LayoutContent />
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <LayoutContent />
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -83,7 +83,7 @@ const NavigationLinks = ({
         activeOpacity={0.7}
         onPress={() => {
           onClose();
-          router.push(link.route as any);
+          router.replace(link.route as any);
         }}
       >
         <Text style={[styles.linkText, themeStyles.text]}>{link.label}</Text>
@@ -92,14 +92,13 @@ const NavigationLinks = ({
   </View>
 );
 
+const LOGO_DARK = require("./images/logo-darkmode.png");
+const LOGO_LIGHT = require("./images/logo-preta.png");
+
 const SidebarDecor = ({ isDark }: { isDark: boolean }) => (
   <View style={styles.ararinhaContainer}>
     <Image
-      source={
-        isDark
-          ? require("./images/logo-darkmode.png")
-          : require("./images/logo-preta.png")
-      }
+      source={isDark ? LOGO_DARK : LOGO_LIGHT}
       style={styles.watermarkLogo}
       resizeMode="contain"
     />

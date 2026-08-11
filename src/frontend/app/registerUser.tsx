@@ -165,6 +165,10 @@ export default function RegisterUser() {
             activeOpacity={0.8}
             onPress={handleSaveUser}
             disabled={isLoading}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Cadastrar"
+            accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} size="small" />
@@ -201,6 +205,9 @@ const AvatarPicker = ({
         <TouchableOpacity
           style={[styles.cameraBadge, { backgroundColor: accent }]}
           activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Mudar foto de perfil"
         >
           <Ionicons name="camera" size={16} color={COLORS.white} />
         </TouchableOpacity>
@@ -238,6 +245,9 @@ const InputField = ({
         keyboardType={keyboardType}
         autoCapitalize="none"
         editable={editable}
+        accessible={true}
+        accessibilityLabel={placeholder}
+        maxFontSizeMultiplier={2}
       />
     </View>
   );
@@ -271,8 +281,17 @@ const PasswordField = ({
         onChangeText={onChangeText}
         secureTextEntry={!showPassword}
         editable={editable}
+        accessible={true}
+        accessibilityLabel={placeholder}
+        maxFontSizeMultiplier={2}
       />
-      <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
+      <TouchableOpacity
+        onPress={toggleShowPassword}
+        style={styles.eyeIcon}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+      >
         <Ionicons
           name={showPassword ? "eye-off-outline" : "eye-outline"}
           size={20}
@@ -296,7 +315,7 @@ const FooterLinks = ({
       <Text style={[styles.footerText, themeStyles.subText]}>
         Já tem uma conta?{" "}
       </Text>
-      <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7} accessible={true} accessibilityRole="button" accessibilityLabel="Entrar">
         <Text style={[styles.loginText, { color: accent }]}>Entrar</Text>
       </TouchableOpacity>
     </View>

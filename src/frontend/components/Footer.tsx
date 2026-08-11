@@ -75,7 +75,7 @@ export default function Footer({ activeTab }: FooterProps) {
               key={tab.key}
               style={styles.centerItem}
               activeOpacity={0.8}
-              onPress={() => router.push(tab.route as any)}
+              onPress={() => router.replace(tab.route as any)}
             >
               <View
                 style={[
@@ -98,7 +98,7 @@ export default function Footer({ activeTab }: FooterProps) {
             key={tab.key}
             style={styles.navItem}
             activeOpacity={0.7}
-            onPress={() => router.push(tab.route as any)}
+            onPress={() => router.replace(tab.route as any)}
           >
             {isActive ? (
               <View style={[styles.activeCircle, { backgroundColor: accent }]}>

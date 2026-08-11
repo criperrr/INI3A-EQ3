@@ -109,8 +109,14 @@ export default function LoginScreen() {
             editable={!isLoading}
           />
 
-          <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
-            <Text style={[styles.forgotPasswordText, { color: accent }]}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            activeOpacity={0.7}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Esqueceu a senha?"
+          >
+            <Text style={[styles.forgotPasswordText, { color: accent }]} maxFontSizeMultiplier={2}>
               Esqueceu a senha?
             </Text>
           </TouchableOpacity>
@@ -124,6 +130,10 @@ export default function LoginScreen() {
             activeOpacity={0.8}
             onPress={handleLogin}
             disabled={isLoading}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Entrar"
+            accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
@@ -172,6 +182,9 @@ const InputField = ({
       keyboardType={keyboardType}
       autoCapitalize="none"
       editable={editable}
+      accessible={true}
+      accessibilityLabel={placeholder}
+      maxFontSizeMultiplier={2}
     />
   </View>
 );
@@ -200,8 +213,17 @@ const PasswordField = ({
       onChangeText={onChangeText}
       secureTextEntry={!showPassword}
       editable={editable}
+      accessible={true}
+      accessibilityLabel="Sua senha"
+      maxFontSizeMultiplier={2}
     />
-    <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
+    <TouchableOpacity
+      onPress={toggleShowPassword}
+      style={styles.eyeIcon}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+    >
       <Ionicons
         name={showPassword ? "eye-off-outline" : "eye-outline"}
         size={20}

@@ -1,12 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Image, Text } from "react-native";
+import { useRouter } from "expo-router";
+import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 
-const COLORS = {
-  darkBlue: "#273462",
-};
+
 
 interface HeaderProps {
   onPressMenu?: () => void;
@@ -16,6 +15,7 @@ interface HeaderProps {
 export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
+  const router = useRouter();
 
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
@@ -36,7 +36,7 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
         <Ionicons name="menu-outline" size={26} color={iconColor} />
       </TouchableOpacity>
 
-      <LogoBrand isDark={isDark} />
+      <LogoBrand isDark={isDark} onPress={() => router.navigate("/")} />
 
       <TouchableOpacity
         activeOpacity={0.7}
@@ -49,17 +49,20 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   );
 }
 
-const LogoBrand = ({ isDark }: { isDark: boolean }) => (
-  <View style={styles.logoContainer}>
+const LOGO_DARK = require("./images/logo-darkmode.png");
+const LOGO_LIGHT = require("./images/logo-presco.png");
+
+const LogoBrand = ({ isDark, onPress }: { isDark: boolean; onPress: () => void }) => (
+  <TouchableOpacity 
+    style={styles.logoContainer} 
+    activeOpacity={0.7} 
+    onPress={onPress}
+  >
     <Image
-      source={
-        isDark
-          ? require("./images/logo-darkmode.png")
-          : require("./images/logo-presco.png")
-      }
+      source={isDark ? LOGO_DARK : LOGO_LIGHT}
       style={styles.logoImage}
     />
-  </View>
+  </TouchableOpacity>
 );
 
 const styles = StyleSheet.create({

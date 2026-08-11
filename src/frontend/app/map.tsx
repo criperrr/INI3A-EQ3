@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
 
 export default function MapScreen() {
@@ -8,6 +9,7 @@ export default function MapScreen() {
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
+      <Stack.Screen options={{ gestureEnabled: false }} />
       <View style={styles.content}>
         <Ionicons
           name="map-outline"
