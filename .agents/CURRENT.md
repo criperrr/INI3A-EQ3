@@ -87,11 +87,14 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
 - [x] Frontend HTTP abstraction (`apiRequest`) with auto-refresh on 401.
 - [x] Agent guidelines (`AGENTS.md`), project index (`CURRENT.md`), commit log (`COMMITS.md`).
-- [ ] Wire `scannerProduct.tsx` → `fetchProductByEan` → `scannerConfirmation.tsx` flow.
+- [x] Align `productController` to use `success()` helper — done (2026-08-11).
+- [x] Fix `market.repository.ts` id/name swap in `updateMarket` — done (2026-08-11).
+- [x] Fix `getMarket`/`getAllMarkets` to use `ST_AsGeoJson` — done (2026-08-11).
+- [x] Replace direct `apiRequest` in scanner with `fetchProductByEan` domain service — done (2026-08-11).
+- [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.
 - [ ] Add missing module routes and controllers for `market` and `ocurrency`.
-- [ ] Align `productController` to use `success()` helper for consistent response format.
 
 ---
 

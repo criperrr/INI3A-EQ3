@@ -22,7 +22,6 @@ class AuthRepositoryClass {
     await redisClient.del(`refresh:${refreshToken}`);
   }
 
-  // mata token veio e cria outro
   async rotateRefreshToken(
     oldToken: string,
     newToken: string,
@@ -35,7 +34,6 @@ class AuthRepositoryClass {
     await multi.exec();
   }
 
-  // bota um access token no blakc list pra nao deixar mais usar ele 
   async blacklistAccessToken(
     jti: string,
     expirySeconds: number,

@@ -1,18 +1,17 @@
-import type { Request, Response, NextFunction } from "express";
+import type { NextFunction, Request, Response } from "express";
 import { productService } from "./product.service";
+import { success } from "@/shared/helpers/response.helper";
+import { ValidationError, ConflictError } from "@/shared/errors/errors";
 
 class ProductControllerClass {
   async getProductByBarcode(req: Request, res: Response, next: NextFunction) {
     try {
       const { ean } = req.params;
-      
-      if (!ean) {
-        return res.status(400).json({
-          success: false,
-          code: "INVALID_REQUEST",
-          message: "O código de barras (EAN) é obrigatório."
-        });
-      }
+
+      const errors: Array<{ field: string; message: string }> = [];
+      if (!ean) errors.push({ field: "ean", message: "O código de barras (EAN) é obrigatório." });
+
+      if (errors.length > 0) throw new ValidationError(errors);
 
       const product = await productService.getProductByBarcode(ean as string);
 
@@ -20,62 +19,37 @@ class ProductControllerClass {
         return res.status(404).json({
           success: false,
           code: "PRODUCT_NOT_FOUND",
-          message: "Produto não encontrado na base de dados externa."
+          message: "Produto não encontrado na base de dados.",
         });
       }
 
-      return res.status(200).json({
-        success: true,
-        code: "SUCCESS",
-        data: product
-      });
-
-    } catch (error: any) {
-      return res.status(500).json({
-        success: false,
-        code: "INTERNAL_ERROR",
-        message: error.message || "Erro interno do servidor."
-      });
+      return res.status(200).json(success(product));
+    } catch (e) {
+      next(e);
     }
   }
 
   async createCustomProduct(req: Request, res: Response, next: NextFunction) {
     try {
       const { name, category, icon, ean } = req.body;
-      
-      if (!name) {
-        return res.status(400).json({
-          success: false,
-          code: "INVALID_REQUEST",
-          message: "O nome do produto é obrigatório."
-        });
+
+      const errors: Array<{ field: string; message: string }> = [];
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        errors.push({ field: "name", message: "O nome do produto é obrigatório." });
       }
 
-      const product = await productService.createCustomProduct({ name, category, icon, ean });
+      if (errors.length > 0) throw new ValidationError(errors);
 
-      return res.status(201).json({
-        success: true,
-        code: "SUCCESS",
-        data: product
-      });
+      const product = await productService.createCustomProduct({ name: name.trim(), category, icon, ean });
 
-    } catch (error: any) {
-      if (error.message.includes("já existe")) {
-        return res.status(409).json({
-          success: false,
-          code: "CONFLICT",
-          message: error.message
-        });
+      return res.status(201).json(success(product));
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message.includes("já existe")) {
+        return next(new ConflictError("Produto com este EAN já existe."));
       }
-
-      return res.status(500).json({
-        success: false,
-        code: "INTERNAL_ERROR",
-        message: error.message || "Erro interno do servidor."
-      });
+      next(e);
     }
   }
 }
 
 export const productController = new ProductControllerClass();
-

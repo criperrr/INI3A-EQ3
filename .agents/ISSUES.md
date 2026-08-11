@@ -26,4 +26,4 @@ Do not add speculative issues. Only add something here if the evidence is concre
 - **Location:** `src/backend/src/modules/product/product.controller.ts` (lines 10–39, 56–60)
 - **Description:** All other controllers respond via `success(data)` from `response.helper.ts`, which produces `{ success: true, code: 200, data }`. `productController` hand-rolls raw JSON responses instead, creating an inconsistent API response shape for the `/products` endpoints.
 - **Reproduction / Evidence:** Compare `auth.controller.ts` line 28 (`res.json(success(result))`) with `product.controller.ts` line 27–31 (manual object). Clients parsing `data` from the standard envelope will receive `undefined` on product responses.
-- **Status:** open
+- **Status:** fixed

@@ -83,7 +83,6 @@ class AuthServiceClass {
       REFRESH_TOKEN_EXPIRY_SECONDS,
     );
 
-    // user sem passhash
     const { passHash: _, ...safeUser } = user;
 
     return {

@@ -5,7 +5,6 @@ export interface ProductData {
   category: string;
   imageUri?: string;
   lastPrice?: string;
-  // adicione outros campos conforme a estrutura do banco de dados
 }
 
 export const fetchProductByEan = async (ean: string): Promise<ProductData | null> => {

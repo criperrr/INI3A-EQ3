@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } fr
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useTheme } from "../content/themeContent";
-import { apiRequest } from "../services/api";
+import { fetchProductByEan } from "../services/productService";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -37,67 +37,27 @@ export default function ScannerProduct() {
     setLoading(true);
 
     try {
-      // Pequeno log para debugar o escaneamento
-      console.log(`Buscando produto para o código: ${data}`);
-      const product = await apiRequest(`/products/barcode/${data}`);
-      
-      setLoading(false);
-      
-      router.push({
-        pathname: "/scannerConfirmation",
-        params: {
-          category: product?.category || "Categoria Não Encontrada",
-          name: product?.name || "Produto Não Encontrado",
-          imageUri: product?.imageUri || "https://via.placeholder.com/150",
-          lastPrice: product?.lastPrice || "Preço não informado",
-          barcode: data,
-        },
-      });
-    } catch (error: any) {
-      setLoading(false);
-      
-      const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
-      const isNetworkError = error?.message?.includes("Network request failed") || error?.message?.includes("fetch");
-      const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;
+      const product = await fetchProductByEan(data);
 
-      if (isTimeout || isNetworkError || isTunnelError) {
-        const errorMsg = isTunnelError 
-          ? "O túnel (localtunnel) está indisponível. O backend pode não estar rodando ou o túnel caiu." 
-          : "Não foi possível conectar ao servidor. Verifique se o backend e o túnel estão online.";
-          
-        Alert.alert(
-          "Erro de Conexão",
-          errorMsg,
-          [
-            { 
-              text: "Tentar Novamente", 
-              onPress: () => {
-                setTimeout(() => {
-                  setScanned(false);
-                  isProcessing.current = false;
-                }, 1500);
-              } 
-            }
-          ]
-        );
-      } else {
+      setLoading(false);
+
+      if (!product) {
         Alert.alert(
           "Produto Não Encontrado",
           "O código de barras não foi encontrado na base de dados. Deseja cadastrá-lo manualmente?",
           [
-            { 
-              text: "Escanear Novamente", 
+            {
+              text: "Escanear Novamente",
               onPress: () => {
-                // Delay artificial para que o usuário tire o celular do código de barras
                 setTimeout(() => {
                   setScanned(false);
                   isProcessing.current = false;
                 }, 1500);
-              }, 
-              style: "cancel" 
+              },
+              style: "cancel",
             },
-            { 
-              text: "Cadastrar Manual", 
+            {
+              text: "Cadastrar Manual",
               onPress: () => {
                 isProcessing.current = false;
                 router.push({
@@ -110,9 +70,50 @@ export default function ScannerProduct() {
                     barcode: data,
                   },
                 });
-              } 
-            }
-          ]
+              },
+            },
+          ],
+        );
+        return;
+      }
+
+      router.push({
+        pathname: "/scannerConfirmation",
+        params: {
+          category: product.category || "Categoria Não Encontrada",
+          name: product.name || "Produto Não Encontrado",
+          imageUri: product.imageUri || "https://via.placeholder.com/150",
+          lastPrice: product.lastPrice || "Preço não informado",
+          barcode: data,
+        },
+      });
+    } catch (error: any) {
+      setLoading(false);
+
+      const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
+      const isNetworkError = error?.message?.includes("Network request failed") || error?.message?.includes("fetch");
+      const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;
+
+      const errorMsg =
+        isTunnelError
+          ? "O túnel (localtunnel) está indisponível. O backend pode não estar rodando ou o túnel caiu."
+          : "Não foi possível conectar ao servidor. Verifique se o backend e o túnel estão online.";
+
+      if (isTimeout || isNetworkError || isTunnelError) {
+        Alert.alert(
+          "Erro de Conexão",
+          errorMsg,
+          [
+            {
+              text: "Tentar Novamente",
+              onPress: () => {
+                setTimeout(() => {
+                  setScanned(false);
+                  isProcessing.current = false;
+                }, 1500);
+              },
+            },
+          ],
         );
       }
     }

@@ -46,8 +46,6 @@ async function setRefreshToken(
   } else await redisClient.set(`refresh:${token}`, id, { EX: ex });
 }
 
-async function destroyRefreshToken(refreshToken: string) { }
-
 async function getUserIdByRefreshToken(refreshToken: string) {
   return redisClient.get(`refresh:${refreshToken}`);
 }

@@ -19,7 +19,7 @@ import {
 import { sql } from "drizzle-orm";
 import { customType } from "drizzle-orm/pg-core";
 
-// custom type 
+
 export interface Point {
   lat: number;
   lng: number;
@@ -48,25 +48,6 @@ export const geography = customType<{ data: Point; driverData: string }>({
   },
 });
 
-// ****************************
-
-/*
-
-export const spatialRefSys = pgTable(
-  "spatial_ref_sys",
-  {
-    srid: integer().primaryKey().notNull(),
-    authName: varchar("auth_name", { length: 256 }),
-    authSrid: integer("auth_srid"),
-    srtext: varchar({ length: 2048 }),
-    proj4Text: varchar({ length: 2048 }),
-  },
-  (table) => [
-    check("spatial_ref_sys_srid_check", sql`(srid > 0) AND (srid <= 998999)`),
-  ],
-);
-
-*/
 
 export const role = pgTable(
   "role",
@@ -100,8 +81,8 @@ export const user = pgTable(
     passHash: varchar("pass_hash", { length: 255 }).notNull(),
     //refreshToken: text("refresh_token"),
     birthdate: date(),
-    points: integer().default(0).notNull().default(0),
-    dangerFlag: boolean("danger_flag").default(false).notNull().default(false),
+    points: integer().default(0).notNull(),
+    dangerFlag: boolean("danger_flag").default(false).notNull(),
     location: geography("location"),
     roleId: integer("role_id").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })

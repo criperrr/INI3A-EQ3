@@ -20,13 +20,14 @@ class MarketRepositoryClass {
         location: sql`ST_AsGeoJson(${Market.location})`,
       });
   }
+
   async updateMarket(id: number | string, market: UpdateMarketDTO) {
     return db
       .update(Market)
       .set(market)
       .returning({
-        id: Market.name,
-        name: Market.id,
+        id: Market.id,
+        name: Market.name,
         location: sql`ST_AsGeoJson(${Market.location})`,
       })
       .where(eq(Market.id, Number(id)));
@@ -41,7 +42,7 @@ class MarketRepositoryClass {
       .select({
         id: Market.id,
         name: Market.name,
-        location: sql`${Market.location}`,
+        location: sql`ST_AsGeoJson(${Market.location})`,
       })
       .from(Market)
       .where(eq(Market.id, Number(id)));
@@ -52,7 +53,7 @@ class MarketRepositoryClass {
       .select({
         id: Market.id,
         name: Market.name,
-        location: sql`${Market.location}`,
+        location: sql`ST_AsGeoJson(${Market.location})`,
       })
       .from(Market);
   }

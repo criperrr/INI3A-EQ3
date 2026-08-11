@@ -18,7 +18,7 @@ class AuthControllerClass {
       }
       if (!password || typeof password !== "string" || password.length < 6) {
         errors.push({ field: "password", message: "A senha deve ter no mínimo 6 caracteres." });
-      } // sera se zod n e bom
+      }
 
       if (errors.length > 0) {
         throw new ValidationError(errors);

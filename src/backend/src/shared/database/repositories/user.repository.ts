@@ -18,7 +18,6 @@ class UserRepositoryClass {
       roleId: User.roleId,
       createdAt: User.createdAt,
     });
-    // erro de banco => errorHandler => parseDatabaseError => log terminal bonito
   }
 
   async getUserById(id: string | number) {
