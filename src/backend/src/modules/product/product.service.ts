@@ -4,6 +4,19 @@ import type { ProductInfo } from "@/shared/types/product";
 class ProductServiceClass {
   async getProductByBarcode(barcode: string): Promise<ProductInfo | null> {
     try {
+      // Verifica no banco de dados local primeiro
+      const localProduct = await ProductRepository.getProductByEan(barcode);
+      if (localProduct) {
+        return {
+          barcode: localProduct.ean || barcode,
+          name: localProduct.name,
+          category: localProduct.description || "Categoria Indisponível",
+          imageUri: localProduct.icon || null,
+          lastPrice: "Preço não informado",
+        };
+      }
+
+      // Se não encontrar, busca na API externa
       const data = await ProductRepository.getProductFromOpenFoodFacts(barcode);
       
       if (!data || data.status === 0) {
@@ -23,6 +36,35 @@ class ProductServiceClass {
       console.error("Erro no ProductServiceClass:", error);
       throw new Error("Não foi possível buscar as informações do produto.");
     }
+  }
+
+  async createCustomProduct(data: { name: string; category?: string; icon?: string; ean?: string }): Promise<ProductInfo> {
+    const internalEan = data.ean || `INT-${Date.now()}`;
+    
+    // Check if it already exists
+    const existing = await ProductRepository.getProductByEan(internalEan);
+    if (existing) {
+      throw new Error("Produto com este EAN já existe.");
+    }
+
+    const created = await ProductRepository.createProduct({
+      ean: internalEan,
+      name: data.name,
+      ...(data.category ? { description: data.category } : {}),
+      ...(data.icon ? { icon: data.icon } : {}),
+    });
+
+    if (!created) {
+      throw new Error("Erro ao criar produto no banco de dados.");
+    }
+
+    return {
+      barcode: created.ean || internalEan,
+      name: created.name,
+      category: created.description || "Sem Categoria",
+      imageUri: created.icon || null,
+      lastPrice: "Preço não informado",
+    };
   }
 }
 

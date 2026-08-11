@@ -140,6 +140,18 @@ export default function ScannerProduct() {
              <>
                <ScannerInstructions />
                <ScannerViewFinder />
+               <View style={styles.manualEntryContainer}>
+                 <TouchableOpacity
+                   style={styles.manualEntryButton}
+                   activeOpacity={0.8}
+                   onPress={() => {
+                     isProcessing.current = false;
+                     router.push("/manualEanSearch");
+                   }}
+                 >
+                   <Text style={styles.manualEntryText}>Digitar Código Manualmente</Text>
+                 </TouchableOpacity>
+               </View>
              </>
           )}
         </CameraView>
@@ -275,8 +287,28 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   tempButtonTextStatic: {
-    color: COLORS.white,
+    color: "#FFF",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  manualEntryContainer: {
+    position: "absolute",
+    bottom: 40,
+    width: "100%",
+    paddingHorizontal: 30,
+    alignItems: "center",
+  },
+  manualEntryButton: {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  manualEntryText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

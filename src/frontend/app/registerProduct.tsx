@@ -8,7 +8,9 @@ import {
   TextInput,
   Image,
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,12 +71,14 @@ export default function RegisterProduct() {
   const displayProduct = product || scannedProduct || MOCK_PRODUCT;
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Product Hero Section */}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, themeStyles.bg]}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Product Hero Section */}
         {isLoading ? (
           <View style={[styles.heroCard, themeStyles.card, themeStyles.border, styles.loadingCard]}>
             <ActivityIndicator size="large" color={accent} />
@@ -146,6 +150,7 @@ export default function RegisterProduct() {
         </View>
       </ScrollView>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 

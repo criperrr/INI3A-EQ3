@@ -7,6 +7,8 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -67,18 +69,21 @@ export default function SearchScreen() {
   };
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, themeStyles.bg]}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         <SearchBar value={searchText} onChangeText={setSearchText} />
         <ProductResultsGrid
           products={MOCK_SEARCH_PRODUCTS}
           onProductPress={handleProductPress}
         />
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
