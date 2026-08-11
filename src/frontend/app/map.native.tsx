@@ -19,8 +19,8 @@ import { useTheme } from "../content/themeContent";
 
 // --- Constantes e Opções dos Filtros ---
 const COLORS = {
-    darkBlue: "#1A2E1A",
-    accent: "#2E7D32",
+    darkBlue: "#1565C0",
+    accent: "#F5B731",
 };
 
 const SHOP_TYPES = [
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
     },
     filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
 
-    // NOVO ESTILO: Botão de centralizar
+
     recenterButton: {
         position: "absolute",
         bottom: 30,
