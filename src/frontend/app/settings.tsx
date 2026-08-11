@@ -11,6 +11,8 @@ import {
   Share,
   Alert,
   Platform,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -183,7 +185,10 @@ const SettingsScreen: React.FC = () => {
   const isSettingsDark = settings.theme === "dark";
 
   return (
-    <ScrollView style={[styles.container, themeStyles.bg]}>
+    <ScrollView 
+      style={[styles.container, themeStyles.bg]}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* Header */}
       <View style={[styles.header, themeStyles.headerBg]}>
         <View style={styles.headerTitleContainer}>
@@ -603,9 +608,10 @@ const SettingsScreen: React.FC = () => {
 
       {/* Change Password Modal */}
       <Modal transparent visible={changePasswordOpen} animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, themeStyles.card]}>
-            <Text style={[styles.modalTitle, themeStyles.text]}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, themeStyles.card]}>
+              <Text style={[styles.modalTitle, themeStyles.text]}>
               Alterar Senha
             </Text>
             <TextInput
@@ -647,8 +653,9 @@ const SettingsScreen: React.FC = () => {
                 <Text style={styles.textWhite}>Alterar</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Delete Account Modal */}
