@@ -57,6 +57,30 @@ interface MarketMarker {
 }
 
 // --- Funções Utilitárias ---
+
+// Nova função para traduzir o padrão do OpenStreetMap para o Português (BR)
+const formatOpeningHoursBR = (hours: string | null | undefined): string => {
+    if (!hours) return "Horário de funcionamento não informado";
+    if (hours === "24/7") return "Aberto 24 horas";
+
+    let formatted = hours
+        .replace(/\bMo\b/g, "Seg")
+        .replace(/\bTu\b/g, "Ter")
+        .replace(/\bWe\b/g, "Qua")
+        .replace(/\bTh\b/g, "Qui")
+        .replace(/\bFr\b/g, "Sex")
+        .replace(/\bSa\b/g, "Sáb")
+        .replace(/\bSu\b/g, "Dom")
+        .replace(/\bPH\b/g, "Feriados")
+        .replace(/\boff\b/g, "fechado")
+        .replace(/\bclosed\b/g, "fechado");
+
+    // Substitui o traço entre os dias por " a " (ex: Seg-Sáb vira Seg a Sáb)
+    formatted = formatted.replace(/([A-Z][a-z]+|Sáb|Dom)-([A-Z][a-z]+|Sáb|Dom)/g, "$1 a $2");
+
+    return formatted;
+};
+
 const getDistanceInKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -350,7 +374,6 @@ export default function MapScreen() {
                             key={marker.id}
                             coordinate={marker.coordinate}
                             pinColor={isDark ? COLORS.accent : COLORS.darkBlue}
-                            // O Callout foi removido. Agora chama o modal.
                             onPress={() => setSelectedMarket(marker)}
                         />
                     ))}
@@ -462,7 +485,7 @@ export default function MapScreen() {
                 </Pressable>
             </Modal>
 
-            {/* NOVO: Modal de Detalhes do Mercado */}
+            {/* Modal de Detalhes do Mercado */}
             <Modal
                 visible={selectedMarket !== null}
                 transparent={true}
@@ -470,10 +493,8 @@ export default function MapScreen() {
                 onRequestClose={() => setSelectedMarket(null)}
             >
                 <Pressable style={styles.modalOverlay} onPress={() => setSelectedMarket(null)}>
-                    {/* Impede que o clique dentro do card feche o modal */}
                     <Pressable style={[styles.marketDetailContent, themeStyles.card]}>
 
-                        {/* Imagem Placeholder */}
                         <Image
                             source={{ uri: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=600&auto=format&fit=crop' }}
                             style={styles.marketImage}
@@ -498,7 +519,8 @@ export default function MapScreen() {
                         <View style={styles.marketInfoRow}>
                             <Ionicons name="time-outline" size={22} color={COLORS.accent} />
                             <Text style={[styles.marketInfoText, themeStyles.text]}>
-                                {selectedMarket?.openingHours || "Horário de funcionamento não informado"}
+                                {/* Usando a nova função para formatar os horários */}
+                                {formatOpeningHoursBR(selectedMarket?.openingHours)}
                             </Text>
                         </View>
 
@@ -572,7 +594,6 @@ const styles = StyleSheet.create({
     selectedOption: { backgroundColor: "rgba(46, 125, 50, 0.15)" },
     optionText: { fontSize: 15, fontWeight: '500' },
 
-    // --- Novos estilos para o Modal do Mercado ---
     marketDetailContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
