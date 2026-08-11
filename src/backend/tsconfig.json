@@ -9,6 +9,7 @@
     // See also https://aka.ms/tsconfig/module
     "module": "esnext",
     "target": "esnext",
+    "moduleResolution": "Bundler",
 
     "types": ["node", "jsonwebtoken"],
     "typeRoots": ["./node_modules/@types", "./src/shared/@types"],
