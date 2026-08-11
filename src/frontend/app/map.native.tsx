@@ -58,7 +58,6 @@ interface MarketMarker {
 
 // --- Funções Utilitárias ---
 
-// Nova função para traduzir o padrão do OpenStreetMap para o Português (BR)
 const formatOpeningHoursBR = (hours: string | null | undefined): string => {
     if (!hours) return "Horário de funcionamento não informado";
     if (hours === "24/7") return "Aberto 24 horas";
@@ -75,7 +74,6 @@ const formatOpeningHoursBR = (hours: string | null | undefined): string => {
         .replace(/\boff\b/g, "fechado")
         .replace(/\bclosed\b/g, "fechado");
 
-    // Substitui o traço entre os dias por " a " (ex: Seg-Sáb vira Seg a Sáb)
     formatted = formatted.replace(/([A-Z][a-z]+|Sáb|Dom)-([A-Z][a-z]+|Sáb|Dom)/g, "$1 a $2");
 
     return formatted;
@@ -180,8 +178,20 @@ export default function MapScreen() {
     const [selectedHoursFilter, setSelectedHoursFilter] = useState<string>("all");
     const [activeFilterModal, setActiveFilterModal] = useState<"type" | "distance" | "hours" | null>(null);
 
-    // NOVO: Estado para armazenar o mercado selecionado ao clicar no marcador
+    // Estado para armazenar o mercado selecionado ao clicar no marcador
     const [selectedMarket, setSelectedMarket] = useState<MarketMarker | null>(null);
+
+    // NOVA FUNÇÃO: Centralizar no usuário
+    const centerOnUserLocation = () => {
+        if (userLocation && mapRef.current) {
+            mapRef.current.animateToRegion({
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                latitudeDelta: 0.02,
+                longitudeDelta: 0.02,
+            }, 1000);
+        }
+    };
 
     // Inicialização da Localização
     const initLocation = useCallback(async () => {
@@ -361,7 +371,7 @@ export default function MapScreen() {
                     ref={mapRef}
                     style={styles.map}
                     showsUserLocation={true}
-                    showsMyLocationButton={true}
+                    showsMyLocationButton={false} // Desabilitado para usar o nosso botão customizado
                     initialRegion={userLocation ? {
                         latitude: userLocation.latitude,
                         longitude: userLocation.longitude,
@@ -414,6 +424,15 @@ export default function MapScreen() {
                         </Text>
                     </TouchableOpacity>
                 </View>
+
+                {/* NOVO: Botão de Centralizar na Localização */}
+                <TouchableOpacity
+                    style={[styles.recenterButton, themeStyles.card, themeStyles.border]}
+                    activeOpacity={0.8}
+                    onPress={centerOnUserLocation}
+                >
+                    <Ionicons name="locate" size={24} color={COLORS.accent} />
+                </TouchableOpacity>
 
                 {/* Loading dinâmico */}
                 {isProcessing && !initialLoading && (
@@ -519,7 +538,6 @@ export default function MapScreen() {
                         <View style={styles.marketInfoRow}>
                             <Ionicons name="time-outline" size={22} color={COLORS.accent} />
                             <Text style={[styles.marketInfoText, themeStyles.text]}>
-                                {/* Usando a nova função para formatar os horários */}
                                 {formatOpeningHoursBR(selectedMarket?.openingHours)}
                             </Text>
                         </View>
@@ -566,6 +584,26 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
+
+    // NOVO ESTILO: Botão de centralizar
+    recenterButton: {
+        position: "absolute",
+        bottom: 30,
+        right: 16,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 1,
+        elevation: 5,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        zIndex: 10,
+    },
+
     inlineLoader: {
         position: "absolute",
         bottom: 40,
