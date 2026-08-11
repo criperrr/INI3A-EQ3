@@ -12,19 +12,20 @@ import { useTheme } from "../content/themeContent";
 
 const COLORS = {
   white: "#FFFFFF",
-  greenConfirm: "#388E3C",
   redCancel: "#D32F2F",
 };
 
 interface ActionButtonsProps {
   onConfirm: () => void;
   onCancel: () => void;
+  themeStyles: any;
+  accent: string;
 }
 
 export default function ScannerConfirmation() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { themeStyles } = useTheme();
+  const { themeStyles, accent } = useTheme();
 
   const product = {
     category: (params.category as string) || "Produto Encontrado",
@@ -37,7 +38,13 @@ export default function ScannerConfirmation() {
   const handleConfirm = () => {
     router.push({
       pathname: "/registerProduct",
-      params: { barcode: product.barcode },
+      params: { 
+        barcode: product.barcode,
+        name: product.name,
+        category: product.category,
+        imageUri: product.imageUri,
+        lastPrice: product.lastPrice,
+      },
     });
   };
 
@@ -55,8 +62,8 @@ export default function ScannerConfirmation() {
             name={product.name}
             imageUri={product.imageUri}
           >
-            <PriceDetails lastPrice={product.lastPrice} />
-            <ActionButtons onConfirm={handleConfirm} onCancel={handleCancel} />
+            <PriceDetails lastPrice={product.lastPrice} themeStyles={themeStyles} />
+            <ActionButtons onConfirm={handleConfirm} onCancel={handleCancel} themeStyles={themeStyles} accent={accent} />
           </ProductCard>
         </View>
       </ScrollView>
@@ -66,22 +73,19 @@ export default function ScannerConfirmation() {
 
 // --- Componentes Internos ---
 
-const PriceDetails = ({ lastPrice }: { lastPrice: string }) => {
-  const { themeStyles } = useTheme();
-  return (
-    <View style={styles.detailsContainer}>
-      <Text style={[styles.priceLabel, themeStyles.subText]}>
-        Último Preço:
-      </Text>
-      <Text style={[styles.priceValue, themeStyles.text]}>{lastPrice}</Text>
-    </View>
-  );
-};
+const PriceDetails = ({ lastPrice, themeStyles }: { lastPrice: string, themeStyles: any }) => (
+  <View style={styles.detailsContainer}>
+    <Text style={[styles.priceLabel, themeStyles.subText]}>
+      Último Preço:
+    </Text>
+    <Text style={[styles.priceValue, themeStyles.text]}>{lastPrice}</Text>
+  </View>
+);
 
-const ActionButtons = ({ onConfirm, onCancel }: ActionButtonsProps) => (
+const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent }: ActionButtonsProps) => (
   <View style={styles.buttonRow}>
     <TouchableOpacity
-      style={[styles.button, styles.buttonYes]}
+      style={[styles.button, { backgroundColor: accent }]}
       activeOpacity={0.8}
       onPress={onConfirm}
     >
@@ -89,11 +93,11 @@ const ActionButtons = ({ onConfirm, onCancel }: ActionButtonsProps) => (
     </TouchableOpacity>
 
     <TouchableOpacity
-      style={[styles.button, styles.buttonNo]}
+      style={[styles.button, styles.buttonNo, themeStyles.border, { borderWidth: 1 }]}
       activeOpacity={0.8}
       onPress={onCancel}
     >
-      <Text style={styles.buttonText}>Não</Text>
+      <Text style={[styles.buttonText, { color: COLORS.redCancel }]}>Não</Text>
     </TouchableOpacity>
   </View>
 );
@@ -103,9 +107,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: {
     flexGrow: 1,
-    paddingTop: 10,
-    paddingBottom: 100,
-    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    paddingHorizontal: 16,
     justifyContent: "center",
   },
   cardWrapper: { width: "100%", alignItems: "center" },
@@ -119,14 +123,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    elevation: 0,
   },
-  buttonYes: { backgroundColor: COLORS.greenConfirm },
-  buttonNo: { backgroundColor: COLORS.redCancel },
+  buttonNo: { backgroundColor: "transparent" },
   buttonText: {
     color: COLORS.white,
     fontSize: 16,

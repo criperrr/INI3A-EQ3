@@ -7,7 +7,7 @@ const MOCK_PRODUCT = {
   category: "Produto",
   name: "Cebola Granel 1kg",
   imageUrl:
-    "https://www.confianca.com.br/ccstore/v1/images/?source=/file/v484523792576810974/products/1144880.1.jpg&height=940&width=940",
+    "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=400&fit=crop", // placeholder mais bonito
   lastPrice: "R$ 7,75",
   pricePerUnit: "R$ 7,75 kg",
 };
@@ -15,7 +15,7 @@ const MOCK_PRODUCT = {
 const MOCK_PRICE_HISTORY = [45, 30, 55, 40, 35, 42, 48, 65, 50, 32, 40, 52];
 
 export default function ProductDetails() {
-  const { themeStyles, isDark, accent } = useTheme();
+  const { themeStyles, accent } = useTheme();
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
@@ -92,10 +92,9 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingTop: 10,
-    paddingBottom: 100,
-    paddingHorizontal: 20,
-    justifyContent: "center",
+    paddingVertical: 16, // alinhado com o index.tsx
+    paddingHorizontal: 16,
+    justifyContent: "flex-start", // mudado para flex-start para não centralizar estranho
   },
   cardWrapper: {
     width: "100%",
@@ -109,10 +108,12 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 14,
     marginBottom: 4,
+    fontWeight: "600",
   },
   priceValue: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: "bold",
+    marginBottom: 2,
   },
   priceSubValue: {
     fontSize: 14,
@@ -120,23 +121,19 @@ const styles = StyleSheet.create({
   },
   chartSection: {
     width: "100%",
+    marginTop: 8,
   },
   chartTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   chartContainer: {
     borderRadius: 16,
     padding: 16,
-    height: 130,
+    height: 140,
     justifyContent: "flex-end",
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
     overflow: "hidden",
   },
   chartWrapperInner: {
@@ -151,11 +148,12 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "flex-end",
     alignItems: "center",
-    marginHorizontal: 3,
+    marginHorizontal: 2,
   },
   chartBar: {
     width: "100%",
-    maxWidth: 10,
-    borderRadius: 4,
+    maxWidth: 12,
+    borderRadius: 6,
+    opacity: 0.9,
   },
 });
