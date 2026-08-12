@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
     View,
     StyleSheet,
@@ -17,27 +17,26 @@ import * as Location from "expo-location";
 import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
 
-// --- Constantes e Opções dos Filtros ---
-const COLORS = {
+const THEME_COLORS = {
     darkBlue: "#1565C0",
     accent: "#F5B731",
 };
 
-const SHOP_TYPES = [
+const MARKET_TYPES = [
     { label: "Todos os Mercados", value: "all" },
     { label: "Supermercados", value: "supermarket" },
     { label: "Mercados de Bairro / Conveniência", value: "convenience" },
     { label: "Mercearias & Hortifruti", value: "grocery" },
 ];
 
-const DISTANCE_OPTIONS = [
+const MAX_DISTANCE_OPTIONS = [
     { label: "1 km", value: 1000 },
     { label: "3 km", value: 3000 },
     { label: "5 km", value: 5000 },
     { label: "10 km", value: 10000 },
 ];
 
-const HOURS_OPTIONS = [
+const OPERATING_HOURS_OPTIONS = [
     { label: "Todos os Horários", value: "all" },
     { label: "Com Horário Informado", value: "with_hours" },
 ];
@@ -48,85 +47,72 @@ const OVERPASS_ENDPOINTS = [
     "https://overpass.private.coffee/api/interpreter"
 ];
 
+interface Coordinate {
+    latitude: number;
+    longitude: number;
+}
+
 interface MarketMarker {
     id: string;
     title: string;
-    coordinate: { latitude: number; longitude: number };
+    coordinate: Coordinate;
     straightDistance: number;
     routeDistance: number;
     openingHours?: string;
 }
 
-// --- Funções Utilitárias ---
-
-const formatOpeningHoursBR = (hours: string | null | undefined): string => {
+const formatOpeningHours = (hours: string | null | undefined): string => {
     if (!hours) return "Horário de funcionamento não informado";
     if (hours === "24/7") return "Aberto 24 horas";
 
-    let formatted = hours
-        .replace(/\bMo\b/g, "Seg")
-        .replace(/\bTu\b/g, "Ter")
-        .replace(/\bWe\b/g, "Qua")
-        .replace(/\bTh\b/g, "Qui")
-        .replace(/\bFr\b/g, "Sex")
-        .replace(/\bSa\b/g, "Sáb")
-        .replace(/\bSu\b/g, "Dom")
-        .replace(/\bPH\b/g, "Feriados")
-        .replace(/\boff\b/g, "fechado")
-        .replace(/\bclosed\b/g, "fechado");
+    const daysTranslation: Record<string, string> = {
+        Mo: "Seg", Tu: "Ter", We: "Qua", Th: "Qui", Fr: "Sex",
+        Sa: "Sáb", Su: "Dom", PH: "Feriados", off: "fechado", closed: "fechado"
+    };
 
-    formatted = formatted.replace(/([A-Z][a-z]+|Sáb|Dom)-([A-Z][a-z]+|Sáb|Dom)/g, "$1 a $2");
-
-    return formatted;
+    let formatted = hours.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off|closed)\b/g, match => daysTranslation[match] || match);
+    return formatted.replace(/([A-Z][a-z]+|Sáb|Dom)-([A-Z][a-z]+|Sáb|Dom)/g, "$1 a $2");
 };
 
-const getDistanceInKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
+const calculateDistanceInKm = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const toRadians = 0.017453292519943295;
+    const a = 0.5 - Math.cos((lat2 - lat1) * toRadians) / 2 +
+        Math.cos(lat1 * toRadians) * Math.cos(lat2 * toRadians) *
+        (1 - Math.cos((lon2 - lon1) * toRadians)) / 2;
+    return 12742 * Math.asin(Math.sqrt(a));
 };
 
-const fetchRouteDistances = async (userLat: number, userLon: number, markers: MarketMarker[]): Promise<MarketMarker[]> => {
+const fetchDrivingDistances = async (userLocation: Coordinate, markers: MarketMarker[]): Promise<MarketMarker[]> => {
     if (markers.length === 0) return markers;
 
-    const coords = markers.map(m => `${m.coordinate.longitude},${m.coordinate.latitude}`).join(';');
-    const url = `https://router.project-osrm.org/table/v1/driving/${userLon},${userLat};${coords}?sources=0&annotations=distance`;
+    const coordinatesString = markers.map(m => `${m.coordinate.longitude},${m.coordinate.latitude}`).join(';');
+    const url = `https://router.project-osrm.org/table/v1/driving/${userLocation.longitude},${userLocation.latitude};${coordinatesString}?sources=0&annotations=distance`;
 
     try {
         const response = await fetch(url);
         const data = await response.json();
 
-        if (data.code === 'Ok' && data.distances && data.distances[0]) {
-            const distances = data.distances[0];
+        if (data.code === 'Ok' && data.distances?.[0]) {
             return markers.map((marker, index) => {
-                const routeDistanceInMeters = distances[index + 1];
+                const distanceInMeters = data.distances[0][index + 1];
                 return {
                     ...marker,
-                    routeDistance: routeDistanceInMeters !== null ? (routeDistanceInMeters / 1000) : marker.straightDistance
+                    routeDistance: distanceInMeters !== null ? (distanceInMeters / 1000) : marker.straightDistance
                 };
             });
         }
     } catch (error) {
-        console.error("Erro ao buscar distâncias OSRM:", error);
+        console.error("Erro ao buscar distâncias de rota:", error);
     }
-    return markers.map(m => ({ ...m, routeDistance: m.straightDistance }));
+    return markers;
 };
 
-const fetchOverpassMarkets = async (lat: number, lng: number, radius: number, shopType: string) => {
-    let shopFilter = '["shop"="supermarket"]';
-    if (shopType === "convenience") shopFilter = '["shop"="convenience"]';
-    else if (shopType === "grocery") shopFilter = '["shop"="grocery"]';
-    else if (shopType === "all") shopFilter = '["shop"~"supermarket|convenience|grocery|deli|general"]';
+const fetchMarketsData = async (latitude: number, longitude: number, radius: number, shopType: string) => {
+    const shopFilter = shopType === "all"
+        ? '["shop"~"supermarket|convenience|grocery|deli|general"]'
+        : `["shop"="${shopType}"]`;
 
-    const query = `[out:json][timeout:25];nwr(around:${radius},${lat},${lng})${shopFilter};out center;`;
+    const query = `[out:json][timeout:25];nwr(around:${radius},${latitude},${longitude})${shopFilter};out center;`;
     let lastErrorStatus = null;
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
@@ -141,20 +127,16 @@ const fetchOverpassMarkets = async (lat: number, lng: number, radius: number, sh
                 body: `data=${encodeURIComponent(query)}`
             });
 
-            if (response.ok) {
-                return await response.json();
-            }
+            if (response.ok) return await response.json();
 
             lastErrorStatus = response.status;
-            console.warn(`Aviso: Erro ${response.status} no endpoint ${endpoint}. Tentando próximo...`);
         } catch (error) {
-            console.warn(`Aviso: Falha ao conectar em ${endpoint}. Tentando próximo...`);
+            console.warn(`Falha no endpoint ${endpoint}. Tentando o próximo...`);
         }
     }
 
-    if (lastErrorStatus === 406) throw new Error("Erro 406: Servidor recusou a conexão (Verifique os cabeçalhos).");
-    if (lastErrorStatus === 429) throw new Error("Servidores sobrecarregados (Erro 429). Aguarde um instante.");
-
+    if (lastErrorStatus === 406) throw new Error("Erro de cabeçalho na requisição ao servidor de mapas.");
+    if (lastErrorStatus === 429) throw new Error("Servidores sobrecarregados. Aguarde um instante.");
     throw new Error("Não foi possível conectar à base de dados de mapas.");
 };
 
@@ -162,208 +144,161 @@ export default function MapScreen() {
     const { themeStyles, isDark } = useTheme();
     const mapRef = useRef<MapView>(null);
 
-    // Estados Globais e de Loading
-    const [initialLoading, setInitialLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [appState, setAppState] = useState({ isLoading: true, error: null as string | null, isProcessing: false });
+    const [filters, setFilters] = useState({ shopType: "supermarket", maxDistance: 5000, hoursOption: "all" });
+    const [mapData, setMapData] = useState<{ radius: number; type: string; elements: any[] }>({ radius: 0, type: "", elements: [] });
 
-    // Estados de Localização e Dados
-    const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-    const [cachedOverpassData, setCachedOverpassData] = useState<{ radius: number; type: string; elements: any[] }>({ radius: 0, type: "", elements: [] });
-    const [evaluatedMarkets, setEvaluatedMarkets] = useState<MarketMarker[]>([]);
+    const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
     const [visibleMarkers, setVisibleMarkers] = useState<MarketMarker[]>([]);
-
-    // Estados dos Filtros e Modal
-    const [selectedShopType, setSelectedShopType] = useState<string>("supermarket");
-    const [selectedDistance, setSelectedDistance] = useState<number>(5000);
-    const [selectedHoursFilter, setSelectedHoursFilter] = useState<string>("all");
     const [activeFilterModal, setActiveFilterModal] = useState<"type" | "distance" | "hours" | null>(null);
-
-    // Estado para armazenar o mercado selecionado ao clicar no marcador
     const [selectedMarket, setSelectedMarket] = useState<MarketMarker | null>(null);
 
-    // NOVA FUNÇÃO: Centralizar no usuário
-    const centerOnUserLocation = () => {
+    const initializeUserLocation = useCallback(async () => {
+        try {
+            setAppState(prev => ({ ...prev, error: null, isLoading: true }));
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') throw new Error('Permissão de localização negada.');
+
+            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+            setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
+        } catch (error: any) {
+            setAppState(prev => ({ ...prev, error: error.message || "Não foi possível obter a localização.", isLoading: false }));
+        }
+    }, []);
+
+    useEffect(() => {
+        initializeUserLocation();
+    }, [initializeUserLocation]);
+
+    useEffect(() => {
+        if (!userLocation) return;
+
+        const requiredRadius = Math.floor(filters.maxDistance * 1.3);
+        const isDataCached = mapData.type === filters.shopType && mapData.radius >= requiredRadius;
+
+        if (isDataCached) {
+            setAppState(prev => ({ ...prev, isLoading: false }));
+            return;
+        }
+
+        let isMounted = true;
+
+        const fetchRawMapData = async () => {
+            setAppState(prev => ({ ...prev, isProcessing: true }));
+            try {
+                const data = await fetchMarketsData(userLocation.latitude, userLocation.longitude, requiredRadius, filters.shopType);
+                if (isMounted) {
+                    setMapData({ radius: requiredRadius, type: filters.shopType, elements: data.elements || [] });
+                    setAppState({ isLoading: false, error: null, isProcessing: false });
+                }
+            } catch (error: any) {
+                if (isMounted) {
+                    setAppState({ isLoading: false, error: error.message || "Falha ao buscar estabelecimentos.", isProcessing: false });
+                }
+            }
+        };
+
+        fetchRawMapData();
+        return () => { isMounted = false; };
+    }, [userLocation, filters.shopType, filters.maxDistance]);
+
+    const nearbyMarkets = useMemo(() => {
+        if (!userLocation || mapData.elements.length === 0) return [];
+
+        const maxDistanceInKm = filters.maxDistance / 1000;
+
+        const processedMarkers = mapData.elements.reduce((acc, element) => {
+            const lat = element.type === 'node' ? element.lat : element.center?.lat;
+            const lon = element.type === 'node' ? element.lon : element.center?.lon;
+            if (!lat || !lon) return acc;
+
+            const distance = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
+            const matchesHoursFilter = filters.hoursOption !== "with_hours" || element.tags?.opening_hours;
+
+            if (distance <= maxDistanceInKm && matchesHoursFilter) {
+                acc.push({
+                    id: String(element.id),
+                    title: element.tags?.name || "Mercado / Loja",
+                    coordinate: { latitude: lat, longitude: lon },
+                    straightDistance: distance,
+                    routeDistance: distance,
+                    openingHours: element.tags?.opening_hours || null,
+                });
+            }
+            return acc;
+        }, [] as MarketMarker[]);
+
+        return processedMarkers.sort((a: MarketMarker, b: MarketMarker) => a.straightDistance - b.straightDistance);
+    }, [mapData, userLocation, filters.maxDistance, filters.hoursOption]);
+
+    useEffect(() => {
+        if (nearbyMarkets.length === 0) {
+            setVisibleMarkers([]);
+            return;
+        }
+
+        let isMounted = true;
+        setVisibleMarkers(nearbyMarkets);
+        setAppState(prev => ({ ...prev, isProcessing: true }));
+
+        const closestMarkets = nearbyMarkets.slice(0, 25);
+
+        fetchDrivingDistances(userLocation!, closestMarkets).then(enrichedMarkets => {
+            if (isMounted) {
+                const enrichedIds = new Set(enrichedMarkets.map((m: MarketMarker) => m.id));
+                const remainingMarkets = nearbyMarkets.filter((m: MarketMarker) => !enrichedIds.has(m.id));
+
+                const finalMarkers = [...enrichedMarkets, ...remainingMarkets]
+                    .filter(m => (m.routeDistance * 1000) <= filters.maxDistance)
+                    .sort((a, b) => a.routeDistance - b.routeDistance);
+
+                setVisibleMarkers(finalMarkers);
+                setAppState(prev => ({ ...prev, isProcessing: false }));
+
+                if (finalMarkers.length > 0 && mapRef.current) {
+                    requestAnimationFrame(() => {
+                        const coordinatesToFit = [...finalMarkers.map(m => m.coordinate), userLocation!];
+                        mapRef.current?.fitToCoordinates(coordinatesToFit, {
+                            edgePadding: { top: 70, right: 70, bottom: 70, left: 70 },
+                            animated: true,
+                        });
+                    });
+                }
+            }
+        });
+
+        return () => { isMounted = false; };
+    }, [nearbyMarkets]);
+
+    const centerMapOnUser = () => {
         if (userLocation && mapRef.current) {
             mapRef.current.animateToRegion({
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
+                ...userLocation,
                 latitudeDelta: 0.02,
                 longitudeDelta: 0.02,
             }, 1000);
         }
     };
 
-    // Inicialização da Localização
-    const initLocation = useCallback(async () => {
-        try {
-            setErrorMsg(null);
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') throw new Error('Permissão de localização negada.');
+    const navigateToMarket = (market: MarketMarker) => {
+        const url = `https://www.google.com/maps/dir/?api=1&destination=${market.coordinate.latitude},${market.coordinate.longitude}`;
+        Linking.openURL(url).catch(() => alert("Não foi possível abrir o Google Maps."));
+    };
 
-            const location = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-            });
-            setUserLocation({
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude
-            });
-        } catch (error: any) {
-            setErrorMsg(error.message || "Não foi possível obter a localização exata.");
-            setInitialLoading(false);
-        }
-    }, []);
+    if (appState.isLoading) {
+        return <LoadingScreen themeStyles={themeStyles} />;
+    }
 
-    useEffect(() => {
-        initLocation();
-    }, [initLocation]);
+    if (appState.error) {
+        return <ErrorScreen error={appState.error} onRetry={initializeUserLocation} themeStyles={themeStyles} />;
+    }
 
-    // PIPELINE 1: Busca na API Overpass
-    useEffect(() => {
-        if (!userLocation) return;
-
-        const requiredRadius = Math.floor(selectedDistance * 1.3);
-
-        if (cachedOverpassData.type === selectedShopType && cachedOverpassData.radius >= requiredRadius) {
-            return;
-        }
-
-        const fetchApis = async () => {
-            setIsProcessing(true);
-            try {
-                const data = await fetchOverpassMarkets(userLocation.latitude, userLocation.longitude, requiredRadius, selectedShopType);
-                setCachedOverpassData({
-                    radius: requiredRadius,
-                    type: selectedShopType,
-                    elements: data.elements || []
-                });
-            } catch (error: any) {
-                console.error("Erro no Overpass:", error);
-                setErrorMsg(error.message || "Falha ao buscar estabelecimentos.");
-                setInitialLoading(false);
-                setIsProcessing(false);
-            }
-        };
-
-        fetchApis();
-    }, [userLocation, selectedShopType, selectedDistance]);
-
-    // PIPELINE 2: Processamento e cálculo de rotas (OSRM)
-    useEffect(() => {
-        if (!userLocation || cachedOverpassData.elements.length === 0) {
-            setEvaluatedMarkets([]);
-            setInitialLoading(false);
-            setIsProcessing(false);
-            return;
-        }
-
-        const processRoutes = async () => {
-            setIsProcessing(true);
-
-            let parsedMarkers: MarketMarker[] = cachedOverpassData.elements.map((element: any) => {
-                const lat = element.type === 'node' ? element.lat : element.center?.lat;
-                const lon = element.type === 'node' ? element.lon : element.center?.lon;
-                if (!lat || !lon) return null;
-
-                return {
-                    id: String(element.id),
-                    title: element.tags?.name || "Mercado / Loja",
-                    coordinate: { latitude: lat, longitude: lon },
-                    straightDistance: getDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon),
-                    routeDistance: 0,
-                    openingHours: element.tags?.opening_hours || null,
-                };
-            }).filter(Boolean) as MarketMarker[];
-
-            parsedMarkers.sort((a, b) => a.straightDistance - b.straightDistance);
-            const topClosestMarkers = parsedMarkers.slice(0, 25);
-
-            const withRouteDistances = await fetchRouteDistances(userLocation.latitude, userLocation.longitude, topClosestMarkers);
-
-            setEvaluatedMarkets(withRouteDistances);
-            setInitialLoading(false);
-            setIsProcessing(false);
-        };
-
-        processRoutes();
-    }, [cachedOverpassData, userLocation]);
-
-    // PIPELINE 3: Filtros Locais
-    useEffect(() => {
-        if (!userLocation || evaluatedMarkets.length === 0) {
-            setVisibleMarkers([]);
-            return;
-        }
-
-        const filtered = evaluatedMarkets.filter(marker => {
-            if (selectedHoursFilter === "with_hours" && !marker.openingHours) return false;
-            if ((marker.routeDistance * 1000) > selectedDistance) return false;
-            return true;
-        });
-
-        filtered.sort((a, b) => a.routeDistance - b.routeDistance);
-        setVisibleMarkers(filtered);
-
-        if (mapRef.current) {
-            if (filtered.length > 0) {
-                const coordsToFit = filtered.map(m => m.coordinate);
-                coordsToFit.push(userLocation);
-
-                setTimeout(() => {
-                    mapRef.current?.fitToCoordinates(coordsToFit, {
-                        edgePadding: { top: 70, right: 70, bottom: 70, left: 70 },
-                        animated: true,
-                    });
-                }, 500);
-            } else {
-                mapRef.current.animateToRegion({
-                    latitude: userLocation.latitude,
-                    longitude: userLocation.longitude,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05
-                }, 1000);
-            }
-        }
-    }, [evaluatedMarkets, selectedDistance, selectedHoursFilter, userLocation]);
-
-    const getFilterLabel = (filterId: string) => {
-        if (filterId === "type") {
-            const current = SHOP_TYPES.find((s) => s.value === selectedShopType);
-            return current ? current.label.split("/")[0] : "Tipo";
-        }
-        if (filterId === "distance") return `${selectedDistance / 1000} km`;
-        if (filterId === "hours") return selectedHoursFilter === "with_hours" ? "Com Horário" : "Horários";
+    const getFilterLabel = (filterType: "type" | "distance" | "hours") => {
+        if (filterType === "type") return MARKET_TYPES.find(s => s.value === filters.shopType)?.label.split("/")[0] || "Tipo";
+        if (filterType === "distance") return `${filters.maxDistance / 1000} km`;
+        if (filterType === "hours") return filters.hoursOption === "with_hours" ? "Com Horário" : "Horários";
         return "";
     };
-
-    // Função para abrir o Google Maps
-    const openDirections = (market: MarketMarker) => {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${market.coordinate.latitude},${market.coordinate.longitude}`;
-        Linking.openURL(url).catch(() => {
-            alert("Não foi possível abrir o Google Maps.");
-        });
-    };
-
-    // --- Renderização Condicional ---
-    if (initialLoading) {
-        return (
-            <View style={[styles.container, styles.centered, themeStyles.bg]}>
-                <ActivityIndicator size="large" color={COLORS.accent} />
-                <Text style={[styles.loadingText, themeStyles.text]}>Preparando o mapa e rotas...</Text>
-            </View>
-        );
-    }
-
-    if (errorMsg) {
-        return (
-            <View style={[styles.container, styles.centered, themeStyles.bg]}>
-                <Text style={[themeStyles.text, styles.errorText]}>{errorMsg}</Text>
-                <TouchableOpacity onPress={initLocation} style={styles.retryButton}>
-                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Tentar Novamente</Text>
-                </TouchableOpacity>
-            </View>
-        );
-    }
 
     return (
         <View style={[styles.container, themeStyles.bg]}>
@@ -373,7 +308,7 @@ export default function MapScreen() {
                     ref={mapRef}
                     style={styles.map}
                     showsUserLocation={true}
-                    showsMyLocationButton={false} // Desabilitado para usar o nosso botão customizado
+                    showsMyLocationButton={false}
                     initialRegion={userLocation ? {
                         latitude: userLocation.latitude,
                         longitude: userLocation.longitude,
@@ -385,187 +320,212 @@ export default function MapScreen() {
                         <Marker
                             key={marker.id}
                             coordinate={marker.coordinate}
-                            pinColor={isDark ? COLORS.accent : COLORS.darkBlue}
+                            pinColor={isDark ? THEME_COLORS.accent : THEME_COLORS.darkBlue}
                             onPress={() => setSelectedMarket(marker)}
                         />
                     ))}
                 </MapView>
 
-                {/* Filtros no topo */}
                 <View style={styles.filtersWrapper}>
-                    <TouchableOpacity
-                        style={[styles.filterCard, themeStyles.card, themeStyles.border]}
-                        activeOpacity={0.8}
+                    <FilterButton
+                        icon="storefront-outline"
+                        label={getFilterLabel("type")}
                         onPress={() => setActiveFilterModal("type")}
-                    >
-                        <Ionicons name="storefront-outline" size={20} color={isDark ? "#F0E6D3" : COLORS.darkBlue} />
-                        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>
-                            {getFilterLabel("type")}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.filterCard, themeStyles.card, themeStyles.border]}
-                        activeOpacity={0.8}
+                        themeStyles={themeStyles}
+                        isDark={isDark}
+                    />
+                    <FilterButton
+                        icon="navigate-outline"
+                        label={getFilterLabel("distance")}
                         onPress={() => setActiveFilterModal("distance")}
-                    >
-                        <Ionicons name="navigate-outline" size={20} color={isDark ? "#F0E6D3" : COLORS.darkBlue} />
-                        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>
-                            {getFilterLabel("distance")}
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.filterCard, themeStyles.card, themeStyles.border]}
-                        activeOpacity={0.8}
+                        themeStyles={themeStyles}
+                        isDark={isDark}
+                    />
+                    <FilterButton
+                        icon="time-outline"
+                        label={getFilterLabel("hours")}
                         onPress={() => setActiveFilterModal("hours")}
-                    >
-                        <Ionicons name="time-outline" size={20} color={isDark ? "#F0E6D3" : COLORS.darkBlue} />
-                        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>
-                            {getFilterLabel("hours")}
-                        </Text>
-                    </TouchableOpacity>
+                        themeStyles={themeStyles}
+                        isDark={isDark}
+                    />
                 </View>
 
-                {/* NOVO: Botão de Centralizar na Localização */}
                 <TouchableOpacity
                     style={[styles.recenterButton, themeStyles.card, themeStyles.border]}
                     activeOpacity={0.8}
-                    onPress={centerOnUserLocation}
+                    onPress={centerMapOnUser}
                 >
-                    <Ionicons name="locate" size={24} color={COLORS.accent} />
+                    <Ionicons name="locate" size={24} color={THEME_COLORS.accent} />
                 </TouchableOpacity>
 
-                {/* Loading dinâmico */}
-                {isProcessing && !initialLoading && (
+                {appState.isProcessing && (
                     <View style={styles.inlineLoader}>
-                        <ActivityIndicator size="small" color={COLORS.accent} />
-                        <Text style={{ marginLeft: 8, fontSize: 12, color: "#333", fontWeight: '500' }}>Atualizando...</Text>
+                        <ActivityIndicator size="small" color={THEME_COLORS.accent} />
+                        <Text style={styles.inlineLoaderText}>Atualizando...</Text>
                     </View>
                 )}
             </View>
 
-            {/* Modal de Filtros */}
-            <Modal
-                visible={activeFilterModal !== null}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setActiveFilterModal(null)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setActiveFilterModal(null)}>
-                    <View style={[styles.modalContent, themeStyles.card]}>
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, themeStyles.text]}>
-                                {activeFilterModal === "type" && "Selecione o Tipo"}
-                                {activeFilterModal === "distance" && "Selecione a Distância Máxima"}
-                                {activeFilterModal === "hours" && "Filtrar por Horário"}
-                            </Text>
-                            <TouchableOpacity onPress={() => setActiveFilterModal(null)}>
-                                <Ionicons name="close-circle-outline" size={26} color={isDark ? "#fff" : "#333"} />
-                            </TouchableOpacity>
-                        </View>
+            <FilterSelectionModal
+                activeModal={activeFilterModal}
+                filters={filters}
+                onClose={() => setActiveFilterModal(null)}
+                onUpdateFilters={(newFilters:any) => setFilters(prev => ({ ...prev, ...newFilters }))}
+                themeStyles={themeStyles}
+                isDark={isDark}
+            />
 
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {activeFilterModal === "type" &&
-                                SHOP_TYPES.map((item) => (
-                                    <TouchableOpacity
-                                        key={item.value}
-                                        style={[styles.optionItem, selectedShopType === item.value && styles.selectedOption]}
-                                        onPress={() => { setSelectedShopType(item.value); setActiveFilterModal(null); }}
-                                    >
-                                        <Text style={[styles.optionText, themeStyles.text]}>{item.label}</Text>
-                                        {selectedShopType === item.value && <Ionicons name="checkmark-circle" size={20} color={COLORS.accent} />}
-                                    </TouchableOpacity>
-                                ))}
-
-                            {activeFilterModal === "distance" &&
-                                DISTANCE_OPTIONS.map((item) => (
-                                    <TouchableOpacity
-                                        key={item.value}
-                                        style={[styles.optionItem, selectedDistance === item.value && styles.selectedOption]}
-                                        onPress={() => { setSelectedDistance(item.value); setActiveFilterModal(null); }}
-                                    >
-                                        <Text style={[styles.optionText, themeStyles.text]}>{item.label}</Text>
-                                        {selectedDistance === item.value && <Ionicons name="checkmark-circle" size={20} color={COLORS.accent} />}
-                                    </TouchableOpacity>
-                                ))}
-
-                            {activeFilterModal === "hours" &&
-                                HOURS_OPTIONS.map((item) => (
-                                    <TouchableOpacity
-                                        key={item.value}
-                                        style={[styles.optionItem, selectedHoursFilter === item.value && styles.selectedOption]}
-                                        onPress={() => { setSelectedHoursFilter(item.value); setActiveFilterModal(null); }}
-                                    >
-                                        <Text style={[styles.optionText, themeStyles.text]}>{item.label}</Text>
-                                        {selectedHoursFilter === item.value && <Ionicons name="checkmark-circle" size={20} color={COLORS.accent} />}
-                                    </TouchableOpacity>
-                                ))}
-                        </ScrollView>
-                    </View>
-                </Pressable>
-            </Modal>
-
-            {/* Modal de Detalhes do Mercado */}
-            <Modal
-                visible={selectedMarket !== null}
-                transparent={true}
-                animationType="slide"
-                onRequestClose={() => setSelectedMarket(null)}
-            >
-                <Pressable style={styles.modalOverlay} onPress={() => setSelectedMarket(null)}>
-                    <Pressable style={[styles.marketDetailContent, themeStyles.card]}>
-
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=600&auto=format&fit=crop' }}
-                            style={styles.marketImage}
-                        />
-
-                        <View style={styles.modalHeader}>
-                            <Text style={[styles.modalTitle, themeStyles.text, { flex: 1 }]} numberOfLines={2}>
-                                {selectedMarket?.title}
-                            </Text>
-                            <TouchableOpacity onPress={() => setSelectedMarket(null)} style={{ paddingLeft: 10 }}>
-                                <Ionicons name="close-circle" size={28} color={isDark ? "#fff" : "#333"} />
-                            </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.marketInfoRow}>
-                            <Ionicons name="navigate-outline" size={22} color={COLORS.accent} />
-                            <Text style={[styles.marketInfoText, themeStyles.text]}>
-                                A exatos {selectedMarket?.routeDistance.toFixed(2)} km de você
-                            </Text>
-                        </View>
-
-                        <View style={styles.marketInfoRow}>
-                            <Ionicons name="time-outline" size={22} color={COLORS.accent} />
-                            <Text style={[styles.marketInfoText, themeStyles.text]}>
-                                {formatOpeningHoursBR(selectedMarket?.openingHours)}
-                            </Text>
-                        </View>
-
-                        <TouchableOpacity
-                            style={styles.routesButton}
-                            activeOpacity={0.8}
-                            onPress={() => selectedMarket && openDirections(selectedMarket)}
-                        >
-                            <Ionicons name="map" size={20} color="#fff" />
-                            <Text style={styles.routesButtonText}>Rotas</Text>
-                        </TouchableOpacity>
-
-                    </Pressable>
-                </Pressable>
-            </Modal>
+            <MarketDetailModal
+                market={selectedMarket}
+                onClose={() => setSelectedMarket(null)}
+                onNavigate={navigateToMarket}
+                themeStyles={themeStyles}
+                isDark={isDark}
+            />
         </View>
     );
 }
+
+// --- Subcomponentes de UI ---
+
+const LoadingScreen = ({ themeStyles }: { themeStyles: any }) => (
+    <View style={[styles.container, styles.centered, themeStyles.bg]}>
+        <ActivityIndicator size="large" color={THEME_COLORS.accent} />
+        <Text style={[styles.loadingText, themeStyles.text]}>Preparando o mapa e rotas...</Text>
+    </View>
+);
+
+const ErrorScreen = ({ error, onRetry, themeStyles }: { error: string, onRetry: () => void, themeStyles: any }) => (
+    <View style={[styles.container, styles.centered, themeStyles.bg]}>
+        <Text style={[themeStyles.text, styles.errorText]}>{error}</Text>
+        <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
+            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+        </TouchableOpacity>
+    </View>
+);
+
+const FilterButton = ({ icon, label, onPress, themeStyles, isDark }: any) => (
+    <TouchableOpacity
+        style={[styles.filterCard, themeStyles.card, themeStyles.border]}
+        activeOpacity={0.8}
+        onPress={onPress}
+    >
+        <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : THEME_COLORS.darkBlue} />
+        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+);
+
+const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark }: any) => {
+    if (!activeModal) return null;
+
+    const getModalTitle = () => {
+        if (activeModal === "type") return "Selecione o Tipo";
+        if (activeModal === "distance") return "Selecione a Distância Máxima";
+        return "Filtrar por Horário";
+    };
+
+    const getOptionsList = () => {
+        if (activeModal === "type") return MARKET_TYPES;
+        if (activeModal === "distance") return MAX_DISTANCE_OPTIONS;
+        return OPERATING_HOURS_OPTIONS;
+    };
+
+    const handleSelectOption = (value: any) => {
+        if (activeModal === "type") onUpdateFilters({ shopType: value });
+        else if (activeModal === "distance") onUpdateFilters({ maxDistance: value });
+        else if (activeModal === "hours") onUpdateFilters({ hoursOption: value });
+        onClose();
+    };
+
+    const getCurrentValue = () => {
+        if (activeModal === "type") return filters.shopType;
+        if (activeModal === "distance") return filters.maxDistance;
+        return filters.hoursOption;
+    };
+
+    return (
+        <Modal visible={true} transparent={true} animationType="slide" onRequestClose={onClose}>
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <View style={[styles.modalContent, themeStyles.card]}>
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, themeStyles.text]}>{getModalTitle()}</Text>
+                        <TouchableOpacity onPress={onClose}>
+                            <Ionicons name="close-circle-outline" size={26} color={isDark ? "#fff" : "#333"} />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        {getOptionsList().map((item) => {
+                            const isSelected = getCurrentValue() === item.value;
+                            return (
+                                <TouchableOpacity
+                                    key={item.value}
+                                    style={[styles.optionItem, isSelected && styles.selectedOption]}
+                                    onPress={() => handleSelectOption(item.value)}
+                                >
+                                    <Text style={[styles.optionText, themeStyles.text]}>{item.label}</Text>
+                                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={THEME_COLORS.accent} />}
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </ScrollView>
+                </View>
+            </Pressable>
+        </Modal>
+    );
+};
+
+const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark }: any) => {
+    if (!market) return null;
+
+    return (
+        <Modal visible={true} transparent={true} animationType="slide" onRequestClose={onClose}>
+            <Pressable style={styles.modalOverlay} onPress={onClose}>
+                <Pressable style={[styles.marketDetailContent, themeStyles.card]}>
+                    <Image
+                        source={{ uri: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=600&auto=format&fit=crop' }}
+                        style={styles.marketImage}
+                    />
+                    <View style={styles.modalHeader}>
+                        <Text style={[styles.modalTitle, themeStyles.text, { flex: 1 }]} numberOfLines={2}>
+                            {market.title}
+                        </Text>
+                        <TouchableOpacity onPress={onClose} style={{ paddingLeft: 10 }}>
+                            <Ionicons name="close-circle" size={28} color={isDark ? "#fff" : "#333"} />
+                        </TouchableOpacity>
+                    </View>
+                    <View style={styles.marketInfoRow}>
+                        <Ionicons name="navigate-outline" size={22} color={THEME_COLORS.accent} />
+                        <Text style={[styles.marketInfoText, themeStyles.text]}>
+                            A exatos {market.routeDistance.toFixed(2)} km de você
+                        </Text>
+                    </View>
+                    <View style={styles.marketInfoRow}>
+                        <Ionicons name="time-outline" size={22} color={THEME_COLORS.accent} />
+                        <Text style={[styles.marketInfoText, themeStyles.text]}>
+                            {formatOpeningHours(market.openingHours)}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.routesButton}
+                        activeOpacity={0.8}
+                        onPress={() => onNavigate(market)}
+                    >
+                        <Ionicons name="map" size={20} color="#fff" />
+                        <Text style={styles.routesButtonText}>Rotas</Text>
+                    </TouchableOpacity>
+                </Pressable>
+            </Pressable>
+        </Modal>
+    );
+};
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
     centered: { justifyContent: "center", alignItems: "center" },
     loadingText: { marginTop: 12, fontSize: 16, fontWeight: "500" },
     errorText: { textAlign: 'center', padding: 20, marginBottom: 10, fontSize: 16 },
-    retryButton: { backgroundColor: COLORS.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+    retryButton: { backgroundColor: THEME_COLORS.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+    retryButtonText: { color: '#fff', fontWeight: 'bold' },
     mapContainer: { flex: 1 },
     map: { ...StyleSheet.absoluteFillObject },
     filtersWrapper: {
@@ -586,8 +546,6 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
-
-
     recenterButton: {
         position: "absolute",
         bottom: 30,
@@ -605,7 +563,6 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
         zIndex: 10,
     },
-
     inlineLoader: {
         position: "absolute",
         bottom: 40,
@@ -618,6 +575,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         elevation: 4,
     },
+    inlineLoaderText: { marginLeft: 8, fontSize: 12, color: "#333", fontWeight: '500' },
     modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)", justifyContent: "flex-end" },
     modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "50%" },
     modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
@@ -633,7 +591,6 @@ const styles = StyleSheet.create({
     },
     selectedOption: { backgroundColor: "rgba(46, 125, 50, 0.15)" },
     optionText: { fontSize: 15, fontWeight: '500' },
-
     marketDetailContent: {
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
@@ -658,7 +615,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     routesButton: {
-        backgroundColor: COLORS.accent,
+        backgroundColor: THEME_COLORS.accent,
         flexDirection: "row",
         justifyContent: "center",
         alignItems: "center",
