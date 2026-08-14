@@ -248,7 +248,7 @@ const SettingsScreen: React.FC = () => {
                 >
                   <Zap size={16} color={accent} />
                   <Text style={[styles.rowLabel, themeStyles.text]}>
-                    Preto Puro (AMOLED)
+                    Modo Economico
                   </Text>
                 </View>
                 <Text style={[styles.rowSubLabel, themeStyles.subText]}>
