@@ -3,7 +3,7 @@ import app from "@/app";
 import { connectRedis, redisClient } from "@/shared/redis/server";
 import { pool, testDatabaseConnection } from "@/shared/database/database";
 
-const PORT = process.env.SERVER_PORT || 3000;
+const PORT = process.env.SERVER_PORT || 3333;
 
 async function bootstrap() {
   await connectRedis();

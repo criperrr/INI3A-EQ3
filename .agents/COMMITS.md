@@ -24,7 +24,22 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
-## [2026-08-11 19:41] - fix(backend): align productController with success() helper and errorHandler pattern
+## [2026-08-15 11:26] - fix(backend): define SERVER_PORT=3333 in .env and align server.ts fallback
+
+- **Description:** Configured `SERVER_PORT=3333` in `src/backend/.env` and updated `server.ts` fallback from port 3000 to 3333 to align with `start_project.sh` and project architecture specifications.
+- **Files Modified:**
+  - `src/backend/.env`
+  - `src/backend/src/server.ts`
+- **Impact / Next Steps:** `start_project.sh` now successfully detects the backend server starting on port 3333 and proceeds with localtunnel and frontend initialization.
+
+---
+
+- **Description:** Updated `start_project.sh` to dynamically parse `REDIS_URL`, `DATABASE_URL`, and `SERVER_PORT` from `src/backend/.env`. Fixed issue where the startup script was hardcoded to check `localhost:6379`, causing timeouts when using remote Redis instances (e.g. Upstash over TLS).
+- **Files Modified:**
+  - `start_project.sh`
+- **Impact / Next Steps:** `./start_project.sh` now correctly detects remote Redis and DB connections defined in `.env` without blocking.
+
+---
 
 - **Description:** Rewrote `product.controller.ts` to use `success()` from `response.helper.ts`, `ValidationError` for missing inputs, `ConflictError` for duplicate EAN, and `next(e)` in all catch blocks — matching `authController` pattern. Previously, product errors bypassed the global `errorHandler`, causing silent failures.
 - **Files Modified:**
