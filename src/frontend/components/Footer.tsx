@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent"; // Importação do tema
+import { useTabNavigation } from "../content/tabNavigationContext";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -50,21 +51,16 @@ const NAV_TABS: TabConfig[] = [
 ];
 
 export default function Footer({ activeTab }: FooterProps) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark, accent } = useTheme();
+  const { navigateToTab } = useTabNavigation();
 
   const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
   const dynamicHeight = 60 + dynamicPaddingBottom;
 
   const handleTabPress = (route: string, isActive: boolean) => {
     if (isActive) return;
-    try {
-      if (router.canDismiss && router.canDismiss()) {
-        router.dismissAll();
-      }
-    } catch {}
-    router.replace(route as any);
+    navigateToTab(route);
   };
 
   return (

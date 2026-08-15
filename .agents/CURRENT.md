@@ -74,10 +74,13 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/frontend/app/profile.tsx` | User profile and gamification points |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup — largest file, 28KB) |
-| `src/frontend/app/map.tsx` / `map.web.tsx` | Web platform stubs for map screen |
+| `src/frontend/content/themeContent.tsx` | Contexto de tema e cores dinâmicas (Monet) |
+| `src/frontend/content/authContext.tsx` | Contexto de autenticação do usuário |
+| `src/frontend/content/tabNavigationContext.tsx` | Contexto de navegação e sincronização dinâmica da direção da animação de abas (`slide_from_left` / `slide_from_right`) |
 | `src/frontend/components/Header.tsx` | Shared header component |
 | `src/frontend/components/Footer.tsx` | Shared footer/nav component |
 | `src/frontend/components/Sidebar.tsx` | Sidebar component |
+| `src/frontend/components/SwipeTabNavigator.tsx` | Gesture handler wrapper para transição horizontal estilo TikTok entre as 5 abas principais |
 | `src/frontend/components/productCard.tsx` | Product card component |
 | `.agents/DESIGN.md` | UI design token spec — `useTheme()` keys, typography, spacing, component rules |
 
@@ -94,6 +97,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Replace direct `apiRequest` in scanner with `fetchProductByEan` domain service — done (2026-08-11).
 - [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics) — done (2026-08-15).
 - [x] Fix navigation screen stacking when switching tabs, footer home, and header logo — done (2026-08-15).
+- [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback — done (2026-08-15).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

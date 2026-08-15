@@ -125,3 +125,43 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Clean, single-instance navigation without history buildup or duplicate stacked menus.
+
+---
+
+## [2026-08-15 11:25] - feat(frontend): horizontal decisive swipe navigation between main tabs (TikTok-style)
+
+- **Description:** Implemented horizontal swipe navigation between the 5 primary tabs (`/`, `/search`, `/scannerProduct`, `/map`, `/profile`) using `react-native-gesture-handler` (`Gesture.Pan()`) and `SwipeTabNavigator`. Configured decisive swipe thresholds (`|translationX| >= 80px` or `|velocityX| >= 650px/s` with angle lock `failOffsetY: [-35, 35]` and `|translationX| > |translationY| * 1.5`) to prevent accidental triggers during vertical scrolling on lists. Added light haptic feedback via `expo-haptics` and isolated secondary screens (`/settings`, `/login`, etc.) from swipe gesture handling.
+- **Files Modified:**
+  - `src/frontend/components/SwipeTabNavigator.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `menu-swipe-navigation.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users can now fluidly flick/swipe between Home, Search, Scanner, Map, and Profile menus with synced Footer state and haptic feedback.
+
+---
+
+## [2026-08-15 11:30] - fix(frontend): dynamic directional screen animations matching user gesture and tab transitions
+
+- **Description:** Fixed issue where screen transition animations did not match the physical direction of the user's swipe gestures (previously hardcoded to `slide_from_right` for all navigations). Created `TabNavigationContext` to dynamically compute and supply the correct transition animation: swiping left (advancing) animates the incoming screen from the right (`slide_from_right`), swiping right (going back) animates the incoming screen from the left (`slide_from_left`), and tapping footer tabs automatically evaluates target index vs current index to select the matching directional slide.
+- **Files Modified:**
+  - `src/frontend/content/tabNavigationContext.tsx`
+  - `src/frontend/components/SwipeTabNavigator.tsx`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Transitions now strictly adhere to natural physics and match the user's gesture direction across all tabs.
+
+---
+
+## [2026-08-15 11:35] - feat(frontend): real-time interactive 1:1 finger-tracking swipe transitions with Reanimated spring physics (TikTok-style)
+
+- **Description:** Upgraded `SwipeTabNavigator.tsx` with `react-native-reanimated` shared values (`translateX`, `opacity`, `scale`) to track the user's finger 1:1 in real time across the UI thread (60/120fps). Added rubber-band elastic dampening at carousel boundaries, smooth release fling to edge on transition with haptic trigger, bounceless spring snap-back (`withSpring`) when gestures are cancelled, and gliding entry animation for the incoming tab.
+- **Files Modified:**
+  - `src/frontend/components/SwipeTabNavigator.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** True TikTok/Instagram-style interactive gesture physics where the screen moves seamlessly with the user's finger.

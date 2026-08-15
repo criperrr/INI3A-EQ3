@@ -6,14 +6,18 @@ import { Stack, usePathname, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ThemeProvider, useTheme } from "../content/themeContent";
 import { AuthProvider } from "../content/authContext";
+import { TabNavigationProvider, useTabNavigation } from "../content/tabNavigationContext";
 import Header from "../components/Header";
 import Footer, { TabKey } from "../components/Footer";
 import Sidebar from "../components/Sidebar";
+import SwipeTabNavigator from "../components/SwipeTabNavigator";
 
 function LayoutContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { isDark, themeStyles } = useTheme();
+  const { animationType, getTabIndex } = useTabNavigation();
+  const isMainTab = getTabIndex(pathname) !== -1;
 
   const getActiveTab = (): TabKey => {
     if (!pathname) return "home";
@@ -49,13 +53,15 @@ function LayoutContent() {
         <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       )}
       <View style={styles.contentWrapper}>
-        <Stack screenOptions={{ 
-          headerShown: false, 
-          gestureEnabled: Platform.OS !== 'web', 
-          gestureDirection: 'horizontal',
-          animation: 'slide_from_right',
-          fullScreenGestureEnabled: true
-        }} />
+        <SwipeTabNavigator>
+          <Stack screenOptions={{ 
+            headerShown: false, 
+            gestureEnabled: Platform.OS !== 'web', 
+            gestureDirection: 'horizontal',
+            animation: isMainTab ? 'none' : animationType,
+            fullScreenGestureEnabled: true
+          }} />
+        </SwipeTabNavigator>
       </View>
       {!isAuthScreen && <Footer activeTab={getActiveTab()} />}
     </View>
@@ -68,7 +74,9 @@ export default function Layout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
-            <LayoutContent />
+            <TabNavigationProvider>
+              <LayoutContent />
+            </TabNavigationProvider>
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>

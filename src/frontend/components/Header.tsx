@@ -4,8 +4,7 @@ import { useRouter } from "expo-router";
 import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent"; // Importação do tema
-
-
+import { useTabNavigation } from "../content/tabNavigationContext";
 
 interface HeaderProps {
   onPressMenu?: () => void;
@@ -16,16 +15,12 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
   const router = useRouter();
+  const { navigateToTab } = useTabNavigation();
 
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   const handleLogoPress = () => {
-    try {
-      if (router.canDismiss && router.canDismiss()) {
-        router.dismissAll();
-      }
-    } catch {}
-    router.replace("/");
+    navigateToTab("/");
   };
 
   return (
