@@ -73,3 +73,39 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/services/api.ts`
   - `src/frontend/services/productService.ts`
 - **Impact / Next Steps:** No behavioral change.
+
+---
+
+## [2026-08-15 10:51] - feat(settings): complete settings features with backup export/import, real password change, and cache management
+
+- **Description:** Implemented complete settings suite across frontend and backend. Added `PATCH /auth/password` endpoint with bcrypt current password verification, integrated real authenticated password change and account deletion in `auth.ts`, added JSON backup export (native Share) and import with live theme synchronization in `themeContent.tsx`, implemented non-destructive local cache clearing, and added scanner haptic/interaction preferences.
+- **Files Modified:**
+  - `src/backend/src/modules/auth/auth.routes.ts`
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/frontend/services/auth.ts`
+  - `src/frontend/content/themeContent.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Settings screen is now fully functional and connected to the backend API without simulated mocks.
+
+---
+
+## [2026-08-15 10:53] - refactor(settings): replace raw JSON with encoded configuration code for export and import
+
+- **Description:** Replaced raw multi-line JSON export with a compact Base64-encoded configuration code format (`PRESCO-CONFIG-...`). Added an interactive export modal with code viewer and native share, and updated the import modal with automatic decoding and backward-compatibility for raw JSON payloads.
+- **Files Modified:**
+  - `src/frontend/app/settings.tsx`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Exporting and importing settings is now significantly more compact and user-friendly.
+
+---
+
+## [2026-08-15 10:59] - feat(settings): instant real-time auto-saving on any setting toggle
+
+- **Description:** Updated `settings.tsx` so all preference toggles, theme selections, Monet palettes, languages, scanner settings, and security options persist immediately to `AsyncStorage` upon user interaction. Added visual feedback pill ("✓ Salvo") in the header that triggers instantly on every click.
+- **Files Modified:**
+  - `src/frontend/app/settings.tsx`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Removed manual save button requirement; all changes are persisted in real time.

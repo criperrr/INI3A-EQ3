@@ -13,6 +13,7 @@ INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. U
 - `POST /auth/login` — authenticate, returns tokens
 - `POST /auth/refresh` — rotate refresh token
 - `POST /auth/logout` — blacklist access token JTI (requireAuth)
+- `PATCH /auth/password` — change password with current password verification (requireAuth)
 - `DELETE /auth/account` — delete own account (requireAuth)
 - `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts)
 - `POST /products/custom` — create internal product without EAN
@@ -31,9 +32,9 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 |---|---|
 | `src/backend/src/app.ts` | Express app, mounts `/auth` and `/products` routers, `errorHandler` last |
 | `src/backend/src/server.ts` | `bootstrap()` — connects Redis, starts HTTP on `SERVER_PORT` |
-| `src/backend/src/modules/auth/auth.routes.ts` | Auth Router with `requireAuth` on logout and delete |
-| `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, logout, deleteAccount |
-| `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, logout, updateUser, deleteUser, getUserById |
+| `src/backend/src/modules/auth/auth.routes.ts` | Auth Router with `requireAuth` on logout, password change and delete |
+| `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, logout, changePassword, deleteAccount |
+| `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, logout, changePassword, updateUser, deleteUser, getUserById |
 | `src/backend/src/modules/product/product.routes.ts` | Product Router — GET `/barcode/:ean`, POST `/custom` |
 | `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — getProductByBarcode, createCustomProduct (NOTE: uses raw JSON response, not `success()`) |
 | `src/backend/src/modules/product/product.service.ts` | `productService` singleton — getProductByBarcode (local then OpenFoodFacts), createCustomProduct |
@@ -58,7 +59,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | File | Key exports / purpose |
 |---|---|
 | `src/frontend/services/api.ts` | `apiRequest<T>`, `ApiError`, `STORAGE_KEYS`, `BASE_URL` |
-| `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `AuthUser`, `AuthTokens` |
+| `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `changePassword`, `deleteAccount`, `AuthUser`, `AuthTokens` |
 | `src/frontend/services/productService.ts` | `fetchProductByEan(ean)` → `ProductData | null` |
 | `src/frontend/app/_layout.tsx` | Root stack layout and theme provider |
 | `src/frontend/app/index.tsx` | Home screen |
@@ -71,7 +72,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/frontend/app/search.tsx` | Product text search |
 | `src/frontend/app/productDetails.tsx` | Product detail view |
 | `src/frontend/app/profile.tsx` | User profile and gamification points |
-| `src/frontend/app/settings.tsx` | Theme toggle and preferences |
+| `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup — largest file, 28KB) |
 | `src/frontend/app/map.tsx` / `map.web.tsx` | Web platform stubs for map screen |
 | `src/frontend/components/Header.tsx` | Shared header component |
@@ -91,6 +92,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Fix `market.repository.ts` id/name swap in `updateMarket` — done (2026-08-11).
 - [x] Fix `getMarket`/`getAllMarkets` to use `ST_AsGeoJson` — done (2026-08-11).
 - [x] Replace direct `apiRequest` in scanner with `fetchProductByEan` domain service — done (2026-08-11).
+- [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics) — done (2026-08-15).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

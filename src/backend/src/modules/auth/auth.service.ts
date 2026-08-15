@@ -179,6 +179,27 @@ class AuthServiceClass {
     return rowCount;
   }
 
+  async changePassword(
+    userId: number | string,
+    currentPassword: string,
+    newPassword: string,
+  ) {
+    const user = await UserRepository.getUserById(userId);
+    if (!user) {
+      throw new UnauthorizedError("Usuário não encontrado.");
+    }
+
+    const isPasswordValid = await compare(currentPassword, user.passHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedError("Senha atual incorreta.");
+    }
+
+    const passHash = await hash(newPassword, 10);
+    await UserRepository.updateUser(userId, { passHash });
+
+    return { message: "Senha atualizada com sucesso." };
+  }
+
   async getUserById(id: number | string) {
     const result = await UserRepository.getUserById(id);
     if (!result) {

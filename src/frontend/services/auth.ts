@@ -95,3 +95,33 @@ export async function getStoredTokens(): Promise<{
     refreshToken: refreshToken[1],
   };
 }
+
+/**
+ * Updates the user's password using the authenticated API.
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/auth/password", {
+    method: "PATCH",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+/**
+ * Deletes the authenticated user's account and clears stored tokens.
+ */
+export async function deleteAccount(): Promise<void> {
+  try {
+    await apiRequest("/auth/account", {
+      method: "DELETE",
+    });
+  } finally {
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.ACCESS_TOKEN,
+      STORAGE_KEYS.REFRESH_TOKEN,
+    ]);
+  }
+}
+

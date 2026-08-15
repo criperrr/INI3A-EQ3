@@ -85,6 +85,40 @@ class AuthControllerClass {
     }
   }
 
+  async changePassword(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.user;
+      const { currentPassword, newPassword } = req.body;
+
+      const errors: Array<{ field: string; message: string }> = [];
+      if (!currentPassword || typeof currentPassword !== "string") {
+        errors.push({
+          field: "currentPassword",
+          message: "Senha atual é obrigatória.",
+        });
+      }
+      if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+        errors.push({
+          field: "newPassword",
+          message: "A nova senha deve ter no mínimo 6 caracteres.",
+        });
+      }
+
+      if (errors.length > 0) {
+        throw new ValidationError(errors);
+      }
+
+      const result = await authService.changePassword(
+        id,
+        currentPassword,
+        newPassword,
+      );
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
   async deleteAccount(req: Api.Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.user;

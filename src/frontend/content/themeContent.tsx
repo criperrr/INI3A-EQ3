@@ -159,6 +159,13 @@ interface ThemeContextType {
   setMonetEnabled: (enabled: boolean) => void;
   setSyncWithSystemAndroid: (enabled: boolean) => void;
   setMonetSeedColor: (hex: string) => void;
+  applyThemeSettingsBatch: (batch: {
+    theme?: "light" | "dark";
+    amoledEnabled?: boolean;
+    monetEnabled?: boolean;
+    syncWithSystemAndroid?: boolean;
+    monetSeedColor?: string;
+  }) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -221,6 +228,33 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMonetSeedColorState(hex);
     persistSetting("monetSeedColor", hex);
   }, [persistSetting]);
+
+  const applyThemeSettingsBatch = useCallback(
+    async (batch: {
+      theme?: "light" | "dark";
+      amoledEnabled?: boolean;
+      monetEnabled?: boolean;
+      syncWithSystemAndroid?: boolean;
+      monetSeedColor?: string;
+    }) => {
+      if (batch.theme !== undefined) setTheme(batch.theme);
+      if (batch.amoledEnabled !== undefined) setAmoledEnabledState(batch.amoledEnabled);
+      if (batch.monetEnabled !== undefined) setMonetEnabledState(batch.monetEnabled);
+      if (batch.syncWithSystemAndroid !== undefined)
+        setSyncWithSystemAndroidState(batch.syncWithSystemAndroid);
+      if (batch.monetSeedColor !== undefined) setMonetSeedColorState(batch.monetSeedColor);
+
+      try {
+        const saved = await AsyncStorage.getItem("app_settings");
+        const parsed = saved ? JSON.parse(saved) : {};
+        const updated = { ...parsed, ...batch };
+        await AsyncStorage.setItem("app_settings", JSON.stringify(updated));
+      } catch (error) {
+        console.error("Erro ao aplicar configurações em lote:", error);
+      }
+    },
+    [],
+  );
 
   // Compute derived values
   const isDark = theme === "dark";
@@ -286,6 +320,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             setMonetEnabled,
             setSyncWithSystemAndroid,
             setMonetSeedColor,
+            applyThemeSettingsBatch,
           }}
       >
         {children}
