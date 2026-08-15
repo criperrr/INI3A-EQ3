@@ -19,6 +19,15 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
 
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
+  const handleLogoPress = () => {
+    try {
+      if (router.canDismiss && router.canDismiss()) {
+        router.dismissAll();
+      }
+    } catch {}
+    router.replace("/");
+  };
+
   return (
     <View
       style={[
@@ -36,7 +45,7 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
         <Ionicons name="menu-outline" size={26} color={iconColor} />
       </TouchableOpacity>
 
-      <LogoBrand isDark={isDark} onPress={() => router.navigate("/")} />
+      <LogoBrand isDark={isDark} onPress={handleLogoPress} />
 
       <TouchableOpacity
         activeOpacity={0.7}

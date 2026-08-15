@@ -38,7 +38,11 @@ function LayoutContent() {
       {!isAuthScreen && (
         <Header
           onPressMenu={() => setIsMenuOpen(true)}
-          onPressSettings={() => router.push("/settings")}
+          onPressSettings={() => {
+            if (pathname !== "/settings") {
+              router.push("/settings");
+            }
+          }}
         />
       )}
       {!isAuthScreen && (

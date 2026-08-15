@@ -22,7 +22,16 @@ export default function AboutUs() {
       showsVerticalScrollIndicator={false}
     >
       {/* Botão de Voltar Customizado */}
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => {
+          if (router.canGoBack && router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace("/");
+          }
+        }}
+      >
         <Ionicons name="arrow-back" size={24} color={iconColor} />
         <Text style={[styles.backText, themeStyles.text]}>Voltar</Text>
       </TouchableOpacity>

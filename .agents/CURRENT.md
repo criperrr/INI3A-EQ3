@@ -93,6 +93,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Fix `getMarket`/`getAllMarkets` to use `ST_AsGeoJson` — done (2026-08-11).
 - [x] Replace direct `apiRequest` in scanner with `fetchProductByEan` domain service — done (2026-08-11).
 - [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics) — done (2026-08-15).
+- [x] Fix navigation screen stacking when switching tabs, footer home, and header logo — done (2026-08-15).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

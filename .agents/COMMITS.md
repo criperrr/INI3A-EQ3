@@ -109,3 +109,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/settings.tsx`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Removed manual save button requirement; all changes are persisted in real time.
+
+---
+
+## [2026-08-15 11:07] - fix(frontend): fix navigation stack buildup and menu stacking across Header, Footer, and Sidebar
+
+- **Description:** Fixed issue where alternating between tabs in the Footer and clicking the Presco logo in the Header stacked multiple duplicate screens and menus in the navigation history. `Header.tsx` was calling `router.navigate("/")`, which performed a stack push because `Footer.tsx` was using `router.replace()`. Replaced `router.navigate("/")` in Header with a safe dismiss and `router.replace("/")`, added dismiss guards and active checks in `Footer.tsx` and `Sidebar.tsx`, guarded duplicate settings pushes in `_layout.tsx`, and added resilient fallback in subpage back buttons (`aboutUs.tsx`, `helpUser.tsx`).
+- **Files Modified:**
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/aboutUs.tsx`
+  - `src/frontend/app/helpUser.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Clean, single-instance navigation without history buildup or duplicate stacked menus.

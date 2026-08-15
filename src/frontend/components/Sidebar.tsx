@@ -83,6 +83,11 @@ const NavigationLinks = ({
         activeOpacity={0.7}
         onPress={() => {
           onClose();
+          try {
+            if (router.canDismiss && router.canDismiss()) {
+              router.dismissAll();
+            }
+          } catch {}
           router.replace(link.route as any);
         }}
       >

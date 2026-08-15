@@ -73,7 +73,13 @@ export default function HelpUser() {
     >
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack && router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/");
+            }
+          }}
           style={[styles.backButton, themeStyles.card, themeStyles.border]}
         >
           <Ionicons

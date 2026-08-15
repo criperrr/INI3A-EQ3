@@ -57,6 +57,16 @@ export default function Footer({ activeTab }: FooterProps) {
   const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
   const dynamicHeight = 60 + dynamicPaddingBottom;
 
+  const handleTabPress = (route: string, isActive: boolean) => {
+    if (isActive) return;
+    try {
+      if (router.canDismiss && router.canDismiss()) {
+        router.dismissAll();
+      }
+    } catch {}
+    router.replace(route as any);
+  };
+
   return (
     <View
       style={[
@@ -75,7 +85,7 @@ export default function Footer({ activeTab }: FooterProps) {
               key={tab.key}
               style={styles.centerItem}
               activeOpacity={0.8}
-              onPress={() => router.replace(tab.route as any)}
+              onPress={() => handleTabPress(tab.route, isActive)}
             >
               <View
                 style={[
@@ -98,7 +108,7 @@ export default function Footer({ activeTab }: FooterProps) {
             key={tab.key}
             style={styles.navItem}
             activeOpacity={0.7}
-            onPress={() => router.replace(tab.route as any)}
+            onPress={() => handleTabPress(tab.route, isActive)}
           >
             {isActive ? (
               <View style={[styles.activeCircle, { backgroundColor: accent }]}>
