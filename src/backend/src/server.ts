@@ -2,7 +2,7 @@ import "dotenv/config";
 import app from "@/app";
 import { connectRedis } from "@/shared/redis/server";
 
-const PORT = process.env.SERVER_PORT || 3000;
+const PORT = process.env.SERVER_PORT || 3333;
 
 async function bootstrap() {
   await connectRedis();

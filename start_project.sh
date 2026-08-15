@@ -2,18 +2,64 @@
 
 echo "🔍 Verifying connections..."
 
+# Parse backend config from src/backend/.env if available
+read -r DB_HOST DB_PORT REDIS_HOST REDIS_PORT SERVER_PORT <<< $(node -e '
+const fs = require("fs");
+let env = {};
+try {
+  const content = fs.readFileSync("./src/backend/.env", "utf8");
+  content.split("\n").forEach(line => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) return;
+    const idx = trimmed.indexOf("=");
+    if (idx !== -1) {
+      const key = trimmed.slice(0, idx).trim();
+      let val = trimmed.slice(idx + 1).trim();
+      if ((val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("\x27") && val.endsWith("\x27"))) {
+        val = val.slice(1, -1);
+      }
+      env[key] = val;
+    }
+  });
+} catch(e) {}
+
+const parseUrl = (u, defaultHost, defaultPort) => {
+  try {
+    if (!u) return { host: defaultHost, port: defaultPort };
+    const cleanUrl = u.replace(/^postgresql:\/\//, "postgres://");
+    const parsed = new URL(cleanUrl);
+    return { host: parsed.hostname || defaultHost, port: parsed.port || defaultPort };
+  } catch (e) {
+    return { host: defaultHost, port: defaultPort };
+  }
+};
+
+const redis = parseUrl(env.REDIS_URL, "localhost", 6379);
+const db = parseUrl(env.DATABASE_URL, "localhost", 5432);
+const serverPort = env.SERVER_PORT || "3333";
+
+console.log(`${db.host} ${db.port} ${redis.host} ${redis.port} ${serverPort}`);
+' 2>/dev/null)
+
+DB_HOST=${DB_HOST:-localhost}
+DB_PORT=${DB_PORT:-5432}
+REDIS_HOST=${REDIS_HOST:-localhost}
+REDIS_PORT=${REDIS_PORT:-6379}
+SERVER_PORT=${SERVER_PORT:-3333}
+
 # Function to check port
 check_port() {
-  local port=$1
-  local name=$2
+  local host=$1
+  local port=$2
+  local name=$3
   local max_attempts=30
   local attempt=1
   
-  echo -n "Waiting for $name on port $port..."
-  while ! nc -z localhost $port; do
+  echo -n "Waiting for $name on $host:$port..."
+  while ! nc -z "$host" "$port" 2>/dev/null; do
     if [ $attempt -ge $max_attempts ]; then
       echo " Timeout!"
-      echo "❌ $name is not running on port $port."
+      echo "❌ $name is not running on $host:$port."
       exit 1
     fi
     sleep 1
@@ -24,8 +70,8 @@ check_port() {
 }
 
 # 1. Verify Database (PostgreSQL) and Redis
-check_port 5432 "PostgreSQL"
-check_port 6379 "Redis"
+check_port "$DB_HOST" "$DB_PORT" "PostgreSQL"
+check_port "$REDIS_HOST" "$REDIS_PORT" "Redis"
 
 # 2. Setup tmux session for background services
 echo "Setting up tmux dashboard..."
@@ -36,13 +82,13 @@ tmux new-session -d -s dev -n "dashboard"
 tmux send-keys -t dev:dashboard.0 "cd ./src/backend && DEBUG=* NODE_ENV=development npm run dev" C-m
 
 # 3. Wait for backend to be ready
-check_port 3333 "Backend Server"
+check_port "localhost" "$SERVER_PORT" "Backend Server"
 
 # 4. Start tunnels for backend and frontend in a hidden background window
 echo "Starting tunnels for backend and frontend..."
 rm -f /tmp/backend_tunnel.log /tmp/frontend_tunnel.log
 tmux new-window -t dev -n "tunnel"
-tmux send-keys -t dev:tunnel "npx --yes localtunnel --port 3333 --subdomain ini3a-eq3-api > /tmp/backend_tunnel.log & npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app > /tmp/frontend_tunnel.log & wait" C-m
+tmux send-keys -t dev:tunnel "npx --yes localtunnel --port $SERVER_PORT --subdomain ini3a-eq3-api > /tmp/backend_tunnel.log & npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app > /tmp/frontend_tunnel.log & wait" C-m
 
 # Wait for tunnel URLs
 echo -n "Waiting for tunnel URLs..."
