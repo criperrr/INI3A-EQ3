@@ -1,15 +1,35 @@
 import "dotenv/config";
 import app from "@/app";
-import { connectRedis } from "@/shared/redis/server";
+import { connectRedis, redisClient } from "@/shared/redis/server";
+import { pool, testDatabaseConnection } from "@/shared/database/database";
 
 const PORT = process.env.SERVER_PORT || 3000;
 
 async function bootstrap() {
   await connectRedis();
+  await testDatabaseConnection();
 
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`SERVER: Running on port ${PORT}`);
   });
+
+  const shutdown = async (signal: string) => {
+    console.log(`SERVER: Received ${signal}, closing gracefully...`);
+    server.close(async () => {
+      try {
+        await pool.end();
+        if (redisClient.isOpen) {
+          await redisClient.quit();
+        }
+      } catch (err) {
+        console.error("SERVER: Error during shutdown:", err);
+      }
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
 bootstrap().catch((err) => {

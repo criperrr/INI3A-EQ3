@@ -1,6 +1,7 @@
 import { apiRequest } from "./api";
 
 export interface ProductData {
+  barcode?: string;
   name: string;
   category: string;
   imageUri?: string;
@@ -13,8 +14,24 @@ export const fetchProductByEan = async (ean: string): Promise<ProductData | null
       method: "GET",
     });
     return response;
-  } catch (error) {
-    console.error(`Erro ao buscar produto com EAN ${ean}:`, error);
-    return null; // Retorna nulo se o produto não for encontrado ou houver erro
+  } catch (error: any) {
+    if (error?.status === 404 || error?.code === "PRODUCT_NOT_FOUND") {
+      return null;
+    }
+    console.error(`Erro de comunicação ao buscar EAN ${ean}:`, error);
+    throw error;
   }
 };
+
+export const createCustomProduct = async (data: {
+  name: string;
+  category?: string;
+  icon?: string;
+  ean?: string;
+}): Promise<ProductData> => {
+  return apiRequest<ProductData>("/products/custom", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+

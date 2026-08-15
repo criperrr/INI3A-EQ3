@@ -24,8 +24,7 @@ check_port() {
 }
 
 # 1. Verify Database (PostgreSQL) and Redis
-check_port 5432 "PostgreSQL"
-check_port 6379 "Redis"
+bash ./reload_services.sh
 
 # 2. Setup tmux session for background services
 echo "Setting up tmux dashboard..."
@@ -38,11 +37,14 @@ tmux send-keys -t dev:dashboard.0 "cd ./src/backend && DEBUG=* NODE_ENV=developm
 # 3. Wait for backend to be ready
 check_port 3333 "Backend Server"
 
-# 4. Start tunnels for backend and frontend in a hidden background window
+# 4. Detect LAN IP and start tunnels for backend and frontend in a hidden background window
+LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "localhost")
+echo "🌐 Local LAN IP: $LAN_IP"
+
 echo "Starting tunnels for backend and frontend..."
 rm -f /tmp/backend_tunnel.log /tmp/frontend_tunnel.log
 tmux new-window -t dev -n "tunnel"
-tmux send-keys -t dev:tunnel "npx --yes localtunnel --port 3333 --subdomain ini3a-eq3-api > /tmp/backend_tunnel.log & npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app > /tmp/frontend_tunnel.log & wait" C-m
+tmux send-keys -t dev:tunnel "while true; do npx --yes localtunnel --port 3333 --subdomain ini3a-eq3-api > /tmp/backend_tunnel.log 2>&1; sleep 2; done & while true; do npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app > /tmp/frontend_tunnel.log 2>&1; sleep 2; done & wait" C-m
 
 # Wait for tunnel URLs
 echo -n "Waiting for tunnel URLs..."
@@ -50,7 +52,7 @@ attempt=1
 while ! grep -q "your url is:" /tmp/backend_tunnel.log 2>/dev/null || ! grep -q "your url is:" /tmp/frontend_tunnel.log 2>/dev/null; do
   if [ $attempt -ge 15 ]; then
     echo " Timeout!"
-    echo "❌ Could not get tunnel URLs."
+    echo "⚠️ Tunnel took too long. Falling back to local LAN IP: http://$LAN_IP:3333"
     break
   fi
   sleep 1
@@ -59,10 +61,16 @@ while ! grep -q "your url is:" /tmp/backend_tunnel.log 2>/dev/null || ! grep -q 
 done
 echo ""
 
-BACKEND_URL=$(grep -o "https://.*" /tmp/backend_tunnel.log || echo "http://localhost:3333")
-FRONTEND_URL=$(grep -o "https://.*" /tmp/frontend_tunnel.log || echo "")
-echo "✅ Backend Tunnel URL: $BACKEND_URL"
-echo "✅ Frontend Tunnel URL: $FRONTEND_URL"
+BACKEND_URL=$(grep -o "https://[a-zA-Z0-9.-]*\.loca\.lt" /tmp/backend_tunnel.log | head -n 1)
+if [ -z "$BACKEND_URL" ]; then
+  BACKEND_URL="http://$LAN_IP:3333"
+fi
+FRONTEND_URL=$(grep -o "https://[a-zA-Z0-9.-]*\.loca\.lt" /tmp/frontend_tunnel.log | head -n 1)
+
+echo "✅ Backend API URL: $BACKEND_URL (LAN fallback: http://$LAN_IP:3333)"
+if [ -n "$FRONTEND_URL" ]; then
+  echo "✅ Frontend Tunnel URL: $FRONTEND_URL"
+fi
 
 # 5. Start frontend in a right pane with maximum logs
 echo "Starting frontend..."

@@ -14,8 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333/api";
+import { createCustomProduct } from "../services/productService";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -34,24 +33,13 @@ export default function CustomRegisterProduct() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_URL}/products/custom`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          category,
-          ean: ean.trim() || undefined,
-        }),
+      const created = await createCustomProduct({
+        name: name.trim(),
+        category: category.trim() || undefined,
+        ean: ean.trim() || undefined,
       });
 
-      const data = await response.json();
       setLoading(false);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Erro ao cadastrar produto.");
-      }
 
       Alert.alert("Sucesso", "Produto cadastrado com sucesso!", [
         {
@@ -60,15 +48,15 @@ export default function CustomRegisterProduct() {
             router.replace({
               pathname: "/registerProduct",
               params: {
-                barcode: data.data.barcode,
-                name: data.data.name,
-                category: data.data.category,
-                imageUri: data.data.imageUri,
-                lastPrice: data.data.lastPrice,
+                barcode: created.barcode || ean.trim(),
+                name: created.name,
+                category: created.category,
+                imageUri: created.imageUri,
+                lastPrice: created.lastPrice,
               },
             });
-          }
-        }
+          },
+        },
       ]);
 
     } catch (error: any) {

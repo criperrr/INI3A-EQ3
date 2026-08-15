@@ -39,7 +39,9 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — getProductByBarcode, createCustomProduct (NOTE: uses raw JSON response, not `success()`) |
 | `src/backend/src/modules/product/product.service.ts` | `productService` singleton — getProductByBarcode (local then OpenFoodFacts), createCustomProduct |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
-| `src/backend/src/shared/database/database.ts` | `db` — Drizzle client instance |
+| `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
+| `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
+| `reload_services.sh` | Service manager script to auto-reconnect, check, and restart PostgreSQL & Redis (`npm run db:reload`, `npm run db:restart`) |
 | `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
 | `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts (HTTP fetch), getProductByEan, createProduct |
@@ -98,6 +100,8 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics) — done (2026-08-15).
 - [x] Fix navigation screen stacking when switching tabs, footer home, and header logo — done (2026-08-15).
 - [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback — done (2026-08-15).
+- [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager (`npm run db:reload`, `npm run db:restart`) — done (2026-08-15).
+- [x] Fix scanner connection failure, tunnel resilience, database product persistence, and error propagation — done (2026-08-15).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

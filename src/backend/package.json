@@ -18,7 +18,9 @@
   "scripts": {
     "dev": "tsx --watch ./src/server.ts",
     "start": "tsx ./src/server.ts",
-    "db:migrate": "tsx ./src/shared/database/migrate.ts"
+    "db:migrate": "tsx ./src/shared/database/migrate.ts",
+    "db:check": "tsx ./src/shared/database/healthCheck.ts",
+    "db:reload": "bash ../../reload_services.sh"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",

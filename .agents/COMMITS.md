@@ -165,3 +165,44 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** True TikTok/Instagram-style interactive gesture physics where the screen moves seamlessly with the user's finger.
+
+---
+
+## [2026-08-15 11:45] - feat(backend): resilient PostgreSQL & Redis auto-reconnect, idle client error handling, /health API, and reload_services manager
+
+- **Description:** Fixed frequent backend crashes and dropped database connections during code modifications and dev watch restarts. Handled `pg.Pool` `'error'` events on idle clients to prevent uncaught exceptions from terminating Node.js, added connection pooling keep-alive configuration, implemented startup retry with exponential backoff for PostgreSQL and Redis in `database.ts` and `redis/server.ts`, added graceful shutdown handlers in `server.ts`, implemented `GET /health` in `app.ts` to inspect DB/Redis readiness, and created `reload_services.sh` + `restart_db.sh` (`npm run db:reload`, `npm run db:restart`, `npm run db:status`, `npm run db:check`) to automatically detect, revive, and verify PostgreSQL and Redis services and notify the active tmux session.
+- **Files Modified:**
+  - `src/backend/src/shared/database/database.ts`
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/server.ts`
+  - `src/backend/src/app.ts`
+  - `src/backend/src/shared/database/healthCheck.ts`
+  - `src/backend/package.json`
+  - `package.json`
+  - `reload_services.sh`
+  - `restart_db.sh`
+  - `start_project.sh`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Node.js no longer crashes on database connection hiccups or file edits, and developers can reload/restart services instantly with a single command.
+
+---
+
+## [2026-08-15 11:58] - fix(scanner/backend): resolve scanner connection failures, tunnel 503, database product caching, and error propagation
+
+- **Description:** Diagnosed and fixed the root causes for scanner failures:
+  1. **Tunnel 503 Outage**: The background `localtunnel` process was crashing and returning `503 Service Unavailable`. Added an auto-restart loop in `start_project.sh` and automatic fallback to the machine's local LAN IP (`http://<LAN_IP>:3333`).
+  2. **Error Swallowing**: `productService.ts` was catching all errors and returning `null`, which fooled `scannerProduct.tsx` into displaying "Produto Não Encontrado" even on database/network/tunnel crashes. Refined error propagation so only genuine 404s return `null` and real errors bubble up to trigger connection alerts.
+  3. **Port & Prefix Fallbacks**: Fixed `api.ts` default fallback port to `3333` (was `3000`), removed invalid `/api` prefix in `customRegisterProduct.tsx`, and replaced raw `fetch` with `createCustomProduct` domain service.
+  4. **Database Product Caching**: Updated `product.service.ts` to automatically persist external OpenFoodFacts products into the PostgreSQL `product` table upon lookup so that local DB gets populated for offline/fast future queries.
+  5. **Scanner Manual Flow**: Fixed "Cadastrar Manual" action in `scannerProduct.tsx` to route directly to `customRegisterProduct` with scanned EAN instead of placeholder confirmation screen.
+- **Files Modified:**
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `start_project.sh`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Scanner communicates reliably with backend and database, displays clear network alerts when connectivity is broken, and persists scanned items to PostgreSQL.

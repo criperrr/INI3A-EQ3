@@ -61,13 +61,9 @@ export default function ScannerProduct() {
               onPress: () => {
                 isProcessing.current = false;
                 router.push({
-                  pathname: "/scannerConfirmation",
+                  pathname: "/customRegisterProduct",
                   params: {
-                    category: "Sem Categoria",
-                    name: "Novo Produto",
-                    imageUri: "https://via.placeholder.com/150",
-                    lastPrice: "Preço não informado",
-                    barcode: data,
+                    ean: data,
                   },
                 });
               },
@@ -91,31 +87,30 @@ export default function ScannerProduct() {
       setLoading(false);
 
       const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
-      const isNetworkError = error?.message?.includes("Network request failed") || error?.message?.includes("fetch");
       const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;
 
-      const errorMsg =
-        isTunnelError
-          ? "O túnel (localtunnel) está indisponível. O backend pode não estar rodando ou o túnel caiu."
-          : "Não foi possível conectar ao servidor. Verifique se o backend e o túnel estão online.";
-
-      if (isTimeout || isNetworkError || isTunnelError) {
-        Alert.alert(
-          "Erro de Conexão",
-          errorMsg,
-          [
-            {
-              text: "Tentar Novamente",
-              onPress: () => {
-                setTimeout(() => {
-                  setScanned(false);
-                  isProcessing.current = false;
-                }, 1500);
-              },
-            },
-          ],
-        );
+      let errorMsg = error?.message || "Não foi possível conectar ao servidor. Verifique se o backend e a rede estão online.";
+      if (isTunnelError) {
+        errorMsg = "O túnel de conexão (localtunnel) está temporariamente indisponível. Verifique se o backend e o túnel estão online.";
+      } else if (isTimeout) {
+        errorMsg = "A requisição demorou muito para responder (timeout). Verifique sua conexão.";
       }
+
+      Alert.alert(
+        "Erro de Conexão",
+        errorMsg,
+        [
+          {
+            text: "Tentar Novamente",
+            onPress: () => {
+              setTimeout(() => {
+                setScanned(false);
+                isProcessing.current = false;
+              }, 1500);
+            },
+          },
+        ],
+      );
     }
   };
 

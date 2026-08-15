@@ -1,4 +1,13 @@
 {
+  "name": "ini3a-eq3",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bash ./start_project.sh",
+    "db:reload": "bash ./reload_services.sh",
+    "db:restart": "bash ./reload_services.sh --restart",
+    "db:status": "bash ./reload_services.sh --status",
+    "db:check": "npm run --prefix src/backend db:check"
+  },
   "dependencies": {
     "ngrok": "^5.0.0-beta.2"
   }

@@ -23,15 +23,28 @@ class ProductServiceClass {
         return null; // Produto não encontrado
       }
       
-      const product = data.product;
-      
-      return {
+      const productData = data.product;
+      const productInfo: ProductInfo = {
         barcode: barcode,
-        name: product.product_name || product.product_name_pt || "Produto sem nome",
-        category: product.categories?.split(",")[0]?.trim() || "Categoria Indisponível",
-        imageUri: product.image_url || product.image_front_url || null,
+        name: productData.product_name || productData.product_name_pt || "Produto sem nome",
+        category: productData.categories?.split(",")[0]?.trim() || "Categoria Indisponível",
+        imageUri: productData.image_url || productData.image_front_url || null,
         lastPrice: "Preço não informado",
       };
+
+      // Persiste no banco de dados local para consultas futuras
+      try {
+        await ProductRepository.createProduct({
+          ean: barcode,
+          name: productInfo.name,
+          description: productInfo.category,
+          icon: productInfo.imageUri || "",
+        });
+      } catch (saveErr) {
+        console.warn("ProductService: Não foi possível salvar produto externo no banco:", saveErr);
+      }
+      
+      return productInfo;
     } catch (error) {
       console.error("Erro no ProductServiceClass:", error);
       throw new Error("Não foi possível buscar as informações do produto.");
