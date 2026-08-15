@@ -27,7 +27,7 @@ async function invalidateJWT(target: Jwt.JwtInvalidateInfo): Promise<void> {
 }
 
 async function verifyJTI(jti: string): Promise<number> {
-  return redisClient.exists(jti);
+  return redisClient.exists(`blacklist:${jti}`);
 }
 
 async function setRefreshToken(

@@ -30,7 +30,7 @@ export default function ScannerConfirmation() {
   const product = {
     category: (params.category as string) || "Produto Encontrado",
     name: (params.name as string) || "Nome indisponível",
-    imageUri: (params.imageUri as string) || "https://via.placeholder.com/150",
+    imageUri: (params.imageUri as string) || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
     lastPrice: (params.lastPrice as string) || "Preço não informado",
     barcode: (params.barcode as string) || "",
   };

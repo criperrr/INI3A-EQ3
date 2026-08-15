@@ -159,3 +159,39 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Workspace is now an enterprise-grade Google Antigravity environment with surgical context efficiency, full self-validation, safety enforcement, and custom project playbooks.
+
+---
+
+## [2026-08-15 11:15] - fix(security/architecture): comprehensive backend security hardening and frontend robustness
+
+- **Description:** Executed full security, architectural, and bug fixes across backend and frontend:
+  1. **Backend User Data Sanitization:** Stripped `passHash` in `authService.getUserById` and `authService.updateUser`; replaced raw generic errors with typed `NotFoundError`, `ValidationError`, and `InternalError`.
+  2. **500 Error Disclosure Prevention:** Masked unexpected 500 error messages in `errorHandler.ts` to prevent internal database and stack trace exposure.
+  3. **Input Validation Strengthening:** Added RFC 5322 regex and length constraints (2-100 name, 6-128 password) in `authController`.
+  4. **PostGIS SQL Injection Hardening:** Converted `market.repository.ts` from string interpolation into parameterized `ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography`.
+  5. **External API Defense:** Added alphanumeric sanitization, User-Agent, and 8-second `AbortController` timeout to OpenFoodFacts API integration in `product.repository.ts`.
+  6. **JWT Algorithm Confusion Defense:** Specified `algorithms: ["HS256"]` in `jwt.ts` verification.
+  7. **Redis Server Fix:** Corrected `verifyJTI` prefix to `blacklist:${jti}`.
+  8. **Product Controller Standard:** Enforced `NotFoundError` in `getProductByBarcode`.
+  9. **Frontend UTF-8 Base64 Safe Decoding:** Upgraded `decodeJwtPayload` in `authContext.tsx` with full UTF-8/Unicode decoding support for React Native / Hermes.
+  10. **Profile Auth Connection:** Connected `profile.tsx` to `useAuth()` state with real dynamic user details and real logout.
+  11. **Image Fallback Normalization:** Replaced broken placeholder URLs across `scannerProduct.tsx`, `scannerConfirmation.tsx`, `registerProduct.tsx`, and `manualEanSearch.tsx` with reliable Unsplash assets.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/user.repository.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/database/repositories/market.repository.ts`
+  - `src/backend/src/shared/middlewares/errorHandler.ts`
+  - `src/backend/src/shared/util/jwt.ts`
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/frontend/content/authContext.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Full test suite, static typechecking, and AG-Kit validation pass with 0 errors. Backend and frontend are hardened against OWASP vulnerabilities and runtime edge cases.
+

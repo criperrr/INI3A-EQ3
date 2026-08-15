@@ -6,14 +6,35 @@ import { eq, ilike, or, desc } from "drizzle-orm";
 
 class ProductRepositoryClass {
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    
-    if (!response.ok) {
-      throw new Error(`Erro ao acessar a API externa: ${response.status} ${response.statusText}`);
+    const sanitizedBarcode = encodeURIComponent(barcode.trim().replace(/[^a-zA-Z0-9_-]/g, ""));
+    if (!sanitizedBarcode) return null;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const response = await fetch(
+        `https://world.openfoodfacts.org/api/v0/product/${sanitizedBarcode}.json`,
+        {
+          signal: controller.signal,
+          headers: {
+            "User-Agent": "PRescoApp - PriceComparison/1.0",
+          },
+        },
+      );
+
+      clearTimeout(timeoutId);
+
+      if (response.status === 404 || !response.ok) {
+        return null;
+      }
+
+      const data = (await response.json()) as OpenFoodFactsResponse;
+      return data;
+    } catch {
+      clearTimeout(timeoutId);
+      return null;
     }
-    
-    const data = (await response.json()) as OpenFoodFactsResponse;
-    return data;
   }
 
   async getAllProducts(options?: Repositories.ProductFilter): Promise<Repositories.Product[]> {

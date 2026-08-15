@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { productService } from "./product.service";
 import { success } from "@/shared/helpers/response.helper";
-import { ValidationError, ConflictError } from "@/shared/errors/errors";
+import { ValidationError, ConflictError, NotFoundError } from "@/shared/errors/errors";
 
 class ProductControllerClass {
   async listProducts(req: Request, res: Response, next: NextFunction) {
@@ -47,11 +47,7 @@ class ProductControllerClass {
       const product = await productService.getProductByBarcode(ean as string);
 
       if (!product) {
-        return res.status(404).json({
-          success: false,
-          code: "PRODUCT_NOT_FOUND",
-          message: "Produto não encontrado na base de dados.",
-        });
+        throw new NotFoundError("Produto não encontrado na base de dados.");
       }
 
       return res.status(200).json(success(product));

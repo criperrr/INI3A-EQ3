@@ -37,7 +37,7 @@ export function generateRefreshToken(): string {
 }
 
 export function verifyAccessToken(token: string): Jwt.JwtPayload {
-  return jwt.verify(token, JWT_SECRET) as Jwt.JwtPayload;
+  return jwt.verify(token, JWT_SECRET, { algorithms: ["HS256"] }) as Jwt.JwtPayload;
 }
 
 export function getTokenRemainingSeconds(decoded: jwt.JwtPayload): number {

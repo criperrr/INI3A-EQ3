@@ -65,7 +65,7 @@ export default function ScannerProduct() {
                   params: {
                     category: "Sem Categoria",
                     name: "Novo Produto",
-                    imageUri: "https://via.placeholder.com/150",
+                    imageUri: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
                     lastPrice: "Preço não informado",
                     barcode: data,
                   },
@@ -82,7 +82,7 @@ export default function ScannerProduct() {
         params: {
           category: product.category || "Categoria Não Encontrada",
           name: product.name || "Produto Não Encontrado",
-          imageUri: product.imageUri || "https://via.placeholder.com/150",
+          imageUri: product.imageUri || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
           lastPrice: product.lastPrice || "Preço não informado",
           barcode: data,
         },

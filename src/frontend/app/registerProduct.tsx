@@ -64,7 +64,7 @@ export default function RegisterProduct() {
   const scannedProduct = params.name ? {
     name: params.name,
     category: params.category || "Sem Categoria",
-    imageUri: params.imageUri || "https://via.placeholder.com/150",
+    imageUri: params.imageUri || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
     lastPrice: params.lastPrice || "Preço não informado",
   } : null;
 

@@ -9,13 +9,15 @@ import {
 import {
   UnauthorizedError,
   ConflictError,
+  NotFoundError,
+  ValidationError,
+  InternalError,
 } from "@/shared/errors/errors";
 import type * as Services from "@/shared/types/services";
 import type * as Repositories from "@/shared/types/repositories";
 
 class AuthServiceClass {
   async register(data: Services.CreateUser) {
-
     const existing = await UserRepository.getUserByEmail(data.email);
     if (existing) {
       throw new ConflictError("Este e-mail já está cadastrado.");
@@ -30,7 +32,7 @@ class AuthServiceClass {
     });
 
     if (!result) {
-      throw new Error("Falha ao criar o usuário.");
+      throw new InternalError("CREATE_USER_FAILED", "Falha ao criar o usuário.", 500);
     }
 
     const accessToken = signAccessToken({
@@ -131,7 +133,6 @@ class AuthServiceClass {
     };
   }
 
-
   async logout(jti: string, jtiRemainingSeconds: number, refreshToken?: string) {
     await AuthRepository.blacklistAccessToken(jti, jtiRemainingSeconds);
 
@@ -144,7 +145,7 @@ class AuthServiceClass {
     const { password, ...remainder } = user;
 
     if (Object.keys(remainder).length === 0 && password === undefined) {
-      throw new Error("Nada para atualizar.");
+      throw new ValidationError([{ field: "body", message: "Nada para atualizar." }]);
     }
 
     const userQuery: Partial<Repositories.UpdateUser> = { ...remainder };
@@ -153,17 +154,13 @@ class AuthServiceClass {
       userQuery.passHash = await hash(password, 10);
     }
 
-    if (Object.keys(userQuery).length == 0) {
-      throw new Error("Nada para atualizar.");
-    }
-
     const result = await UserRepository.updateUser(
       id,
       userQuery as Repositories.UpdateUser,
     );
 
     if (!result[0]) {
-      throw new Error("Falha ao atualizar o usuário.");
+      throw new NotFoundError("Usuário não encontrado.");
     }
 
     return result[0];
@@ -172,8 +169,8 @@ class AuthServiceClass {
   async deleteUser(id: number | string) {
     const rowCount = await UserRepository.deleteUser(id);
 
-    if (rowCount == 0) {
-      throw new Error("Usuário não encontrado.");
+    if (rowCount === 0) {
+      throw new NotFoundError("Usuário não encontrado.");
     }
 
     return rowCount;
@@ -186,7 +183,7 @@ class AuthServiceClass {
   ) {
     const user = await UserRepository.getUserById(userId);
     if (!user) {
-      throw new UnauthorizedError("Usuário não encontrado.");
+      throw new NotFoundError("Usuário não encontrado.");
     }
 
     const isPasswordValid = await compare(currentPassword, user.passHash);
@@ -203,9 +200,10 @@ class AuthServiceClass {
   async getUserById(id: number | string) {
     const result = await UserRepository.getUserById(id);
     if (!result) {
-      throw new Error("Usuário não encontrado.");
+      throw new NotFoundError("Usuário não encontrado.");
     }
-    return result;
+    const { passHash: _, ...safeUser } = result;
+    return safeUser;
   }
 }
 

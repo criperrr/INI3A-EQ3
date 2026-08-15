@@ -59,21 +59,20 @@ class MarketRepositoryClass {
   }
 
   async getMarketsByRadius(coord: Point, radius: number) {
-    const wktPoint = `POINT(${coord.lng} ${coord.lat})`;
-
     return db
       .select({
         id: Market.id,
         name: Market.name,
         location: sql`ST_AsGeoJson(${Market.location})`,
       })
-      .from(Market).where(sql`
-      ST_DWithin(
-      ${Market.location},
-      ST_GeographyFromText(${wktPoint}),
-      ${radius}
-      )
-      `);
+      .from(Market)
+      .where(
+        sql`ST_DWithin(
+          ${Market.location},
+          ST_SetSRID(ST_MakePoint(${coord.lng}, ${coord.lat}), 4326)::geography,
+          ${radius}
+        )`
+      );
   }
 }
 

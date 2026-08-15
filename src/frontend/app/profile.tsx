@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent";
+import { useAuth } from "../content/authContext";
 
 const COLORS = {
   amber: "#FFC107",
@@ -18,15 +19,7 @@ const COLORS = {
   redLogout: "#D32F2F",
 };
 
-const MOCK_USER = {
-  name: "Caleb Jensen",
-  role: "Product Analyst",
-  avatarUri: "https://randomuser.me/api/portraits/men/32.jpg",
-  level: 20,
-  currentXp: 268,
-  maxXp: 320,
-  stats: { following: 173, products: 994, followers: 213 },
-};
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop";
 
 const MOCK_CONTRIBUTIONS = Array.from({ length: 18 }, () =>
   Array.from({ length: 4 }, () => Math.floor(Math.random() * 4)),
@@ -48,10 +41,29 @@ const getGridColor = (intensity: number, isDark: boolean) => {
 export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles } = useTheme();
+  const { user, logout, isAuthenticated } = useAuth();
 
-  const handleLogout = () => {
-    console.log("Mock Logout efetuado!");
-    router.replace("/login");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/login");
+    } catch {
+      router.replace("/login");
+    }
+  };
+
+  const handleLogin = () => {
+    router.push("/login");
+  };
+
+  const displayUser = {
+    name: user?.name || "Visitante",
+    role: user?.email || "Conta não autenticada",
+    avatarUri: DEFAULT_AVATAR,
+    level: 1,
+    currentXp: 120,
+    maxXp: 300,
+    stats: { following: 0, products: 0, followers: 0 },
   };
 
   return (
@@ -60,15 +72,30 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <ProfileHeader user={MOCK_USER} />
-        <StatsCard stats={MOCK_USER.stats} />
+        <ProfileHeader user={displayUser} />
+        <StatsCard stats={displayUser.stats} />
         <LevelProgress
-          currentXp={MOCK_USER.currentXp}
-          maxXp={MOCK_USER.maxXp}
-          level={MOCK_USER.level}
+          currentXp={displayUser.currentXp}
+          maxXp={displayUser.maxXp}
+          level={displayUser.level}
         />
         <ContributionHistory contributions={MOCK_CONTRIBUTIONS} />
-        <LogoutButton onPress={handleLogout} />
+        {isAuthenticated ? (
+          <LogoutButton onPress={handleLogout} />
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.logoutButton,
+              themeStyles.card,
+              { borderColor: themeStyles.border.borderColor },
+            ]}
+            activeOpacity={0.8}
+            onPress={handleLogin}
+          >
+            <Ionicons name="log-in-outline" size={20} color={COLORS.greenProgress} />
+            <Text style={[styles.logoutText, { color: COLORS.greenProgress }]}>Fazer Login</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -76,7 +103,17 @@ export default function ProfileScreen() {
 
 // --- Componentes Internos ---
 
-const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => {
+interface UserProfile {
+  name: string;
+  role: string;
+  avatarUri: string;
+  level: number;
+  currentXp: number;
+  maxXp: number;
+  stats: { following: number; products: number; followers: number };
+}
+
+const ProfileHeader = ({ user }: { user: UserProfile }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.profileHeaderContainer}>
@@ -108,7 +145,7 @@ const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => {
   );
 };
 
-const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
+const StatsCard = ({ stats }: { stats: UserProfile["stats"] }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={[styles.statsCard, themeStyles.card, themeStyles.border]}>

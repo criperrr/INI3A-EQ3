@@ -31,6 +31,6 @@ export function errorHandler(
   return res.status(500).json({
     success: false,
     code: "INTERNAL_SERVER_ERROR",
-    message: error.message || "An unexpected error occurred.",
+    message: "Ocorreu um erro interno no servidor.",
   });
 }
