@@ -9,7 +9,7 @@ Chronological record of all system modifications, additions, and refactorings.
 All project changes MUST be appended using the exact structure below:
 
 ```markdown
-## [YYYY-MM-DD HH:mm] - [TYPE](scope): Short title
+## [YYYY-MM-DD HH:mm] - `TYPE(scope)`: Short title
 
 - **Description:** Technical summary of changes and rationale.
 - **Files Modified:**
@@ -76,6 +76,29 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ---
 
+## [2026-08-15 10:37] - feat(backend/frontend): implement complete product CRUD operations
+
+- **Description:** Implemented full end-to-end CRUD for products. Added `NotFoundError` error class, DTO types, and repository methods (`getAllProducts`, `getProductById`, `createProduct`, `updateProduct`, `deleteProduct`). Added service logic with EAN uniqueness validation, controller endpoints using `success()` envelope and `ValidationError`, and RESTful Express routes. On frontend, implemented domain service functions in `productService.ts`, connected `index.tsx` (real products + pull-to-refresh), `search.tsx` (debounced search), `customRegisterProduct.tsx` (create and edit modes), and `productDetails.tsx` (dynamic load + edit and delete action buttons).
+- **Files Modified:**
+  - `src/backend/src/shared/errors/errors.ts`
+  - `src/backend/src/shared/types/services.ts`
+  - `src/backend/src/shared/types/repositories.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Full product lifecycle management is now available in both API and UI. Next step on roadmap is wiring the scanner flow with market selection and ocurrency creation.
+
+---
+
 ## [2026-08-15 10:51] - feat(settings): complete settings features with backup export/import, real password change, and cache management
 
 - **Description:** Implemented complete settings suite across frontend and backend. Added `PATCH /auth/password` endpoint with bcrypt current password verification, integrated real authenticated password change and account deletion in `auth.ts`, added JSON backup export (native Share) and import with live theme synchronization in `themeContent.tsx`, implemented non-destructive local cache clearing, and added scanner haptic/interaction preferences.
@@ -109,3 +132,30 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/settings.tsx`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Removed manual save button requirement; all changes are persisted in real time.
+
+---
+
+## [2026-08-15 11:05] - feat(agents): complete fusion and customization of AG-Kit with local INI3A-EQ3 architecture
+
+- **Description:** Successfully unified the local surgical efficiency protocol of INI3A-EQ3 with the complete capability matrix of AG-Kit (`vudovn/ag-kit`). Configured modular trigger-based rules in `.agents/rules/`, persistent memory architecture in `.agents/memory/`, 20 specialist agent personas in `.agents/agent/` custom-tailored for INI3A-EQ3 (React Native Expo mobile, Express DDD backend, PostGIS spatial database), 13 slash-command workflows in `.agents/workflows/`, 60 SemVer-compliant skills in `.agents/skills/`, native PreToolUse safety gate in `.agents/hooks/` and `hooks.json`, runtime contract in `antigravity.json`, MCP integration in `mcp_config.json`, and automated validation scripts (`validate_kit.py`, `generate_manifest.py`, `dependency_graph.py`). Verified with 100% passing test suites and 0 validation errors.
+- **Files Modified:**
+  - `.agents/rules/*`
+  - `.agents/memory/*`
+  - `.agents/agent/*`
+  - `.agents/workflows/*`
+  - `.agents/skills/*`
+  - `.agents/hooks/*`
+  - `.agents/scripts/*`
+  - `.agents/antigravity.json`
+  - `.agents/hooks.json`
+  - `.agents/mcp_config.json`
+  - `.agents/manifest.json`
+  - `.agents/manifest.lock.json`
+  - `.agents/DEPENDENCY_GRAPH.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/README.md`
+  - `.agents/VERSION`
+  - `.agents/AGENTS.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Workspace is now an enterprise-grade Google Antigravity environment with surgical context efficiency, full self-validation, safety enforcement, and custom project playbooks.

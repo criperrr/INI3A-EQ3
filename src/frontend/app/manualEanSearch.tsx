@@ -13,7 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
-import { apiRequest } from "../services/api";
+import { fetchProductByEan } from "../services/productService";
 
 export default function ManualEanSearch() {
   const [ean, setEan] = useState("");
@@ -29,8 +29,28 @@ export default function ManualEanSearch() {
 
     setLoading(true);
     try {
-      const product = await apiRequest(`/products/barcode/${ean}`);
+      const product = await fetchProductByEan(ean.trim());
       setLoading(false);
+
+      if (!product) {
+        Alert.alert(
+          "Produto Não Encontrado",
+          "O código informado não existe na base. Deseja cadastrá-lo manualmente?",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Cadastrar",
+              onPress: () => {
+                router.push({
+                  pathname: "/customRegisterProduct" as any,
+                  params: { ean: ean.trim() },
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
       
       router.push({
         pathname: "/scannerConfirmation",
@@ -39,7 +59,7 @@ export default function ManualEanSearch() {
           name: product?.name || "Produto Não Encontrado",
           imageUri: product?.imageUri || "https://via.placeholder.com/150",
           lastPrice: product?.lastPrice || "Preço não informado",
-          barcode: ean,
+          barcode: ean.trim(),
         },
       });
     } catch (error: any) {
@@ -54,8 +74,8 @@ export default function ManualEanSearch() {
             text: "Cadastrar", 
             onPress: () => {
               router.push({
-                pathname: "/customRegisterProduct",
-                params: { ean },
+                pathname: "/customRegisterProduct" as any,
+                params: { ean: ean.trim() },
               });
             } 
           }
@@ -63,6 +83,7 @@ export default function ManualEanSearch() {
       );
     }
   };
+
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

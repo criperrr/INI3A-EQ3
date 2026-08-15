@@ -56,3 +56,9 @@ export class ValidationError extends AppError {
     this.errors = errors;
   }
 }
+
+export class NotFoundError extends AppError {
+  constructor(message: string = "Resource not found.") {
+    super("NOT_FOUND", message, 404);
+  }
+}

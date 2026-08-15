@@ -15,13 +15,29 @@ Always read `.agents/CURRENT.md` at the start of any task before calling `list_d
 - Avoid `list_dir` unless creating new folders or updating `CURRENT.md`.
 
 ### 1.3. Skills (Load Only When Relevant)
-Deep architecture references are split into skills — load them only if the task touches that area:
+Deep architecture references and domain playbooks are organized as Antigravity Skills in `.agents/skills/`. Load them only if the task touches that domain:
 
-- **Backend** (Express, Drizzle, Redis, Auth): `.agents/skills/backend/SKILL.md`
-  Covers: layer responsibilities, DB schema, error classes, Redis keys, `requireAuth`, type namespaces, endpoint checklist, module file structure.
-- **Frontend** (React Native, Expo Router, services): `.agents/skills/frontend/SKILL.md`
-  Covers: `apiRequest`, domain service patterns, screen map, component list, design token spec.
-- **Design tokens** (colors, typography, spacing): `.agents/DESIGN.md`
+- **Backend** (`.agents/skills/backend/SKILL.md`): Layer flow, Drizzle schema, PostGIS geography, Redis keys, error classes, auth middleware, endpoint checklist.
+- **Frontend** (`.agents/skills/frontend/SKILL.md`): `apiRequest`, domain services, screen map, component registry, design token usage.
+- **Design Tokens** (`.agents/DESIGN.md`): UI palette, spacing, typography, radii, input/button specifications.
+- **TypeScript Pro** (`.agents/skills/typescript-pro/SKILL.md`): Strict typing, generics, advanced utility types, type narrowing.
+- **Node.js Backend Patterns** (`.agents/skills/nodejs-backend-patterns/SKILL.md`): Resilient Express architecture, async error safety, middleware chaining.
+- **React Native Architecture** (`.agents/skills/react-native-architecture/SKILL.md`): Expo Router best practices, safe area handling, native modules, offline storage.
+- **API Design Principles** (`.agents/skills/api-design-principles/SKILL.md`): RESTful standards, semantic HTTP codes, DTO consistency.
+- **PostgreSQL & Database Architect** (`.agents/skills/postgresql/SKILL.md`, `.agents/skills/database-architect/SKILL.md`): Indexing strategies, relational design, PostGIS spatial queries.
+- **Backend Security Coder** (`.agents/skills/backend-security-coder/SKILL.md`): Threat modeling, input sanitization, injection defense, auth validation.
+- **Unit Testing** (`.agents/skills/unit-testing-test-generate/SKILL.md`): Unit test generation, test runners, mocks/stubs.
+- **Code Review** (`.agents/skills/code-review-ai-ai-review/SKILL.md`): Clean code audit, complexity reduction, refactoring.
+- **Error Diagnostics** (`.agents/skills/error-debugging-error-analysis/SKILL.md`): Systematic debugging, stack trace analysis, root cause resolution.
+- **On-Demand Skill Catalog**: Search and install from 300+ skills in `CATALOG.md` via `python3 .agents/tools/skills_cli.py search <term>` / `install <skill_id>`.
+
+### 1.4. Antigravity Modular Toolkit & Memory
+- **Rules (`.agents/rules/`):** `core-protocol.md` (P0), `universal-rules.md` (P0), `code-rules.md` (P0), `design-rules.md` (P0), `request-routing.md` (P1), `quick-reference.md` (P2).
+- **Persistent Memory (`.agents/memory/`):** Read `MEMORY.md` for project conventions, technical decisions, and user preferences.
+- **Workflows (`.agents/workflows/`):** Repeatable slash commands (`/plan`, `/coordinate`, `/create`, `/debug`, `/test`, `/verify`, `/remember`, `/status`).
+- **Specialist Agents (`.agents/agent/`):** 20 domain roles (`mobile-developer`, `backend-specialist`, `database-architect`, `security-auditor`, `debugger`, `test-engineer`, `orchestrator`, etc.).
+- **Native Safety Hook (`.agents/hooks/`):** `PreToolUse` gate in `hooks.json` validated by `validate-tool-call.mjs`.
+- **Validation Scripts (`.agents/scripts/`):** `validate_kit.py`, `generate_manifest.py`, `dependency_graph.py`, `checklist.py`.
 
 ---
 

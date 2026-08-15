@@ -1,10 +1,23 @@
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import type { ProductInfo } from "@/shared/types/product";
+import type * as Services from "@/shared/types/services";
+import { ConflictError, NotFoundError } from "@/shared/errors/errors";
 
 class ProductServiceClass {
+  async listProducts(filter?: Services.ProductFilter): Promise<Services.Product[]> {
+    return ProductRepository.getAllProducts(filter);
+  }
+
+  async getProductById(id: number): Promise<Services.Product> {
+    const product = await ProductRepository.getProductById(id);
+    if (!product) {
+      throw new NotFoundError("Produto não encontrado.");
+    }
+    return product;
+  }
+
   async getProductByBarcode(barcode: string): Promise<ProductInfo | null> {
     try {
-      // Verifica no banco de dados local primeiro
       const localProduct = await ProductRepository.getProductByEan(barcode);
       if (localProduct) {
         return {
@@ -16,11 +29,10 @@ class ProductServiceClass {
         };
       }
 
-      // Se não encontrar, busca na API externa
       const data = await ProductRepository.getProductFromOpenFoodFacts(barcode);
       
       if (!data || data.status === 0) {
-        return null; // Produto não encontrado
+        return null;
       }
       
       const product = data.product;
@@ -33,18 +45,41 @@ class ProductServiceClass {
         lastPrice: "Preço não informado",
       };
     } catch (error) {
+      if (error instanceof NotFoundError) throw error;
       console.error("Erro no ProductServiceClass:", error);
       throw new Error("Não foi possível buscar as informações do produto.");
     }
   }
 
+  async createProduct(data: Services.CreateProduct): Promise<Services.Product> {
+    if (data.ean && data.ean.trim().length > 0) {
+      const existing = await ProductRepository.getProductByEan(data.ean.trim());
+      if (existing) {
+        throw new ConflictError("Produto com este código de barras (EAN) já existe.");
+      }
+    }
+
+    const created = await ProductRepository.createProduct({
+      name: data.name,
+      ean: data.ean?.trim() || null,
+      ncm: data.ncm?.trim() || null,
+      description: data.description?.trim() || "",
+      icon: data.icon?.trim() || "",
+    });
+
+    if (!created) {
+      throw new Error("Erro ao criar produto no banco de dados.");
+    }
+
+    return created;
+  }
+
   async createCustomProduct(data: { name: string; category?: string; icon?: string; ean?: string }): Promise<ProductInfo> {
     const internalEan = data.ean || `INT-${Date.now()}`;
     
-    // Check if it already exists
     const existing = await ProductRepository.getProductByEan(internalEan);
     if (existing) {
-      throw new Error("Produto com este EAN já existe.");
+      throw new ConflictError("Produto com este EAN já existe.");
     }
 
     const created = await ProductRepository.createProduct({
@@ -66,6 +101,46 @@ class ProductServiceClass {
       lastPrice: "Preço não informado",
     };
   }
+
+  async updateProduct(id: number, data: Services.UpdateProduct): Promise<Services.Product> {
+    const existing = await ProductRepository.getProductById(id);
+    if (!existing) {
+      throw new NotFoundError("Produto não encontrado.");
+    }
+
+    if (data.ean && data.ean.trim() !== existing.ean) {
+      const withEan = await ProductRepository.getProductByEan(data.ean.trim());
+      if (withEan && withEan.id !== id) {
+        throw new ConflictError("Outro produto já possui este código de barras (EAN).");
+      }
+    }
+
+    const updated = await ProductRepository.updateProduct(id, {
+      ...data,
+      ...(data.ean !== undefined ? { ean: data.ean ? data.ean.trim() : null } : {}),
+      ...(data.name !== undefined ? { name: data.name.trim() } : {}),
+      ...(data.ncm !== undefined ? { ncm: data.ncm ? data.ncm.trim() : null } : {}),
+      ...(data.description !== undefined ? { description: data.description ? data.description.trim() : "" } : {}),
+      ...(data.icon !== undefined ? { icon: data.icon ? data.icon.trim() : "" } : {}),
+    });
+
+    if (!updated) {
+      throw new NotFoundError("Produto não encontrado.");
+    }
+
+    return updated;
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    const existing = await ProductRepository.getProductById(id);
+    if (!existing) {
+      throw new NotFoundError("Produto não encontrado.");
+    }
+
+    const deleted = await ProductRepository.deleteProduct(id);
+    return !!deleted;
+  }
 }
 
 export const productService = new ProductServiceClass();
+

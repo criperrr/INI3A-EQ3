@@ -11,6 +11,29 @@ export type UpdateUser = AtLeastOne<
   >
 >;
 
+export type Product = InferSelectModel<typeof schema.product>;
+export type CreateProduct = {
+  name: string;
+  ean?: string | null | undefined;
+  ncm?: string | null | undefined;
+  description?: string | null | undefined;
+  icon?: string | null | undefined;
+};
+export type UpdateProduct = {
+  name?: string | undefined;
+  ean?: string | null | undefined;
+  ncm?: string | null | undefined;
+  description?: string | null | undefined;
+  icon?: string | null | undefined;
+};
+export type ProductFilter = {
+  search?: string | undefined;
+  limit?: number | undefined;
+  offset?: number | undefined;
+};
+
+
+
 
 
 

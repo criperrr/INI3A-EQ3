@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -9,63 +9,71 @@ import {
   Image,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { fetchProducts, ProductItem } from "../services/productService";
 
-const MOCK_SEARCH_PRODUCTS = [
-  {
-    id: 1,
-    name: "Maçã Gala 1kg",
-    price: "R$ 8,99",
-    image:
-      "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=400&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Arroz Agulhinha",
-    price: "R$ 25,90",
-    image:
-      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Feijão Carioca",
-    price: "R$ 9,90",
-    image:
-      "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=400&h=400&fit=crop",
-  },
-  {
-    id: 4,
-    name: "Sabão Líquido 1L",
-    price: "R$ 14,90",
-    image:
-      "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&h=400&fit=crop",
-  },
-  {
-    id: 5,
-    name: "Detergente Neutro",
-    price: "R$ 2,99",
-    image:
-      "https://images.unsplash.com/photo-1585421514284-efb74c2b69ba?w=400&h=400&fit=crop",
-  },
-  {
-    id: 6,
-    name: "Água Sanitária 2L",
-    price: "R$ 5,49",
-    image:
-      "https://images.unsplash.com/photo-1584568694244-14fbdf83bd30?w=400&h=400&fit=crop",
-  },
-];
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop";
 
 export default function SearchScreen() {
   const [searchText, setSearchText] = useState("");
-  const router = useRouter();
-  const { themeStyles } = useTheme();
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const handleProductPress = () => {
-    router.push("/productDetails");
+  const router = useRouter();
+  const { themeStyles, accent } = useTheme();
+
+  const loadProducts = useCallback(async (query: string) => {
+    setLoading(true);
+    try {
+      const data = await fetchProducts(query);
+      setProducts(data);
+    } catch (error) {
+      console.error("Erro ao carregar produtos:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      loadProducts(searchText);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchText, loadProducts]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadProducts(searchText);
+  };
+
+  const handleProductPress = (item: ProductItem) => {
+    router.push({
+      pathname: "/productDetails",
+      params: {
+        id: String(item.id),
+        name: item.name,
+        category: item.description || "Geral",
+        imageUri: item.icon || "",
+        barcode: item.ean || "",
+        lastPrice: item.lastPrice || "Preço não informado",
+      },
+    });
+  };
+
+  const handleNewProduct = () => {
+    router.push({
+      pathname: "/customRegisterProduct" as any,
+      params: { name: searchText },
+    });
   };
 
   return (
@@ -75,12 +83,55 @@ export default function SearchScreen() {
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={accent}
+              colors={[accent]}
+            />
+          }
         >
-        <SearchBar value={searchText} onChangeText={setSearchText} />
-        <ProductResultsGrid
-          products={MOCK_SEARCH_PRODUCTS}
-          onProductPress={handleProductPress}
-        />
+          <SearchBar value={searchText} onChangeText={setSearchText} />
+
+          {loading && !refreshing ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={accent} />
+              <Text style={[styles.loadingText, themeStyles.subText]}>
+                Buscando produtos...
+              </Text>
+            </View>
+          ) : products.length > 0 ? (
+            <ProductResultsGrid
+              products={products}
+              onProductPress={handleProductPress}
+            />
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Ionicons
+                name="search-outline"
+                size={56}
+                color={accent}
+                style={styles.emptyIcon}
+              />
+              <Text style={[styles.emptyTitle, themeStyles.text]}>
+                Nenhum produto encontrado
+              </Text>
+              <Text style={[styles.emptySubtitle, themeStyles.subText]}>
+                {searchText
+                  ? `Não encontramos resultados para "${searchText}".`
+                  : "Nenhum produto cadastrado no momento."}
+              </Text>
+              <TouchableOpacity
+                style={[styles.createBtn, { backgroundColor: accent }]}
+                activeOpacity={0.8}
+                onPress={handleNewProduct}
+              >
+                <Ionicons name="add-circle-outline" size={20} color="#FFF" style={styles.createBtnIcon} />
+                <Text style={styles.createBtnText}>Cadastrar Produto</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       </View>
     </TouchableWithoutFeedback>
@@ -111,11 +162,16 @@ const SearchBar = ({
       />
       <TextInput
         style={[styles.searchInput, themeStyles.text]}
-        placeholder="Buscar produto..."
+        placeholder="Buscar produto por nome ou código..."
         placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={onChangeText}
       />
+      {value.length > 0 && (
+        <TouchableOpacity onPress={() => onChangeText("")}>
+          <Ionicons name="close-circle" size={18} color={placeholderColor} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -124,22 +180,22 @@ const ProductResultsGrid = ({
   products,
   onProductPress,
 }: {
-  products: typeof MOCK_SEARCH_PRODUCTS;
-  onProductPress: () => void;
+  products: ProductItem[];
+  onProductPress: (item: ProductItem) => void;
 }) => {
-  const { themeStyles } = useTheme();
+  const { themeStyles, isDark } = useTheme();
 
   return (
     <View style={styles.gridContainer}>
-      {products.map((product) => (
+      {products.map((item) => (
         <TouchableOpacity
-          key={product.id}
+          key={item.id}
           style={[styles.productCard, themeStyles.card, themeStyles.border]}
           activeOpacity={0.8}
-          onPress={onProductPress}
+          onPress={() => onProductPress(item)}
         >
           <Image
-            source={{ uri: product.image }}
+            source={{ uri: item.icon || FALLBACK_IMAGE }}
             style={styles.productImage}
             resizeMode="cover"
           />
@@ -149,11 +205,21 @@ const ProductResultsGrid = ({
               style={[styles.productName, themeStyles.text]}
               numberOfLines={2}
             >
-              {product.name}
+              {item.name}
             </Text>
-            <Text style={[styles.productPrice, themeStyles.text]}>
-              {product.price}
-            </Text>
+            {item.description ? (
+              <Text
+                style={[styles.productCategory, themeStyles.subText]}
+                numberOfLines={1}
+              >
+                {item.description}
+              </Text>
+            ) : null}
+            {item.ean ? (
+              <Text style={[styles.productEan, { color: isDark ? "#8B949E" : "#5A6B52" }]}>
+                {item.ean}
+              </Text>
+            ) : null}
           </View>
         </TouchableOpacity>
       ))}
@@ -164,14 +230,14 @@ const ProductResultsGrid = ({
 // --- Estilos ---
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: { flexGrow: 1, paddingTop: 10, paddingHorizontal: 16 },
+  content: { flexGrow: 1, paddingTop: 10, paddingHorizontal: 16, paddingBottom: 30 },
   searchBarContainer: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 24,
     paddingHorizontal: 16,
     height: 48,
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -181,6 +247,15 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, height: "100%" },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 15,
+  },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -203,14 +278,67 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 1,
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   productInfo: { alignItems: "center" },
   productName: {
     fontSize: 13,
+    fontWeight: "600",
     textAlign: "center",
     marginBottom: 4,
-    minHeight: 36,
+    minHeight: 34,
   },
-  productPrice: { fontSize: 15, fontWeight: "bold" },
+  productCategory: {
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: 2,
+  },
+  productEan: {
+    fontSize: 10,
+    fontWeight: "500",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    marginBottom: 16,
+    opacity: 0.7,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  createBtnIcon: {
+    marginRight: 8,
+  },
+  createBtnText: {
+    color: "#FFF",
+    fontSize: 15,
+    fontWeight: "bold",
+  },
 });
+

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
@@ -8,11 +8,12 @@ import {
   Image,
   FlatList,
   Dimensions,
+  RefreshControl,
 } from "react-native";
-// Adicionado useLocalSearchParams na importação
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { fetchProducts, ProductItem } from "../services/productService";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -30,6 +31,8 @@ type GridItemType = {
   id: number;
   name: string;
   image: string;
+  ean?: string | null;
+  description?: string | null;
 };
 
 // --- Mocks ---
@@ -159,19 +162,53 @@ const ACTION_TABS: TabType[] = [
 
 export default function Index() {
   const router = useRouter();
-  const { view } = useLocalSearchParams<{ view?: string }>(); // Pega os parâmetros da URL
-  const { themeStyles } = useTheme();
+  const { view } = useLocalSearchParams<{ view?: string }>();
+  const { themeStyles, accent } = useTheme();
 
   const [activeView, setActiveView] = useState("products");
+  const [dbProducts, setDbProducts] = useState<ProductItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Novo useEffect: Lê o parâmetro vindo da Sidebar e altera a view na hora
+  const loadData = useCallback(async () => {
+    try {
+      const items = await fetchProducts();
+      setDbProducts(items);
+    } catch (e) {
+      console.error("Erro ao buscar produtos na Home:", e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   useEffect(() => {
     if (view === "markets" || view === "products") {
       setActiveView(view);
     }
   }, [view]);
 
-  const handleItemPress = () => {
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadData();
+  };
+
+  const handleProductPress = (item: GridItemType) => {
+    router.push({
+      pathname: "/productDetails",
+      params: {
+        id: String(item.id),
+        name: item.name,
+        category: item.description || "Geral",
+        imageUri: item.image,
+        barcode: item.ean || "",
+      },
+    });
+  };
+
+  const handleMarketPress = (item: GridItemType) => {
     router.push("/productDetails");
   };
 
@@ -183,7 +220,18 @@ export default function Index() {
     }
   };
 
-  const gridData = activeView === "products" ? MOCK_PRODUCTS : MOCK_MARKETS;
+  const productGridData: GridItemType[] =
+    dbProducts.length > 0
+      ? dbProducts.map((p) => ({
+          id: p.id,
+          name: p.name,
+          image: p.icon || "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+          ean: p.ean,
+          description: p.description,
+        }))
+      : MOCK_PRODUCTS;
+
+  const gridData = activeView === "products" ? productGridData : MOCK_MARKETS;
   const gridTitle =
     activeView === "products" ? "Produtos" : "Mercados Próximos";
 
@@ -191,13 +239,21 @@ export default function Index() {
     <ScrollView
       contentContainerStyle={[styles.content, themeStyles.bg]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={accent}
+          colors={[accent]}
+        />
+      }
     >
       <Banner />
       <ActionMenu onTabPress={handleTabAction} />
       <ItemsGrid
         title={gridTitle}
         data={gridData}
-        onItemPress={handleItemPress}
+        onItemPress={activeView === "products" ? handleProductPress : handleMarketPress}
       />
     </ScrollView>
   );
@@ -207,6 +263,7 @@ const Banner = () => {
   const { themeStyles, accent } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -329,7 +386,7 @@ const ItemsGrid = ({
 }: {
   title: string;
   data: GridItemType[];
-  onItemPress: () => void;
+  onItemPress: (item: GridItemType) => void;
 }) => {
   const { themeStyles } = useTheme();
   return (
@@ -341,7 +398,7 @@ const ItemsGrid = ({
             key={item.id}
             style={[styles.productItem, themeStyles.card, themeStyles.border]}
             activeOpacity={0.8}
-            onPress={onItemPress}
+            onPress={() => onItemPress(item)}
           >
             <Image
               source={{ uri: item.image }}
@@ -360,6 +417,7 @@ const ItemsGrid = ({
     </View>
   );
 };
+
 
 // --- Estilos ---
 const styles = StyleSheet.create({

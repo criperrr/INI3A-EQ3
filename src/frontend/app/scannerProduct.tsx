@@ -147,7 +147,7 @@ export default function ScannerProduct() {
                    activeOpacity={0.8}
                    onPress={() => {
                      isProcessing.current = false;
-                     router.push("/manualEanSearch");
+                     router.push("/manualEanSearch" as any);
                    }}
                  >
                    <Text style={styles.manualEntryText}>Digitar Código Manualmente</Text>
