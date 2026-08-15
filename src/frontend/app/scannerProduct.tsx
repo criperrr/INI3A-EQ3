@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } fr
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
 
 const COLORS = {
@@ -17,6 +18,7 @@ export default function ScannerProduct() {
   const isProcessing = useRef(false);
   const router = useRouter();
   const { themeStyles } = useTheme();
+  const { t } = useI18n();
 
   useFocusEffect(
     useCallback(() => {
@@ -43,11 +45,11 @@ export default function ScannerProduct() {
 
       if (!product) {
         Alert.alert(
-          "Produto Não Encontrado",
-          "O código de barras não foi encontrado na base de dados. Deseja cadastrá-lo manualmente?",
+          t("scanner.productNotFound"),
+          t("products.customProductSubtitle"),
           [
             {
-              text: "Escanear Novamente",
+              text: t("scanner.rescan"),
               onPress: () => {
                 setTimeout(() => {
                   setScanned(false);
@@ -57,7 +59,7 @@ export default function ScannerProduct() {
               style: "cancel",
             },
             {
-              text: "Cadastrar Manual",
+              text: t("scanner.manualEntry"),
               onPress: () => {
                 isProcessing.current = false;
                 router.push({
@@ -76,10 +78,10 @@ export default function ScannerProduct() {
       router.push({
         pathname: "/scannerConfirmation",
         params: {
-          category: product.category || "Categoria Não Encontrada",
-          name: product.name || "Produto Não Encontrado",
+          category: product.category || t("scanner.category"),
+          name: product.name || t("scanner.productName"),
           imageUri: product.imageUri || "https://via.placeholder.com/150",
-          lastPrice: product.lastPrice || "Preço não informado",
+          lastPrice: product.lastPrice || t("products.pricePlaceholder"),
           barcode: data,
         },
       });
@@ -89,19 +91,19 @@ export default function ScannerProduct() {
       const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
       const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;
 
-      let errorMsg = error?.message || "Não foi possível conectar ao servidor. Verifique se o backend e a rede estão online.";
+      let errorMsg = error?.message || t("errors.serverError");
       if (isTunnelError) {
-        errorMsg = "O túnel de conexão (localtunnel) está temporariamente indisponível. Verifique se o backend e o túnel estão online.";
+        errorMsg = t("errors.networkError");
       } else if (isTimeout) {
-        errorMsg = "A requisição demorou muito para responder (timeout). Verifique sua conexão.";
+        errorMsg = t("errors.timeoutError");
       }
 
       Alert.alert(
-        "Erro de Conexão",
+        t("common.error"),
         errorMsg,
         [
           {
-            text: "Tentar Novamente",
+            text: t("common.retry"),
             onPress: () => {
               setTimeout(() => {
                 setScanned(false);
@@ -117,7 +119,7 @@ export default function ScannerProduct() {
   return (
     <View style={[styles.container, themeStyles.bg]}>
       {!permission.granted ? (
-        <PermissionNotice onRequestPermission={requestPermission} />
+        <PermissionNotice onRequestPermission={requestPermission} t={t} />
       ) : (
         <CameraView
           style={styles.cameraBackground}
@@ -130,11 +132,11 @@ export default function ScannerProduct() {
           {loading ? (
              <View style={styles.loadingOverlay}>
                <ActivityIndicator size="large" color={COLORS.accent} />
-               <Text style={styles.loadingText}>Buscando produto...</Text>
+               <Text style={styles.loadingText}>{t("scanner.searchingProduct")}</Text>
              </View>
           ) : (
              <>
-               <ScannerInstructions />
+               <ScannerInstructions t={t} />
                <ScannerViewFinder />
                <View style={styles.manualEntryContainer}>
                  <TouchableOpacity
@@ -145,7 +147,7 @@ export default function ScannerProduct() {
                      router.push("/manualEanSearch");
                    }}
                  >
-                   <Text style={styles.manualEntryText}>Digitar Código Manualmente</Text>
+                   <Text style={styles.manualEntryText}>{t("scanner.manualEntry")}</Text>
                  </TouchableOpacity>
                </View>
              </>
@@ -160,31 +162,33 @@ export default function ScannerProduct() {
 
 const PermissionNotice = ({
   onRequestPermission,
+  t,
 }: {
   onRequestPermission: () => Promise<any>;
+  t: (key: any) => string;
 }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.permissionContainer}>
       <Text style={[styles.permissionText, themeStyles.text]}>
-        Precisamos da sua permissão para usar a câmera.
+        {t("scanner.permissionRequired")}
       </Text>
       <TouchableOpacity
         style={styles.tempButtonStatic}
         activeOpacity={0.8}
         onPress={onRequestPermission}
       >
-        <Text style={styles.tempButtonTextStatic}>Conceder Permissão</Text>
+        <Text style={styles.tempButtonTextStatic}>{t("scanner.grantPermission")}</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-const ScannerInstructions = () => (
+const ScannerInstructions = ({ t }: { t: (key: any) => string }) => (
   <View style={styles.overlayTextContainer}>
-    <Text style={styles.placeholderText}>Câmera Ativada</Text>
+    <Text style={styles.placeholderText}>{t("scanner.title")}</Text>
     <Text style={styles.instructionText}>
-      Alinhe o código de barras no centro
+      {t("scanner.alignBarcode")}
     </Text>
   </View>
 );

@@ -15,11 +15,13 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
+  const { t } = useI18n();
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -31,7 +33,7 @@ export default function LoginScreen() {
     setErrorMessage("");
 
     if (!email.trim() || !password) {
-      setErrorMessage("Preencha todos os campos.");
+      setErrorMessage(t("auth.nameRequired") || "Preencha todos os campos.");
       return;
     }
 
@@ -43,7 +45,7 @@ export default function LoginScreen() {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Erro ao conectar com o servidor.");
+        setErrorMessage(t("errors.networkError"));
       }
     } finally {
       setIsLoading(false);
@@ -69,10 +71,10 @@ export default function LoginScreen() {
           style={[styles.formContainer, themeStyles.card, themeStyles.border]}
         >
           <Text style={[styles.welcomeText, themeStyles.text]}>
-            Bem-vindo de volta!
+            {t("auth.loginTitle")}
           </Text>
           <Text style={[styles.subtitleText, themeStyles.subText]}>
-            Faça login para continuar no PResco.
+            {t("auth.loginSubtitle")}
           </Text>
 
           {errorMessage !== "" && (
@@ -84,7 +86,7 @@ export default function LoginScreen() {
 
           <InputField
             icon="mail-outline"
-            placeholder="Seu e-mail"
+            placeholder={t("auth.email")}
             value={email}
             onChangeText={(text: string) => {
               setEmail(text);
@@ -97,6 +99,7 @@ export default function LoginScreen() {
           />
 
           <PasswordField
+            placeholder={t("auth.password")}
             value={password}
             onChangeText={(text: string) => {
               setPassword(text);
@@ -114,10 +117,10 @@ export default function LoginScreen() {
             activeOpacity={0.7}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Esqueceu a senha?"
+            accessibilityLabel={t("auth.forgotPassword")}
           >
             <Text style={[styles.forgotPasswordText, { color: accent }]} maxFontSizeMultiplier={2}>
-              Esqueceu a senha?
+              {t("auth.forgotPassword")}
             </Text>
           </TouchableOpacity>
 
@@ -132,13 +135,13 @@ export default function LoginScreen() {
             disabled={isLoading}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Entrar"
+            accessibilityLabel={t("auth.loginButton")}
             accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.loginButtonText}>Entrar</Text>
+              <Text style={styles.loginButtonText}>{t("auth.loginButton")}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -147,6 +150,7 @@ export default function LoginScreen() {
           onGoToRegister={handleGoToRegister}
           themeStyles={themeStyles}
           accent={accent}
+          t={t}
         />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -237,17 +241,19 @@ const FooterLinks = ({
   onGoToRegister,
   themeStyles,
   accent,
+  t,
 }: {
   onGoToRegister: () => void;
   themeStyles: any;
   accent: string;
+  t: (key: any) => string;
 }) => (
   <View style={styles.footerContainer}>
     <Text style={[styles.footerText, themeStyles.subText]}>
-      Não tem uma conta?{" "}
+      {t("auth.noAccount")}{" "}
     </Text>
     <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
-      <Text style={[styles.registerText, { color: accent }]}>Cadastre-se</Text>
+      <Text style={[styles.registerText, { color: accent }]}>{t("auth.signUp")}</Text>
     </TouchableOpacity>
   </View>
 );

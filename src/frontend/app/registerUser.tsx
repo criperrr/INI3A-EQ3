@@ -16,6 +16,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
 
 const COLORS = {
@@ -29,6 +30,7 @@ const DEFAULT_AVATAR =
 export default function RegisterUser() {
   const router = useRouter();
   const { themeStyles, accent } = useTheme();
+  const { t } = useI18n();
   const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,17 +45,17 @@ export default function RegisterUser() {
     setErrorMessage("");
 
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
-      setErrorMessage("Preencha todos os campos.");
+      setErrorMessage(t("auth.nameRequired") || "Preencha todos os campos.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setErrorMessage("As senhas não coincidem.");
+      setErrorMessage(t("auth.passwordsDoNotMatch"));
       return;
     }
 
     if (password.length < 6) {
-      setErrorMessage("A senha deve ter no mínimo 6 caracteres.");
+      setErrorMessage(t("auth.passwordTooShort"));
       return;
     }
 
@@ -65,7 +67,7 @@ export default function RegisterUser() {
       if (error instanceof ApiError) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Erro ao conectar com o servidor.");
+        setErrorMessage(t("errors.networkError"));
       }
     } finally {
       setIsLoading(false);
@@ -93,10 +95,10 @@ export default function RegisterUser() {
           style={[styles.formContainer, themeStyles.card, themeStyles.border]}
         >
           <Text style={[styles.welcomeText, themeStyles.text]}>
-            Crie sua conta
+            {t("auth.registerTitle")}
           </Text>
           <Text style={[styles.subtitleText, themeStyles.subText]}>
-            Preencha seus dados para começar.
+            {t("auth.registerSubtitle")}
           </Text>
 
           {errorMessage !== "" && (
@@ -110,7 +112,7 @@ export default function RegisterUser() {
 
           <InputField
             icon="person-outline"
-            placeholder="Nome Completo"
+            placeholder={t("auth.name")}
             value={name}
             onChangeText={(text: string) => {
               setName(text);
@@ -120,7 +122,7 @@ export default function RegisterUser() {
           />
           <InputField
             icon="mail-outline"
-            placeholder="Seu e-mail"
+            placeholder={t("auth.email")}
             value={email}
             onChangeText={(text: string) => {
               setEmail(text);
@@ -131,7 +133,7 @@ export default function RegisterUser() {
           />
 
           <PasswordField
-            placeholder="Crie uma senha"
+            placeholder={t("auth.password")}
             value={password}
             onChangeText={(text: string) => {
               setPassword(text);
@@ -143,7 +145,7 @@ export default function RegisterUser() {
           />
 
           <PasswordField
-            placeholder="Confirme sua senha"
+            placeholder={t("auth.confirmPassword")}
             value={confirmPassword}
             onChangeText={(text: string) => {
               setConfirmPassword(text);
@@ -167,18 +169,18 @@ export default function RegisterUser() {
             disabled={isLoading}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Cadastrar"
+            accessibilityLabel={t("auth.registerButton")}
             accessibilityState={{ disabled: isLoading }}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.white} size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>Cadastrar</Text>
+              <Text style={styles.saveButtonText}>{t("auth.registerButton")}</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} />
+        <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} t={t} />
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
@@ -305,18 +307,20 @@ const PasswordField = ({
 const FooterLinks = ({
   onGoToLogin,
   accent,
+  t,
 }: {
   onGoToLogin: () => void;
   accent: string;
+  t: (key: any) => string;
 }) => {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.footerContainer}>
       <Text style={[styles.footerText, themeStyles.subText]}>
-        Já tem uma conta?{" "}
+        {t("auth.hasAccount")}{" "}
       </Text>
-      <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7} accessible={true} accessibilityRole="button" accessibilityLabel="Entrar">
-        <Text style={[styles.loginText, { color: accent }]}>Entrar</Text>
+      <TouchableOpacity onPress={onGoToLogin} activeOpacity={0.7} accessible={true} accessibilityRole="button" accessibilityLabel={t("auth.signIn")}>
+        <Text style={[styles.loginText, { color: accent }]}>{t("auth.signIn")}</Text>
       </TouchableOpacity>
     </View>
   );

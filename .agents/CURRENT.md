@@ -77,6 +77,10 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup — largest file, 28KB) |
 | `src/frontend/content/themeContent.tsx` | Contexto de tema e cores dinâmicas (Monet) |
+| `src/frontend/content/i18nContext.tsx` | Contexto global de internacionalização, hook `useI18n()` e persistência de idioma |
+| `src/frontend/i18n/index.ts` | Registro dos 7 idiomas (PT, EN, ES, DE, RU, ZH, JA) e dicionários tipados |
+| `src/frontend/i18n/types.ts` | Schema TypeScript `TranslationSchema` e tipos de chaves de tradução |
+| `src/frontend/i18n/locales/` | Dicionários completos: `pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts` |
 | `src/frontend/content/authContext.tsx` | Contexto de autenticação do usuário |
 | `src/frontend/content/tabNavigationContext.tsx` | Contexto de navegação e sincronização dinâmica da direção da animação de abas (`slide_from_left` / `slide_from_right`) |
 | `src/frontend/components/Header.tsx` | Shared header component |
@@ -102,6 +106,7 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback — done (2026-08-15).
 - [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager (`npm run db:reload`, `npm run db:restart`) — done (2026-08-15).
 - [x] Fix scanner connection failure, tunnel resilience, database product persistence, and error propagation — done (2026-08-15).
+- [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) with AsyncStorage persistence and high-polish selection modal — done (2026-08-15).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

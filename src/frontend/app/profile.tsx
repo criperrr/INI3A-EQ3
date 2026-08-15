@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 
 const COLORS = {
   amber: "#FFC107",
@@ -48,6 +49,7 @@ const getGridColor = (intensity: number, isDark: boolean) => {
 export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles } = useTheme();
+  const { t } = useI18n();
 
   const handleLogout = () => {
     console.log("Mock Logout efetuado!");
@@ -61,14 +63,15 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ProfileHeader user={MOCK_USER} />
-        <StatsCard stats={MOCK_USER.stats} />
+        <StatsCard stats={MOCK_USER.stats} t={t} />
         <LevelProgress
           currentXp={MOCK_USER.currentXp}
           maxXp={MOCK_USER.maxXp}
           level={MOCK_USER.level}
+          t={t}
         />
-        <ContributionHistory contributions={MOCK_CONTRIBUTIONS} />
-        <LogoutButton onPress={handleLogout} />
+        <ContributionHistory contributions={MOCK_CONTRIBUTIONS} t={t} />
+        <LogoutButton onPress={handleLogout} t={t} />
       </ScrollView>
     </View>
   );
@@ -108,7 +111,13 @@ const ProfileHeader = ({ user }: { user: typeof MOCK_USER }) => {
   );
 };
 
-const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
+const StatsCard = ({
+  stats,
+  t,
+}: {
+  stats: typeof MOCK_USER.stats;
+  t: (key: any) => string;
+}) => {
   const { themeStyles } = useTheme();
   return (
     <View style={[styles.statsCard, themeStyles.card, themeStyles.border]}>
@@ -116,7 +125,7 @@ const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
         <Text style={[styles.statValue, themeStyles.text]}>
           {stats.following}
         </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Seguindo</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>{t("profile.rank")}</Text>
       </View>
       <View
         style={[
@@ -128,7 +137,7 @@ const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
         <Text style={[styles.statValue, themeStyles.text]}>
           {stats.products}
         </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Produtos</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>{t("products.title")}</Text>
       </View>
       <View
         style={[
@@ -140,7 +149,7 @@ const StatsCard = ({ stats }: { stats: typeof MOCK_USER.stats }) => {
         <Text style={[styles.statValue, themeStyles.text]}>
           {stats.followers}
         </Text>
-        <Text style={[styles.statLabel, themeStyles.subText]}>Seguidores</Text>
+        <Text style={[styles.statLabel, themeStyles.subText]}>{t("profile.points")}</Text>
       </View>
     </View>
   );
@@ -150,10 +159,12 @@ const LevelProgress = ({
   currentXp,
   maxXp,
   level,
+  t,
 }: {
   currentXp: number;
   maxXp: number;
   level: number;
+  t: (key: any) => string;
 }) => {
   const { themeStyles } = useTheme();
   const progressPercentage = (currentXp / maxXp) * 100;
@@ -161,7 +172,9 @@ const LevelProgress = ({
   return (
     <View style={styles.levelSection}>
       <View style={styles.levelInfoRow}>
-        <Text style={[styles.levelText, themeStyles.text]}>Levl. {level}</Text>
+        <Text style={[styles.levelText, themeStyles.text]}>
+          {t("profile.level")} {level}
+        </Text>
         <Text style={[styles.levelProgressNumber, themeStyles.subText]}>
           {currentXp}/{maxXp}
         </Text>
@@ -177,24 +190,26 @@ const LevelProgress = ({
 
 const ContributionHistory = ({
   contributions,
+  t,
 }: {
   contributions: number[][];
+  t: (key: any) => string;
 }) => {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={styles.achievementsSection}>
       <Text style={[styles.sectionTitle, themeStyles.text]}>
-        Minhas Conquistas
+        {t("profile.badges")}
       </Text>
 
       <View
         style={[styles.contributionsCard, themeStyles.card, themeStyles.border]}
       >
         <Text style={[styles.contributionsTitle, themeStyles.text]}>
-          Histórico de contribuições
+          {t("profile.contributionStats")}
         </Text>
         <Text style={[styles.contributionsSubtitle, themeStyles.subText]}>
-          Últimos 75 dias
+          {t("profile.reportedPrices")}
         </Text>
 
         <View style={styles.contributionGrid}>
@@ -217,7 +232,13 @@ const ContributionHistory = ({
   );
 };
 
-const LogoutButton = ({ onPress }: { onPress: () => void }) => {
+const LogoutButton = ({
+  onPress,
+  t,
+}: {
+  onPress: () => void;
+  t: (key: any) => string;
+}) => {
   const { themeStyles, isDark } = useTheme();
   return (
     <TouchableOpacity
@@ -230,7 +251,7 @@ const LogoutButton = ({ onPress }: { onPress: () => void }) => {
       onPress={onPress}
     >
       <Ionicons name="log-out-outline" size={20} color={COLORS.redLogout} />
-      <Text style={styles.logoutText}>Sair da Conta</Text>
+      <Text style={styles.logoutText}>{t("auth.logout")}</Text>
     </TouchableOpacity>
   );
 };

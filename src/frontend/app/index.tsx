@@ -13,6 +13,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -102,17 +103,17 @@ const MOCK_MARKETS: GridItemType[] = [
 const MOCK_BANNERS = [
   {
     id: "1",
-    title: "Legumes da Horta",
-    subtitle: "Desconto em itens selecionados",
-    linkText: "Ver Ofertas",
+    title: "Economia Inteligente",
+    subtitle: "Compare e economize até 35% na sua feira",
+    linkText: "Conferir",
     image:
-      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
   },
   {
     id: "2",
-    title: "Frutas Frescas",
-    subtitle: "Chegaram hoje do produtor",
-    linkText: "Aproveitar",
+    title: "Frutas da Estação",
+    subtitle: "Qualidade fresca perto de você",
+    linkText: "Ver Mais",
     image:
       "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&h=400&fit=crop",
   },
@@ -126,43 +127,44 @@ const MOCK_BANNERS = [
   },
 ];
 
-const ACTION_TABS: TabType[] = [
-  {
-    id: "markets",
-    label: "Mercados",
-    icon: "storefront-outline",
-    actionType: "view",
-    actionValue: "markets",
-  },
-  {
-    id: "products",
-    label: "Produtos",
-    icon: "cart-outline",
-    actionType: "view",
-    actionValue: "products",
-  },
-  {
-    id: "help",
-    label: "Ajuda",
-    icon: "help-buoy-outline",
-    actionType: "route",
-    actionValue: "/helpUser",
-  },
-  {
-    id: "about",
-    label: "Sobre Nós",
-    icon: "leaf-outline",
-    actionType: "route",
-    actionValue: "/aboutUs",
-  },
-];
-
 export default function Index() {
   const router = useRouter();
-  const { view } = useLocalSearchParams<{ view?: string }>(); // Pega os parâmetros da URL
+  const { view } = useLocalSearchParams<{ view?: string }>();
   const { themeStyles } = useTheme();
+  const { t } = useI18n();
 
   const [activeView, setActiveView] = useState("products");
+
+  const actionTabs: TabType[] = [
+    {
+      id: "markets",
+      label: t("map.title"),
+      icon: "storefront-outline",
+      actionType: "view",
+      actionValue: "markets",
+    },
+    {
+      id: "products",
+      label: t("products.title"),
+      icon: "cart-outline",
+      actionType: "view",
+      actionValue: "products",
+    },
+    {
+      id: "scanner",
+      label: t("navigation.scanner"),
+      icon: "barcode-outline",
+      actionType: "route",
+      actionValue: "/scannerProduct",
+    },
+    {
+      id: "settings",
+      label: t("settings.title"),
+      icon: "settings-outline",
+      actionType: "route",
+      actionValue: "/settings",
+    },
+  ];
 
   // Novo useEffect: Lê o parâmetro vindo da Sidebar e altera a view na hora
   useEffect(() => {
@@ -185,7 +187,7 @@ export default function Index() {
 
   const gridData = activeView === "products" ? MOCK_PRODUCTS : MOCK_MARKETS;
   const gridTitle =
-    activeView === "products" ? "Produtos" : "Mercados Próximos";
+    activeView === "products" ? t("products.title") : t("map.nearbyMarketsTitle");
 
   return (
     <ScrollView
@@ -193,7 +195,7 @@ export default function Index() {
       showsVerticalScrollIndicator={false}
     >
       <Banner />
-      <ActionMenu onTabPress={handleTabAction} />
+      <ActionMenu onTabPress={handleTabAction} tabs={actionTabs} />
       <ItemsGrid
         title={gridTitle}
         data={gridData}
@@ -297,11 +299,17 @@ const Banner = () => {
   );
 };
 
-const ActionMenu = ({ onTabPress }: { onTabPress: (tab: TabType) => void }) => {
+const ActionMenu = ({
+  onTabPress,
+  tabs,
+}: {
+  onTabPress: (tab: TabType) => void;
+  tabs: TabType[];
+}) => {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
-      {ACTION_TABS.map((tab) => (
+      {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.id}
           style={styles.tabButton}

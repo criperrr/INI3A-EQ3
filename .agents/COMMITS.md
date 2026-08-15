@@ -221,3 +221,46 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Scanner communicates reliably with backend and database, displays clear network alerts when connectivity is broken, and persists scanned items to PostgreSQL.
+
+---
+
+## [2026-08-15 12:15] - feat(i18n): full internationalization & localization engine supporting 7 major languages
+
+- **Description:** Implemented a robust, lightweight, and type-safe internationalization (i18n) and localization engine across the entire frontend supporting 7 major languages:
+  1. **Português (pt-BR)** 🇧🇷 (Default)
+  2. **English (en-US)** 🇺🇸
+  3. **Español (es-ES)** 🇪🇸
+  4. **Deutsch (de-DE)** 🇩🇪
+  5. **Русский (ru-RU)** 🇷🇺
+  6. **简体中文 (zh-CN)** 🇨🇳
+  7. **日本語 (ja-JP)** 🇯🇵
+
+  Key architectural additions:
+  - `src/frontend/i18n/types.ts`: Strictly typed `TranslationSchema` and dot-notation `TranslationKey` union types.
+  - `src/frontend/i18n/locales/{pt,en,es,de,ru,zh,ja}.ts`: Comprehensive translation dictionaries for all 7 languages covering common actions, navigation, authentication, scanner, settings, products, profile, maps, and errors.
+  - `src/frontend/content/i18nContext.tsx`: `I18nProvider` with `useI18n()` / `useTranslation()` hook, nested string lookup, parameter interpolation (`{param}`), missing-key fallback, and persistence in `AsyncStorage` (`@presco:language` + `app_settings` sync).
+  - `src/frontend/app/_layout.tsx`: Root level `<I18nProvider>` integration for immediate reactive updates without app restart.
+  - `src/frontend/app/settings.tsx`: Upgraded language selection from a basic alert to a full, high-polish Modal with flag icons, native and English names, active checkmark indicator, and haptic feedback.
+  - Translated screens and components (`login.tsx`, `registerUser.tsx`, `index.tsx`, `profile.tsx`, `scannerProduct.tsx`, `Sidebar.tsx`, etc.).
+- **Files Modified:**
+  - `src/frontend/i18n/types.ts` (new)
+  - `src/frontend/i18n/index.ts` (new)
+  - `src/frontend/i18n/locales/pt.ts` (new)
+  - `src/frontend/i18n/locales/en.ts` (new)
+  - `src/frontend/i18n/locales/es.ts` (new)
+  - `src/frontend/i18n/locales/de.ts` (new)
+  - `src/frontend/i18n/locales/ru.ts` (new)
+  - `src/frontend/i18n/locales/zh.ts` (new)
+  - `src/frontend/i18n/locales/ja.ts` (new)
+  - `src/frontend/content/i18nContext.tsx` (new)
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The application is now fully accessible in 7 international languages with instantaneous real-time language switching and persistent user preferences.

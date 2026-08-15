@@ -45,6 +45,7 @@ import {
   Code2,
 } from "lucide-react-native";
 import { useTheme, MONET_PRESETS } from "../content/themeContent";
+import { useI18n, SupportedLanguage } from "../content/i18nContext";
 import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
 
@@ -136,6 +137,16 @@ const SettingsScreen: React.FC = () => {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [clearCacheModalOpen, setClearCacheModalOpen] = useState(false);
+  const [languageModalOpen, setLanguageModalOpen] = useState(false);
+
+  // i18n
+  const {
+    language: currentLanguage,
+    setLanguage: setI18nLanguage,
+    languages,
+    languageInfo,
+    t,
+  } = useI18n();
 
   // Export Settings state
   const [generatedCode, setGeneratedCode] = useState("");
@@ -278,21 +289,7 @@ const SettingsScreen: React.FC = () => {
 
   const handleLanguageSelect = () => {
     triggerHaptic();
-    Alert.alert("Selecionar Idioma", "Escolha seu idioma preferido:", [
-      {
-        text: "Português (Brasil)",
-        onPress: () => handleSettingChange("language", "pt-BR"),
-      },
-      {
-        text: "English (US)",
-        onPress: () => handleSettingChange("language", "en-US"),
-      },
-      {
-        text: "Español",
-        onPress: () => handleSettingChange("language", "es-ES"),
-      },
-      { text: "Cancelar", style: "cancel" },
-    ]);
+    setLanguageModalOpen(true);
   };
 
   const handleReset = async () => {
@@ -587,13 +584,15 @@ const SettingsScreen: React.FC = () => {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Globe size={18} color={accent} />
               <View>
-                <Text style={[styles.rowLabel, themeStyles.text]}>Idioma</Text>
+                <Text style={[styles.rowLabel, themeStyles.text]}>
+                  {t("settings.language")}
+                </Text>
                 <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                  {settings.language}
+                  {languageInfo.flag} {languageInfo.nativeName}
                 </Text>
               </View>
             </View>
-            <Text style={[styles.linkText, { color: accent }]}>Alterar</Text>
+            <Text style={[styles.linkText, { color: accent }]}>{t("common.edit")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -1310,6 +1309,82 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal transparent visible={languageModalOpen} animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, themeStyles.card, { maxHeight: 540 }]}>
+            <View
+              style={[
+                styles.rowCenter,
+                { justifyContent: "space-between", marginBottom: 14 },
+              ]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Globe size={22} color={accent} style={{ marginRight: 8 }} />
+                <Text style={[styles.modalTitle, themeStyles.text, { marginBottom: 0 }]}>
+                  {t("settings.selectLanguage")}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setLanguageModalOpen(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <X size={20} color={themeStyles.subText.color} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.modalDescription, themeStyles.subText, { marginBottom: 14 }]}>
+              {t("settings.languageSubtitle")}
+            </Text>
+
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              {languages.map((item) => {
+                const isSelected = item.code === currentLanguage;
+                return (
+                  <TouchableOpacity
+                    key={item.code}
+                    style={[
+                      styles.languageOption,
+                      themeStyles.border,
+                      isSelected && {
+                        borderColor: accent,
+                        backgroundColor: `${accent}18`,
+                      },
+                    ]}
+                    onPress={async () => {
+                      triggerHaptic();
+                      await setI18nLanguage(item.code);
+                      handleSettingChange("language", item.code);
+                      showSavedIndicator();
+                      setTimeout(() => setLanguageModalOpen(false), 200);
+                    }}
+                  >
+                    <View style={styles.languageRowLeft}>
+                      <Text style={styles.flagEmoji}>{item.flag}</Text>
+                      <View>
+                        <Text
+                          style={[
+                            styles.languageNativeName,
+                            themeStyles.text,
+                            isSelected && { color: accent, fontWeight: "bold" },
+                          ]}
+                        >
+                          {item.nativeName}
+                        </Text>
+                        <Text style={[styles.languageEnglishName, themeStyles.subText]}>
+                          {item.englishName}
+                        </Text>
+                      </View>
+                    </View>
+                    {isSelected && <Check size={20} color={accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -1418,6 +1493,32 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
   modalDescription: { fontSize: 14, marginBottom: 16, lineHeight: 20 },
+  languageOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  languageRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  flagEmoji: {
+    fontSize: 24,
+  },
+  languageNativeName: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  languageEnglishName: {
+    fontSize: 12,
+    marginTop: 1,
+  },
   input: {
     width: "100%",
     borderWidth: 1,

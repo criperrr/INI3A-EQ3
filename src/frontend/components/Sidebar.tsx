@@ -9,22 +9,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent"; // Importação do tema
+import { useI18n } from "../content/i18nContext";
 
 const { width, height } = Dimensions.get("window");
 
 const COLORS = {
   overlay: "rgba(0, 0, 0, 0.4)",
 };
-
-const MENU_LINKS = [
-  { id: "account", label: "Minha Conta", route: "/profile" },
-  // Alteração aqui: enviando para a raiz com o parâmetro view
-  { id: "markets", label: "Mercados", route: "/?view=markets" },
-  { id: "products", label: "Produtos", route: "/?view=products" },
-  { id: "settings", label: "Configurações", route: "/settings" },
-  { id: "help", label: "Ajuda", route: "/helpUser" },
-  { id: "about", label: "Sobre Nós", route: "/aboutUs" },
-];
 
 interface SidebarProps {
   isOpen: boolean;
@@ -34,6 +25,16 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
+  const { t } = useI18n();
+
+  const menuLinks = [
+    { id: "account", label: t("navigation.profile"), route: "/profile" },
+    { id: "markets", label: t("map.title"), route: "/?view=markets" },
+    { id: "products", label: t("products.title"), route: "/?view=products" },
+    { id: "settings", label: t("settings.title"), route: "/settings" },
+    { id: "history", label: t("navigation.history"), route: "/profile" },
+    { id: "scanner", label: t("navigation.scanner"), route: "/scannerProduct" },
+  ];
 
   if (!isOpen) return null;
 
@@ -51,6 +52,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           themeStyles={themeStyles}
           router={router}
           onClose={onClose}
+          menuLinks={menuLinks}
         />
         <SidebarDecor isDark={isDark} />
       </View>
@@ -70,13 +72,15 @@ const NavigationLinks = ({
   themeStyles,
   router,
   onClose,
+  menuLinks,
 }: {
   themeStyles: any;
   router: any;
   onClose: () => void;
+  menuLinks: Array<{ id: string; label: string; route: string }>;
 }) => (
   <View style={styles.linksContainer}>
-    {MENU_LINKS.map((link) => (
+    {menuLinks.map((link) => (
       <TouchableOpacity
         key={link.id}
         style={styles.linkItem}
