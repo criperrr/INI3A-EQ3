@@ -127,6 +127,8 @@ const MOCK_BANNERS = [
   },
 ];
 
+import { fetchProducts } from "../services/productService";
+
 export default function Index() {
   const router = useRouter();
   const { view } = useLocalSearchParams<{ view?: string }>();
@@ -134,6 +136,7 @@ export default function Index() {
   const { t } = useI18n();
 
   const [activeView, setActiveView] = useState("products");
+  const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
 
   const actionTabs: TabType[] = [
     {
@@ -166,6 +169,24 @@ export default function Index() {
     },
   ];
 
+  useEffect(() => {
+    fetchProducts({ limit: 6 })
+      .then((res) => {
+        if (res.items && res.items.length > 0) {
+          const mapped: GridItemType[] = res.items.map((p) => ({
+            id: p.id || Math.random(),
+            name: p.name,
+            image:
+              p.imageUri ||
+              p.icon ||
+              "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+          }));
+          setRealProducts(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Novo useEffect: Lê o parâmetro vindo da Sidebar e altera a view na hora
   useEffect(() => {
     if (view === "markets" || view === "products") {
@@ -173,8 +194,19 @@ export default function Index() {
     }
   }, [view]);
 
-  const handleItemPress = () => {
-    router.push("/productDetails");
+  const handleItemPress = (item: GridItemType) => {
+    if (activeView === "products") {
+      router.push({
+        pathname: "/productDetails",
+        params: {
+          id: String(item.id),
+          name: item.name,
+          imageUri: item.image,
+        },
+      });
+    } else {
+      router.push("/map");
+    }
   };
 
   const handleTabAction = (tab: TabType) => {
@@ -185,7 +217,7 @@ export default function Index() {
     }
   };
 
-  const gridData = activeView === "products" ? MOCK_PRODUCTS : MOCK_MARKETS;
+  const gridData = activeView === "products" ? realProducts : MOCK_MARKETS;
   const gridTitle =
     activeView === "products" ? t("products.title") : t("map.nearbyMarketsTitle");
 
@@ -337,7 +369,7 @@ const ItemsGrid = ({
 }: {
   title: string;
   data: GridItemType[];
-  onItemPress: () => void;
+  onItemPress: (item: GridItemType) => void;
 }) => {
   const { themeStyles } = useTheme();
   return (
@@ -349,7 +381,7 @@ const ItemsGrid = ({
             key={item.id}
             style={[styles.productItem, themeStyles.card, themeStyles.border]}
             activeOpacity={0.8}
-            onPress={onItemPress}
+            onPress={() => onItemPress(item)}
           >
             <Image
               source={{ uri: item.image }}

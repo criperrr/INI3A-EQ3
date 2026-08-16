@@ -31,6 +31,7 @@ export default function RegisterProduct() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams<{
+    id?: string;
     ean?: string;
     barcode?: string;
     name?: string;
@@ -58,7 +59,20 @@ export default function RegisterProduct() {
   }, [targetEan, params.name]);
 
   const handleRegister = () => {
-    router.push("/productDetails");
+    const activeItem = displayProduct;
+    const formattedPrice = price.trim() ? (price.includes("R$") ? price.trim() : `R$ ${price.trim()}`) : activeItem.lastPrice;
+
+    router.push({
+      pathname: "/productDetails",
+      params: {
+        id: params.id || (product?.id ? String(product.id) : undefined),
+        barcode: targetEan || product?.barcode,
+        name: activeItem.name,
+        category: activeItem.category,
+        imageUri: activeItem.imageUri,
+        lastPrice: formattedPrice,
+      },
+    });
   };
 
   const scannedProduct = params.name ? {

@@ -4,13 +4,14 @@ import { connectRedis, redisClient } from "@/shared/redis/server";
 import { pool, testDatabaseConnection } from "@/shared/database/database";
 
 const PORT = process.env.SERVER_PORT || 3333;
+const HOST = process.env.SERVER_HOST || "0.0.0.0";
 
 async function bootstrap() {
   await connectRedis();
   await testDatabaseConnection();
 
-  const server = app.listen(PORT, () => {
-    console.log(`SERVER: Running on port ${PORT}`);
+  const server = app.listen(Number(PORT), HOST, () => {
+    console.log(`SERVER: Running on http://${HOST}:${PORT}`);
   });
 
   const shutdown = async (signal: string) => {

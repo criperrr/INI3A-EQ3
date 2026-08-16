@@ -48,10 +48,11 @@ export default function CustomRegisterProduct() {
             router.replace({
               pathname: "/registerProduct",
               params: {
+                id: created.id ? String(created.id) : undefined,
                 barcode: created.barcode || ean.trim(),
                 name: created.name,
                 category: created.category,
-                imageUri: created.imageUri,
+                imageUri: created.imageUri || undefined,
                 lastPrice: created.lastPrice,
               },
             });

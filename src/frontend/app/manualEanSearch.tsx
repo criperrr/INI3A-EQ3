@@ -13,7 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
-import { apiRequest } from "../services/api";
+import { fetchProductByEan } from "../services/productService";
 
 export default function ManualEanSearch() {
   const [ean, setEan] = useState("");
@@ -22,16 +22,37 @@ export default function ManualEanSearch() {
   const { themeStyles, accent, isDark } = useTheme();
 
   const handleSearch = async () => {
-    if (!ean.trim()) {
+    const trimmedEan = ean.trim();
+    if (!trimmedEan) {
       Alert.alert("Atenção", "Por favor, insira o código de barras.");
       return;
     }
 
     setLoading(true);
     try {
-      const product = await apiRequest(`/products/barcode/${ean}`);
+      const product = await fetchProductByEan(trimmedEan);
       setLoading(false);
-      
+
+      if (!product) {
+        Alert.alert(
+          "Produto Não Encontrado",
+          "O código informado não existe na base. Deseja cadastrá-lo manualmente?",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Cadastrar",
+              onPress: () => {
+                router.push({
+                  pathname: "/customRegisterProduct",
+                  params: { ean: trimmedEan },
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
+
       router.push({
         pathname: "/scannerConfirmation",
         params: {
@@ -39,28 +60,12 @@ export default function ManualEanSearch() {
           name: product?.name || "Produto Não Encontrado",
           imageUri: product?.imageUri || "https://via.placeholder.com/150",
           lastPrice: product?.lastPrice || "Preço não informado",
-          barcode: ean,
+          barcode: trimmedEan,
         },
       });
     } catch (error: any) {
       setLoading(false);
-      
-      Alert.alert(
-        "Produto Não Encontrado",
-        "O código informado não existe na base. Deseja cadastrá-lo manualmente?",
-        [
-          { text: "Cancelar", style: "cancel" },
-          { 
-            text: "Cadastrar", 
-            onPress: () => {
-              router.push({
-                pathname: "/customRegisterProduct",
-                params: { ean },
-              });
-            } 
-          }
-        ]
-      );
+      Alert.alert("Erro", error.message || "Erro de conexão ao buscar o produto.");
     }
   };
 

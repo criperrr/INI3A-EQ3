@@ -15,10 +15,16 @@ INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. U
 - `POST /auth/logout` — blacklist access token JTI (requireAuth)
 - `PATCH /auth/password` — change password with current password verification (requireAuth)
 - `DELETE /auth/account` — delete own account (requireAuth)
-- `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts)
-- `POST /products/custom` — create internal product without EAN
+- `GET /products` — list products (paginated, trigram/ilike search, category filter, sorting)
+- `GET /products/categories` — list distinct product categories
+- `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts fallback with auto-cache)
+- `GET /products/:id` — get product details with latest price, min/max/avg statistics and occurrence history
+- `GET /products/:id/history` — get price history timeline for charts
+- `POST /products/custom` / `POST /products` — create product with validation and conflict checks
+- `PUT /products/:id` / `PATCH /products/:id` — update product name, category, ean, ncm, icon
+- `DELETE /products/:id` — delete product from database
 
-**Frontend** is a React Native Expo app. Screens live in `src/frontend/app/` (Expo Router). All API calls go through `services/api.ts → apiRequest`.
+**Frontend** is a React Native Expo app. Screens live in `src/frontend/app/` (Expo Router). All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 
 ---
 
@@ -35,18 +41,18 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/backend/src/modules/auth/auth.routes.ts` | Auth Router with `requireAuth` on logout, password change and delete |
 | `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, logout, changePassword, deleteAccount |
 | `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, logout, changePassword, updateUser, deleteUser, getUserById |
-| `src/backend/src/modules/product/product.routes.ts` | Product Router — GET `/barcode/:ean`, POST `/custom` |
-| `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — getProductByBarcode, createCustomProduct (NOTE: uses raw JSON response, not `success()`) |
-| `src/backend/src/modules/product/product.service.ts` | `productService` singleton — getProductByBarcode (local then OpenFoodFacts), createCustomProduct |
+| `src/backend/src/modules/product/product.routes.ts` | Product Router — full REST CRUD (`GET /`, `GET /categories`, `GET /barcode/:ean`, `GET /:id`, `GET /:id/history`, `POST /custom`, `POST /`, `PUT /:id`, `PATCH /:id`, `DELETE /:id`) |
+| `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — getAllProducts, getProductById, getProductByBarcode, createCustomProduct, updateProduct, deleteProduct, getCategories, getPriceHistory |
+| `src/backend/src/modules/product/product.service.ts` | `productService` singleton — full CRUD logic, dynamic price computation, statistics, and OpenFoodFacts integration |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
 | `reload_services.sh` | Service manager script to auto-reconnect, check, and restart PostgreSQL & Redis (`npm run db:reload`, `npm run db:restart`) |
 | `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
-| `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts (HTTP fetch), getProductByEan, createProduct |
+| `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts, getProductByEan, getProductById, searchProducts, countProducts, createProduct, updateProduct, deleteProduct, getCategories, getLatestPriceForProduct, getPriceStats, getPriceHistory |
 | `src/backend/src/shared/database/repositories/market.repository.ts` | `MarketRepository` — createMarket, updateMarket, deleteMarket, getMarket, getAllMarkets, getMarketsByRadius (PostGIS `ST_DWithin`) |
-| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
+| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
 | `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, 500 for unknown errors |
 | `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth` — verifies Bearer JWT, checks Redis blacklist, populates `req.user` |
 | `src/backend/src/shared/redis/server.ts` | `redisClient`, `connectRedis`, helpers (`invalidateJWT`, `setRefreshToken`, `getUserIdByRefreshToken`) |
@@ -54,7 +60,8 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 | `src/backend/src/shared/helpers/response.helper.ts` | `success(data, code?)` → `{ success: true, code: 200, data }` |
 | `src/backend/src/shared/types/services.ts` | `CreateUser { name, email, password }`, `UpdateUser` |
 | `src/backend/src/shared/types/repositories.ts` | `CreateUser { name, email, passHash }`, `UpdateUser` |
-| `src/backend/src/shared/types/product.ts` | `ProductInfo`, `OpenFoodFactsResponse`, `OpenFoodFactsProduct` |
+| `src/backend/src/shared/types/product.ts` | `ProductDTO`, `ProductDetailDTO`, `SearchProductsQuery`, `PaginatedProductsResult`, `CreateProductDTO`, `UpdateProductDTO`, `PriceHistoryItem`, `ProductInfo` |
+| `start_project.sh` | Main dev environment launcher. Default: Tunneling (Localtunnel). Flag `--local-nat` / `npm run dev:local`: 100% direct LAN (Home Wi-Fi) |
 
 ### Frontend
 
@@ -62,17 +69,17 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 |---|---|
 | `src/frontend/services/api.ts` | `apiRequest<T>`, `ApiError`, `STORAGE_KEYS`, `BASE_URL` |
 | `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `changePassword`, `deleteAccount`, `AuthUser`, `AuthTokens` |
-| `src/frontend/services/productService.ts` | `fetchProductByEan(ean)` → `ProductData | null` |
+| `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
 | `src/frontend/app/_layout.tsx` | Root stack layout and theme provider |
-| `src/frontend/app/index.tsx` | Home screen |
+| `src/frontend/app/index.tsx` | Home screen with dynamic products loading and item navigation |
 | `src/frontend/app/login.tsx` | Login screen |
 | `src/frontend/app/registerUser.tsx` | Registration screen |
 | `src/frontend/app/scannerProduct.tsx` | Camera EAN barcode scanning |
 | `src/frontend/app/scannerConfirmation.tsx` | Confirm scanned EAN before submitting |
 | `src/frontend/app/customRegisterProduct.tsx` | Manual product entry without EAN |
 | `src/frontend/app/registerProduct.tsx` | Price submission for a product at a market |
-| `src/frontend/app/search.tsx` | Product text search |
-| `src/frontend/app/productDetails.tsx` | Product detail view |
+| `src/frontend/app/search.tsx` | Full live text & barcode search with debounce, category chips, pull-to-refresh, empty states, and product navigation |
+| `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, edit modal, and delete action |
 | `src/frontend/app/profile.tsx` | User profile and gamification points |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup — largest file, 28KB) |
@@ -107,6 +114,8 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager (`npm run db:reload`, `npm run db:restart`) — done (2026-08-15).
 - [x] Fix scanner connection failure, tunnel resilience, database product persistence, and error propagation — done (2026-08-15).
 - [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) with AsyncStorage persistence and high-polish selection modal — done (2026-08-15).
+- [x] Complete Product CRUD, search, category filtering, price statistics, history charts, and full frontend-backend integration — done (2026-08-16).
+- [x] Add `--local-nat` startup option for zero-latency direct home LAN development and Expo Go QR code scanning (`npm run dev:local`) — done (2026-08-16).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.

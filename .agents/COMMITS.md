@@ -264,3 +264,41 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** The application is now fully accessible in 7 international languages with instantaneous real-time language switching and persistent user preferences.
+
+---
+
+## [2026-08-16 14:05] - feat(products): complete product CRUD, full-text & barcode search, category filtering, price statistics, and interactive history charts
+
+- **Description:** Implemented end-to-end CRUD for products across backend and frontend:
+  1. **Backend API & Data Layer:** Added `GET /products` (paginated, ILIKE/trigram fuzzy search on name/EAN, category filter, custom sorting), `GET /products/categories`, `GET /products/:id` (with aggregated latest price, min, max, avg and occurrences count), `GET /products/:id/history`, `POST /products/custom` & `POST /products` (with EAN uniqueness conflict validation), `PUT /products/:id` & `PATCH /products/:id` (in-place update), and `DELETE /products/:id`. Added `NotFoundError (404)` subclass in `errors.ts`.
+  2. **Frontend Domain Service & Screens:** Expanded `productService.ts` with all typed methods. Replaced static mock list in `search.tsx` with live API search, 350ms input debounce, clear button, category chip filters, pull-to-refresh, loading and empty states, and product details navigation. Upgraded `productDetails.tsx` to read route params, dynamically fetch product data and price statistics, display visual proportional price history charts, support modal editing, and handle item deletion with user feedback. Refactored `manualEanSearch.tsx`, `customRegisterProduct.tsx`, `registerProduct.tsx`, and `index.tsx` to use the unified product domain service and pass correct product identifiers.
+- **Files Modified:**
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/errors/errors.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Product management, search, filtering, price aggregation, and detail views are now 100% operational with full stack integration.
+
+---
+
+## [2026-08-16 14:15] - feat(scripts): add --local-nat option for direct local network development and Expo Go QR scanning
+
+- **Description:** Added `--local-nat` (and aliases `--local`, `--nat`, `-l`) non-default startup flag to `start_project.sh` and npm shortcuts (`npm run dev:local`, `npm run dev:nat`). When passed, the launcher detects the computer's local LAN IP (e.g. `192.168.1.x`), bypasses localtunnel entirely, configures `EXPO_PUBLIC_API_URL` and `REACT_NATIVE_PACKAGER_HOSTNAME` to point directly to the LAN IP, and starts Expo Metro with `--lan`. This eliminates tunnel lag and provides instant, 100% responsive testing via Expo Go QR code scanning on the home Wi-Fi. Default mode remains tunneling for restricted/school networks. Explicitly bound backend server in `server.ts` to `0.0.0.0`.
+- **Files Modified:**
+  - `start_project.sh`
+  - `package.json`
+  - `src/backend/src/server.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers can run `npm run dev:local` at home for zero-latency direct Wi-Fi testing with Expo Go, while `npm run dev` continues to work with tunnels in school environments.

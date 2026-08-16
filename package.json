@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bash ./start_project.sh",
+    "dev:local": "bash ./start_project.sh --local-nat",
+    "dev:nat": "bash ./start_project.sh --local-nat",
+    "dev:tunnel": "bash ./start_project.sh --tunnel",
     "db:reload": "bash ./reload_services.sh",
     "db:restart": "bash ./reload_services.sh --restart",
     "db:status": "bash ./reload_services.sh --status",
