@@ -1,12 +1,12 @@
-import React from "react";
+import React, { memo } from "react";
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
   Dimensions,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 import { useI18n } from "../content/i18nContext";
@@ -22,7 +22,68 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+const LOGO_DARK = require("./images/logo-darkmode.png");
+const LOGO_LIGHT = require("./images/logo-preta.png");
+
+const SidebarDecor = memo(function SidebarDecor({ isDark }: { isDark: boolean }) {
+  return (
+    <View style={styles.ararinhaContainer}>
+      <Image
+        source={isDark ? LOGO_DARK : LOGO_LIGHT}
+        style={styles.watermarkLogo}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        transition={150}
+      />
+    </View>
+  );
+});
+
+const SidebarHeader = memo(function SidebarHeader({ themeStyles }: { themeStyles: any }) {
+  return (
+    <View style={styles.treeSection}>
+      <View style={styles.ipePlaceholder} />
+      <Text style={[styles.treeText, themeStyles.text]}>PResco</Text>
+    </View>
+  );
+});
+
+const NavigationLinks = memo(function NavigationLinks({
+  themeStyles,
+  router,
+  onClose,
+  menuLinks,
+}: {
+  themeStyles: any;
+  router: any;
+  onClose: () => void;
+  menuLinks: { id: string; label: string; route: string }[];
+}) {
+  return (
+    <View style={styles.linksContainer}>
+      {menuLinks.map((link) => (
+        <TouchableOpacity
+          key={link.id}
+          style={styles.linkItem}
+          activeOpacity={0.7}
+          onPress={() => {
+            onClose();
+            try {
+              if (router.canDismiss && router.canDismiss()) {
+                router.dismissAll();
+              }
+            } catch {}
+            router.replace(link.route as any);
+          }}
+        >
+          <Text style={[styles.linkText, themeStyles.text]}>{link.label}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+});
+
+const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
   const { t } = useI18n();
@@ -58,61 +119,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </View>
     </View>
   );
-}
+});
 
-// --- Componentes Internos ---
-const SidebarHeader = ({ themeStyles }: { themeStyles: any }) => (
-  <View style={styles.treeSection}>
-    <View style={styles.ipePlaceholder} />
-    <Text style={[styles.treeText, themeStyles.text]}>PResco</Text>
-  </View>
-);
-
-const NavigationLinks = ({
-  themeStyles,
-  router,
-  onClose,
-  menuLinks,
-}: {
-  themeStyles: any;
-  router: any;
-  onClose: () => void;
-  menuLinks: Array<{ id: string; label: string; route: string }>;
-}) => (
-  <View style={styles.linksContainer}>
-    {menuLinks.map((link) => (
-      <TouchableOpacity
-        key={link.id}
-        style={styles.linkItem}
-        activeOpacity={0.7}
-        onPress={() => {
-          onClose();
-          try {
-            if (router.canDismiss && router.canDismiss()) {
-              router.dismissAll();
-            }
-          } catch {}
-          router.replace(link.route as any);
-        }}
-      >
-        <Text style={[styles.linkText, themeStyles.text]}>{link.label}</Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-);
-
-const LOGO_DARK = require("./images/logo-darkmode.png");
-const LOGO_LIGHT = require("./images/logo-preta.png");
-
-const SidebarDecor = ({ isDark }: { isDark: boolean }) => (
-  <View style={styles.ararinhaContainer}>
-    <Image
-      source={isDark ? LOGO_DARK : LOGO_LIGHT}
-      style={styles.watermarkLogo}
-      resizeMode="contain"
-    />
-  </View>
-);
+export default Sidebar;
 
 // --- Estilos ---
 const styles = StyleSheet.create({

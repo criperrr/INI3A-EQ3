@@ -1,19 +1,19 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
   ScrollView,
-  Image,
   FlatList,
   Dimensions,
 } from "react-native";
-// Adicionado useLocalSearchParams na importação
+import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
+import { fetchProducts } from "../services/productService";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -119,53 +119,50 @@ const MOCK_BANNERS = [
   },
   {
     id: "3",
-    title: "Padaria Artesanal",
-    subtitle: "Pães quentinhos saindo agora",
-    linkText: "Comprar",
+    title: "Mercados Locais",
+    subtitle: "Encontre os melhores preços do seu bairro",
+    linkText: "Explorar",
     image:
-      "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=800&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&h=400&fit=crop",
   },
 ];
 
-import { fetchProducts } from "../services/productService";
-
-export default function Index() {
+export default function HomeScreen() {
   const router = useRouter();
-  const { view } = useLocalSearchParams<{ view?: string }>();
   const { themeStyles } = useTheme();
   const { t } = useI18n();
-
-  const [activeView, setActiveView] = useState("products");
+  const { view } = useLocalSearchParams<{ view?: string }>();
+  const [activeView, setActiveView] = useState<string>("products");
   const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
 
   const actionTabs: TabType[] = [
     {
-      id: "markets",
-      label: t("map.title"),
-      icon: "storefront-outline",
-      actionType: "view",
-      actionValue: "markets",
-    },
-    {
-      id: "products",
-      label: t("products.title"),
-      icon: "cart-outline",
-      actionType: "view",
-      actionValue: "products",
-    },
-    {
-      id: "scanner",
+      id: "1",
       label: t("navigation.scanner"),
       icon: "barcode-outline",
       actionType: "route",
       actionValue: "/scannerProduct",
     },
     {
-      id: "settings",
-      label: t("settings.title"),
-      icon: "settings-outline",
+      id: "2",
+      label: t("navigation.search"),
+      icon: "search-outline",
       actionType: "route",
-      actionValue: "/settings",
+      actionValue: "/search",
+    },
+    {
+      id: "3",
+      label: t("map.title"),
+      icon: "location-outline",
+      actionType: "view",
+      actionValue: "markets",
+    },
+    {
+      id: "4",
+      label: t("products.title"),
+      icon: "cube-outline",
+      actionType: "view",
+      actionValue: "products",
     },
   ];
 
@@ -187,14 +184,13 @@ export default function Index() {
       .catch(() => {});
   }, []);
 
-  // Novo useEffect: Lê o parâmetro vindo da Sidebar e altera a view na hora
   useEffect(() => {
     if (view === "markets" || view === "products") {
       setActiveView(view);
     }
   }, [view]);
 
-  const handleItemPress = (item: GridItemType) => {
+  const handleItemPress = useCallback((item: GridItemType) => {
     if (activeView === "products") {
       router.push({
         pathname: "/productDetails",
@@ -207,15 +203,15 @@ export default function Index() {
     } else {
       router.push("/map");
     }
-  };
+  }, [activeView, router]);
 
-  const handleTabAction = (tab: TabType) => {
+  const handleTabAction = useCallback((tab: TabType) => {
     if (tab.actionType === "view") {
       setActiveView(tab.actionValue);
     } else if (tab.actionType === "route") {
       router.push(tab.actionValue as any);
     }
-  };
+  }, [router]);
 
   const gridData = activeView === "products" ? realProducts : MOCK_MARKETS;
   const gridTitle =
@@ -237,7 +233,7 @@ export default function Index() {
   );
 }
 
-const Banner = () => {
+const Banner = memo(function Banner() {
   const { themeStyles, accent } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -261,13 +257,13 @@ const Banner = () => {
     return () => clearInterval(timer);
   }, [activeIndex]);
 
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / CARD_WIDTH);
     if (index !== activeIndex) {
       setActiveIndex(index);
     }
-  };
+  }, [activeIndex]);
 
   return (
     <View style={styles.bannerSection}>
@@ -297,7 +293,9 @@ const Banner = () => {
               <Image
                 source={{ uri: item.image }}
                 style={styles.bannerImage}
-                resizeMode="cover"
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
               />
               <Text style={[styles.bannerTitle, themeStyles.text]}>
                 {item.title}
@@ -329,15 +327,15 @@ const Banner = () => {
       </View>
     </View>
   );
-};
+});
 
-const ActionMenu = ({
+const ActionMenu = memo(function ActionMenu({
   onTabPress,
   tabs,
 }: {
   onTabPress: (tab: TabType) => void;
   tabs: TabType[];
-}) => {
+}) {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
@@ -360,9 +358,9 @@ const ActionMenu = ({
       ))}
     </View>
   );
-};
+});
 
-const ItemsGrid = ({
+const ItemsGrid = memo(function ItemsGrid({
   title,
   data,
   onItemPress,
@@ -370,7 +368,7 @@ const ItemsGrid = ({
   title: string;
   data: GridItemType[];
   onItemPress: (item: GridItemType) => void;
-}) => {
+}) {
   const { themeStyles } = useTheme();
   return (
     <View style={styles.productsSection}>
@@ -386,7 +384,9 @@ const ItemsGrid = ({
             <Image
               source={{ uri: item.image }}
               style={styles.productImage}
-              resizeMode="cover"
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
             />
             <Text
               style={[styles.productName, themeStyles.text]}
@@ -399,7 +399,7 @@ const ItemsGrid = ({
       </View>
     </View>
   );
-};
+});
 
 // --- Estilos ---
 const styles = StyleSheet.create({

@@ -62,3 +62,9 @@ export class ValidationError extends AppError {
     this.errors = errors;
   }
 }
+
+export class ForbiddenError extends AppError {
+  constructor(message: string = "Acesso negado. Permissões insuficientes.") {
+    super("FORBIDDEN", message, 403);
+  }
+}

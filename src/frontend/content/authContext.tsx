@@ -11,24 +11,58 @@ import {
   registerUser,
   logoutUser,
   getStoredTokens,
+  fetchUserProfile,
   type AuthUser,
+  type UserProfileData,
 } from "../services/auth";
 import { ApiError } from "../services/api";
 
 interface AuthContextData {
   user: AuthUser | null;
+  profile: UserProfileData | null;
+  isAdmin: boolean;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  refreshProfile: () => Promise<UserProfileData | null>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const fullProfile = await fetchUserProfile();
+      if (fullProfile) {
+        setProfile(fullProfile);
+        setUser((prev) => ({
+          ...prev,
+          id: fullProfile.id,
+          name: fullProfile.name,
+          email: fullProfile.email,
+          roleId: fullProfile.roleId,
+          roleName: fullProfile.roleName,
+          authority: fullProfile.authority,
+          isAdmin: fullProfile.isAdmin,
+          points: fullProfile.points,
+          level: fullProfile.level,
+          currentXp: fullProfile.currentXp,
+          maxXp: fullProfile.maxXp,
+          levelTitle: fullProfile.levelTitle,
+        }));
+        return fullProfile;
+      }
+    } catch (e) {
+      console.error("[AuthContext] Error refreshing profile:", e);
+    }
+    return null;
+  }, []);
 
   // Try to restore auth state from stored tokens on mount
   useEffect(() => {
@@ -37,8 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const tokens = await getStoredTokens();
 
         if (tokens.accessToken) {
-          // We have a token — try to decode the user from it.
-          // For simplicity, we decode the JWT payload client-side.
           const payload = decodeJwtPayload(tokens.accessToken);
 
           if (payload && payload.id) {
@@ -47,6 +79,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               name: payload.name,
               email: payload.email,
               roleId: payload.roleId,
+              isAdmin: payload.roleId === 5,
+            });
+
+            // Fetch complete profile asynchronously in background
+            fetchUserProfile().then((p) => {
+              if (p) {
+                setProfile(p);
+                setUser((prev) => ({
+                  ...prev,
+                  id: p.id,
+                  name: p.name,
+                  email: p.email,
+                  roleId: p.roleId,
+                  roleName: p.roleName,
+                  authority: p.authority,
+                  isAdmin: p.isAdmin,
+                  points: p.points,
+                  level: p.level,
+                  currentXp: p.currentXp,
+                  maxXp: p.maxXp,
+                  levelTitle: p.levelTitle,
+                }));
+              }
             });
           }
         }
@@ -63,12 +118,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const result = await loginUser(email, password);
     setUser(result.user);
+    const p = await fetchUserProfile();
+    if (p) {
+      setProfile(p);
+      setUser(p);
+    }
   }, []);
 
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const result = await registerUser(name, email, password);
       setUser(result.user);
+      const p = await fetchUserProfile();
+      if (p) {
+        setProfile(p);
+        setUser(p);
+      }
     },
     [],
   );
@@ -76,23 +141,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await logoutUser();
     setUser(null);
+    setProfile(null);
   }, []);
+
+  const isAdmin = !!(
+    user?.roleId === 5 ||
+    user?.isAdmin === true ||
+    profile?.isAdmin === true ||
+    (profile?.authority !== undefined && profile.authority >= 10)
+  );
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        profile,
+        isAdmin,
         isAuthenticated: !!user,
         isLoading,
         login,
         register,
         logout,
+        refreshProfile,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
+
 
 export function useAuth(): AuthContextData {
   const context = useContext(AuthContext);

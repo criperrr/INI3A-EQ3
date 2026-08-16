@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,8 +12,10 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
@@ -28,6 +29,7 @@ const DEFAULT_AVATAR =
   "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
 export default function RegisterUser() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { themeStyles, accent } = useTheme();
   const { t } = useI18n();
@@ -87,7 +89,13 @@ export default function RegisterUser() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: Math.max(insets.top + 16, 24),
+              paddingBottom: Math.max(insets.bottom + 24, 32),
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -203,6 +211,9 @@ const AvatarPicker = ({
         <Image
           source={{ uri: imageUri }}
           style={[styles.avatarImage, themeStyles.border]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
         />
         <TouchableOpacity
           style={[styles.cameraBadge, { backgroundColor: accent }]}

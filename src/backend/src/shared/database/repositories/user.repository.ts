@@ -46,9 +46,98 @@ class UserRepositoryClass {
       .where(eq(User.id, Number(id)));
   }
 
+  async incrementPoints(id: string | number, amount: number) {
+    const userObj = await this.getUserById(id);
+    if (!userObj) return null;
+
+    const newPoints = (userObj.points || 0) + amount;
+    const [updated] = await this.db
+      .update(User)
+      .set({ points: newPoints })
+      .returning({ id: User.id, points: User.points, roleId: User.roleId })
+      .where(eq(User.id, Number(id)));
+
+    // Check if new badges should be awarded automatically based on points
+    const eligibleBadges = await this.db.query.badge.findMany();
+    for (const b of eligibleBadges) {
+      if (newPoints >= b.minPoints) {
+        await this.awardBadge(id, b.id).catch(() => {});
+      }
+    }
+
+    return updated;
+  }
+
+  async getUserWithRole(id: string | number) {
+    const found = await this.db
+      .select({
+        id: User.id,
+        name: User.name,
+        email: User.email,
+        points: User.points,
+        roleId: User.roleId,
+        dangerFlag: User.dangerFlag,
+        birthdate: User.birthdate,
+        createdAt: User.createdAt,
+        updatedAt: User.updatedAt,
+        roleName: schema.role.name,
+        authority: schema.role.authority,
+        minPoints: schema.role.minPoints,
+      })
+      .from(User)
+      .leftJoin(schema.role, eq(User.roleId, schema.role.id))
+      .where(eq(User.id, Number(id)));
+
+    return found[0] || null;
+  }
+
+  async getUserBadges(userId: string | number) {
+    return this.db
+      .select({
+        id: schema.badge.id,
+        name: schema.badge.name,
+        icon: schema.badge.icon,
+        minPoints: schema.badge.minPoints,
+        awardedAt: schema.userBadge.awardedAt,
+      })
+      .from(schema.userBadge)
+      .innerJoin(schema.badge, eq(schema.userBadge.badgeId, schema.badge.id))
+      .where(eq(schema.userBadge.userId, Number(userId)));
+  }
+
+  async getAllBadges() {
+    return this.db.query.badge.findMany();
+  }
+
+  async awardBadge(userId: string | number, badgeId: number) {
+    return this.db
+      .insert(schema.userBadge)
+      .values({
+        userId: Number(userId),
+        badgeId,
+      })
+      .onConflictDoNothing();
+  }
+
+  async getUserRank(userId: string | number) {
+    const userObj = await this.getUserById(userId);
+    if (!userObj) return 1;
+
+    const allUsers = await this.db
+      .select({ id: User.id, points: User.points })
+      .from(User)
+      .orderBy(User.points);
+
+    // Sort descending by points
+    allUsers.sort((a, b) => b.points - a.points);
+    const rankIndex = allUsers.findIndex((u) => u.id === Number(userId));
+    return rankIndex >= 0 ? rankIndex + 1 : 1;
+  }
+
   async deleteUser(id: string | number) {
     return (await this.db.delete(User).where(eq(User.id, Number(id)))).rowCount;
   }
 }
 
 export const UserRepository = new UserRepositoryClass(db);
+

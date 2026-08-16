@@ -1,7 +1,7 @@
+import React, { memo } from "react";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
-import { useRouter } from "expo-router";
-import { View, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 import { useTabNavigation } from "../content/tabNavigationContext";
@@ -11,10 +11,37 @@ interface HeaderProps {
   onPressSettings?: () => void;
 }
 
-export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
+const LOGO_DARK = require("./images/logo-darkmode.png");
+const LOGO_LIGHT = require("./images/logo-presco.png");
+
+const LogoBrand = memo(function LogoBrand({
+  isDark,
+  onPress,
+}: {
+  isDark: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.logoContainer}
+      activeOpacity={0.7}
+      onPress={onPress}
+    >
+      <Image
+        source={isDark ? LOGO_DARK : LOGO_LIGHT}
+        style={styles.logoImage}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+        transition={150}
+        priority="high"
+      />
+    </TouchableOpacity>
+  );
+});
+
+const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
   const { themeStyles, isDark } = useTheme(); // Consumo do tema
-  const router = useRouter();
   const { navigateToTab } = useTabNavigation();
 
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
@@ -51,23 +78,9 @@ export default function Header({ onPressMenu, onPressSettings }: HeaderProps) {
       </TouchableOpacity>
     </View>
   );
-}
+});
 
-const LOGO_DARK = require("./images/logo-darkmode.png");
-const LOGO_LIGHT = require("./images/logo-presco.png");
-
-const LogoBrand = ({ isDark, onPress }: { isDark: boolean; onPress: () => void }) => (
-  <TouchableOpacity 
-    style={styles.logoContainer} 
-    activeOpacity={0.7} 
-    onPress={onPress}
-  >
-    <Image
-      source={isDark ? LOGO_DARK : LOGO_LIGHT}
-      style={styles.logoImage}
-    />
-  </TouchableOpacity>
-);
+export default Header;
 
 const styles = StyleSheet.create({
   container: {
@@ -89,6 +102,5 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 60,
     height: 60,
-    resizeMode: "contain",
   },
 });

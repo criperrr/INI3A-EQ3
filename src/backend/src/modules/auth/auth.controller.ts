@@ -128,6 +128,16 @@ class AuthControllerClass {
       next(e);
     }
   }
+
+  async getMe(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.user;
+      const profile = await authService.getProfile(id);
+      return res.status(200).json(success(profile));
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const authController = new AuthControllerClass();

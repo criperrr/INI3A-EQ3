@@ -6,12 +6,14 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 
 ## 1. Executive Summary
 
-INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts, and price reports (`ocurrency`) are submitted against a `market` and `product`. A moderation system (`cured`) and gamification (`points`, `badge`, `role`) are partially defined in the schema.
+INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts, and price reports (`ocurrency`) are submitted against a `market` and `product`. A complete role-based permission system differentiates **Administrators** (full delete/edit access across all products and price occurrences) and **Regular Users** (product analysis, market price suggestions, and community price auditing). Gamification tracks user points, unlocks badges, and levels up contributor ranks.
 
-**Backend** runs on port 3333 (Express). All routes are prefixed:
+**Backend** runs on port 3333 (Express, TypeScript, Drizzle ORM, Redis, PostGIS).
+Routes:
 - `POST /auth/register` — create user, returns tokens
 - `POST /auth/login` — authenticate, returns tokens
 - `POST /auth/refresh` — rotate refresh token
+- `GET /auth/me` — authenticated user profile with level, XP progress, stats, badges, and contribution grid (requireAuth)
 - `POST /auth/logout` — blacklist access token JTI (requireAuth)
 - `PATCH /auth/password` — change password with current password verification (requireAuth)
 - `DELETE /auth/account` — delete own account (requireAuth)
@@ -20,82 +22,86 @@ INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. U
 - `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts fallback with auto-cache)
 - `GET /products/:id` — get product details with latest price, min/max/avg statistics and occurrence history
 - `GET /products/:id/history` — get price history timeline for charts
-- `POST /products/custom` / `POST /products` — create product with validation and conflict checks
-- `PUT /products/:id` / `PATCH /products/:id` — update product name, category, ean, ncm, icon
-- `DELETE /products/:id` — delete product from database
+- `POST /products/custom` / `POST /products` — create product (+25 XP for user)
+- `PUT /products/:id` / `PATCH /products/:id` — update product (requireAdmin)
+- `DELETE /products/:id` — delete product from database (requireAdmin)
+- `POST /ocurrency` — submit price report occurrence (+15 XP, requireAuth)
+- `GET /ocurrency/product/:productId` — list price reports for a product across markets
+- `POST /ocurrency/:id/vote` — audit / vote on price reliability (+5 XP, requireAuth)
+- `PUT /ocurrency/:id` — update price occurrence (requireAuth, author or admin)
+- `DELETE /ocurrency/:id` — delete price occurrence (requireAuth, author or admin)
+- `GET /markets` — list available markets
+- `POST /markets` — register new market (requireAuth)
 
-**Frontend** is a React Native Expo app. Screens live in `src/frontend/app/` (Expo Router). All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
+**Frontend** is a React Native Expo app (SDK 54, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
+- `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
+- `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, and contribution activity heatmap.
+- `productDetails.tsx` displays market prices list, allows community price voting, and grants exclusive edit/delete controls to admins.
+- `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.
 
 ---
 
 ## 2. Navigation Index
 
-Direct relative paths from project root. Use `grep_search` on the symbol name to get line numbers before opening with `view_file`.
+Direct relative paths from project root.
 
 ### Backend
 
 | File | Key exports / purpose |
 |---|---|
-| `src/backend/src/app.ts` | Express app, mounts `/auth` and `/products` routers, `errorHandler` last |
-| `src/backend/src/server.ts` | `bootstrap()` — connects Redis, starts HTTP on `SERVER_PORT` |
-| `src/backend/src/modules/auth/auth.routes.ts` | Auth Router with `requireAuth` on logout, password change and delete |
-| `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, logout, changePassword, deleteAccount |
-| `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, logout, changePassword, updateUser, deleteUser, getUserById |
-| `src/backend/src/modules/product/product.routes.ts` | Product Router — full REST CRUD (`GET /`, `GET /categories`, `GET /barcode/:ean`, `GET /:id`, `GET /:id/history`, `POST /custom`, `POST /`, `PUT /:id`, `PATCH /:id`, `DELETE /:id`) |
-| `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — getAllProducts, getProductById, getProductByBarcode, createCustomProduct, updateProduct, deleteProduct, getCategories, getPriceHistory |
-| `src/backend/src/modules/product/product.service.ts` | `productService` singleton — full CRUD logic, dynamic price computation, statistics, and OpenFoodFacts integration |
+| `src/backend/src/app.ts` | Express app, mounts `/auth`, `/products`, `/ocurrency`, `/markets` routers, `errorHandler` last |
+| `src/backend/src/server.ts` | `bootstrap()` — connects Redis, verifies DB, executes idempotent seed, starts HTTP |
+| `src/backend/src/shared/database/seed.ts` | `seedDatabase()` — seeds roles, badges, markets, test admin (`admin@admin.org`/`admin`), regular test user |
+| `src/backend/src/modules/auth/auth.routes.ts` | Auth Router (`/register`, `/login`, `/refresh`, `/me`, `/logout`, `/password`, `/account`) |
+| `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, getMe, logout, changePassword, deleteAccount |
+| `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, getProfile, logout, changePassword, updateUser, deleteUser |
+| `src/backend/src/modules/product/product.routes.ts` | Product Router — REST CRUD with `requireAdmin` on PUT/PATCH/DELETE |
+| `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — list, getById, getByBarcode, createCustomProduct (+25 XP), updateProduct, deleteProduct |
+| `src/backend/src/modules/product/product.service.ts` | `productService` singleton — full CRUD logic, dynamic price computation, statistics, OpenFoodFacts |
+| `src/backend/src/modules/ocurrency/ocurrency.routes.ts` | Ocurrency Router (`GET /product/:productId`, `POST /`, `POST /:id/vote`, `PUT /:id`, `DELETE /:id`) |
+| `src/backend/src/modules/ocurrency/ocurrency.controller.ts` | `ocurrencyController` singleton — create, getByProduct, vote, update, delete |
+| `src/backend/src/modules/ocurrency/ocurrency.service.ts` | `ocurrencyService` singleton — occurrence management, XP rewards (+15 XP create, +5 XP vote), admin vs author permissions |
+| `src/backend/src/modules/market/market.routes.ts` | Market Router (`GET /`, `GET /:id`, `POST /`) |
+| `src/backend/src/modules/market/market.controller.ts` | `marketController` singleton — getAllMarkets, getMarketById, createMarket |
+| `src/backend/src/modules/market/market.service.ts` | `marketService` singleton — market listing and creation |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
-| `reload_services.sh` | Service manager script to auto-reconnect, check, and restart PostgreSQL & Redis (`npm run db:reload`, `npm run db:restart`) |
-| `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, updateUser, deleteUser |
+| `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, incrementPoints, getUserWithRole, getUserBadges, getAllBadges, awardBadge, getUserRank, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
-| `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts, getProductByEan, getProductById, searchProducts, countProducts, createProduct, updateProduct, deleteProduct, getCategories, getLatestPriceForProduct, getPriceStats, getPriceHistory |
+| `src/backend/src/shared/database/repositories/ocurrency.repository.ts` | `OcurrencyRepository` — create, findById, findByProduct, findByUser, countByUser, update, delete, vote, getUserContributionGrid |
+| `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts, getProductByEan, getProductById, searchProducts, countProducts, createProduct, updateProduct, deleteProduct, getCategories, getPriceStats, getPriceHistory |
 | `src/backend/src/shared/database/repositories/market.repository.ts` | `MarketRepository` — createMarket, updateMarket, deleteMarket, getMarket, getAllMarkets, getMarketsByRadius (PostGIS `ST_DWithin`) |
-| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
+| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `ForbiddenError (403)`, `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
 | `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, 500 for unknown errors |
-| `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth` — verifies Bearer JWT, checks Redis blacklist, populates `req.user` |
+| `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth`, `requireAdmin`, `requireMinAuthority` |
 | `src/backend/src/shared/redis/server.ts` | `redisClient`, `connectRedis`, helpers (`invalidateJWT`, `setRefreshToken`, `getUserIdByRefreshToken`) |
-| `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken` (48-byte hex), `verifyAccessToken`, `getTokenRemainingSeconds`. Expiry: access=15m, refresh=7d |
+| `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken`, `verifyAccessToken`, `getTokenRemainingSeconds` |
 | `src/backend/src/shared/helpers/response.helper.ts` | `success(data, code?)` → `{ success: true, code: 200, data }` |
-| `src/backend/src/shared/types/services.ts` | `CreateUser { name, email, password }`, `UpdateUser` |
-| `src/backend/src/shared/types/repositories.ts` | `CreateUser { name, email, passHash }`, `UpdateUser` |
-| `src/backend/src/shared/types/product.ts` | `ProductDTO`, `ProductDetailDTO`, `SearchProductsQuery`, `PaginatedProductsResult`, `CreateProductDTO`, `UpdateProductDTO`, `PriceHistoryItem`, `ProductInfo` |
-| `start_project.sh` | Main dev environment launcher. Default: Tunneling (Localtunnel). Flag `--local-nat` / `npm run dev:local`: 100% direct LAN (Home Wi-Fi) |
 
 ### Frontend
 
 | File | Key exports / purpose |
 |---|---|
 | `src/frontend/services/api.ts` | `apiRequest<T>`, `ApiError`, `STORAGE_KEYS`, `BASE_URL` |
-| `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `changePassword`, `deleteAccount`, `AuthUser`, `AuthTokens` |
+| `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `changePassword`, `deleteAccount`, `fetchUserProfile`, `AuthUser`, `UserProfileData` |
 | `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
+| `src/frontend/services/ocurrencyService.ts` | `submitPriceOccurrence`, `fetchProductOccurrences`, `voteOccurrence`, `updateOccurrence`, `deleteOccurrence` |
+| `src/frontend/services/marketService.ts` | `fetchMarkets`, `createMarket` |
 | `src/frontend/app/_layout.tsx` | Root stack layout and theme provider |
 | `src/frontend/app/index.tsx` | Home screen with dynamic products loading and item navigation |
-| `src/frontend/app/login.tsx` | Login screen |
+| `src/frontend/app/login.tsx` | Login screen with Expo Go / Dev detection and 1-tap quick login for `admin@admin.org` and regular test user |
 | `src/frontend/app/registerUser.tsx` | Registration screen |
 | `src/frontend/app/scannerProduct.tsx` | Camera EAN barcode scanning |
 | `src/frontend/app/scannerConfirmation.tsx` | Confirm scanned EAN before submitting |
 | `src/frontend/app/customRegisterProduct.tsx` | Manual product entry without EAN |
-| `src/frontend/app/registerProduct.tsx` | Price submission for a product at a market |
+| `src/frontend/app/registerProduct.tsx` | Price submission for a product at a selected market (+15 XP reward) |
 | `src/frontend/app/search.tsx` | Full live text & barcode search with debounce, category chips, pull-to-refresh, empty states, and product navigation |
-| `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, edit modal, and delete action |
-| `src/frontend/app/profile.tsx` | User profile and gamification points |
+| `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, market occurrences list with community voting, and admin-only edit/delete controls |
+| `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, admin banner, and logout |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
-| `src/frontend/app/map.native.tsx` | Native map (proximity market lookup — largest file, 28KB) |
-| `src/frontend/content/themeContent.tsx` | Contexto de tema e cores dinâmicas (Monet) |
-| `src/frontend/content/i18nContext.tsx` | Contexto global de internacionalização, hook `useI18n()` e persistência de idioma |
-| `src/frontend/i18n/index.ts` | Registro dos 7 idiomas (PT, EN, ES, DE, RU, ZH, JA) e dicionários tipados |
-| `src/frontend/i18n/types.ts` | Schema TypeScript `TranslationSchema` e tipos de chaves de tradução |
-| `src/frontend/i18n/locales/` | Dicionários completos: `pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts` |
-| `src/frontend/content/authContext.tsx` | Contexto de autenticação do usuário |
-| `src/frontend/content/tabNavigationContext.tsx` | Contexto de navegação e sincronização dinâmica da direção da animação de abas (`slide_from_left` / `slide_from_right`) |
-| `src/frontend/components/Header.tsx` | Shared header component |
-| `src/frontend/components/Footer.tsx` | Shared footer/nav component |
-| `src/frontend/components/Sidebar.tsx` | Sidebar component |
-| `src/frontend/components/SwipeTabNavigator.tsx` | Gesture handler wrapper para transição horizontal estilo TikTok entre as 5 abas principais |
-| `src/frontend/components/productCard.tsx` | Product card component |
-| `.agents/DESIGN.md` | UI design token spec — `useTheme()` keys, typography, spacing, component rules |
+| `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
+| `src/frontend/content/authContext.tsx` | `AuthProvider`, `useAuth()` with `user`, `profile`, `isAdmin`, `refreshProfile()` |
 
 ---
 
@@ -104,22 +110,16 @@ Direct relative paths from project root. Use `grep_search` on the symbol name to
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
 - [x] Frontend HTTP abstraction (`apiRequest`) with auto-refresh on 401.
 - [x] Agent guidelines (`AGENTS.md`), project index (`CURRENT.md`), commit log (`COMMITS.md`).
-- [x] Align `productController` to use `success()` helper — done (2026-08-11).
-- [x] Fix `market.repository.ts` id/name swap in `updateMarket` — done (2026-08-11).
-- [x] Fix `getMarket`/`getAllMarkets` to use `ST_AsGeoJson` — done (2026-08-11).
-- [x] Replace direct `apiRequest` in scanner with `fetchProductByEan` domain service — done (2026-08-11).
-- [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics) — done (2026-08-15).
-- [x] Fix navigation screen stacking when switching tabs, footer home, and header logo — done (2026-08-15).
-- [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback — done (2026-08-15).
-- [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager (`npm run db:reload`, `npm run db:restart`) — done (2026-08-15).
-- [x] Fix scanner connection failure, tunnel resilience, database product persistence, and error propagation — done (2026-08-15).
-- [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) with AsyncStorage persistence and high-polish selection modal — done (2026-08-15).
-- [x] Complete Product CRUD, search, category filtering, price statistics, history charts, and full frontend-backend integration — done (2026-08-16).
-- [x] Add `--local-nat` startup option for zero-latency direct home LAN development and Expo Go QR code scanning (`npm run dev:local`) — done (2026-08-16).
+- [x] Align `productController` to use `success()` helper.
+- [x] Fix `market.repository.ts` and `getMarket`/`getAllMarkets` to use `ST_AsGeoJson`.
+- [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics).
+- [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback.
+- [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager.
+- [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+- [x] Complete Admin vs Regular User permission scheme, leveling and gamification (+15 XP price, +25 XP product, +5 XP vote), 100% dynamic profile screen without placeholders, Expo Go auto-detection with 1-tap admin login (`admin@admin.org`/`admin`), and occurrence submission across markets — done (2026-08-16).
+- [x] Full mobile native performance optimization suite (Phase 0 Audit, Android 13-16 Predictive Back & Edge-to-Edge insets, iOS pop transitions, Metro `inlineRequires` lazy loading, full migration to `expo-image` with `memory-disk` cache, `@shopify/flash-list`, and pure UI thread memoization) — done (2026-08-16).
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
-- [ ] Implement `ocurrency` (price report) submission endpoint and service.
 - [ ] Implement market proximity lookup in frontend map screen.
-- [ ] Add missing module routes and controllers for `market` and `ocurrency`.
 
 ---
 

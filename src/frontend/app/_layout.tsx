@@ -55,13 +55,16 @@ function LayoutContent() {
       )}
       <View style={styles.contentWrapper}>
         <SwipeTabNavigator>
-          <Stack screenOptions={{ 
-            headerShown: false, 
-            gestureEnabled: Platform.OS !== 'web', 
-            gestureDirection: 'horizontal',
-            animation: isMainTab ? 'none' : animationType,
-            fullScreenGestureEnabled: true
-          }} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: Platform.OS !== "web",
+              gestureDirection: "horizontal",
+              animation: isMainTab ? "none" : (Platform.OS === "android" ? "default" : animationType),
+              fullScreenGestureEnabled: Platform.OS === "ios",
+              animationDuration: 220,
+            }}
+          />
         </SwipeTabNavigator>
       </View>
       {!isAuthScreen && <Footer activeTab={getActiveTab()} />}

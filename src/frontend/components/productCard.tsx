@@ -1,5 +1,6 @@
-import React, { ReactNode } from "react";
-import { StyleSheet, View, Text, Image } from "react-native";
+import React, { ReactNode, memo } from "react";
+import { StyleSheet, View, Text } from "react-native";
+import { Image } from "expo-image";
 import { useTheme } from "../content/themeContent"; // Importação do tema
 
 interface ProductCardProps {
@@ -9,7 +10,7 @@ interface ProductCardProps {
   children?: ReactNode;
 }
 
-export default function ProductCard({
+const ProductCard = memo(function ProductCard({
   name,
   category,
   imageUri,
@@ -34,30 +35,40 @@ export default function ProductCard({
       <View style={styles.actionContainer}>{children}</View>
     </View>
   );
-}
+});
 
-// --- Componentes Internos ---
-const ProductImage = ({
+export default ProductCard;
+
+// --- Componentes Internos Memoizados ---
+const ProductImage = memo(function ProductImage({
   imageUri,
   themeStyles,
 }: {
   imageUri?: string;
   themeStyles: any;
-}) => (
-  <View style={[styles.imageContainer, themeStyles.inputBg]}>
-    {imageUri ? (
-      <Image source={{ uri: imageUri }} style={styles.productImage} />
-    ) : (
-      <View style={styles.imagePlaceholder}>
-        <Text style={[styles.placeholderText, themeStyles.subText]}>
-          Sem Imagem
-        </Text>
-      </View>
-    )}
-  </View>
-);
+}) {
+  return (
+    <View style={[styles.imageContainer, themeStyles.inputBg]}>
+      {imageUri ? (
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.productImage}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          transition={200}
+        />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Text style={[styles.placeholderText, themeStyles.subText]}>
+            Sem Imagem
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+});
 
-const ProductInfo = ({
+const ProductInfo = memo(function ProductInfo({
   name,
   category,
   themeStyles,
@@ -65,18 +76,20 @@ const ProductInfo = ({
   name: string;
   category?: string;
   themeStyles: any;
-}) => (
-  <View style={styles.infoContainer}>
-    {category && (
-      <Text style={[styles.productCategory, themeStyles.subText]}>
-        {category.toUpperCase()}
+}) {
+  return (
+    <View style={styles.infoContainer}>
+      {category && (
+        <Text style={[styles.productCategory, themeStyles.subText]}>
+          {category.toUpperCase()}
+        </Text>
+      )}
+      <Text style={[styles.productName, themeStyles.text]} numberOfLines={2}>
+        {name}
       </Text>
-    )}
-    <Text style={[styles.productName, themeStyles.text]} numberOfLines={2}>
-      {name}
-    </Text>
-  </View>
-);
+    </View>
+  );
+});
 
 // --- Estilos ---
 const styles = StyleSheet.create({

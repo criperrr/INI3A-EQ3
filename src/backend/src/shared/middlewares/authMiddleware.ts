@@ -1,7 +1,7 @@
 import type { NextFunction, Response } from "express";
 import { verifyAccessToken } from "@/shared/util/jwt";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
-import { UnauthorizedError } from "@/shared/errors/errors";
+import { UnauthorizedError, ForbiddenError } from "@/shared/errors/errors";
 
 export async function requireAuth(
   req: Api.Request,
@@ -53,3 +53,44 @@ export async function requireAuth(
     next(new UnauthorizedError("Token inválido ou expirado."));
   }
 }
+
+export async function requireAdmin(
+  req: Api.Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  return requireAuth(req, res, (err) => {
+    if (err) return next(err);
+    if (!req.user || req.user.roleId !== 5) {
+      return next(
+        new ForbiddenError("Acesso restrito para administradores."),
+      );
+    }
+    next();
+  });
+}
+
+export function requireMinAuthority(minAuthority: number) {
+  return async (req: Api.Request, res: Response, next: NextFunction) => {
+    return requireAuth(req, res, async (err) => {
+      if (err) return next(err);
+      if (!req.user) {
+        return next(new UnauthorizedError());
+      }
+      // Role 5 is super-admin
+      if (req.user.roleId === 5) return next();
+
+      // Authority mapping: 1 -> 0, 2 -> 1, 3 -> 2, 4 -> 3, 5 -> 10
+      const authorityMap: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 10 };
+      const currentAuthority = authorityMap[req.user.roleId] ?? 0;
+
+      if (currentAuthority < minAuthority) {
+        return next(
+          new ForbiddenError(`Permissão insuficiente. Nível de autoridade requerido: ${minAuthority}`),
+        );
+      }
+      next();
+    });
+  };
+}
+

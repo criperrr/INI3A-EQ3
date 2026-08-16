@@ -3,6 +3,8 @@ import cors from "cors";
 import { errorHandler } from "@/shared/middlewares/errorHandler";
 import authRouter from "@/modules/auth/auth.routes";
 import productRouter from "@/modules/product/product.routes";
+import ocurrencyRouter from "@/modules/ocurrency/ocurrency.routes";
+import marketRouter from "@/modules/market/market.routes";
 
 import { checkDatabaseHealth } from "@/shared/database/database";
 import { redisClient } from "@/shared/redis/server";
@@ -31,7 +33,10 @@ app.use("/api/v1", (_, res) => {
 
 app.use("/auth", authRouter);
 app.use("/products", productRouter);
+app.use("/ocurrency", ocurrencyRouter);
+app.use("/markets", marketRouter);
 
 app.use(errorHandler);
 
 export default app;
+

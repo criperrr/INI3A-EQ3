@@ -8,9 +8,9 @@ import {
     Modal,
     Pressable,
     ScrollView,
-    Image,
     Linking
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -484,6 +484,9 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark }:
                     <Image
                         source={{ uri: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=600&auto=format&fit=crop' }}
                         style={styles.marketImage}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={200}
                     />
                     <View style={styles.modalHeader}>
                         <Text style={[styles.modalTitle, themeStyles.text, { flex: 1 }]} numberOfLines={2}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, memo } from "react";
 import {
   View,
   StyleSheet,
@@ -6,12 +6,12 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
-  Image,
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
@@ -82,7 +82,7 @@ export default function SearchScreen() {
     }
     debounceTimer.current = setTimeout(() => {
       loadProducts(searchText, selectedCategory);
-    }, 350);
+    }, 300);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -94,7 +94,7 @@ export default function SearchScreen() {
     loadProducts(searchText, selectedCategory, true);
   }, [searchText, selectedCategory, loadProducts]);
 
-  const handleProductPress = (product: ProductData) => {
+  const handleProductPress = useCallback((product: ProductData) => {
     router.push({
       pathname: "/productDetails",
       params: {
@@ -106,11 +106,11 @@ export default function SearchScreen() {
         lastPrice: product.lastPrice || "Preço não informado",
       },
     });
-  };
+  }, [router]);
 
-  const handleCreateCustom = () => {
+  const handleCreateCustom = useCallback(() => {
     router.push("/customRegisterProduct");
-  };
+  }, [router]);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -195,9 +195,9 @@ export default function SearchScreen() {
   );
 }
 
-// --- Componentes Internos ---
+// --- Componentes Internos Memoizados ---
 
-const SearchBar = ({
+const SearchBar = memo(function SearchBar({
   value,
   onChangeText,
   onClear,
@@ -211,7 +211,7 @@ const SearchBar = ({
   accent: string;
   themeStyles: any;
   isDark: boolean;
-}) => {
+}) {
   const placeholderColor = isDark ? "#8B949E" : "#5A6B52";
 
   return (
@@ -233,9 +233,9 @@ const SearchBar = ({
       )}
     </View>
   );
-};
+});
 
-const CategoryFilterChips = ({
+const CategoryFilterChips = memo(function CategoryFilterChips({
   categories,
   selectedCategory,
   onSelectCategory,
@@ -249,7 +249,7 @@ const CategoryFilterChips = ({
   accent: string;
   themeStyles: any;
   isDark: boolean;
-}) => {
+}) {
   return (
     <View style={styles.categoriesWrapper}>
       <ScrollView
@@ -286,9 +286,63 @@ const CategoryFilterChips = ({
       </ScrollView>
     </View>
   );
-};
+});
 
-const ProductResultsGrid = ({
+const ProductCardItem = memo(function ProductCardItem({
+  product,
+  onPress,
+  themeStyles,
+  accent,
+}: {
+  product: ProductData;
+  onPress: (p: ProductData) => void;
+  themeStyles: any;
+  accent: string;
+}) {
+  const imageSource = product.imageUri || product.icon;
+
+  return (
+    <TouchableOpacity
+      style={[styles.productCard, themeStyles.card, themeStyles.border]}
+      activeOpacity={0.8}
+      onPress={() => onPress(product)}
+    >
+      <View style={[styles.productImageContainer, themeStyles.inputBg]}>
+        {imageSource ? (
+          <Image
+            source={{ uri: imageSource }}
+            style={styles.productImage}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={200}
+          />
+        ) : (
+          <View style={styles.placeholderIconContainer}>
+            <Ionicons name="cube-outline" size={32} color={accent} />
+          </View>
+        )}
+        {product.category && product.category !== "Sem Categoria" && (
+          <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
+            <Text style={styles.categoryBadgeText} numberOfLines={1}>
+              {product.category.toUpperCase()}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.productInfo}>
+        <Text style={[styles.productName, themeStyles.text]} numberOfLines={2}>
+          {product.name}
+        </Text>
+        <Text style={[styles.productPrice, { color: accent }]}>
+          {product.lastPrice || "Preço não informado"}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const ProductResultsGrid = memo(function ProductResultsGrid({
   products,
   onProductPress,
   themeStyles,
@@ -298,49 +352,21 @@ const ProductResultsGrid = ({
   onProductPress: (p: ProductData) => void;
   themeStyles: any;
   accent: string;
-}) => {
+}) {
   return (
     <View style={styles.gridContainer}>
-      {products.map((product) => {
-        const imageSource = product.imageUri || product.icon;
-        return (
-          <TouchableOpacity
-            key={product.id || product.barcode || product.name}
-            style={[styles.productCard, themeStyles.card, themeStyles.border]}
-            activeOpacity={0.8}
-            onPress={() => onProductPress(product)}
-          >
-            <View style={[styles.productImageContainer, themeStyles.inputBg]}>
-              {imageSource ? (
-                <Image source={{ uri: imageSource }} style={styles.productImage} resizeMode="contain" />
-              ) : (
-                <View style={styles.placeholderIconContainer}>
-                  <Ionicons name="cube-outline" size={32} color={accent} />
-                </View>
-              )}
-              {product.category && product.category !== "Sem Categoria" && (
-                <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
-                  <Text style={styles.categoryBadgeText} numberOfLines={1}>
-                    {product.category.toUpperCase()}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            <View style={styles.productInfo}>
-              <Text style={[styles.productName, themeStyles.text]} numberOfLines={2}>
-                {product.name}
-              </Text>
-              <Text style={[styles.productPrice, { color: accent }]}>
-                {product.lastPrice || "Preço não informado"}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+      {products.map((product) => (
+        <ProductCardItem
+          key={product.id || product.barcode || product.name}
+          product={product}
+          onPress={onProductPress}
+          themeStyles={themeStyles}
+          accent={accent}
+        />
+      ))}
     </View>
   );
-};
+});
 
 const EmptyResults = ({
   searchTerm,

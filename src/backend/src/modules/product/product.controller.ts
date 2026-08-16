@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { productService } from "./product.service";
+import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { success } from "@/shared/helpers/response.helper";
 import { ValidationError } from "@/shared/errors/errors";
 
@@ -88,6 +89,10 @@ class ProductControllerClass {
         ean,
         ncm,
       });
+
+      if ((req as any).user?.id) {
+        await UserRepository.incrementPoints((req as any).user.id, 25).catch(() => {});
+      }
 
       return res.status(201).json(success(product));
     } catch (e) {

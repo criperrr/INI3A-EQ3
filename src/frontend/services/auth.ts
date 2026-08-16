@@ -6,8 +6,48 @@ export interface AuthUser {
   name: string;
   email: string;
   roleId: number;
+  roleName?: string;
+  authority?: number;
+  isAdmin?: boolean;
+  points?: number;
+  level?: number;
+  currentXp?: number;
+  maxXp?: number;
+  levelTitle?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface BadgeItem {
+  id: number;
+  name: string;
+  icon: string | null;
+  minPoints: number;
+  isUnlocked: boolean;
+  awardedAt?: string | null;
+}
+
+export interface UserStats {
+  rank: number;
+  reportedPrices: number;
+  points: number;
+  badgesCount: number;
+}
+
+export interface UserProfileData extends AuthUser {
+  stats: UserStats;
+  badges: BadgeItem[];
+  contributionsGrid: number[][];
+  recentContributions: Array<{
+    id: number;
+    productId: number;
+    productName: string;
+    productIcon?: string | null;
+    marketId: number;
+    marketName: string;
+    value: string;
+    createdAt: string;
+  }>;
 }
 
 export interface AuthTokens {
@@ -15,6 +55,7 @@ export interface AuthTokens {
   refreshToken: string;
   user: AuthUser;
 }
+
 
 /**
  * Registers a new user and stores the returned tokens.
@@ -124,4 +165,19 @@ export async function deleteAccount(): Promise<void> {
     ]);
   }
 }
+
+/**
+  * Fetches the full profile of the authenticated user (points, level, badges, stats).
+  */
+export async function fetchUserProfile(): Promise<UserProfileData | null> {
+  try {
+    return await apiRequest<UserProfileData>("/auth/me", {
+      method: "GET",
+    });
+  } catch (error) {
+    console.error("[Auth] Error fetching user profile:", error);
+    return null;
+  }
+}
+
 

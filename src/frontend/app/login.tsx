@@ -14,11 +14,14 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
   const { t } = useI18n();
@@ -29,17 +32,25 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = async () => {
+  const isExpoGo =
+    Constants.appOwnership === "expo" ||
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    (Constants.executionEnvironment as string) === "storeClient" ||
+    __DEV__;
+
+  const handleLogin = async (overrideEmail?: string, overridePass?: string) => {
+    const targetEmail = overrideEmail || email;
+    const targetPassword = overridePass || password;
     setErrorMessage("");
 
-    if (!email.trim() || !password) {
+    if (!targetEmail.trim() || !targetPassword) {
       setErrorMessage(t("auth.nameRequired") || "Preencha todos os campos.");
       return;
     }
 
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(targetEmail.trim(), targetPassword);
       router.replace("/");
     } catch (error) {
       if (error instanceof ApiError) {
@@ -50,6 +61,12 @@ export default function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleQuickLogin = (quickEmail: string, quickPass: string) => {
+    setEmail(quickEmail);
+    setPassword(quickPass);
+    handleLogin(quickEmail, quickPass);
   };
 
   const handleGoToRegister = () => {
@@ -63,100 +80,140 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: Math.max(insets.top + 16, 24),
+              paddingBottom: Math.max(insets.bottom + 24, 32),
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View
-          style={[styles.formContainer, themeStyles.card, themeStyles.border]}
-        >
-          <Text style={[styles.welcomeText, themeStyles.text]}>
-            {t("auth.loginTitle")}
-          </Text>
-          <Text style={[styles.subtitleText, themeStyles.subText]}>
-            {t("auth.loginSubtitle")}
-          </Text>
+          {isExpoGo && (
+            <View style={[styles.devBox, themeStyles.card, themeStyles.border]}>
+              <View style={styles.devHeader}>
+                <Ionicons name="flash" size={16} color={accent} />
+                <Text style={[styles.devTitle, { color: accent }]}>Ambiente Expo Go / Desenvolvedor</Text>
+              </View>
+              <Text style={[styles.devDesc, themeStyles.subText]}>
+                Toque para entrar instantaneamente com o usuário de teste:
+              </Text>
+              <View style={styles.devButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.quickLoginBtn, { backgroundColor: accent }]}
+                  activeOpacity={0.8}
+                  onPress={() => handleQuickLogin("admin@admin.org", "admin")}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="shield-checkmark" size={16} color="#FFF" />
+                  <Text style={styles.quickLoginBtnText}>Admin (admin@admin.org)</Text>
+                </TouchableOpacity>
 
-          {errorMessage !== "" && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={18} color="#D32F2F" />
-              <Text style={styles.errorText}>{errorMessage}</Text>
+                <TouchableOpacity
+                  style={[styles.quickLoginBtnSecondary, themeStyles.inputBg, themeStyles.border]}
+                  activeOpacity={0.8}
+                  onPress={() => handleQuickLogin("usuario@presco.com", "user123")}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="person-outline" size={16} color={themeStyles.text.color} />
+                  <Text style={[styles.quickLoginBtnTextSecondary, themeStyles.text]}>Usuário Comum</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
-          <InputField
-            icon="mail-outline"
-            placeholder={t("auth.email")}
-            value={email}
-            onChangeText={(text: string) => {
-              setEmail(text);
-              setErrorMessage("");
-            }}
-            keyboardType="email-address"
-            themeStyles={themeStyles}
-            isDark={isDark}
-            editable={!isLoading}
-          />
-
-          <PasswordField
-            placeholder={t("auth.password")}
-            value={password}
-            onChangeText={(text: string) => {
-              setPassword(text);
-              setErrorMessage("");
-            }}
-            showPassword={showPassword}
-            toggleShowPassword={() => setShowPassword(!showPassword)}
-            themeStyles={themeStyles}
-            isDark={isDark}
-            editable={!isLoading}
-          />
-
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            activeOpacity={0.7}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={t("auth.forgotPassword")}
+          <View
+            style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
-            <Text style={[styles.forgotPasswordText, { color: accent }]} maxFontSizeMultiplier={2}>
-              {t("auth.forgotPassword")}
+            <Text style={[styles.welcomeText, themeStyles.text]}>
+              {t("auth.loginTitle")}
             </Text>
-          </TouchableOpacity>
+            <Text style={[styles.subtitleText, themeStyles.subText]}>
+              {t("auth.loginSubtitle")}
+            </Text>
 
-          <TouchableOpacity
-            style={[
-              styles.loginButton,
-              { backgroundColor: accent, shadowColor: accent },
-              isLoading && styles.loginButtonDisabled,
-            ]}
-            activeOpacity={0.8}
-            onPress={handleLogin}
-            disabled={isLoading}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={t("auth.loginButton")}
-            accessibilityState={{ disabled: isLoading }}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : (
-              <Text style={styles.loginButtonText}>{t("auth.loginButton")}</Text>
+            {errorMessage !== "" && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
             )}
-          </TouchableOpacity>
-        </View>
 
-        <FooterLinks
-          onGoToRegister={handleGoToRegister}
-          themeStyles={themeStyles}
-          accent={accent}
-          t={t}
-        />
+            <InputField
+              icon="mail-outline"
+              placeholder={t("auth.email")}
+              value={email}
+              onChangeText={(text: string) => {
+                setEmail(text);
+                setErrorMessage("");
+              }}
+              keyboardType="email-address"
+              themeStyles={themeStyles}
+              isDark={isDark}
+              editable={!isLoading}
+            />
+
+            <PasswordField
+              placeholder={t("auth.password")}
+              value={password}
+              onChangeText={(text: string) => {
+                setPassword(text);
+                setErrorMessage("");
+              }}
+              showPassword={showPassword}
+              toggleShowPassword={() => setShowPassword(!showPassword)}
+              themeStyles={themeStyles}
+              isDark={isDark}
+              editable={!isLoading}
+            />
+
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.forgotPassword")}
+            >
+              <Text style={[styles.forgotPasswordText, { color: accent }]} maxFontSizeMultiplier={2}>
+                {t("auth.forgotPassword")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                { backgroundColor: accent, shadowColor: accent },
+                isLoading && styles.loginButtonDisabled,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => handleLogin()}
+              disabled={isLoading}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.loginButton")}
+              accessibilityState={{ disabled: isLoading }}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>{t("auth.loginButton")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <FooterLinks
+            onGoToRegister={handleGoToRegister}
+            themeStyles={themeStyles}
+            accent={accent}
+            t={t}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
   );
 }
+
 
 // --- Componentes Internos ---
 
@@ -363,4 +420,63 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
   },
+  devBox: {
+    width: "100%",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  devHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  devTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  devDesc: {
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  devButtonsRow: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  quickLoginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  quickLoginBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  quickLoginBtnSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  quickLoginBtnTextSecondary: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });
+

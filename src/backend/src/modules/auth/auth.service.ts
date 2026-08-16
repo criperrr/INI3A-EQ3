@@ -1,5 +1,6 @@
 import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
+import { OcurrencyRepository } from "@/shared/database/repositories/ocurrency.repository";
 import { hash, compare } from "bcrypt";
 import {
   signAccessToken,
@@ -207,6 +208,93 @@ class AuthServiceClass {
     }
     return result;
   }
+
+  async getProfile(userId: number | string) {
+    const user = await UserRepository.getUserWithRole(userId);
+    if (!user) {
+      throw new UnauthorizedError("Usuário não encontrado.");
+    }
+
+    const points = user.points || 0;
+    const isSuperAdmin = user.roleId === 5 || (user.authority !== null && user.authority >= 10);
+
+    let level = 1;
+    let currentXp = points;
+    let maxXp = 100;
+    let levelTitle = "Iniciante";
+
+    if (isSuperAdmin) {
+      level = 99;
+      currentXp = points;
+      maxXp = 10000;
+      levelTitle = "Administrador Master";
+    } else if (points >= 1000) {
+      level = 5 + Math.floor((points - 1000) / 500);
+      currentXp = (points - 1000) % 500;
+      maxXp = 500;
+      levelTitle = "Guardião de Preços";
+    } else if (points >= 500) {
+      level = 4;
+      currentXp = points - 500;
+      maxXp = 500;
+      levelTitle = "Curador Sênior";
+    } else if (points >= 250) {
+      level = 3;
+      currentXp = points - 250;
+      maxXp = 250;
+      levelTitle = "Verificador Ativo";
+    } else if (points >= 100) {
+      level = 2;
+      currentXp = points - 100;
+      maxXp = 150;
+      levelTitle = "Contribuidor";
+    }
+
+    const userBadges = await UserRepository.getUserBadges(userId);
+    const allBadges = await UserRepository.getAllBadges();
+    const rankPosition = await UserRepository.getUserRank(userId);
+    const totalOccurrences = await OcurrencyRepository.countByUser(Number(userId));
+    const contributionGrid = await OcurrencyRepository.getUserContributionGrid(Number(userId));
+    const recentContributions = await OcurrencyRepository.findByUser(Number(userId), 5);
+
+    const badgesWithStatus = allBadges.map((b) => {
+      const awarded = userBadges.find((ub) => ub.id === b.id);
+      return {
+        id: b.id,
+        name: b.name,
+        icon: b.icon,
+        minPoints: b.minPoints,
+        isUnlocked: !!awarded || isSuperAdmin || points >= b.minPoints,
+        awardedAt: awarded?.awardedAt || null,
+      };
+    });
+
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roleId: user.roleId,
+      roleName: user.roleName || "default",
+      authority: user.authority ?? 0,
+      isAdmin: isSuperAdmin,
+      points,
+      level,
+      currentXp,
+      maxXp,
+      levelTitle,
+      stats: {
+        rank: rankPosition,
+        reportedPrices: totalOccurrences,
+        points: points,
+        badgesCount: badgesWithStatus.filter((b) => b.isUnlocked).length,
+      },
+      badges: badgesWithStatus,
+      contributionsGrid: contributionGrid,
+      recentContributions,
+      createdAt: user.createdAt,
+    };
+  }
 }
 
 export const authService = new AuthServiceClass();
+

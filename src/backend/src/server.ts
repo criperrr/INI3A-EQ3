@@ -2,6 +2,7 @@ import "dotenv/config";
 import app from "@/app";
 import { connectRedis, redisClient } from "@/shared/redis/server";
 import { pool, testDatabaseConnection } from "@/shared/database/database";
+import { seedDatabase } from "@/shared/database/seed";
 
 const PORT = process.env.SERVER_PORT || 3333;
 const HOST = process.env.SERVER_HOST || "0.0.0.0";
@@ -9,6 +10,8 @@ const HOST = process.env.SERVER_HOST || "0.0.0.0";
 async function bootstrap() {
   await connectRedis();
   await testDatabaseConnection();
+  await seedDatabase().catch((e) => console.error("SEED WARNING:", e));
+
 
   const server = app.listen(Number(PORT), HOST, () => {
     console.log(`SERVER: Running on http://${HOST}:${PORT}`);

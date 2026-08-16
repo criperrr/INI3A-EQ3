@@ -9,12 +9,12 @@ import {
   Alert,
   Modal,
   TextInput,
-  Image,
-  Dimensions,
 } from "react-native";
+import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useAuth } from "../content/authContext";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -23,8 +23,12 @@ import {
   ProductDetailData,
   PriceHistoryItem,
 } from "../services/productService";
-
-const { width } = Dimensions.get("window");
+import {
+  fetchProductOccurrences,
+  voteOccurrence,
+  deleteOccurrence,
+  PriceOccurrence,
+} from "../services/ocurrencyService";
 
 export default function ProductDetails() {
   const params = useLocalSearchParams<{
@@ -39,9 +43,12 @@ export default function ProductDetails() {
 
   const router = useRouter();
   const { themeStyles, accent, isDark } = useTheme();
+  const { isAdmin, user, refreshProfile } = useAuth();
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [occurrences, setOccurrences] = useState<PriceOccurrence[]>([]);
+  const [loadingOccurrences, setLoadingOccurrences] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -50,6 +57,16 @@ export default function ProductDetails() {
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
+
+  const loadOccurrences = useCallback(async (productId: number) => {
+    setLoadingOccurrences(true);
+    try {
+      const list = await fetchProductOccurrences(productId);
+      setOccurrences(list);
+    } finally {
+      setLoadingOccurrences(false);
+    }
+  }, []);
 
   const loadProductData = useCallback(async () => {
     setLoading(true);
@@ -77,6 +94,9 @@ export default function ProductDetails() {
         setEditName(data.name || "");
         setEditCategory(data.category || "");
         setEditEan(data.barcode || data.ean || "");
+        if (data.id) {
+          loadOccurrences(data.id);
+        }
       } else if (params.name) {
         const fallbackData: ProductDetailData = {
           id: targetId || undefined,
@@ -97,7 +117,7 @@ export default function ProductDetails() {
     } finally {
       setLoading(false);
     }
-  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice]);
+  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, loadOccurrences]);
 
   useEffect(() => {
     loadProductData();
@@ -115,6 +135,46 @@ export default function ProductDetails() {
         lastPrice: product?.lastPrice || params.lastPrice,
       },
     });
+  };
+
+  const handleVote = async (occId: number, verdict: boolean) => {
+    try {
+      const res = await voteOccurrence(occId, verdict);
+      Alert.alert(
+        "Voto Registrado",
+        `Obrigado por auditar! Você ganhou +${res.pointsEarned} XP.`,
+      );
+      if (product?.id) loadOccurrences(product.id);
+      refreshProfile();
+    } catch (err: any) {
+      Alert.alert("Erro ao votar", err.message || "Não foi possível registrar o voto.");
+    }
+  };
+
+  const handleDeleteOccurrence = (occId: number) => {
+    Alert.alert(
+      "Excluir Ocorrência",
+      "Tem certeza que deseja excluir esta ocorrência de preço?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteOccurrence(occId);
+              Alert.alert("Sucesso", "Ocorrência excluída com sucesso!");
+              if (product?.id) {
+                loadOccurrences(product.id);
+                loadProductData();
+              }
+            } catch (err: any) {
+              Alert.alert("Erro", err.message || "Não foi possível excluir a ocorrência.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleOpenEdit = () => {
@@ -161,8 +221,8 @@ export default function ProductDetails() {
     }
 
     Alert.alert(
-      "Excluir Produto",
-      `Tem certeza que deseja excluir "${product.name}"? Esta ação não pode ser desfeita.`,
+      "Excluir Produto (Admin)",
+      `Tem certeza que deseja excluir "${product.name}" de todo o sistema? Esta ação não pode ser desfeita.`,
       [
         { text: "Cancelar", style: "cancel" },
         {
@@ -182,11 +242,12 @@ export default function ProductDetails() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
   if (loading && !product) {
+
     return (
       <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
         <ActivityIndicator size="large" color={accent} />
@@ -218,9 +279,22 @@ export default function ProductDetails() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
+          {isAdmin && (
+            <View style={styles.adminTagBadge}>
+              <Ionicons name="shield-checkmark" size={14} color="#FFF" />
+              <Text style={styles.adminTagText}>PAINEL ADMINISTRADOR</Text>
+            </View>
+          )}
+
           <View style={[styles.imageWrapper, themeStyles.inputBg]}>
             {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.productImage} resizeMode="contain" />
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.productImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                transition={200}
+              />
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />
             )}
@@ -277,6 +351,79 @@ export default function ProductDetails() {
           {/* Price History Chart */}
           <PriceHistorySection history={history} accent={accent} themeStyles={themeStyles} />
 
+          {/* Market Occurrences List */}
+          <View style={[styles.occurrencesSection, themeStyles.card, themeStyles.border]}>
+            <View style={styles.occurrencesHeaderRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Ionicons name="storefront-outline" size={18} color={accent} />
+                <Text style={[styles.occurrencesTitle, themeStyles.text]}>Preços por Mercado</Text>
+              </View>
+              <Text style={[styles.occurrencesCountText, { color: accent }]}>
+                {occurrences.length} {occurrences.length === 1 ? "registro" : "registros"}
+              </Text>
+            </View>
+
+            {loadingOccurrences ? (
+              <ActivityIndicator size="small" color={accent} style={{ marginVertical: 12 }} />
+            ) : occurrences.length === 0 ? (
+              <View style={styles.noOccurrencesBox}>
+                <Text style={[styles.noOccurrencesText, themeStyles.subText]}>
+                  Nenhum preço específico por mercado informado ainda.
+                </Text>
+                <Text style={[styles.noOccurrencesSub, themeStyles.subText]}>
+                  Contribua sugerindo o preço em um mercado e ganhe +15 XP!
+                </Text>
+              </View>
+            ) : (
+              occurrences.map((occ) => (
+                <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
+                  <View style={styles.occurrenceMainCol}>
+                    <Text style={[styles.occurrenceMarketName, themeStyles.text]}>
+                      {occ.marketName || "Mercado Local"}
+                    </Text>
+                    <Text style={[styles.occurrenceValue, { color: accent }]}>
+                      R$ {occ.value}
+                    </Text>
+                    <Text style={[styles.occurrenceMeta, themeStyles.subText]}>
+                      Por {occ.userName || "Usuário"} • {new Date(occ.createdAt).toLocaleDateString("pt-BR")}
+                    </Text>
+                  </View>
+
+                  <View style={styles.occurrenceActionsCol}>
+                    <View style={styles.voteRow}>
+                      <TouchableOpacity
+                        style={[styles.voteBtn, themeStyles.card, themeStyles.border]}
+                        onPress={() => handleVote(occ.id, true)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="thumbs-up" size={12} color="#4CAF50" />
+                        <Text style={[styles.voteCount, { color: "#4CAF50" }]}>{occ.upvoteCount}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.voteBtn, themeStyles.card, themeStyles.border]}
+                        onPress={() => handleVote(occ.id, false)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="thumbs-down" size={12} color="#F44336" />
+                        <Text style={[styles.voteCount, { color: "#F44336" }]}>{occ.downvoteCount}</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {(isAdmin || user?.id === occ.userId) && (
+                      <TouchableOpacity
+                        style={styles.deleteOccBtn}
+                        onPress={() => handleDeleteOccurrence(occ.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#E53935" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity
@@ -285,35 +432,45 @@ export default function ProductDetails() {
               onPress={handleRegisterPrice}
             >
               <Ionicons name="pricetag-outline" size={20} color="#FFF" style={styles.btnIcon} />
-              <Text style={styles.primaryActionText}>Atualizar / Informar Preço</Text>
+              <Text style={styles.primaryActionText}>Sugerir / Atualizar Preço no Mercado</Text>
             </TouchableOpacity>
 
-            <View style={styles.secondaryActionsRow}>
-              {product.id && (
-                <TouchableOpacity
-                  style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
-                  activeOpacity={0.8}
-                  onPress={handleOpenEdit}
-                >
-                  <Ionicons name="create-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
-                  <Text style={[styles.secondaryActionText, themeStyles.text]}>Editar Produto</Text>
-                </TouchableOpacity>
-              )}
+            {isAdmin ? (
+              <View style={styles.secondaryActionsRow}>
+                {product.id && (
+                  <TouchableOpacity
+                    style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
+                    activeOpacity={0.8}
+                    onPress={handleOpenEdit}
+                  >
+                    <Ionicons name="create-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
+                    <Text style={[styles.secondaryActionText, themeStyles.text]}>Editar Produto</Text>
+                  </TouchableOpacity>
+                )}
 
-              {product.id && (
-                <TouchableOpacity
-                  style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
-                  activeOpacity={0.8}
-                  onPress={handleDeleteProduct}
-                >
-                  <Ionicons name="trash-outline" size={18} color="#E53935" style={styles.btnIcon} />
-                  <Text style={[styles.secondaryActionText, { color: "#E53935" }]}>Excluir</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                {product.id && (
+                  <TouchableOpacity
+                    style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
+                    activeOpacity={0.8}
+                    onPress={handleDeleteProduct}
+                  >
+                    <Ionicons name="trash-outline" size={18} color="#E53935" style={styles.btnIcon} />
+                    <Text style={[styles.secondaryActionText, { color: "#E53935" }]}>Excluir Produto</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.contributorInfoBox, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="sparkles" size={16} color={accent} />
+                <Text style={[styles.contributorInfoText, themeStyles.subText]}>
+                  Sua contribuição audita a base de preços e rende XP no seu nível!
+                </Text>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
+
 
       {/* Edit Product Modal */}
       <Modal visible={isEditModalVisible} animationType="slide" transparent>
@@ -754,5 +911,120 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
   },
+  adminTagBadge: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6A100",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+    zIndex: 10,
+  },
+  adminTagText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
+  occurrencesSection: {
+    width: "100%",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  occurrencesHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  occurrencesTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  occurrencesCountText: {
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  noOccurrencesBox: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  noOccurrencesText: {
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  noOccurrencesSub: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  occurrenceItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  occurrenceMainCol: {
+    flex: 1,
+  },
+  occurrenceMarketName: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  occurrenceValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginVertical: 2,
+  },
+  occurrenceMeta: {
+    fontSize: 11,
+  },
+  occurrenceActionsCol: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  voteRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  voteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
+  },
+  voteCount: {
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  deleteOccBtn: {
+    padding: 4,
+  },
+  contributorInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  contributorInfoText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16,
+  },
 });
+
 
