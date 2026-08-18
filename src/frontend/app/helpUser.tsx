@@ -10,57 +10,60 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
-
-const FAQ_DATA = [
-  {
-    id: "1",
-    question: "Como faço para realizar um pedido?",
-    answer:
-      "Basta navegar pela lista de produtos ou mercados, adicionar os itens desejados ao carrinho e seguir para a tela de finalização de compra.",
-  },
-  {
-    id: "2",
-    question: "Quais são as formas de pagamento aceitas?",
-    answer:
-      "Aceitamos cartões de crédito, débito, Pix e pagamento em dinheiro na hora da entrega.",
-  },
-  {
-    id: "3",
-    question: "Como posso acompanhar minha entrega?",
-    answer:
-      "Acesse a aba 'Meus Pedidos' no perfil para ver o status em tempo real do seu pedido.",
-  },
-  {
-    id: "4",
-    question: "O que fazer se faltar um item no pedido?",
-    answer:
-      "Entre em contato conosco através do suporte abaixo informando o número do pedido, e faremos o reembolso ou o reenvio do item.",
-  },
-];
-
-const CONTACT_OPTIONS = [
-  {
-    id: "whatsapp",
-    title: "Atendimento via WhatsApp",
-    subtitle: "Seg a Sex, das 08h às 18h",
-    icon: "logo-whatsapp",
-    color: "#25D366",
-    action: () => Linking.openURL("https://wa.me/5511999999999"),
-  },
-  {
-    id: "email",
-    title: "Enviar E-mail",
-    subtitle: "presco.oficial@gmail.com",
-    icon: "mail-outline",
-    color: "#007AFF",
-    action: () => Linking.openURL("mailto:presco.oficial@gmail.com"),
-  },
-];
+import { useI18n } from "../content/i18nContext";
 
 export default function HelpUser() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
+  const { t } = useI18n();
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+
+  const FAQ_DATA = [
+    {
+      id: "1",
+      question: t("help.faq1Question"),
+      answer: t("help.faq1Answer"),
+    },
+    {
+      id: "2",
+      question: t("help.faq2Question"),
+      answer: t("help.faq2Answer"),
+    },
+    {
+      id: "3",
+      question: t("help.faq3Question"),
+      answer: t("help.faq3Answer"),
+    },
+    {
+      id: "4",
+      question: t("help.faq4Question"),
+      answer: t("help.faq4Answer"),
+    },
+    {
+      id: "5",
+      question: t("help.faq5Question"),
+      answer: t("help.faq5Answer"),
+    },
+  ];
+
+  const CONTACT_OPTIONS = [
+    {
+      id: "whatsapp",
+      title: "WhatsApp Support",
+      subtitle: "suporte@presco.app",
+      icon: "logo-whatsapp",
+      color: "#25D366",
+      action: () => Linking.openURL("https://wa.me/5511999999999"),
+    },
+    {
+      id: "email",
+      title: t("help.contactSupport"),
+      subtitle: "suporte@presco.app",
+      icon: "mail-outline",
+      color: "#007AFF",
+      action: () => Linking.openURL("mailto:suporte@presco.app"),
+    },
+  ];
 
   const toggleFaq = (id: string) => {
     setExpandedFaq(expandedFaq === id ? null : id);
@@ -88,15 +91,14 @@ export default function HelpUser() {
             color={isDark ? "#F0E6D3" : "#1A2E1A"}
           />
         </TouchableOpacity>
-        <Text style={[styles.title, themeStyles.text]}>Central de Ajuda</Text>
+        <Text style={[styles.title, themeStyles.text]}>{t("help.title")}</Text>
 
-        {/* Removido o comentário inline fora da formatação ideal que pode gerar nós de texto */}
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, themeStyles.text]}>
-          Perguntas Frequentes
+          {t("help.faqSectionTitle")}
         </Text>
         <View
           style={[styles.faqContainer, themeStyles.card, themeStyles.border]}
@@ -137,7 +139,7 @@ export default function HelpUser() {
 
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, themeStyles.text]}>
-          Ainda precisa de ajuda?
+          {t("help.supportSectionTitle")}
         </Text>
         <View style={styles.contactContainer}>
           {CONTACT_OPTIONS.map((contact) => (

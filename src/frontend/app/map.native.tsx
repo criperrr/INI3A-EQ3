@@ -16,6 +16,7 @@ import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { fetchMarkets, MarketData } from "../services/marketService";
 
 const THEME_COLORS = {
@@ -23,11 +24,11 @@ const THEME_COLORS = {
     accent: "#F5B731",
 };
 
-const MARKET_TYPES = [
-    { label: "Todos os Mercados", value: "all" },
-    { label: "Supermercados", value: "supermarket" },
-    { label: "Mercados de Bairro / Conveniência", value: "convenience" },
-    { label: "Mercearias & Hortifruti", value: "grocery" },
+const getMarketTypes = (t: (key: any) => string) => [
+    { label: t("map.typeAll"), value: "all" },
+    { label: t("map.typeSupermarket"), value: "supermarket" },
+    { label: t("map.typeConvenience"), value: "convenience" },
+    { label: t("map.typeGrocery"), value: "grocery" },
 ];
 
 const MAX_DISTANCE_OPTIONS = [
@@ -37,9 +38,9 @@ const MAX_DISTANCE_OPTIONS = [
     { label: "10 km", value: 10000 },
 ];
 
-const OPERATING_HOURS_OPTIONS = [
-    { label: "Todos os Horários", value: "all" },
-    { label: "Com Horário Informado", value: "with_hours" },
+const getOperatingHoursOptions = (t: (key: any) => string) => [
+    { label: t("map.hoursAll"), value: "all" },
+    { label: t("map.hoursWithInfo"), value: "with_hours" },
 ];
 
 const OVERPASS_ENDPOINTS = [
@@ -72,9 +73,9 @@ interface MarketMarker {
     isBackendMarket?: boolean;
 }
 
-const formatOpeningHours = (hours: string | null | undefined): string => {
-    if (!hours) return "Horário de funcionamento não informado";
-    if (hours === "24/7") return "Aberto 24 horas";
+const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
+    if (!hours) return t ? t("map.hoursUnknown") : "Horário não informado";
+    if (hours === "24/7") return t ? t("map.open24Hours") : "24h";
 
     const daysTranslation: Record<string, string> = {
         Mo: "Seg", Tu: "Ter", We: "Qua", Th: "Qui", Fr: "Sex",
@@ -161,7 +162,6 @@ const fetchMarketsData = async (latitude: number, longitude: number, radius: num
                 return data;
             }
         } catch {
-            // Silently try next endpoint
         }
     }
 
@@ -171,6 +171,7 @@ const fetchMarketsData = async (latitude: number, longitude: number, radius: num
 
 export default function MapScreen() {
     const { themeStyles, isDark } = useTheme();
+    const { t } = useI18n();
     const mapRef = useRef<MapView>(null);
 
     const [appState, setAppState] = useState({ isLoading: true, error: null as string | null, isProcessing: false });
@@ -194,14 +195,12 @@ export default function MapScreen() {
                 return;
             }
 
-            // 1. Instant last known position (< 50ms)
             const lastKnown = await Location.getLastKnownPositionAsync();
             if (lastKnown) {
                 setUserLocation({ latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude });
                 setAppState(prev => ({ ...prev, isLoading: false }));
             }
 
-            // 2. Refine in background with getCurrentPositionAsync without blocking
             Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
                 .then(loc => {
                     if (loc) {
@@ -225,28 +224,24 @@ export default function MapScreen() {
         initializeUserLocation();
     }, [initializeUserLocation]);
 
-    // Fast initial load of local backend markets
     useEffect(() => {
+        let isMounted = true;
         if (!userLocation) return;
 
-        let isMounted = true;
-        fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: filters.maxDistance * 1.5 })
-            .then(markets => {
-                if (!isMounted || !markets || markets.length === 0) return;
-
-                const mapped: MarketMarker[] = [];
-                for (const m of markets) {
+        fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: filters.maxDistance * 1.5 }).then(res => {
+            if (!isMounted || !res || !Array.isArray(res)) return;
+            const mapped: MarketMarker[] = [];
+            for (const m of res) {
+                if (m.location) {
                     let lat = userLocation.latitude;
                     let lon = userLocation.longitude;
-                    if (m.location) {
-                        try {
-                            const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
-                            if (parsed?.coordinates) {
-                                lon = parsed.coordinates[0];
-                                lat = parsed.coordinates[1];
-                            }
-                        } catch {}
-                    }
+                    try {
+                        const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
+                        if (parsed?.coordinates) {
+                            lon = parsed.coordinates[0];
+                            lat = parsed.coordinates[1];
+                        }
+                    } catch {}
                     const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
                     mapped.push({
                         id: `backend_${m.id}`,
@@ -257,96 +252,83 @@ export default function MapScreen() {
                         isBackendMarket: true,
                     });
                 }
-                setBackendMarketsList(mapped);
-            })
-            .catch(() => {});
+            }
+            if (isMounted) setBackendMarketsList(mapped);
+        }).catch(() => {});
 
         return () => { isMounted = false; };
     }, [userLocation, filters.maxDistance]);
 
     useEffect(() => {
+        let isMounted = true;
         if (!userLocation) return;
 
-        const requiredRadius = Math.floor(filters.maxDistance * 1.2);
-        const isDataCached = mapData.type === filters.shopType && mapData.radius >= requiredRadius;
-
-        if (isDataCached) {
-            setAppState(prev => ({ ...prev, isLoading: false }));
-            return;
-        }
-
-        let isMounted = true;
-
-        const fetchRawMapData = async () => {
+        const timer = setTimeout(async () => {
             setAppState(prev => ({ ...prev, isProcessing: true }));
             try {
-                const data = await fetchMarketsData(userLocation.latitude, userLocation.longitude, requiredRadius, filters.shopType);
-                if (isMounted) {
-                    setMapData({ radius: requiredRadius, type: filters.shopType, elements: data.elements || [] });
-                    setAppState({ isLoading: false, error: null, isProcessing: false });
+                const data = await fetchMarketsData(userLocation.latitude, userLocation.longitude, filters.maxDistance, filters.shopType);
+                if (isMounted && data?.elements) {
+                    setMapData({
+                        radius: filters.maxDistance,
+                        type: filters.shopType,
+                        elements: data.elements
+                    });
                 }
             } catch {
-                if (isMounted) {
-                    setAppState({ isLoading: false, error: null, isProcessing: false });
-                }
+            } finally {
+                if (isMounted) setAppState(prev => ({ ...prev, isProcessing: false }));
             }
+        }, 300);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
         };
+    }, [userLocation, filters.maxDistance, filters.shopType]);
 
-        fetchRawMapData();
-        return () => { isMounted = false; };
-    }, [userLocation, filters.shopType, filters.maxDistance]);
+    // Merge Overpass + Backend Markets
+    const nearbyMarkets: MarketMarker[] = useMemo(() => {
+        if (!userLocation) return [];
 
-    const nearbyMarkets = useMemo(() => {
-        if (!userLocation) return backendMarketsList;
+        const overpassMarkers: MarketMarker[] = [];
+        for (const el of (mapData.elements || [])) {
+            const lat = el.lat || el.center?.lat;
+            const lon = el.lon || el.center?.lon;
+            if (!lat || !lon) continue;
 
-        const maxDistanceInKm = filters.maxDistance / 1000;
+            const name = el.tags?.name || el.tags?.brand || el.tags?.operator || t("map.marketDetails");
+            const straightDistance = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
 
-        const processedMarkers = (mapData.elements || []).reduce((acc, element) => {
-            const lat = element.type === 'node' ? element.lat : element.center?.lat;
-            const lon = element.type === 'node' ? element.lon : element.center?.lon;
-            if (!lat || !lon) return acc;
-
-            const distance = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
-            const matchesHoursFilter = filters.hoursOption !== "with_hours" || element.tags?.opening_hours;
-
-            if (distance <= maxDistanceInKm && matchesHoursFilter) {
-                acc.push({
-                    id: String(element.id),
-                    title: element.tags?.name || "Mercado / Loja",
-                    coordinate: { latitude: lat, longitude: lon },
-                    straightDistance: distance,
-                    routeDistance: distance,
-                    openingHours: element.tags?.opening_hours || null,
-                });
-            }
-            return acc;
-        }, [] as MarketMarker[]);
-
-        const combined = [...backendMarketsList, ...processedMarkers];
-        return combined.sort((a: MarketMarker, b: MarketMarker) => a.straightDistance - b.straightDistance);
-    }, [mapData, userLocation, filters.maxDistance, filters.hoursOption, backendMarketsList]);
-
-    useEffect(() => {
-        if (nearbyMarkets.length === 0) {
-            setVisibleMarkers([]);
-            return;
+            overpassMarkers.push({
+                id: `osm_${el.id}`,
+                title: name,
+                coordinate: { latitude: lat, longitude: lon },
+                straightDistance,
+                routeDistance: straightDistance,
+                openingHours: el.tags?.opening_hours,
+            });
         }
 
+        const all = [...backendMarketsList, ...overpassMarkers];
+
+        return all.filter(m => {
+            if (m.straightDistance * 1000 > filters.maxDistance) return false;
+            if (filters.hoursOption === "with_hours" && !m.openingHours) return false;
+            return true;
+        });
+    }, [userLocation, mapData.elements, backendMarketsList, filters, t]);
+
+    useEffect(() => {
         let isMounted = true;
-        // Instantly display markers using straight distance without waiting for OSRM
         setVisibleMarkers(nearbyMarkets);
-        setAppState(prev => ({ ...prev, isProcessing: false }));
 
-        // Background progressive enhancement with OSRM
-        const closestMarkets = nearbyMarkets.slice(0, 15);
+        if (!userLocation || nearbyMarkets.length === 0) return;
 
-        fetchDrivingDistances(userLocation!, closestMarkets).then(enrichedMarkets => {
-            if (isMounted && enrichedMarkets.length > 0) {
-                const enrichedIds = new Set(enrichedMarkets.map((m: MarketMarker) => m.id));
-                const remainingMarkets = nearbyMarkets.filter((m: MarketMarker) => !enrichedIds.has(m.id));
-
-                const finalMarkers = [...enrichedMarkets, ...remainingMarkets]
-                    .filter(m => (m.routeDistance * 1000) <= filters.maxDistance)
+        fetchDrivingDistances(userLocation, nearbyMarkets.slice(0, 15)).then((refined) => {
+            if (isMounted) {
+                const updatedIds = new Set(refined.map(m => m.id));
+                const remaining = nearbyMarkets.filter(m => !updatedIds.has(m.id));
+                const finalMarkers = [...refined, ...remaining]
                     .sort((a, b) => a.routeDistance - b.routeDistance);
 
                 setVisibleMarkers(finalMarkers);
@@ -354,7 +336,7 @@ export default function MapScreen() {
         });
 
         return () => { isMounted = false; };
-    }, [nearbyMarkets]);
+    }, [nearbyMarkets, userLocation]);
 
     const centerMapOnUser = () => {
         if (userLocation && mapRef.current) {
@@ -368,21 +350,21 @@ export default function MapScreen() {
 
     const navigateToMarket = (market: MarketMarker) => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${market.coordinate.latitude},${market.coordinate.longitude}`;
-        Linking.openURL(url).catch(() => alert("Não foi possível abrir o Google Maps."));
+        Linking.openURL(url).catch(() => alert(t("errors.networkError")));
     };
 
     if (appState.isLoading && !userLocation) {
-        return <LoadingScreen themeStyles={themeStyles} />;
+        return <LoadingScreen themeStyles={themeStyles} t={t} />;
     }
 
     if (appState.error && !userLocation) {
-        return <ErrorScreen error={appState.error} onRetry={initializeUserLocation} themeStyles={themeStyles} />;
+        return <ErrorScreen error={appState.error} onRetry={initializeUserLocation} themeStyles={themeStyles} t={t} />;
     }
 
     const getFilterLabel = (filterType: "type" | "distance" | "hours") => {
-        if (filterType === "type") return MARKET_TYPES.find(s => s.value === filters.shopType)?.label.split("/")[0] || "Tipo";
+        if (filterType === "type") return getMarketTypes(t).find(s => s.value === filters.shopType)?.label.split("/")[0] || t("map.marketType");
         if (filterType === "distance") return `${filters.maxDistance / 1000} km`;
-        if (filterType === "hours") return filters.hoursOption === "with_hours" ? "Com Horário" : "Horários";
+        if (filterType === "hours") return filters.hoursOption === "with_hours" ? t("map.hoursWithInfo") : t("map.operatingHours");
         return "";
     };
 
@@ -447,7 +429,7 @@ export default function MapScreen() {
                 {appState.isProcessing && (
                     <View style={styles.inlineLoader}>
                         <ActivityIndicator size="small" color={THEME_COLORS.accent} />
-                        <Text style={styles.inlineLoaderText}>Atualizando...</Text>
+                        <Text style={styles.inlineLoaderText}>{t("common.loading")}</Text>
                     </View>
                 )}
             </View>
@@ -459,6 +441,7 @@ export default function MapScreen() {
                 onUpdateFilters={(newFilters:any) => setFilters(prev => ({ ...prev, ...newFilters }))}
                 themeStyles={themeStyles}
                 isDark={isDark}
+                t={t}
             />
 
             <MarketDetailModal
@@ -467,25 +450,24 @@ export default function MapScreen() {
                 onNavigate={navigateToMarket}
                 themeStyles={themeStyles}
                 isDark={isDark}
+                t={t}
             />
         </View>
     );
 }
 
-// --- Subcomponentes de UI ---
-
-const LoadingScreen = ({ themeStyles }: { themeStyles: any }) => (
+const LoadingScreen = ({ themeStyles, t }: { themeStyles: any, t: (key: any) => string }) => (
     <View style={[styles.container, styles.centered, themeStyles.bg]}>
         <ActivityIndicator size="large" color={THEME_COLORS.accent} />
-        <Text style={[styles.loadingText, themeStyles.text]}>Preparando o mapa e rotas...</Text>
+        <Text style={[styles.loadingText, themeStyles.text]}>{t("common.loading")}</Text>
     </View>
 );
 
-const ErrorScreen = ({ error, onRetry, themeStyles }: { error: string, onRetry: () => void, themeStyles: any }) => (
+const ErrorScreen = ({ error, onRetry, themeStyles, t }: { error: string, onRetry: () => void, themeStyles: any, t: (key: any) => string }) => (
     <View style={[styles.container, styles.centered, themeStyles.bg]}>
         <Text style={[themeStyles.text, styles.errorText]}>{error}</Text>
         <TouchableOpacity onPress={onRetry} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Tentar Novamente</Text>
+            <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
         </TouchableOpacity>
     </View>
 );
@@ -501,19 +483,19 @@ const FilterButton = ({ icon, label, onPress, themeStyles, isDark }: any) => (
     </TouchableOpacity>
 );
 
-const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark }: any) => {
+const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark, t }: any) => {
     if (!activeModal) return null;
 
     const getModalTitle = () => {
-        if (activeModal === "type") return "Selecione o Tipo";
-        if (activeModal === "distance") return "Selecione a Distância Máxima";
-        return "Filtrar por Horário";
+        if (activeModal === "type") return t("map.marketType");
+        if (activeModal === "distance") return t("map.distanceRadius");
+        return t("map.operatingHours");
     };
 
     const getOptionsList = () => {
-        if (activeModal === "type") return MARKET_TYPES;
+        if (activeModal === "type") return getMarketTypes(t);
         if (activeModal === "distance") return MAX_DISTANCE_OPTIONS;
-        return OPERATING_HOURS_OPTIONS;
+        return getOperatingHoursOptions(t);
     };
 
     const handleSelectOption = (value: any) => {
@@ -540,7 +522,7 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
                         </TouchableOpacity>
                     </View>
                     <ScrollView showsVerticalScrollIndicator={false}>
-                        {getOptionsList().map((item) => {
+                        {getOptionsList().map((item: any) => {
                             const isSelected = getCurrentValue() === item.value;
                             return (
                                 <TouchableOpacity
@@ -560,7 +542,7 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
     );
 };
 
-const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark }: any) => {
+const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, t }: any) => {
     if (!market) return null;
 
     return (
@@ -585,13 +567,13 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark }:
                     <View style={styles.marketInfoRow}>
                         <Ionicons name="navigate-outline" size={22} color={THEME_COLORS.accent} />
                         <Text style={[styles.marketInfoText, themeStyles.text]}>
-                            A exatos {market.routeDistance.toFixed(2)} km de você
+                            {market.routeDistance.toFixed(2)} km {t("map.distanceRadius")}
                         </Text>
                     </View>
                     <View style={styles.marketInfoRow}>
                         <Ionicons name="time-outline" size={22} color={THEME_COLORS.accent} />
                         <Text style={[styles.marketInfoText, themeStyles.text]}>
-                            {formatOpeningHours(market.openingHours)}
+                            {formatOpeningHours(market.openingHours, t)}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -600,7 +582,7 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark }:
                         onPress={() => onNavigate(market)}
                     >
                         <Ionicons name="map" size={20} color="#fff" />
-                        <Text style={styles.routesButtonText}>Rotas</Text>
+                        <Text style={styles.routesButtonText}>{t("map.viewOnMap")}</Text>
                     </TouchableOpacity>
                 </Pressable>
             </Pressable>

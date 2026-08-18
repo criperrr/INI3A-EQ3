@@ -17,50 +17,46 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
 
-const FALLBACK_CATEGORIES = [
-  "Todos",
-  "Alimentos",
-  "Bebidas",
-  "Hortifruti",
-  "Padaria",
-  "Limpeza",
-  "Higiene",
-  "Laticínios",
-];
-
 export default function SearchScreen() {
+  const { themeStyles, accent, isDark } = useTheme();
+  const { t } = useI18n();
+  const router = useRouter();
+
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
-  const [categories, setCategories] = useState<string[]>(FALLBACK_CATEGORIES);
+  const [categories, setCategories] = useState<string[]>([t("search.filterAll")]);
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const router = useRouter();
-  const { themeStyles, accent, isDark } = useTheme();
+  const allCategoryLabel = t("search.filterAll");
 
   const loadCategories = useCallback(async () => {
     try {
       const remoteCategories = await fetchCategories();
       if (remoteCategories && remoteCategories.length > 0) {
-        const merged = ["Todos", ...Array.from(new Set([...remoteCategories, ...FALLBACK_CATEGORIES.slice(1)]))];
+        const merged = [allCategoryLabel, ...Array.from(new Set(remoteCategories))];
         setCategories(merged);
+      } else {
+        setCategories([allCategoryLabel]);
       }
     } catch {
-      // Use fallback categories
+      setCategories([allCategoryLabel]);
     }
-  }, []);
+  }, [allCategoryLabel]);
 
   const loadProducts = useCallback(
     async (searchTerm: string, category: string, isRefresh = false) => {
       if (!isRefresh) setLoading(true);
       try {
+        const isAll = category === allCategoryLabel || category === "Todos" || category === "All";
         const response = await fetchProducts({
           search: searchTerm.trim() || undefined,
-          category: category !== "Todos" ? category : undefined,
+          category: !isAll ? category : undefined,
           limit: 30,
         });
         setProducts(response.items || []);
@@ -71,7 +67,7 @@ export default function SearchScreen() {
         setRefreshing(false);
       }
     },
-    []
+    [allCategoryLabel]
   );
 
   useEffect(() => {
@@ -105,10 +101,10 @@ export default function SearchScreen() {
         name: product.name,
         category: product.category,
         imageUri: product.imageUri || product.icon || undefined,
-        lastPrice: product.lastPrice || "Preço não informado",
+        lastPrice: product.lastPrice || t("productDetails.noOccurrences"),
       },
     });
-  }, [router]);
+  }, [router, t]);
 
   const handleCreateCustom = useCallback(() => {
     router.push("/customRegisterProduct");
@@ -121,9 +117,10 @@ export default function SearchScreen() {
         onPress={handleProductPress}
         themeStyles={themeStyles}
         accent={accent}
+        t={t}
       />
     ),
-    [handleProductPress, themeStyles, accent]
+    [handleProductPress, themeStyles, accent, t]
   );
 
   const keyExtractor = useCallback(
@@ -136,9 +133,9 @@ export default function SearchScreen() {
     <View style={styles.headerContainer}>
       <View style={styles.headerRow}>
         <View>
-          <Text style={[styles.screenTitle, themeStyles.text]}>Pesquisar Produtos</Text>
+          <Text style={[styles.screenTitle, themeStyles.text]}>{t("search.title")}</Text>
           <Text style={[styles.screenSubtitle, themeStyles.subText]}>
-            Encontre itens e compare preços em mercados
+            {t("home.welcomeSubtitle")}
           </Text>
         </View>
         <TouchableOpacity
@@ -147,7 +144,7 @@ export default function SearchScreen() {
           onPress={handleCreateCustom}
         >
           <Ionicons name="add" size={20} color="#FFF" />
-          <Text style={styles.addCustomText}>Novo</Text>
+          <Text style={styles.addCustomText}>{t("products.customProductTitle").split(" ")[0]}</Text>
         </TouchableOpacity>
       </View>
 
@@ -158,6 +155,7 @@ export default function SearchScreen() {
         accent={accent}
         themeStyles={themeStyles}
         isDark={isDark}
+        t={t}
       />
 
       <CategoryFilterChips
@@ -172,7 +170,7 @@ export default function SearchScreen() {
       {loading && !refreshing && (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={accent} />
-          <Text style={[styles.loadingLabel, themeStyles.subText]}>Buscando produtos...</Text>
+          <Text style={[styles.loadingLabel, themeStyles.subText]}>{t("common.loading")}</Text>
         </View>
       )}
     </View>
@@ -186,6 +184,7 @@ export default function SearchScreen() {
       onScanBarcode={() => router.push("/scannerProduct")}
       themeStyles={themeStyles}
       accent={accent}
+      t={t}
     />
   ) : null;
 
@@ -230,6 +229,7 @@ const SearchBar = memo(function SearchBar({
   accent,
   themeStyles,
   isDark,
+  t,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -237,6 +237,7 @@ const SearchBar = memo(function SearchBar({
   accent: string;
   themeStyles: any;
   isDark: boolean;
+  t: (key: any) => string;
 }) {
   const placeholderColor = isDark ? "#8B949E" : "#5A6B52";
 
@@ -245,7 +246,7 @@ const SearchBar = memo(function SearchBar({
       <Ionicons name="search-outline" size={20} color={accent} style={styles.searchIcon} />
       <TextInput
         style={[styles.searchInput, themeStyles.text]}
-        placeholder="Buscar por nome ou código de barras..."
+        placeholder={t("search.placeholder")}
         placeholderTextColor={placeholderColor}
         value={value}
         onChangeText={onChangeText}
@@ -319,11 +320,13 @@ const ProductCardItem = memo(function ProductCardItem({
   onPress,
   themeStyles,
   accent,
+  t,
 }: {
   product: ProductData;
   onPress: (p: ProductData) => void;
   themeStyles: any;
   accent: string;
+  t: (key: any) => string;
 }) {
   const imageSource = product.imageUri || product.icon;
 
@@ -361,14 +364,12 @@ const ProductCardItem = memo(function ProductCardItem({
           {product.name}
         </Text>
         <Text style={[styles.productPrice, { color: accent }]}>
-          {product.lastPrice || "Preço não informado"}
+          {product.lastPrice || t("productDetails.noOccurrences")}
         </Text>
       </View>
     </TouchableOpacity>
   );
 });
-
-
 
 const EmptyResults = ({
   searchTerm,
@@ -377,6 +378,7 @@ const EmptyResults = ({
   onScanBarcode,
   themeStyles,
   accent,
+  t,
 }: {
   searchTerm: string;
   selectedCategory: string;
@@ -384,17 +386,18 @@ const EmptyResults = ({
   onScanBarcode: () => void;
   themeStyles: any;
   accent: string;
+  t: (key: any) => string;
 }) => {
   return (
     <View style={styles.emptyContainer}>
       <View style={[styles.emptyIconCircle, themeStyles.inputBg]}>
         <Ionicons name="search" size={44} color={accent} />
       </View>
-      <Text style={[styles.emptyTitle, themeStyles.text]}>Nenhum produto encontrado</Text>
+      <Text style={[styles.emptyTitle, themeStyles.text]}>{t("search.noResults")}</Text>
       <Text style={[styles.emptySubtitle, themeStyles.subText]}>
         {searchTerm
-          ? `Não encontramos resultados para "${searchTerm}"${selectedCategory !== "Todos" ? ` na categoria ${selectedCategory}` : ""}.`
-          : "Nenhum produto cadastrado nesta categoria ainda."}
+          ? t("search.noResultsSubtitle")
+          : t("home.noProducts")}
       </Text>
 
       <View style={styles.emptyActionsRow}>
@@ -404,7 +407,7 @@ const EmptyResults = ({
           onPress={onScanBarcode}
         >
           <Ionicons name="barcode-outline" size={18} color="#FFF" style={styles.btnIcon} />
-          <Text style={styles.emptyActionText}>Escanear Código</Text>
+          <Text style={styles.emptyActionText}>{t("scanner.title")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -413,7 +416,7 @@ const EmptyResults = ({
           onPress={onCreateCustom}
         >
           <Ionicons name="add-circle-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
-          <Text style={[styles.emptyActionText, themeStyles.text]}>Cadastrar Manual</Text>
+          <Text style={[styles.emptyActionText, themeStyles.text]}>{t("products.customProductTitle")}</Text>
         </TouchableOpacity>
       </View>
     </View>

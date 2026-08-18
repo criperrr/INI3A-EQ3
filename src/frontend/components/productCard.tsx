@@ -1,7 +1,8 @@
 import React, { ReactNode, memo } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import { Image } from "expo-image";
-import { useTheme } from "../content/themeContent"; // Importação do tema
+import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 
 interface ProductCardProps {
   name: string;
@@ -16,7 +17,7 @@ const ProductCard = memo(function ProductCard({
   imageUri,
   children,
 }: ProductCardProps) {
-  const { themeStyles } = useTheme(); // Consumo do tema
+  const { themeStyles } = useTheme();
 
   return (
     <View style={[styles.cardContainer, themeStyles.card, themeStyles.border]}>
@@ -47,6 +48,8 @@ const ProductImage = memo(function ProductImage({
   imageUri?: string;
   themeStyles: any;
 }) {
+  const { t } = useI18n();
+
   return (
     <View style={[styles.imageContainer, themeStyles.inputBg]}>
       {imageUri ? (
@@ -60,7 +63,7 @@ const ProductImage = memo(function ProductImage({
       ) : (
         <View style={styles.imagePlaceholder}>
           <Text style={[styles.placeholderText, themeStyles.subText]}>
-            Sem Imagem
+            {t("common.noImage")}
           </Text>
         </View>
       )}

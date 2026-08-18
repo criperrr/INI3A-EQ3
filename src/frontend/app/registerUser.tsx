@@ -100,95 +100,95 @@ export default function RegisterUser() {
           keyboardShouldPersistTaps="handled"
         >
           <View
-          style={[styles.formContainer, themeStyles.card, themeStyles.border]}
-        >
-          <Text style={[styles.welcomeText, themeStyles.text]}>
-            {t("auth.registerTitle")}
-          </Text>
-          <Text style={[styles.subtitleText, themeStyles.subText]}>
-            {t("auth.registerSubtitle")}
-          </Text>
-
-          {errorMessage !== "" && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={18} color="#D32F2F" />
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            </View>
-          )}
-
-          <AvatarPicker imageUri={DEFAULT_AVATAR} accent={accent} />
-
-          <InputField
-            icon="person-outline"
-            placeholder={t("auth.name")}
-            value={name}
-            onChangeText={(text: string) => {
-              setName(text);
-              clearError();
-            }}
-            editable={!isLoading}
-          />
-          <InputField
-            icon="mail-outline"
-            placeholder={t("auth.email")}
-            value={email}
-            onChangeText={(text: string) => {
-              setEmail(text);
-              clearError();
-            }}
-            keyboardType="email-address"
-            editable={!isLoading}
-          />
-
-          <PasswordField
-            placeholder={t("auth.password")}
-            value={password}
-            onChangeText={(text: string) => {
-              setPassword(text);
-              clearError();
-            }}
-            showPassword={showPassword}
-            toggleShowPassword={() => setShowPassword(!showPassword)}
-            editable={!isLoading}
-          />
-
-          <PasswordField
-            placeholder={t("auth.confirmPassword")}
-            value={confirmPassword}
-            onChangeText={(text: string) => {
-              setConfirmPassword(text);
-              clearError();
-            }}
-            showPassword={showConfirmPassword}
-            toggleShowPassword={() =>
-              setShowConfirmPassword(!showConfirmPassword)
-            }
-            editable={!isLoading}
-          />
-
-          <TouchableOpacity
-            style={[
-              styles.saveButton,
-              { backgroundColor: accent, shadowColor: accent },
-              isLoading && styles.saveButtonDisabled,
-            ]}
-            activeOpacity={0.8}
-            onPress={handleSaveUser}
-            disabled={isLoading}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={t("auth.registerButton")}
-            accessibilityState={{ disabled: isLoading }}
+            style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
-            ) : (
-              <Text style={styles.saveButtonText}>{t("auth.registerButton")}</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <Text style={[styles.welcomeText, themeStyles.text]}>
+              {t("auth.registerTitle")}
+            </Text>
+            <Text style={[styles.subtitleText, themeStyles.subText]}>
+              {t("auth.registerSubtitle")}
+            </Text>
 
-        <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} t={t} />
+            {errorMessage !== "" && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
+
+            <AvatarPicker imageUri={DEFAULT_AVATAR} accent={accent} />
+
+            <InputField
+              icon="person-outline"
+              placeholder={t("auth.name")}
+              value={name}
+              onChangeText={(text: string) => {
+                setName(text);
+                clearError();
+              }}
+              editable={!isLoading}
+            />
+            <InputField
+              icon="mail-outline"
+              placeholder={t("auth.email")}
+              value={email}
+              onChangeText={(text: string) => {
+                setEmail(text);
+                clearError();
+              }}
+              keyboardType="email-address"
+              editable={!isLoading}
+            />
+
+            <PasswordField
+              placeholder={t("auth.password")}
+              value={password}
+              onChangeText={(text: string) => {
+                setPassword(text);
+                clearError();
+              }}
+              showPassword={showPassword}
+              toggleShowPassword={() => setShowPassword(!showPassword)}
+              editable={!isLoading}
+            />
+
+            <PasswordField
+              placeholder={t("auth.confirmPassword")}
+              value={confirmPassword}
+              onChangeText={(text: string) => {
+                setConfirmPassword(text);
+                clearError();
+              }}
+              showPassword={showConfirmPassword}
+              toggleShowPassword={() =>
+                setShowConfirmPassword(!showConfirmPassword)
+              }
+              editable={!isLoading}
+            />
+
+            <TouchableOpacity
+              style={[
+                styles.saveButton,
+                { backgroundColor: accent, shadowColor: accent },
+                isLoading && styles.saveButtonDisabled,
+              ]}
+              activeOpacity={0.8}
+              onPress={handleSaveUser}
+              disabled={isLoading}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.registerButton")}
+              accessibilityState={{ disabled: isLoading }}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={COLORS.white} size="small" />
+              ) : (
+                <Text style={styles.saveButtonText}>{t("auth.registerButton")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} t={t} />
         </ScrollView>
       </KeyboardAvoidingView>
     </TouchableWithoutFeedback>
@@ -220,7 +220,7 @@ const AvatarPicker = ({
           activeOpacity={0.8}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Mudar foto de perfil"
+          accessibilityLabel="Change avatar"
         >
           <Ionicons name="camera" size={16} color={COLORS.white} />
         </TouchableOpacity>

@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useAuth } from "../content/authContext";
+import { useI18n } from "../content/i18nContext";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -44,6 +45,7 @@ export default function ProductDetails() {
   const router = useRouter();
   const { themeStyles, accent, isDark } = useTheme();
   const { isAdmin, user, refreshProfile } = useAuth();
+  const { t, language } = useI18n();
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,9 +79,9 @@ export default function ProductDetails() {
         id: targetId || undefined,
         barcode: targetBarcode || "",
         name: params.name,
-        category: params.category || "Sem Categoria",
+        category: params.category || t("common.uncategorized"),
         imageUri: params.imageUri || null,
-        lastPrice: params.lastPrice || "Preço não informado",
+        lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
         priceHistory: [],
       });
       setEditName(params.name);
@@ -172,35 +174,35 @@ export default function ProductDetails() {
     try {
       const res = await voteOccurrence(occId, verdict);
       Alert.alert(
-        "Voto Registrado",
-        `Obrigado por auditar! Você ganhou +${res.pointsEarned} XP.`,
+        t("common.success"),
+        t("productDetails.votedSuccess"),
       );
       if (product?.id) loadOccurrences(product.id);
       refreshProfile();
     } catch (err: any) {
-      Alert.alert("Erro ao votar", err.message || "Não foi possível registrar o voto.");
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
     }
   };
 
   const handleDeleteOccurrence = (occId: number) => {
     Alert.alert(
-      "Excluir Ocorrência",
-      "Tem certeza que deseja excluir esta ocorrência de preço?",
+      t("common.delete"),
+      t("productDetails.deleteOccurrenceConfirm"),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Excluir",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteOccurrence(occId);
-              Alert.alert("Sucesso", "Ocorrência excluída com sucesso!");
+              Alert.alert(t("common.success"), t("common.success"));
               if (product?.id) {
                 loadOccurrences(product.id);
                 loadProductData();
               }
             } catch (err: any) {
-              Alert.alert("Erro", err.message || "Não foi possível excluir a ocorrência.");
+              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
             }
           },
         },
@@ -218,12 +220,12 @@ export default function ProductDetails() {
 
   const handleSaveEdit = async () => {
     if (!editName.trim()) {
-      Alert.alert("Atenção", "O nome do produto é obrigatório.");
+      Alert.alert(t("common.warning"), t("auth.nameRequired"));
       return;
     }
 
     if (!product?.id) {
-      Alert.alert("Erro", "Este produto ainda não possui ID no banco para ser editado.");
+      Alert.alert(t("common.error"), t("errors.notFound"));
       return;
     }
 
@@ -237,9 +239,9 @@ export default function ProductDetails() {
 
       setProduct((prev) => (prev ? { ...prev, ...updated } : updated));
       setIsEditModalVisible(false);
-      Alert.alert("Sucesso", "Produto atualizado com sucesso!");
+      Alert.alert(t("common.success"), t("common.success"));
     } catch (err: any) {
-      Alert.alert("Erro ao atualizar", err.message || "Não foi possível atualizar o produto.");
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setSavingEdit(false);
     }
@@ -247,29 +249,29 @@ export default function ProductDetails() {
 
   const handleDeleteProduct = () => {
     if (!product?.id) {
-      Alert.alert("Aviso", "Este produto não pode ser excluído diretamente.");
+      Alert.alert(t("common.warning"), t("errors.notFound"));
       return;
     }
 
     Alert.alert(
-      "Excluir Produto (Admin)",
-      `Tem certeza que deseja excluir "${product.name}" de todo o sistema? Esta ação não pode ser desfeita.`,
+      t("productDetails.deleteProduct"),
+      t("productDetails.deleteProductConfirm"),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Excluir",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await deleteProduct(product.id!);
-              Alert.alert("Sucesso", "Produto excluído com sucesso!", [
+              Alert.alert(t("common.success"), t("common.success"), [
                 {
-                  text: "OK",
+                  text: t("common.ok"),
                   onPress: () => router.back(),
                 },
               ]);
             } catch (err: any) {
-              Alert.alert("Erro", err.message || "Não foi possível excluir o produto.");
+              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
             }
           },
         },
@@ -278,11 +280,10 @@ export default function ProductDetails() {
   };
 
   if (loading && !product) {
-
     return (
       <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
         <ActivityIndicator size="large" color={accent} />
-        <Text style={[styles.loadingText, themeStyles.subText]}>Carregando detalhes do produto...</Text>
+        <Text style={[styles.loadingText, themeStyles.subText]}>{t("common.loading")}</Text>
       </View>
     );
   }
@@ -291,12 +292,12 @@ export default function ProductDetails() {
     return (
       <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
         <Ionicons name="alert-circle-outline" size={64} color={accent} />
-        <Text style={[styles.errorTitle, themeStyles.text]}>Produto não encontrado</Text>
+        <Text style={[styles.errorTitle, themeStyles.text]}>{t("search.noResults")}</Text>
         <TouchableOpacity
           style={[styles.backBtn, { backgroundColor: accent }]}
           onPress={() => router.back()}
         >
-          <Text style={styles.backBtnText}>Voltar</Text>
+          <Text style={styles.backBtnText}>{t("common.back")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -313,7 +314,7 @@ export default function ProductDetails() {
           {isAdmin && (
             <View style={styles.adminTagBadge}>
               <Ionicons name="shield-checkmark" size={14} color="#FFF" />
-              <Text style={styles.adminTagText}>PAINEL ADMINISTRADOR</Text>
+              <Text style={styles.adminTagText}>{t("productDetails.adminActions").toUpperCase()}</Text>
             </View>
           )}
 
@@ -349,9 +350,9 @@ export default function ProductDetails() {
 
           {/* Last Price Highlight */}
           <View style={styles.priceHighlightBox}>
-            <Text style={[styles.lastPriceLabel, themeStyles.subText]}>Último Preço Registrado</Text>
+            <Text style={[styles.lastPriceLabel, themeStyles.subText]}>{t("productDetails.lastPrice")}</Text>
             <Text style={[styles.lastPriceValue, { color: accent }]}>
-              {product.lastPrice || "Preço não informado"}
+              {product.lastPrice || t("productDetails.noOccurrences")}
             </Text>
           </View>
 
@@ -360,19 +361,19 @@ export default function ProductDetails() {
             <View style={styles.statsRow}>
               {product.minPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>Mínimo</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.lowestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.minPrice}</Text>
                 </View>
               )}
               {product.avgPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>Médio</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.averagePrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.avgPrice}</Text>
                 </View>
               )}
               {product.maxPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>Máximo</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.highestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.maxPrice}</Text>
                 </View>
               )}
@@ -380,17 +381,17 @@ export default function ProductDetails() {
           )}
 
           {/* Price History Chart */}
-          <PriceHistorySection history={history} accent={accent} themeStyles={themeStyles} />
+          <PriceHistorySection history={history} accent={accent} themeStyles={themeStyles} t={t} />
 
           {/* Market Occurrences List */}
           <View style={[styles.occurrencesSection, themeStyles.card, themeStyles.border]}>
             <View style={styles.occurrencesHeaderRow}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Ionicons name="storefront-outline" size={18} color={accent} />
-                <Text style={[styles.occurrencesTitle, themeStyles.text]}>Preços por Mercado</Text>
+                <Text style={[styles.occurrencesTitle, themeStyles.text]}>{t("productDetails.marketPrices")}</Text>
               </View>
               <Text style={[styles.occurrencesCountText, { color: accent }]}>
-                {occurrences.length} {occurrences.length === 1 ? "registro" : "registros"}
+                {occurrences.length} {t("common.details").toLowerCase()}
               </Text>
             </View>
 
@@ -399,10 +400,10 @@ export default function ProductDetails() {
             ) : occurrences.length === 0 ? (
               <View style={styles.noOccurrencesBox}>
                 <Text style={[styles.noOccurrencesText, themeStyles.subText]}>
-                  Nenhum preço específico por mercado informado ainda.
+                  {t("productDetails.noOccurrences")}
                 </Text>
                 <Text style={[styles.noOccurrencesSub, themeStyles.subText]}>
-                  Contribua sugerindo o preço em um mercado e ganhe +15 XP!
+                  {t("productDetails.noOccurrencesSubtitle")}
                 </Text>
               </View>
             ) : (
@@ -410,13 +411,13 @@ export default function ProductDetails() {
                 <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
                   <View style={styles.occurrenceMainCol}>
                     <Text style={[styles.occurrenceMarketName, themeStyles.text]}>
-                      {occ.marketName || "Mercado Local"}
+                      {occ.marketName || t("products.selectMarket")}
                     </Text>
                     <Text style={[styles.occurrenceValue, { color: accent }]}>
                       R$ {occ.value}
                     </Text>
                     <Text style={[styles.occurrenceMeta, themeStyles.subText]}>
-                      Por {occ.userName || "Usuário"} • {new Date(occ.createdAt).toLocaleDateString("pt-BR")}
+                      {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {new Date(occ.createdAt).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}
                     </Text>
                   </View>
 
@@ -463,7 +464,7 @@ export default function ProductDetails() {
               onPress={handleRegisterPrice}
             >
               <Ionicons name="pricetag-outline" size={20} color="#FFF" style={styles.btnIcon} />
-              <Text style={styles.primaryActionText}>Sugerir / Atualizar Preço no Mercado</Text>
+              <Text style={styles.primaryActionText}>{t("productDetails.addPrice")}</Text>
             </TouchableOpacity>
 
             {isAdmin ? (
@@ -475,7 +476,7 @@ export default function ProductDetails() {
                     onPress={handleOpenEdit}
                   >
                     <Ionicons name="create-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
-                    <Text style={[styles.secondaryActionText, themeStyles.text]}>Editar Produto</Text>
+                    <Text style={[styles.secondaryActionText, themeStyles.text]}>{t("productDetails.editProduct")}</Text>
                   </TouchableOpacity>
                 )}
 
@@ -486,7 +487,7 @@ export default function ProductDetails() {
                     onPress={handleDeleteProduct}
                   >
                     <Ionicons name="trash-outline" size={18} color="#E53935" style={styles.btnIcon} />
-                    <Text style={[styles.secondaryActionText, { color: "#E53935" }]}>Excluir Produto</Text>
+                    <Text style={[styles.secondaryActionText, { color: "#E53935" }]}>{t("productDetails.deleteProduct")}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -494,7 +495,7 @@ export default function ProductDetails() {
               <View style={[styles.contributorInfoBox, themeStyles.inputBg, themeStyles.border]}>
                 <Ionicons name="sparkles" size={16} color={accent} />
                 <Text style={[styles.contributorInfoText, themeStyles.subText]}>
-                  Sua contribuição audita a base de preços e rende XP no seu nível!
+                  {t("productDetails.noOccurrencesSubtitle")}
                 </Text>
               </View>
             )}
@@ -502,42 +503,41 @@ export default function ProductDetails() {
         </View>
       </ScrollView>
 
-
       {/* Edit Product Modal */}
       <Modal visible={isEditModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, themeStyles.text]}>Editar Produto</Text>
+              <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.editProductModalTitle")}</Text>
               <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
                 <Ionicons name="close" size={24} color={themeStyles.text.color} />
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.inputLabel, themeStyles.subText]}>Nome do Produto *</Text>
+            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.productName")} *</Text>
             <TextInput
               style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
               value={editName}
               onChangeText={setEditName}
-              placeholder="Nome do produto"
+              placeholder={t("products.productNamePlaceholder")}
               placeholderTextColor={isDark ? "#888" : "#999"}
             />
 
-            <Text style={[styles.inputLabel, themeStyles.subText]}>Categoria</Text>
+            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.category")}</Text>
             <TextInput
               style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
               value={editCategory}
               onChangeText={setEditCategory}
-              placeholder="Categoria do produto"
+              placeholder={t("products.categoryPlaceholder")}
               placeholderTextColor={isDark ? "#888" : "#999"}
             />
 
-            <Text style={[styles.inputLabel, themeStyles.subText]}>Código de Barras (EAN)</Text>
+            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
             <TextInput
               style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
               value={editEan}
               onChangeText={setEditEan}
-              placeholder="EAN / Código"
+              placeholder={t("scanner.barcode")}
               placeholderTextColor={isDark ? "#888" : "#999"}
               keyboardType="numeric"
             />
@@ -547,7 +547,7 @@ export default function ProductDetails() {
                 style={[styles.modalCancelBtn, themeStyles.border]}
                 onPress={() => setIsEditModalVisible(false)}
               >
-                <Text style={[styles.modalBtnText, themeStyles.text]}>Cancelar</Text>
+                <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -558,7 +558,7 @@ export default function ProductDetails() {
                 {savingEdit ? (
                   <ActivityIndicator color="#FFF" size="small" />
                 ) : (
-                  <Text style={[styles.modalBtnText, { color: "#FFF" }]}>Salvar</Text>
+                  <Text style={[styles.modalBtnText, { color: "#FFF" }]}>{t("common.save")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -575,19 +575,21 @@ const PriceHistorySection = ({
   history,
   accent,
   themeStyles,
+  t,
 }: {
   history: PriceHistoryItem[];
   accent: string;
   themeStyles: any;
+  t: (key: any) => string;
 }) => {
   if (history.length === 0) {
     return (
       <View style={styles.historySection}>
-        <Text style={[styles.sectionTitle, themeStyles.text]}>Histórico de Preços</Text>
+        <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
         <View style={[styles.emptyHistoryBox, themeStyles.inputBg, themeStyles.border]}>
           <Ionicons name="stats-chart-outline" size={28} color={accent} />
           <Text style={[styles.emptyHistoryText, themeStyles.subText]}>
-            Nenhum histórico de preços registrado para este produto ainda.
+            {t("productDetails.noOccurrences")}
           </Text>
         </View>
       </View>
@@ -601,7 +603,7 @@ const PriceHistorySection = ({
 
   return (
     <View style={styles.historySection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>Histórico de Preços</Text>
+      <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
       
       {/* Bars Chart */}
       <View style={[styles.chartBox, themeStyles.inputBg, themeStyles.border]}>

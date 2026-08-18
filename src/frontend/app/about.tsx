@@ -154,7 +154,7 @@ export default function AboutScreen() {
           <View style={styles.stepsRow}>
             <View style={[styles.stepItem, themeStyles.inputBg]}>
               <Ionicons name="barcode-outline" size={22} color={accent} />
-              <Text style={[styles.stepLabel, themeStyles.text]}>Escanear</Text>
+              <Text style={[styles.stepLabel, themeStyles.text]}>{t("about.scanStep")}</Text>
             </View>
             <Ionicons
               name="arrow-forward"
@@ -172,7 +172,7 @@ export default function AboutScreen() {
             />
             <View style={[styles.stepItem, themeStyles.inputBg]}>
               <Ionicons name="wallet-outline" size={22} color={accent} />
-              <Text style={[styles.stepLabel, themeStyles.text]}>Economizar</Text>
+              <Text style={[styles.stepLabel, themeStyles.text]}>{t("about.saveStep")}</Text>
             </View>
           </View>
         </View>
@@ -242,7 +242,7 @@ export default function AboutScreen() {
                 color={isDark ? "#F5F5F5" : "#1A1A1A"}
               />
               <Text style={[styles.linkText, themeStyles.text]}>
-                Repositório no GitHub
+                {t("about.githubRepo")}
               </Text>
             </View>
             <Ionicons

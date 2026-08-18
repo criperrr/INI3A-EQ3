@@ -9,6 +9,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "../components/productCard";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 
 const COLORS = {
   white: "#FFFFFF",
@@ -20,6 +21,7 @@ interface ActionButtonsProps {
   onCancel: () => void;
   themeStyles: any;
   accent: string;
+  t: (key: any) => string;
 }
 
 export default function ScannerConfirmation() {
@@ -34,13 +36,14 @@ export default function ScannerConfirmation() {
     lastPrice?: string;
   }>();
   const { themeStyles, accent } = useTheme();
+  const { t } = useI18n();
 
   const product = {
     id: params.id,
-    category: params.category || "Produto Encontrado",
-    name: params.name || "Nome indisponível",
+    category: params.category || t("scanner.confirmProduct"),
+    name: params.name || t("scanner.productFound"),
     imageUri: params.imageUri || undefined,
-    lastPrice: params.lastPrice || "Preço não informado",
+    lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
     barcode: params.barcode || params.ean || "",
     ean: params.ean || params.barcode || "",
   };
@@ -74,8 +77,8 @@ export default function ScannerConfirmation() {
             name={product.name}
             imageUri={product.imageUri}
           >
-            <PriceDetails lastPrice={product.lastPrice} themeStyles={themeStyles} />
-            <ActionButtons onConfirm={handleConfirm} onCancel={handleCancel} themeStyles={themeStyles} accent={accent} />
+            <PriceDetails lastPrice={product.lastPrice} themeStyles={themeStyles} t={t} />
+            <ActionButtons onConfirm={handleConfirm} onCancel={handleCancel} themeStyles={themeStyles} accent={accent} t={t} />
           </ProductCard>
         </View>
       </ScrollView>
@@ -85,23 +88,23 @@ export default function ScannerConfirmation() {
 
 // --- Componentes Internos ---
 
-const PriceDetails = ({ lastPrice, themeStyles }: { lastPrice: string, themeStyles: any }) => (
+const PriceDetails = ({ lastPrice, themeStyles, t }: { lastPrice: string, themeStyles: any, t: (key: any) => string }) => (
   <View style={styles.detailsContainer}>
     <Text style={[styles.priceLabel, themeStyles.subText]}>
-      Último Preço:
+      {t("productDetails.lastPrice")}:
     </Text>
     <Text style={[styles.priceValue, themeStyles.text]}>{lastPrice}</Text>
   </View>
 );
 
-const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent }: ActionButtonsProps) => (
+const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent, t }: ActionButtonsProps) => (
   <View style={styles.buttonRow}>
     <TouchableOpacity
       style={[styles.button, { backgroundColor: accent }]}
       activeOpacity={0.8}
       onPress={onConfirm}
     >
-      <Text style={styles.buttonText}>Sim</Text>
+      <Text style={styles.buttonText}>{t("common.yes")}</Text>
     </TouchableOpacity>
 
     <TouchableOpacity
@@ -109,7 +112,7 @@ const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent }: ActionButto
       activeOpacity={0.8}
       onPress={onCancel}
     >
-      <Text style={[styles.buttonText, { color: COLORS.redCancel }]}>Não</Text>
+      <Text style={[styles.buttonText, { color: COLORS.redCancel }]}>{t("common.no")}</Text>
     </TouchableOpacity>
   </View>
 );

@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { createCustomProduct } from "../services/productService";
 
 export default function CustomRegisterProduct() {
@@ -24,10 +25,11 @@ export default function CustomRegisterProduct() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { themeStyles, accent, isDark } = useTheme();
+  const { t } = useI18n();
 
   const handleRegister = async () => {
     if (!name.trim()) {
-      Alert.alert("Atenção", "O nome do produto é obrigatório.");
+      Alert.alert(t("common.warning"), t("auth.nameRequired"));
       return;
     }
 
@@ -41,9 +43,9 @@ export default function CustomRegisterProduct() {
 
       setLoading(false);
 
-      Alert.alert("Sucesso", "Produto cadastrado com sucesso!", [
+      Alert.alert(t("common.success"), t("products.productRegisteredSuccess"), [
         {
-          text: "Continuar",
+          text: t("common.done"),
           onPress: () => {
             router.replace({
               pathname: "/registerProduct",
@@ -62,7 +64,7 @@ export default function CustomRegisterProduct() {
 
     } catch (error: any) {
       setLoading(false);
-      Alert.alert("Erro", error.message || "Não foi possível cadastrar o produto.");
+      Alert.alert(t("common.error"), error.message || t("errors.genericError"));
     }
   };
 
@@ -74,17 +76,17 @@ export default function CustomRegisterProduct() {
           keyboardShouldPersistTaps="handled"
         >
         <Ionicons name="cube-outline" size={80} color={accent} style={styles.icon} />
-        <Text style={[styles.title, themeStyles.text]}>Novo Produto</Text>
+        <Text style={[styles.title, themeStyles.text]}>{t("products.customProductTitle")}</Text>
         <Text style={[styles.subtitle, themeStyles.subText]}>
-          Preencha os dados para cadastrar este produto na base.
+          {t("products.customProductSubtitle")}
         </Text>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>Código de Barras (Opcional)</Text>
+          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.ean")} ({t("common.optional")})</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
-              placeholder="Deixe em branco para gerar um automático"
+              placeholder={t("scanner.barcode")}
               placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
               keyboardType="numeric"
               value={ean}
@@ -94,11 +96,11 @@ export default function CustomRegisterProduct() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>Nome do Produto *</Text>
+          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.productName")} *</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
-              placeholder="Ex: Arroz Branco 5kg"
+              placeholder={t("products.productNamePlaceholder")}
               placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
               value={name}
               onChangeText={setName}
@@ -107,11 +109,11 @@ export default function CustomRegisterProduct() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>Categoria</Text>
+          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.category")}</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
-              placeholder="Ex: Alimentos Básicos"
+              placeholder={t("products.categoryPlaceholder")}
               placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
               value={category}
               onChangeText={setCategory}
@@ -128,7 +130,7 @@ export default function CustomRegisterProduct() {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.buttonText}>Cadastrar Produto</Text>
+            <Text style={styles.buttonText}>{t("products.registerCustomButton")} (+25 XP)</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

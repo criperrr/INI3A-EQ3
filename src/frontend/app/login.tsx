@@ -94,10 +94,10 @@ export default function LoginScreen() {
             <View style={[styles.devBox, themeStyles.card, themeStyles.border]}>
               <View style={styles.devHeader}>
                 <Ionicons name="flash" size={16} color={accent} />
-                <Text style={[styles.devTitle, { color: accent }]}>Ambiente Expo Go / Desenvolvedor</Text>
+                <Text style={[styles.devTitle, { color: accent }]}>{t("auth.devMode")}</Text>
               </View>
               <Text style={[styles.devDesc, themeStyles.subText]}>
-                Toque para entrar instantaneamente com o usuário de teste:
+                {t("auth.devModeDesc")}
               </Text>
               <View style={styles.devButtonsRow}>
                 <TouchableOpacity
@@ -107,7 +107,7 @@ export default function LoginScreen() {
                   disabled={isLoading}
                 >
                   <Ionicons name="shield-checkmark" size={16} color="#FFF" />
-                  <Text style={styles.quickLoginBtnText}>Admin (admin@admin.org)</Text>
+                  <Text style={styles.quickLoginBtnText}>{t("auth.adminUser")} (admin@admin.org)</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -117,7 +117,7 @@ export default function LoginScreen() {
                   disabled={isLoading}
                 >
                   <Ionicons name="person-outline" size={16} color={themeStyles.text.color} />
-                  <Text style={[styles.quickLoginBtnTextSecondary, themeStyles.text]}>Usuário Comum</Text>
+                  <Text style={[styles.quickLoginBtnTextSecondary, themeStyles.text]}>{t("auth.regularUser")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -268,14 +268,14 @@ const PasswordField = ({
     />
     <TextInput
       style={[styles.input, themeStyles.text]}
-      placeholder="Sua senha"
+      placeholder="••••••••"
       placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
       value={value}
       onChangeText={onChangeText}
       secureTextEntry={!showPassword}
       editable={editable}
       accessible={true}
-      accessibilityLabel="Sua senha"
+      accessibilityLabel="Password"
       maxFontSizeMultiplier={2}
     />
     <TouchableOpacity
@@ -283,7 +283,7 @@ const PasswordField = ({
       style={styles.eyeIcon}
       accessible={true}
       accessibilityRole="button"
-      accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+      accessibilityLabel="Toggle password visibility"
     >
       <Ionicons
         name={showPassword ? "eye-off-outline" : "eye-outline"}

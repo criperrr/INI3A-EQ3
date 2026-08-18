@@ -22,6 +22,17 @@ export interface TranslationSchema {
     no: string;
     warning: string;
     version: string;
+    seeAll: string;
+    refresh: string;
+    actions: string;
+    details: string;
+    status: string;
+    noImage: string;
+    saved: string;
+    guest: string;
+    uncategorized: string;
+    levelShort: string;
+    environment: string;
   };
   navigation: {
     home: string;
@@ -71,6 +82,80 @@ export interface TranslationSchema {
     passwordTooShort: string;
     passwordsDoNotMatch: string;
     nameRequired: string;
+    devMode: string;
+    devModeDesc: string;
+    regularUser: string;
+    adminUser: string;
+    changeAvatar: string;
+    showPassword: string;
+    hidePassword: string;
+  };
+  home: {
+    greeting: string;
+    searchPlaceholder: string;
+    scanButton: string;
+    categories: string;
+    recentProducts: string;
+    featuredProducts: string;
+    noProducts: string;
+    viewAll: string;
+    welcomeSubtitle: string;
+    openMenu: string;
+    startPriceCheck: string;
+    banner1Title: string;
+    banner1Subtitle: string;
+    banner1Action: string;
+    banner2Title: string;
+    banner2Subtitle: string;
+    banner2Action: string;
+    banner3Title: string;
+    banner3Subtitle: string;
+    banner3Action: string;
+  };
+  search: {
+    title: string;
+    placeholder: string;
+    filterAll: string;
+    resultsCount: string;
+    noResults: string;
+    noResultsSubtitle: string;
+    searchPrompt: string;
+    clearFilter: string;
+    categoriesTitle: string;
+    recentSearches: string;
+  };
+  productDetails: {
+    title: string;
+    priceStats: string;
+    lowestPrice: string;
+    averagePrice: string;
+    highestPrice: string;
+    lastPrice: string;
+    priceHistory: string;
+    marketPrices: string;
+    noOccurrences: string;
+    noOccurrencesSubtitle: string;
+    addPrice: string;
+    voteHelpful: string;
+    voteUnreliable: string;
+    votedSuccess: string;
+    deleteOccurrenceConfirm: string;
+    editProduct: string;
+    deleteProduct: string;
+    deleteProductConfirm: string;
+    editProductModalTitle: string;
+    productName: string;
+    category: string;
+    ean: string;
+    saveChanges: string;
+    saving: string;
+    adminActions: string;
+    chartDays30: string;
+    chartDays60: string;
+    chartDays90: string;
+    confidence: string;
+    reportedBy: string;
+    date: string;
   };
   settings: {
     title: string;
@@ -86,6 +171,8 @@ export interface TranslationSchema {
     language: string;
     languageSubtitle: string;
     selectLanguage: string;
+    systemDefaultLanguage: string;
+    systemLanguageSubtitle: string;
     notifications: string;
     notificationsSubtitle: string;
     emailNotifications: string;
@@ -127,6 +214,19 @@ export interface TranslationSchema {
     importButton: string;
     importSuccess: string;
     importInvalidCode: string;
+    systemSync: string;
+    systemSyncSubtitle: string;
+    chooseSeedColor: string;
+    privateProfile: string;
+    privateProfileSubtitle: string;
+    colorPrescoGreen: string;
+    colorOceanBlue: string;
+    colorLavenderPurple: string;
+    colorGoldenAmber: string;
+    colorCoralPink: string;
+    colorMintGreen: string;
+    active: string;
+    inactive: string;
   };
   scanner: {
     title: string;
@@ -149,6 +249,12 @@ export interface TranslationSchema {
     continueToPrice: string;
     permissionRequired: string;
     grantPermission: string;
+    cameraPermissionDenied: string;
+    scanSuccess: string;
+    manualSearchTitle: string;
+    manualSearchSubtitle: string;
+    manualSearchPlaceholder: string;
+    searchProductBtn: string;
   };
   products: {
     title: string;
@@ -164,7 +270,14 @@ export interface TranslationSchema {
     customProductSubtitle: string;
     description: string;
     categoryPlaceholder: string;
+    productNamePlaceholder: string;
     registerCustomButton: string;
+    priceRequired: string;
+    invalidPriceFormat: string;
+    selectMarketRequired: string;
+    rewardXp: string;
+    productRegisteredSuccess: string;
+    enterValidData: string;
   };
   profile: {
     title: string;
@@ -178,6 +291,26 @@ export interface TranslationSchema {
     reputation: string;
     editProfile: string;
     memberSince: string;
+    adminBadge: string;
+    contributionsTitle: string;
+    levelProgress: string;
+    quickDevLogin: string;
+    logout: string;
+    xpToNextLevel: string;
+    adminPanelTitle: string;
+    adminPanelDesc: string;
+    xpRewardHint: string;
+    unlockedCount: string;
+    unlocked: string;
+    locked: string;
+    weeklyHistory: string;
+    contributionsCount: string;
+    guestJoinHint: string;
+    quickTestTitle: string;
+    quickTestSubtitle: string;
+    loginAsRegular: string;
+    loginAsAdmin: string;
+    loginWithOther: string;
   };
   map: {
     title: string;
@@ -188,6 +321,27 @@ export interface TranslationSchema {
     noMarketsFound: string;
     locationPermissionDenied: string;
     recenter: string;
+    marketDetails: string;
+    openDirections: string;
+    filterRadius: string;
+    loadingLocation: string;
+    gpsDisabled: string;
+    myLocation: string;
+    marketsInRadius: string;
+    marketType: string;
+    distanceRadius: string;
+    operatingHours: string;
+    viewOnMap: string;
+    unavailableOnWeb: string;
+    mobileOnlyNotice: string;
+    typeAll: string;
+    typeSupermarket: string;
+    typeConvenience: string;
+    typeGrocery: string;
+    hoursAll: string;
+    hoursWithInfo: string;
+    hoursUnknown: string;
+    open24Hours: string;
   };
   help: {
     title: string;
@@ -225,6 +379,9 @@ export interface TranslationSchema {
     termsOfService: string;
     creditsTitle: string;
     creditsDescription: string;
+    scanStep: string;
+    saveStep: string;
+    githubRepo: string;
   };
   errors: {
     networkError: string;
@@ -250,6 +407,9 @@ export type TranslationKey =
   | `common.${keyof TranslationSchema["common"]}`
   | `navigation.${keyof TranslationSchema["navigation"]}`
   | `auth.${keyof TranslationSchema["auth"]}`
+  | `home.${keyof TranslationSchema["home"]}`
+  | `search.${keyof TranslationSchema["search"]}`
+  | `productDetails.${keyof TranslationSchema["productDetails"]}`
   | `settings.${keyof TranslationSchema["settings"]}`
   | `scanner.${keyof TranslationSchema["scanner"]}`
   | `products.${keyof TranslationSchema["products"]}`

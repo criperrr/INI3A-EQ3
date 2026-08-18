@@ -16,6 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useAuth } from "../content/authContext";
+import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
 import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence } from "../services/ocurrencyService";
@@ -46,6 +47,7 @@ export default function RegisterProduct() {
   }>();
   const { themeStyles, accent, isDark } = useTheme();
   const { refreshProfile } = useAuth();
+  const { t } = useI18n();
 
   const targetEan = params.ean || params.barcode;
   const targetId = params.id ? Number(params.id) : null;
@@ -79,11 +81,11 @@ export default function RegisterProduct() {
   }, [targetEan, targetId]);
 
   const handleRegister = async () => {
-    const rawPrice = price.trim().replace("R$", "").replace(",", ".").trim();
+    const rawPrice = price.trim().replace("R$", "").replace("$", "").replace("€", "").replace("¥", "").replace("₽", "").replace(",", ".").trim();
     const numPrice = parseFloat(rawPrice);
 
     if (!price.trim() || isNaN(numPrice) || numPrice <= 0) {
-      Alert.alert("Preço Inválido", "Por favor, insira um valor numérico válido maior que zero.");
+      Alert.alert(t("common.error"), t("products.invalidPriceFormat"));
       return;
     }
 
@@ -103,7 +105,7 @@ export default function RegisterProduct() {
     }
 
     if (!effectiveProductId) {
-      Alert.alert("Aviso", "Identificador do produto não localizado para envio.");
+      Alert.alert(t("common.warning"), t("errors.notFound"));
       setIsSubmitting(false);
       return;
     }
@@ -119,11 +121,11 @@ export default function RegisterProduct() {
       await refreshProfile();
 
       Alert.alert(
-        "🎉 Preço Cadastrado!",
-        `Preço registrado com sucesso! Você ganhou +${result.pointsEarned} XP por contribuir.`,
+        t("common.success"),
+        t("products.priceSubmittedSuccess"),
         [
           {
-            text: "Ver Detalhes",
+            text: t("common.details"),
             onPress: () => {
               router.replace({
                 pathname: "/productDetails",
@@ -133,7 +135,7 @@ export default function RegisterProduct() {
                   name: displayProduct.name,
                   category: displayProduct.category,
                   imageUri: displayProduct.imageUri || undefined,
-                  lastPrice: `R$ ${numPrice.toFixed(2)}`,
+                  lastPrice: `${numPrice.toFixed(2)}`,
                 },
               });
             },
@@ -141,7 +143,7 @@ export default function RegisterProduct() {
         ],
       );
     } catch (err: any) {
-      Alert.alert("Erro ao enviar", err.message || "Não foi possível registrar o preço.");
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -150,9 +152,9 @@ export default function RegisterProduct() {
   const scannedProduct = params.name
     ? {
         name: params.name,
-        category: params.category || "Sem Categoria",
+        category: params.category || t("products.title"),
         imageUri: params.imageUri || null,
-        lastPrice: params.lastPrice || "Preço não informado",
+        lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
       }
     : null;
 
@@ -178,7 +180,7 @@ export default function RegisterProduct() {
             >
               <ActivityIndicator size="large" color={accent} />
               <Text style={[styles.loadingText, themeStyles.text]}>
-                Buscando informações do produto...
+                {t("scanner.searchingProduct")}
               </Text>
             </View>
           ) : (
@@ -213,10 +215,10 @@ export default function RegisterProduct() {
                     color={isDark ? "#A0A0A0" : "#5A6B52"}
                   />
                   <Text style={[styles.lastPriceText, themeStyles.subText]}>
-                    Último preço:{" "}
+                    {t("productDetails.lastPrice")}:{" "}
                   </Text>
                   <Text style={[styles.lastPriceValue, themeStyles.text]}>
-                    {displayProduct.lastPrice || "Não informado"}
+                    {displayProduct.lastPrice || t("productDetails.noOccurrences")}
                   </Text>
                 </View>
               </View>
@@ -226,13 +228,13 @@ export default function RegisterProduct() {
           {/* Register Form Section */}
           <View style={styles.formSection}>
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Sugerir / Atualizar Preço
+              {t("products.registerPrice")}
             </Text>
 
             {/* Price Input */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, themeStyles.subText]}>
-                Preço Encontrado (R$) *
+                {t("products.enterPrice")} *
               </Text>
               <View
                 style={[
@@ -249,7 +251,7 @@ export default function RegisterProduct() {
                 />
                 <TextInput
                   style={[styles.input, themeStyles.text]}
-                  placeholder="Ex: 14.90"
+                  placeholder={t("products.pricePlaceholder")}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
                   keyboardType="numeric"
                   value={price}
@@ -262,7 +264,7 @@ export default function RegisterProduct() {
             {/* Market Selection */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, themeStyles.subText]}>
-                Supermercado / Estabelecimento *
+                {t("products.selectMarket")} *
               </Text>
               <ScrollView
                 horizontal
@@ -307,7 +309,7 @@ export default function RegisterProduct() {
             <View style={[styles.rewardNotice, themeStyles.inputBg, themeStyles.border]}>
               <Ionicons name="sparkles" size={18} color={accent} />
               <Text style={[styles.rewardText, themeStyles.subText]}>
-                Ao enviar este preço, você ganha <Text style={{ fontWeight: "bold", color: accent }}>+15 XP</Text> e ajuda milhares de pessoas a economizar!
+                {t("productDetails.noOccurrencesSubtitle")}
               </Text>
             </View>
 
@@ -333,7 +335,7 @@ export default function RegisterProduct() {
                     style={styles.buttonIcon}
                   />
                   <Text style={styles.registerButtonText}>
-                    Confirmar e Ganhar +15 XP
+                    {t("products.submitPrice")} (+15 XP)
                   </Text>
                 </>
               )}

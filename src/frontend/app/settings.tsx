@@ -142,6 +142,8 @@ const SettingsScreen: React.FC = () => {
   // i18n
   const {
     language: currentLanguage,
+    languagePreference,
+    isSystemLanguage,
     setLanguage: setI18nLanguage,
     languages,
     languageInfo,
@@ -295,12 +297,12 @@ const SettingsScreen: React.FC = () => {
   const handleReset = async () => {
     triggerHaptic();
     Alert.alert(
-      "Redefinir Configurações",
-      "Deseja restaurar todas as configurações para o padrão?",
+      t("settings.resetSettings"),
+      t("settings.resetConfirm"),
       [
-        { text: "Cancelar", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Redefinir",
+          text: t("settings.resetSettings"),
           style: "destructive",
           onPress: async () => {
             setSettings(DEFAULT_SETTINGS);
@@ -325,15 +327,15 @@ const SettingsScreen: React.FC = () => {
   const handleChangePassword = async () => {
     setPasswordError("");
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordError("Preencha todos os campos.");
+      setPasswordError(t("auth.nameRequired"));
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError("A nova senha deve ter no mínimo 6 caracteres.");
+      setPasswordError(t("auth.passwordTooShort"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordError("A nova senha e confirmação não coincidem.");
+      setPasswordError(t("auth.passwordsDoNotMatch"));
       return;
     }
 
@@ -341,14 +343,14 @@ const SettingsScreen: React.FC = () => {
       setIsChangingPassword(true);
       await changePassword(currentPassword, newPassword);
       triggerHaptic();
-      Alert.alert("Sucesso", "Senha alterada com sucesso!");
+      Alert.alert(t("common.success"), t("auth.passwordChangedSuccess"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setChangePasswordOpen(false);
     } catch (err: any) {
       setPasswordError(
-        err?.message || "Erro ao alterar a senha. Verifique sua senha atual.",
+        err?.message || t("errors.serverError"),
       );
     } finally {
       setIsChangingPassword(false);
@@ -362,16 +364,16 @@ const SettingsScreen: React.FC = () => {
       await deleteAccount();
       await AsyncStorage.removeItem(STORAGE_KEY);
       setDeleteModalOpen(false);
-      Alert.alert("Conta Removida", "Sua conta foi excluída com sucesso.", [
+      Alert.alert(t("auth.deleteAccount"), t("auth.deleteAccountWarning"), [
         {
-          text: "OK",
+          text: t("common.ok"),
           onPress: () => router.replace("/login" as any),
         },
       ]);
     } catch (err: any) {
       Alert.alert(
-        "Erro",
-        err?.message || "Não foi possível excluir a conta no momento.",
+        t("common.error"),
+        err?.message || t("errors.serverError"),
       );
     } finally {
       setIsDeletingAccount(false);
@@ -416,7 +418,7 @@ const SettingsScreen: React.FC = () => {
   const handleImportSettings = async () => {
     setImportError("");
     if (!importCodeText.trim()) {
-      setImportError("Cole o código de configuração antes de importar.");
+      setImportError(t("settings.importPlaceholder"));
       return;
     }
 
@@ -465,11 +467,9 @@ const SettingsScreen: React.FC = () => {
       showSavedIndicator();
       setImportModalOpen(false);
       setImportCodeText("");
-      Alert.alert("Sucesso", "Configurações importadas e aplicadas!");
+      Alert.alert(t("common.success"), t("settings.importSuccess"));
     } catch (err: any) {
-      setImportError(
-        "Código de configuração inválido ou corrompido. Verifique o código e tente novamente.",
-      );
+      setImportError(t("settings.importInvalidCode"));
     }
   };
 
@@ -486,9 +486,9 @@ const SettingsScreen: React.FC = () => {
         await AsyncStorage.multiRemove(nonEssentialKeys);
       }
       setClearCacheModalOpen(false);
-      Alert.alert("Cache Limpo", "Os dados temporários e cache local foram limpos.");
+      Alert.alert(t("settings.clearCache"), t("settings.cacheCleared"));
     } catch (error) {
-      Alert.alert("Erro", "Falha ao limpar o cache.");
+      Alert.alert(t("common.error"), t("errors.serverError"));
     } finally {
       setIsClearingCache(false);
     }
@@ -506,12 +506,12 @@ const SettingsScreen: React.FC = () => {
         <View style={styles.headerTitleContainer}>
           <Settings size={26} color={accent} />
           <Text style={[styles.headerTitle, themeStyles.text]}>
-            Configurações
+            {t("settings.title")}
           </Text>
         </View>
         {isSaved && (
           <View style={styles.savedAlert}>
-            <Text style={styles.savedAlertText}>✓ Salvo</Text>
+            <Text style={styles.savedAlertText}>✓ {t("common.saved")}</Text>
           </View>
         )}
       </View>
@@ -527,17 +527,17 @@ const SettingsScreen: React.FC = () => {
               <Sun size={20} color={accent} />
             )}
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Aparência
+              {t("settings.appearance")}
             </Text>
           </View>
 
           <View style={styles.row}>
             <View>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Tema Escuro
+                {t("settings.themeDark")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {isSettingsDark ? "Ativado" : "Desativado"}
+                {isSettingsDark ? t("settings.active") : t("settings.inactive")}
               </Text>
             </View>
             <Switch
@@ -561,11 +561,11 @@ const SettingsScreen: React.FC = () => {
                 >
                   <Zap size={16} color={accent} />
                   <Text style={[styles.rowLabel, themeStyles.text]}>
-                    Modo AMOLED
+                    {t("settings.amoledDark")}
                   </Text>
                 </View>
                 <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                  Preto absoluto (economiza bateria em telas OLED)
+                  {t("settings.amoledSubtitle")}
                 </Text>
               </View>
               <Switch
@@ -588,7 +588,9 @@ const SettingsScreen: React.FC = () => {
                   {t("settings.language")}
                 </Text>
                 <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                  {languageInfo.flag} {languageInfo.nativeName}
+                  {isSystemLanguage
+                    ? `⚙️ ${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
+                    : `${languageInfo.flag} ${languageInfo.nativeName}`}
                 </Text>
               </View>
             </View>
@@ -601,17 +603,17 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Palette size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Cores e Material You
+              {t("settings.monetColors")}
             </Text>
           </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Cores Dinâmicas
+                {t("settings.monetColors")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Gera a paleta a partir de tons harmônicos
+                {t("settings.monetSubtitle")}
               </Text>
             </View>
             <Switch
@@ -644,11 +646,11 @@ const SettingsScreen: React.FC = () => {
                   >
                     <Smartphone size={16} color={accent} />
                     <Text style={[styles.rowLabel, themeStyles.text]}>
-                      Sincronizar com o Sistema (Android)
+                      {t("settings.systemSync")}
                     </Text>
                   </View>
                   <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    Utiliza as cores do papel de parede do dispositivo
+                    {t("settings.systemSyncSubtitle")}
                   </Text>
                 </View>
                 <Switch
@@ -672,11 +674,25 @@ const SettingsScreen: React.FC = () => {
                       { marginBottom: 10 },
                     ]}
                   >
-                    Escolha a cor semente:
+                    {t("settings.chooseSeedColor")}
                   </Text>
                   <View style={styles.colorGrid}>
                     {MONET_PRESETS.map((preset) => {
                       const isSelected = monetSeedColor === preset.hex;
+                      const presetLabel =
+                        preset.name === "Verde"
+                          ? t("settings.colorPrescoGreen")
+                          : preset.name === "Azul"
+                          ? t("settings.colorOceanBlue")
+                          : preset.name === "Roxo"
+                          ? t("settings.colorLavenderPurple")
+                          : preset.name === "Rosa"
+                          ? t("settings.colorCoralPink")
+                          : preset.name === "Laranja"
+                          ? t("settings.colorGoldenAmber")
+                          : preset.name === "Teal"
+                          ? t("settings.colorMintGreen")
+                          : preset.name;
                       return (
                         <TouchableOpacity
                           key={preset.hex}
@@ -713,7 +729,7 @@ const SettingsScreen: React.FC = () => {
                               },
                             ]}
                           >
-                            {preset.name}
+                            {presetLabel}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -730,17 +746,17 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Vibrate size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Scanner & Interatividade
+              {t("settings.scannerHaptics")}
             </Text>
           </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Vibração / Resposta Tátil
+                {t("settings.scannerHaptics")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Feedback háptico ao escanear códigos de barras
+                {t("settings.scannerHapticsSubtitle")}
               </Text>
             </View>
             <Switch
@@ -753,10 +769,10 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Confirmação Direta de Scan
+                {t("settings.autoConfirmScan")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Avança automaticamente ao detectar código com alta precisão
+                {t("settings.autoConfirmScanSubtitle")}
               </Text>
             </View>
             <Switch
@@ -774,17 +790,17 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Bell size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Notificações
+              {t("settings.notifications")}
             </Text>
           </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Notificações Push
+                {t("settings.notifications")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Alertas de quedas de preço e ofertas
+                {t("settings.notificationsSubtitle")}
               </Text>
             </View>
             <Switch
@@ -797,10 +813,10 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Notificações por E-mail
+                {t("settings.emailNotifications")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Resumo semanal de preços e relatórios
+                {t("settings.emailNotificationsSubtitle")}
               </Text>
             </View>
             <Switch
@@ -818,17 +834,17 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Shield size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Privacidade & Segurança
+              {t("settings.privacy")}
             </Text>
           </View>
 
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Perfil Privado
+                {t("settings.privateProfile")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Ocultar informações de contribuições no ranking público
+                {t("settings.privateProfileSubtitle")}
               </Text>
             </View>
             <Switch
@@ -843,7 +859,7 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Autenticação de Dois Fatores (2FA)
+                {t("settings.twoFactor")}
               </Text>
             </View>
             <Switch
@@ -856,10 +872,10 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]}>
-                Coleta Anônima de Telemetria
+                {t("settings.dataCollection")}
               </Text>
               <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                Ajuda a melhorar o desempenho do scanner
+                {t("settings.dataCollectionSubtitle")}
               </Text>
             </View>
             <Switch
@@ -877,7 +893,7 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Code2 size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Código de Configuração & Backup
+              {t("settings.backupExport")}
             </Text>
           </View>
 
@@ -892,7 +908,7 @@ const SettingsScreen: React.FC = () => {
                 style={{ marginRight: 8 }}
               />
               <Text style={[styles.actionBtnText, themeStyles.text]}>
-                Exportar (Gerar Código)
+                {t("settings.backupExport")}
               </Text>
             </TouchableOpacity>
 
@@ -910,7 +926,7 @@ const SettingsScreen: React.FC = () => {
                 style={{ marginRight: 8 }}
               />
               <Text style={[styles.actionBtnText, themeStyles.text]}>
-                Importar por Código
+                {t("settings.importSettings")}
               </Text>
             </TouchableOpacity>
 
@@ -927,7 +943,7 @@ const SettingsScreen: React.FC = () => {
                 style={{ marginRight: 8 }}
               />
               <Text style={[styles.actionBtnText, themeStyles.text]}>
-                Limpar Cache Local do App
+                {t("settings.clearCache")}
               </Text>
             </TouchableOpacity>
           </View>
@@ -937,7 +953,7 @@ const SettingsScreen: React.FC = () => {
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
             <User size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>Conta</Text>
+            <Text style={[styles.sectionTitle, themeStyles.text]}>{t("settings.accountSecurity")}</Text>
           </View>
 
           <TouchableOpacity
@@ -954,7 +970,7 @@ const SettingsScreen: React.FC = () => {
               style={{ marginRight: 8 }}
             />
             <Text style={[styles.actionBtnText, themeStyles.text]}>
-              Alterar Senha
+              {t("auth.changePassword")}
             </Text>
           </TouchableOpacity>
 
@@ -966,7 +982,7 @@ const SettingsScreen: React.FC = () => {
             }}
           >
             <Trash2 size={16} color="#DC2626" style={{ marginRight: 8 }} />
-            <Text style={styles.textRed}>Deletar Minha Conta</Text>
+            <Text style={styles.textRed}>{t("auth.deleteAccount")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -975,24 +991,24 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.sectionHeader}>
             <Info size={20} color={accent} />
             <Text style={[styles.sectionTitle, themeStyles.text]}>
-              Sobre o Aplicativo
+              {t("about.title")}
             </Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>Versão</Text>
+            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("common.version")}</Text>
             <Text style={[styles.infoValue, themeStyles.text]}>1.0.0 (Build 42)</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>Ambiente</Text>
+            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("common.environment")}</Text>
             <Text style={[styles.infoValue, themeStyles.text]}>
               {Platform.OS.toUpperCase()} • Expo SDK 54
             </Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>Status da API</Text>
+            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("settings.backendStatus")}</Text>
             <View style={styles.badgeContainer}>
               <View
                 style={[
@@ -1009,10 +1025,10 @@ const SettingsScreen: React.FC = () => {
               />
               <Text style={[styles.infoValue, themeStyles.text]}>
                 {apiStatus === "online"
-                  ? "Conectado"
+                  ? t("settings.connected")
                   : apiStatus === "offline"
-                  ? "Offline"
-                  : "Verificando..."}
+                  ? t("settings.offline")
+                  : t("settings.connecting")}
               </Text>
             </View>
           </View>
@@ -1031,7 +1047,7 @@ const SettingsScreen: React.FC = () => {
               style={{ marginRight: 6 }}
             />
             <Text style={[styles.resetBtnText, themeStyles.text]}>
-              Restaurar Padrões de Fábrica
+              {t("settings.resetSettings")}
             </Text>
           </TouchableOpacity>
         </View>
@@ -1051,7 +1067,7 @@ const SettingsScreen: React.FC = () => {
                     themeStyles.text,
                   ]}
                 >
-                  Código de Configuração
+                  {t("settings.exportCodeModalTitle")}
                 </Text>
               </View>
 
@@ -1062,8 +1078,7 @@ const SettingsScreen: React.FC = () => {
                   { marginTop: 10 },
                 ]}
               >
-                Copie o código abaixo ou compartilhe para transferir suas preferências
-                para outro dispositivo:
+                {t("settings.exportCodeSubtitle")}
               </Text>
 
               <TextInput
@@ -1085,7 +1100,7 @@ const SettingsScreen: React.FC = () => {
                   style={[styles.modalBtn, themeStyles.btnToggleOff]}
                   onPress={() => setExportModalOpen(false)}
                 >
-                  <Text style={themeStyles.text}>Fechar</Text>
+                  <Text style={themeStyles.text}>{t("common.close")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1093,7 +1108,7 @@ const SettingsScreen: React.FC = () => {
                   onPress={handleShareExportCode}
                 >
                   <Share2 size={16} color="#FFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.textWhite}>Compartilhar</Text>
+                  <Text style={styles.textWhite}>{t("settings.shareCode")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1107,10 +1122,10 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, themeStyles.card]}>
               <Text style={[styles.modalTitle, themeStyles.text]}>
-                Importar por Código
+                {t("settings.importModalTitle")}
               </Text>
               <Text style={[styles.modalDescription, themeStyles.subText]}>
-                Cole abaixo o código de configuração gerado (ex: PRESCO-CONFIG-...):
+                {t("settings.importPlaceholder")}
               </Text>
 
               <TextInput
@@ -1143,14 +1158,14 @@ const SettingsScreen: React.FC = () => {
                     setImportError("");
                   }}
                 >
-                  <Text style={themeStyles.text}>Cancelar</Text>
+                  <Text style={themeStyles.text}>{t("common.cancel")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={[styles.modalBtn, { backgroundColor: accent }]}
                   onPress={handleImportSettings}
                 >
-                  <Text style={styles.textWhite}>Importar</Text>
+                  <Text style={styles.textWhite}>{t("settings.importButton")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1164,12 +1179,12 @@ const SettingsScreen: React.FC = () => {
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, themeStyles.card]}>
               <Text style={[styles.modalTitle, themeStyles.text]}>
-                Alterar Senha
+                {t("auth.changePassword")}
               </Text>
 
               <TextInput
                 secureTextEntry
-                placeholder="Senha Atual"
+                placeholder={t("auth.currentPassword")}
                 placeholderTextColor="#9CA3AF"
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
@@ -1178,7 +1193,7 @@ const SettingsScreen: React.FC = () => {
 
               <TextInput
                 secureTextEntry
-                placeholder="Nova Senha (mínimo 6 caracteres)"
+                placeholder={t("auth.newPassword")}
                 placeholderTextColor="#9CA3AF"
                 value={newPassword}
                 onChangeText={setNewPassword}
@@ -1187,7 +1202,7 @@ const SettingsScreen: React.FC = () => {
 
               <TextInput
                 secureTextEntry
-                placeholder="Confirmar Nova Senha"
+                placeholder={t("auth.confirmNewPassword")}
                 placeholderTextColor="#9CA3AF"
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
@@ -1210,7 +1225,7 @@ const SettingsScreen: React.FC = () => {
                   }}
                   disabled={isChangingPassword}
                 >
-                  <Text style={themeStyles.text}>Cancelar</Text>
+                  <Text style={themeStyles.text}>{t("common.cancel")}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1221,7 +1236,7 @@ const SettingsScreen: React.FC = () => {
                   {isChangingPassword ? (
                     <ActivityIndicator size="small" color="#FFF" />
                   ) : (
-                    <Text style={styles.textWhite}>Atualizar</Text>
+                    <Text style={styles.textWhite}>{t("common.save")}</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1239,12 +1254,11 @@ const SettingsScreen: React.FC = () => {
               <Text
                 style={[styles.modalTitle, { marginLeft: 8 }, themeStyles.text]}
               >
-                Limpar Cache Local
+                {t("settings.clearCache")}
               </Text>
             </View>
             <Text style={[styles.modalDescription, themeStyles.subText]}>
-              Isso limpará os dados temporários e o histórico armazenado
-              localmente. Sua conta continuará conectada. Deseja continuar?
+              {t("settings.clearCacheSubtitle")}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1252,7 +1266,7 @@ const SettingsScreen: React.FC = () => {
                 onPress={() => setClearCacheModalOpen(false)}
                 disabled={isClearingCache}
               >
-                <Text style={themeStyles.text}>Cancelar</Text>
+                <Text style={themeStyles.text}>{t("common.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: accent }]}
@@ -1262,7 +1276,7 @@ const SettingsScreen: React.FC = () => {
                 {isClearingCache ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.textWhite}>Limpar</Text>
+                  <Text style={styles.textWhite}>{t("settings.clearCache")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1279,12 +1293,11 @@ const SettingsScreen: React.FC = () => {
               <Text
                 style={[styles.modalTitle, { marginLeft: 8 }, themeStyles.text]}
               >
-                Deletar Conta
+                {t("auth.deleteAccount")}
               </Text>
             </View>
             <Text style={[styles.modalDescription, themeStyles.subText]}>
-              Tem certeza que deseja deletar sua conta? Esta ação é irreversível
-              e todos os seus dados e contribuições serão removidos do sistema.
+              {t("auth.deleteAccountWarning")}
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -1292,7 +1305,7 @@ const SettingsScreen: React.FC = () => {
                 onPress={() => setDeleteModalOpen(false)}
                 disabled={isDeletingAccount}
               >
-                <Text style={themeStyles.text}>Cancelar</Text>
+                <Text style={themeStyles.text}>{t("common.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalBtn, styles.btnRed]}
@@ -1302,7 +1315,7 @@ const SettingsScreen: React.FC = () => {
                 {isDeletingAccount ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.textWhite}>Deletar</Text>
+                  <Text style={styles.textWhite}>{t("common.delete")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1338,9 +1351,47 @@ const SettingsScreen: React.FC = () => {
               {t("settings.languageSubtitle")}
             </Text>
 
-            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              {/* Option 0: System Default Language */}
+              <TouchableOpacity
+                style={[
+                  styles.languageOption,
+                  themeStyles.border,
+                  isSystemLanguage && {
+                    borderColor: accent,
+                    backgroundColor: `${accent}18`,
+                  },
+                ]}
+                onPress={async () => {
+                  triggerHaptic();
+                  await setI18nLanguage("system");
+                  handleSettingChange("language", "system");
+                  showSavedIndicator();
+                  setTimeout(() => setLanguageModalOpen(false), 200);
+                }}
+              >
+                <View style={styles.languageRowLeft}>
+                  <Text style={styles.flagEmoji}>⚙️</Text>
+                  <View>
+                    <Text
+                      style={[
+                        styles.languageNativeName,
+                        themeStyles.text,
+                        isSystemLanguage && { color: accent, fontWeight: "bold" },
+                      ]}
+                    >
+                      {t("settings.systemDefaultLanguage")}
+                    </Text>
+                    <Text style={[styles.languageEnglishName, themeStyles.subText]}>
+                      {t("settings.systemLanguageSubtitle")}
+                    </Text>
+                  </View>
+                </View>
+                {isSystemLanguage && <Check size={20} color={accent} />}
+              </TouchableOpacity>
+
               {languages.map((item) => {
-                const isSelected = item.code === currentLanguage;
+                const isSelected = !isSystemLanguage && item.code === currentLanguage;
                 return (
                   <TouchableOpacity
                     key={item.code}

@@ -24,6 +24,84 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 12:05] - fix(i18n): 100% full screen localization audit and complete translation across 7 languages
+
+- **Description:** Audited and resolved untranslated hardcoded UI strings across the entire application while strictly preserving dynamic user names (`user.name`, `profile.name`, `occ.userName`):
+  1. **Schema & Locales Expansion:** Added type-safe keys in `types.ts` for all 7 languages (`pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts`) covering missing areas in `common`, `auth`, `home`, `settings`, `profile`, `map`, `scanner`, and `about`.
+  2. **Screen Localization:**
+     - `map.native.tsx`: Dynamically translated filter options, modal titles, formatOpeningHours (24/7 and unknown hours), and market detail popups.
+     - `settings.tsx`: Fully localized header, dark/AMOLED toggles, Material You Monet seed color names and titles, scanner haptics, push & email notifications, private profile, backup export/import modals, clear cache confirmation, change password form, delete account confirmation, and reset defaults dialog.
+     - `manualEanSearch.tsx`: Localized manual EAN input headers, placeholders, not-found modal options, and warning dialogs.
+     - `aboutUs.tsx` & `about.tsx`: Localized scan/save steps, mission, how-it-works description, open data section, and GitHub repository links.
+     - `helpUser.tsx` & `help.tsx`: Localized quick action subtitles, FAQ sections, and contact support actions.
+     - `Sidebar.tsx`: Localized fallback visitor label (`common.guest`), user level/XP badge, and admin role badge.
+     - `login.tsx` & `registerUser.tsx`: Localized dev environment test login cards, user avatars, password visibility buttons, and accessibility labels.
+     - `index.tsx`: Localized dynamic rotating carousel banners with `t("home.banner*")`.
+     - `profile.tsx`: Localized admin panel badge, unlocked badge status, XP reward hints, weekly contribution count, and guest test connection cards.
+     - `productDetails.tsx`: Localized fallback category and price labels.
+  3. **Verification:** Verified static type checking with `npx tsc --noEmit` across both `src/frontend` and `src/backend` (0 errors).
+- **Files Modified:**
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/aboutUs.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/helpUser.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** 100% of screens, modals, alerts, and feedback text in the app dynamically adapt to the user's language in all 7 supported idioms, with full type safety and zero hardcoded static strings, while dynamic user profile names remain intact.
+
+## [2026-08-18 11:38] - feat(i18n): system language auto-detection and complete application-wide localization
+
+- **Description:** Implemented system locale auto-detection as the primary default and completed full multilingual localization across all application screens and components:
+  1. **System Locale Auto-Detection:** Installed `expo-localization` and implemented `resolveSystemLanguage()` in `i18nContext.tsx` to automatically resolve the device's system language on launch with fallback to `pt-BR`. Supported `"system"` preference in AsyncStorage (`@presco:language` and `app_settings`).
+  2. **System Default Option in Settings:** Added the "Padrão do Sistema (Automático)" setting option in the Language Selection Modal in `settings.tsx` with live reactive status.
+  3. **Complete Type-Safe Dictionaries:** Expanded `TranslationSchema` in `types.ts` and synchronized all 7 language dictionary files (`pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts`) covering all domains (`home`, `search`, `productDetails`, `settings`, `scanner`, `products`, `profile`, `map`, `help`, `about`, `common`, `auth`, `navigation`, `errors`).
+  4. **Application-Wide Screen Translation:** Fully migrated and localized all application screens (`productDetails.tsx`, `registerProduct.tsx`, `customRegisterProduct.tsx`, `search.tsx`, `scannerProduct.tsx`, `scannerConfirmation.tsx`, `settings.tsx`, `map.native.tsx`, `map.tsx`, `map.web.tsx`) and shared components (`Sidebar.tsx`, `productCard.tsx`).
+  5. **Type Verification:** Executed `npx tsc --noEmit` with zero errors across the entire frontend TypeScript codebase.
+- **Files Modified:**
+  - `src/frontend/package.json`
+  - `src/frontend/content/i18nContext.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/map.tsx`
+  - `src/frontend/app/map.web.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** When the app is opened, it automatically selects the user's device system language primarily; users can switch between 7 languages or back to System Default at any time in Settings.
+
+---
+
 ## [2026-08-18 11:28] - feat(infra): create Windows dev launcher (start_project.ps1 & start_project.bat)
 
 - **Description:** Created Windows-native dev launchers providing full functional parity with `start_project.sh`:

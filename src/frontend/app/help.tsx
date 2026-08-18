@@ -169,7 +169,7 @@ export default function HelpScreen() {
               {t("navigation.scanner")}
             </Text>
             <Text style={[styles.quickCardSub, themeStyles.subText]}>
-              +15 XP por preço
+              {t("products.registerPrice")}
             </Text>
           </TouchableOpacity>
 
@@ -185,7 +185,7 @@ export default function HelpScreen() {
               {t("navigation.search")}
             </Text>
             <Text style={[styles.quickCardSub, themeStyles.subText]}>
-              Comparar mercados
+              {t("home.startPriceCheck")}
             </Text>
           </TouchableOpacity>
         </View>

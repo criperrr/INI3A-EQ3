@@ -9,10 +9,12 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 
 export default function AboutUs() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
+  const { t } = useI18n();
 
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
@@ -33,57 +35,37 @@ export default function AboutUs() {
         }}
       >
         <Ionicons name="arrow-back" size={24} color={iconColor} />
-        <Text style={[styles.backText, themeStyles.text]}>Voltar</Text>
+        <Text style={[styles.backText, themeStyles.text]}>{t("common.back")}</Text>
       </TouchableOpacity>
 
       {/* Cabeçalho da Tela */}
       <View style={styles.headerSection}>
-        <Text style={[styles.title, themeStyles.text]}>Sobre Nós</Text>
+        <Text style={[styles.title, themeStyles.text]}>{t("about.title")}</Text>
         <Text style={[styles.subtitle, themeStyles.subText]}>
-          Conheça a nossa história e o nosso propósito.
+          {t("about.subtitle")}
         </Text>
       </View>
 
       {/* Seções de Conteúdo */}
       <View style={[styles.card, themeStyles.card, themeStyles.border]}>
-        <Text style={[styles.cardTitle, themeStyles.text]}>Nossa Missão</Text>
+        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.missionTitle")}</Text>
         <Text style={[styles.cardBody, themeStyles.subText]}>
-          Conectar os brasileiros ao comércio local através de uma plataforma
-          simples e com a nossa cara, ajudando você a se informar e a economizar
-          nas compras do dia a dia.
+          {t("about.missionDescription")}
         </Text>
       </View>
 
       <View style={[styles.card, themeStyles.card, themeStyles.border]}>
-        <Text style={[styles.cardTitle, themeStyles.text]}>Nossos Valores</Text>
+        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.howItWorksTitle")}</Text>
+        <Text style={[styles.cardBody, themeStyles.subText]}>
+          {t("about.howItWorksDescription")}
+        </Text>
+      </View>
 
-        <View style={styles.valueItem}>
-          <Ionicons name="checkmark-circle-outline" size={20} color={accent} />
-          <Text style={[styles.valueText, themeStyles.text]}>
-            <Text style={[styles.valueBold, themeStyles.text]}>
-              Transparência:{" "}
-            </Text>
-            Clareza em todas as informações e ofertas.
-          </Text>
-        </View>
-
-        <View style={styles.valueItem}>
-          <Ionicons name="leaf-outline" size={20} color={accent} />
-          <Text style={[styles.valueText, themeStyles.text]}>
-            <Text style={[styles.valueBold, themeStyles.text]}>Ética: </Text>
-            Compromisso absoluto com o respeito e o usuário.
-          </Text>
-        </View>
-
-        <View style={styles.valueItem}>
-          <Ionicons name="people-outline" size={20} color={accent} />
-          <Text style={[styles.valueText, themeStyles.text]}>
-            <Text style={[styles.valueBold, themeStyles.text]}>
-              Veracidade:{" "}
-            </Text>
-            Informações reais e confiáveis sobre o seu entorno.
-          </Text>
-        </View>
+      <View style={[styles.card, themeStyles.card, themeStyles.border]}>
+        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.openDataTitle")}</Text>
+        <Text style={[styles.cardBody, themeStyles.subText]}>
+          {t("about.openDataDescription")}
+        </Text>
       </View>
     </ScrollView>
   );

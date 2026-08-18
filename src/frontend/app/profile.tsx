@@ -132,11 +132,11 @@ export default function ProfileScreen() {
     );
   }
 
-  const displayName = profile?.name || user?.name || "Usuário Presco";
+  const displayName = profile?.name || user?.name || t("common.guest");
   const displayEmail = profile?.email || user?.email || "";
   const displayRole =
     profile?.levelTitle ||
-    (isAdmin ? "Administrador Master" : user?.roleName || "Membro Presco");
+    (isAdmin ? t("profile.adminBadge") : user?.roleName || t("auth.regularUser"));
   const displayLevel = profile?.level || user?.level || (isAdmin ? 99 : 1);
   const currentXp = profile?.currentXp ?? user?.currentXp ?? (user?.points || 0);
   const maxXp = profile?.maxXp ?? user?.maxXp ?? 100;
@@ -170,9 +170,10 @@ export default function ProfileScreen() {
           level={displayLevel}
           isAdmin={isAdmin}
           accent={accent}
+          t={t}
         />
 
-        {isAdmin && <AdminPrivilegesBanner accent={accent} themeStyles={themeStyles} />}
+        {isAdmin && <AdminPrivilegesBanner accent={accent} themeStyles={themeStyles} t={t} />}
 
         <StatsCard stats={stats} t={t} />
 
@@ -208,6 +209,7 @@ const ProfileHeader = memo(function ProfileHeader({
   level,
   isAdmin,
   accent,
+  t,
 }: {
   name: string;
   email: string;
@@ -215,6 +217,7 @@ const ProfileHeader = memo(function ProfileHeader({
   level: number;
   isAdmin: boolean;
   accent: string;
+  t: (key: any) => string;
 }) {
   const { themeStyles } = useTheme();
 
@@ -244,7 +247,7 @@ const ProfileHeader = memo(function ProfileHeader({
         {isAdmin && (
           <View style={styles.adminBannerBadge}>
             <Ionicons name="shield-checkmark" size={14} color="#FFF" />
-            <Text style={styles.adminBannerText}>ADMINISTRADOR</Text>
+            <Text style={styles.adminBannerText}>{t("profile.adminBadge").toUpperCase()}</Text>
           </View>
         )}
       </View>
@@ -270,7 +273,7 @@ const ProfileHeader = memo(function ProfileHeader({
             <Ionicons name="sparkles" size={12} color="#FFF" style={{ marginRight: 2 }} />
           ) : null}
           <Text style={styles.levelBadgeText}>
-            {isAdmin ? "MAX" : `Nv. ${level}`}
+            {isAdmin ? "MAX" : `${t("common.levelShort")} ${level}`}
           </Text>
         </View>
       </View>
@@ -287,20 +290,22 @@ const ProfileHeader = memo(function ProfileHeader({
 const AdminPrivilegesBanner = memo(function AdminPrivilegesBanner({
   accent,
   themeStyles,
+  t,
 }: {
   accent: string;
   themeStyles: any;
+  t: (key: any) => string;
 }) {
   return (
     <View style={[styles.adminCard, themeStyles.card, { borderColor: COLORS.adminGlow }]}>
       <View style={styles.adminCardHeader}>
         <Ionicons name="shield-checkmark" size={20} color={COLORS.adminGlow} />
         <Text style={[styles.adminCardTitle, { color: COLORS.adminGlow }]}>
-          Painel de Permissões Master
+          {t("profile.adminPanelTitle")}
         </Text>
       </View>
       <Text style={[styles.adminCardDesc, themeStyles.subText]}>
-        Você tem autoridade total para editar e excluir qualquer produto no catálogo global, além de moderar e auditar ocorrências de todos os usuários.
+        {t("profile.adminPanelDesc")}
       </Text>
     </View>
   );
@@ -378,10 +383,10 @@ const LevelProgress = memo(function LevelProgress({
       <View style={styles.levelInfoRow}>
         <View style={styles.levelTitleCol}>
           <Text style={[styles.levelText, themeStyles.text]}>
-            {t("profile.level") || "Nível"} {level} • {roleTitle}
+            {t("profile.level")} {level} • {roleTitle}
           </Text>
           <Text style={[styles.levelSubText, themeStyles.subText]}>
-            Ganhe +15 XP por preço e +25 XP por novo produto
+            {t("profile.xpRewardHint")}
           </Text>
         </View>
         <Text style={[styles.levelProgressNumber, { color: accent }]}>
@@ -417,10 +422,10 @@ const BadgesSection = memo(function BadgesSection({
     <View style={styles.badgesSection}>
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionTitle, themeStyles.text]}>
-          {t("profile.badges") || "Conquistas e Medalhas"}
+          {t("profile.badges")}
         </Text>
         <Text style={[styles.badgeCountText, { color: accent }]}>
-          {badges.filter((b) => b.isUnlocked).length}/{badges.length} Desbloqueadas
+          {badges.filter((b) => b.isUnlocked).length}/{badges.length} {t("profile.unlockedCount")}
         </Text>
       </View>
 
@@ -444,7 +449,7 @@ const BadgesSection = memo(function BadgesSection({
               {b.name}
             </Text>
             <Text style={[styles.badgeMinPoints, themeStyles.subText]}>
-              {b.isUnlocked ? "Conquistado" : `${b.minPoints} XP`}
+              {b.isUnlocked ? t("profile.unlocked") : `${b.minPoints} XP`}
             </Text>
           </View>
         ))}
@@ -460,13 +465,13 @@ const ContributionHistory = memo(function ContributionHistory({
 }: {
   contributions: number[][];
   reportedCount: number;
-  t: (key: any) => string;
+  t: (key: any, params?: any) => string;
 }) {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={styles.achievementsSection}>
       <Text style={[styles.sectionTitle, themeStyles.text]}>
-        {t("profile.contributionStats") || "Atividade de Contribuições"}
+        {t("profile.contributionStats")}
       </Text>
 
       <View
@@ -474,10 +479,10 @@ const ContributionHistory = memo(function ContributionHistory({
       >
         <View style={styles.contributionsHeaderRow}>
           <Text style={[styles.contributionsTitle, themeStyles.text]}>
-            Histórico Semanal
+            {t("profile.weeklyHistory")}
           </Text>
           <Text style={[styles.contributionsSubtitle, themeStyles.subText]}>
-            {reportedCount} colaborações registradas
+            {t("profile.contributionsCount", { count: reportedCount })}
           </Text>
         </View>
 
@@ -537,10 +542,10 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
           <Ionicons name="person-circle-outline" size={76} color={accent} />
         </View>
         <Text style={[styles.guestTitle, themeStyles.text]}>
-          {t("navigation.profile") || "Perfil de Usuário"}
+          {t("navigation.profile")}
         </Text>
         <Text style={[styles.guestSubtitle, themeStyles.subText]}>
-          Conecte-se para acumular XP, subir de nível na comunidade e desbloquear medalhas exclusivas.
+          {t("profile.guestJoinHint")}
         </Text>
       </View>
 
@@ -556,11 +561,11 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
         <View style={styles.quickConnectHeader}>
           <Ionicons name="flash" size={18} color={accent} />
           <Text style={[styles.quickConnectTitle, { color: accent }]}>
-            Acesso Rápido de Teste (Banco Local)
+            {t("profile.quickTestTitle")}
           </Text>
         </View>
         <Text style={[styles.quickConnectDesc, themeStyles.subText]}>
-          Toque para conectar instantaneamente com as credenciais padrão do banco de dados:
+          {t("profile.quickTestSubtitle")}
         </Text>
 
         <View style={styles.quickConnectButtons}>
@@ -576,8 +581,8 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
               <>
                 <Ionicons name="person" size={18} color="#FFFFFF" />
                 <View style={styles.btnTextCol}>
-                  <Text style={styles.quickBtnText}>Entrar como Usuário Comum</Text>
-                  <Text style={styles.quickBtnSubText}>usuario@presco.com • Nv. 2 (150 XP)</Text>
+                  <Text style={styles.quickBtnText}>{t("profile.loginAsRegular")}</Text>
+                  <Text style={styles.quickBtnSubText}>usuario@presco.com • {t("common.levelShort")} 2 (150 XP)</Text>
                 </View>
                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
               </>
@@ -602,10 +607,10 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
                 <Ionicons name="shield-checkmark" size={18} color={COLORS.gold} />
                 <View style={styles.btnTextCol}>
                   <Text style={[styles.quickAdminBtnText, { color: COLORS.gold }]}>
-                    Entrar como Administrador Master
+                    {t("profile.loginAsAdmin")}
                   </Text>
                   <Text style={[styles.quickAdminBtnSubText, themeStyles.subText]}>
-                    admin@admin.org • Nível MAX
+                    admin@admin.org • {t("profile.level")} MAX
                   </Text>
                 </View>
                 <Ionicons name="arrow-forward" size={16} color={COLORS.gold} />
@@ -624,7 +629,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
         >
           <Ionicons name="log-in-outline" size={20} color={themeStyles.text.color} />
           <Text style={[styles.loginBtnText, themeStyles.text]}>
-            {t("auth.loginButton") || "Entrar com outra conta"}
+            {t("profile.loginWithOther")}
           </Text>
         </TouchableOpacity>
 

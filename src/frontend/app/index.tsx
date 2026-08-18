@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, memo } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -260,14 +260,45 @@ export default function HomeScreen() {
 
 const Banner = memo(function Banner() {
   const { themeStyles, accent } = useTheme();
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
+
+  const banners = useMemo(
+    () => [
+      {
+        id: "1",
+        title: t("home.banner1Title"),
+        subtitle: t("home.banner1Subtitle"),
+        linkText: t("home.banner1Action"),
+        image:
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
+      },
+      {
+        id: "2",
+        title: t("home.banner2Title"),
+        subtitle: t("home.banner2Subtitle"),
+        linkText: t("home.banner2Action"),
+        image:
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=800&h=400&fit=crop",
+      },
+      {
+        id: "3",
+        title: t("home.banner3Title"),
+        subtitle: t("home.banner3Subtitle"),
+        linkText: t("home.banner3Action"),
+        image:
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&h=400&fit=crop",
+      },
+    ],
+    [t]
+  );
 
   useEffect(() => {
     const timer = setInterval(() => {
       let nextIndex = activeIndex + 1;
       let shouldAnimate = true;
-      if (nextIndex >= MOCK_BANNERS.length) {
+      if (nextIndex >= banners.length) {
         nextIndex = 0;
         shouldAnimate = false;
       }
@@ -280,7 +311,7 @@ const Banner = memo(function Banner() {
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [activeIndex]);
+  }, [activeIndex, banners.length]);
 
   const handleScroll = useCallback((event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -294,7 +325,7 @@ const Banner = memo(function Banner() {
     <View style={styles.bannerSection}>
       <FlatList
         ref={flatListRef}
-        data={MOCK_BANNERS}
+        data={banners}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
@@ -337,7 +368,7 @@ const Banner = memo(function Banner() {
       />
 
       <View style={styles.paginationContainer}>
-        {MOCK_BANNERS.map((_, index) => (
+        {banners.map((_: any, index: number) => (
           <View
             key={index}
             style={[

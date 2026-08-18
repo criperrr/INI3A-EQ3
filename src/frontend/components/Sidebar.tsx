@@ -45,6 +45,8 @@ const SidebarHeader = memo(function SidebarHeader({
   isDark: boolean;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <View style={[styles.headerContainer, themeStyles.border]}>
       <View style={styles.brandRow}>
@@ -58,7 +60,7 @@ const SidebarHeader = memo(function SidebarHeader({
         <View style={styles.brandInfo}>
           <Text style={[styles.brandTitle, themeStyles.text]}>PResco</Text>
           <Text style={[styles.brandSubtitle, themeStyles.subText]}>
-            Economia & Preços
+            {t("home.welcomeSubtitle")}
           </Text>
         </View>
       </View>
@@ -170,7 +172,7 @@ const UserProfileCard = memo(function UserProfileCard({
   const { accent, isDark } = useTheme();
   const { t } = useI18n();
 
-  const displayName = profile?.name || user?.name || "Visitante";
+  const displayName = profile?.name || user?.name || t("common.guest");
   const userInitial = displayName.charAt(0).toUpperCase();
   const userPoints = profile?.points ?? user?.points ?? 0;
   const userLevel = profile?.level ?? user?.level ?? 1;
@@ -209,14 +211,14 @@ const UserProfileCard = memo(function UserProfileCard({
           {isAdmin && (
             <View style={[styles.adminBadge, { backgroundColor: accent + "25" }]}>
               <Text style={[styles.adminBadgeText, { color: accent }]}>
-                Admin
+                {t("profile.adminBadge")}
               </Text>
             </View>
           )}
         </View>
         <Text style={[styles.userStatus, themeStyles.subText]}>
           {isAuthenticated
-            ? `Nível ${userLevel} • ${userPoints} XP`
+            ? `${t("profile.level")} ${userLevel} • ${userPoints} XP`
             : t("auth.signIn")}
         </Text>
       </View>

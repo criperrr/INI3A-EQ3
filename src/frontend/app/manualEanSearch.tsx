@@ -13,6 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
+import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
 
 export default function ManualEanSearch() {
@@ -20,11 +21,12 @@ export default function ManualEanSearch() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { themeStyles, accent, isDark } = useTheme();
+  const { t } = useI18n();
 
   const handleSearch = async () => {
     const trimmedEan = ean.trim();
     if (!trimmedEan) {
-      Alert.alert("Atenção", "Por favor, insira o código de barras.");
+      Alert.alert(t("common.warning"), t("scanner.alignBarcode"));
       return;
     }
 
@@ -35,12 +37,12 @@ export default function ManualEanSearch() {
 
       if (!product) {
         Alert.alert(
-          "Produto Não Encontrado",
-          "O código informado não existe na base. Deseja cadastrá-lo manualmente?",
+          t("scanner.productNotFound"),
+          t("products.customProductSubtitle"),
           [
-            { text: "Cancelar", style: "cancel" },
+            { text: t("common.cancel"), style: "cancel" },
             {
-              text: "Cadastrar",
+              text: t("navigation.register"),
               onPress: () => {
                 router.push({
                   pathname: "/customRegisterProduct",
@@ -57,17 +59,17 @@ export default function ManualEanSearch() {
         pathname: "/scannerConfirmation",
         params: {
           id: product.id ? String(product.id) : undefined,
-          category: product?.category || "Categoria Não Encontrada",
-          name: product?.name || "Produto Não Encontrado",
+          category: product?.category || t("common.uncategorized"),
+          name: product?.name || t("scanner.productNotFound"),
           imageUri: product?.imageUri || product?.icon || undefined,
-          lastPrice: product?.lastPrice || "Preço não informado",
+          lastPrice: product?.lastPrice || t("productDetails.noOccurrences"),
           barcode: product?.barcode || trimmedEan,
           ean: product?.ean || trimmedEan,
         },
       });
     } catch (error: any) {
       setLoading(false);
-      Alert.alert("Erro", error.message || "Erro de conexão ao buscar o produto.");
+      Alert.alert(t("common.error"), error.message || t("errors.networkError"));
     }
   };
 
@@ -76,15 +78,15 @@ export default function ManualEanSearch() {
       <View style={[styles.container, themeStyles.bg]}>
         <View style={styles.content}>
         <Ionicons name="barcode-outline" size={80} color={accent} style={styles.icon} />
-        <Text style={[styles.title, themeStyles.text]}>Busca Manual</Text>
+        <Text style={[styles.title, themeStyles.text]}>{t("scanner.manualSearchTitle")}</Text>
         <Text style={[styles.subtitle, themeStyles.subText]}>
-          Digite o código de barras do produto abaixo.
+          {t("scanner.manualSearchSubtitle")}
         </Text>
 
         <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
           <TextInput
             style={[styles.input, themeStyles.text]}
-            placeholder="Ex: 7891010101010"
+            placeholder={t("scanner.manualSearchPlaceholder")}
             placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
             keyboardType="numeric"
             value={ean}
@@ -101,7 +103,7 @@ export default function ManualEanSearch() {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.buttonText}>Buscar Produto</Text>
+            <Text style={styles.buttonText}>{t("scanner.searchProductBtn")}</Text>
           )}
         </TouchableOpacity>
       </View>
