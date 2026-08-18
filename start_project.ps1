@@ -1,0 +1,240 @@
+# ==============================================================================
+# start_project.ps1 - Presco Dev Environment Launcher for Windows
+#
+# Modes:
+#   1. Tunneling Mode (Default):
+#      Uses localtunnel for school or restricted networks.
+#      Usage: .\start_project.ps1
+#
+#   2. 100% Local NAT Mode (-LocalNat):
+#      Direct local network connection. Zero latency, instant QR code scanning
+#      via Expo Go on the same Wi-Fi.
+#      Usage: .\start_project.ps1 -LocalNat
+# ==============================================================================
+
+[CmdletBinding()]
+param(
+    [Alias("local-nat", "local", "nat", "l")]
+    [switch]$LocalNat,
+
+    [Alias("tunnel", "t")]
+    [switch]$Tunnel,
+
+    [Alias("h")]
+    [switch]$Help
+)
+
+$ErrorActionPreference = "Continue"
+$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+# ------------------------------------------------------------------------------
+# 0. Help / Options
+# ------------------------------------------------------------------------------
+if ($Help) {
+    Write-Host "========================================================" -ForegroundColor Cyan
+    Write-Host " Presco Dev Launcher (Windows PowerShell)" -ForegroundColor Cyan
+    Write-Host "========================================================" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "Usage:"
+    Write-Host "  .\start_project.ps1 [OPTIONS]"
+    Write-Host ""
+    Write-Host "Options:"
+    Write-Host "  -LocalNat, -l      Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
+    Write-Host "  -Tunnel, -t        Run in Tunneling mode via localtunnel (default)"
+    Write-Host "  -Help, -h          Show this help message"
+    Write-Host ""
+    Write-Host "NPM Shortcuts:"
+    Write-Host "  npm run dev:win         -> Default tunneling mode"
+    Write-Host "  npm run dev:win:local   -> 100% Local NAT mode"
+    exit 0
+}
+
+$IsLocalNat = $false
+if ($LocalNat) {
+    $IsLocalNat = $true
+}
+
+Write-Host "========================================================" -ForegroundColor Cyan
+if ($IsLocalNat) {
+    Write-Host " [+] MODE: 100% LOCAL NETWORK (NAT) - Direct Home LAN" -ForegroundColor Green
+} else {
+    Write-Host " [*] MODE: TUNNELING (Localtunnel) - Restricted/School Network" -ForegroundColor Yellow
+}
+Write-Host "========================================================" -ForegroundColor Cyan
+
+# ------------------------------------------------------------------------------
+# 1. Parse backend configuration from src/backend/.env
+# ------------------------------------------------------------------------------
+Write-Host "[i] Reading backend configuration..." -ForegroundColor Gray
+
+$backendDir = Join-Path $ScriptDir "src\backend"
+$frontendDir = Join-Path $ScriptDir "src\frontend"
+$envFile = Join-Path $backendDir ".env"
+
+$DbHost = "localhost"
+$DbPort = 5432
+$RedisHost = "localhost"
+$RedisPort = 6379
+$ServerPort = 3333
+
+if (Test-Path $envFile) {
+    $envLines = Get-Content $envFile
+    foreach ($line in $envLines) {
+        $trimmed = $line.Trim()
+        if (($trimmed) -and (-not ($trimmed.StartsWith("#")))) {
+            $eqIdx = $trimmed.IndexOf("=")
+            if ($eqIdx -gt 0) {
+                $k = $trimmed.Substring(0, $eqIdx).Trim()
+                $v = $trimmed.Substring($eqIdx + 1).Trim().Trim("`"'")
+                
+                if ($k -eq "SERVER_PORT" -and $v) {
+                    $ServerPort = [int]$v
+                }
+                elseif ($k -eq "DATABASE_URL" -and $v) {
+                    try {
+                        $clean = $v -replace "^postgresql://", "postgres://"
+                        $uri = [System.Uri]$clean
+                        if ($uri.Host) { $DbHost = $uri.Host }
+                        if ($uri.Port -gt 0) { $DbPort = $uri.Port }
+                    } catch {}
+                }
+                elseif ($k -eq "REDIS_URL" -and $v) {
+                    try {
+                        $uri = [System.Uri]$v
+                        if ($uri.Host) { $RedisHost = $uri.Host }
+                        if ($uri.Port -gt 0) { $RedisPort = $uri.Port }
+                    } catch {}
+                }
+            }
+        }
+    }
+}
+
+# ------------------------------------------------------------------------------
+# 2. Port Check Helper
+# ------------------------------------------------------------------------------
+function Test-ServicePort {
+    param(
+        [string]$HostName,
+        [int]$Port,
+        [string]$ServiceName,
+        [int]$MaxAttempts = 30
+    )
+    
+    Write-Host -NoNewline "[...] Waiting for $ServiceName on ${HostName}:${Port}..."
+    $attempt = 1
+    
+    while ($attempt -le $MaxAttempts) {
+        try {
+            $tcp = New-Object System.Net.Sockets.TcpClient
+            $async = $tcp.BeginConnect($HostName, $Port, $null, $null)
+            $success = $async.AsyncWaitHandle.WaitOne(1000, $false)
+            if ($success -and $tcp.Connected) {
+                $tcp.EndConnect($async)
+                $tcp.Close()
+                Write-Host " [OK]" -ForegroundColor Green
+                return $true
+            }
+            $tcp.Close()
+        } catch {}
+        
+        Write-Host -NoNewline "."
+        Start-Sleep -Seconds 1
+        $attempt++
+    }
+    
+    Write-Host " Timeout!" -ForegroundColor Red
+    Write-Host "[X] $ServiceName is not running on ${HostName}:${Port}." -ForegroundColor Red
+    return $false
+}
+
+# ------------------------------------------------------------------------------
+# 3. Verify Database and Redis
+# ------------------------------------------------------------------------------
+$pgReady = Test-ServicePort -HostName $DbHost -Port $DbPort -ServiceName "PostgreSQL"
+if (-not $pgReady) {
+    Write-Host "[!] PostgreSQL is not responding. Please make sure Docker or PostgreSQL service is running." -ForegroundColor Red
+    exit 1
+}
+
+$redisReady = Test-ServicePort -HostName $RedisHost -Port $RedisPort -ServiceName "Redis"
+if (-not $redisReady) {
+    Write-Host "[!] Redis is not responding. Please make sure Redis service or container is running." -ForegroundColor Red
+    exit 1
+}
+
+# ------------------------------------------------------------------------------
+# 4. Detect Local LAN IP
+# ------------------------------------------------------------------------------
+function Get-LanIp {
+    try {
+        $udp = New-Object System.Net.Sockets.UdpClient
+        $udp.Connect("8.8.8.8", 53)
+        $localAddr = $udp.Client.LocalEndPoint.Address.ToString()
+        $udp.Close()
+        if ($localAddr) { return $localAddr }
+    } catch {}
+
+    try {
+        $netIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
+            $_.InterfaceAlias -notmatch "Loopback|vEthernet|WSL" -and
+            $_.IPAddress -notmatch "^127\.|^169\.254\."
+        } | Select-Object -First 1).IPAddress
+        if ($netIp) { return $netIp }
+    } catch {}
+
+    return "localhost"
+}
+
+$LanIp = Get-LanIp
+Write-Host "[i] Detected Local LAN IP: $LanIp" -ForegroundColor Cyan
+
+# ------------------------------------------------------------------------------
+# 5. Launch Backend Server & Frontend Expo
+# ------------------------------------------------------------------------------
+$hasWt = (Get-Command wt.exe -ErrorAction SilentlyContinue) -ne $null
+
+if ($IsLocalNat) {
+    $BackendUrl = "http://${LanIp}:${ServerPort}"
+    Write-Host "[+] Direct Backend API URL: $BackendUrl" -ForegroundColor Green
+    Write-Host "[+] Expo Bundler will serve over LAN (exp://${LanIp}:8081)" -ForegroundColor Green
+    Write-Host "[i] Open Expo Go on your mobile (same Wi-Fi) and scan the QR code!" -ForegroundColor Yellow
+
+    $backendCmd = "Set-Location '$backendDir'; `$env:DEBUG='*'; `$env:NODE_ENV='development'; npm run dev"
+    $frontendCmd = "Set-Location '$frontendDir'; `$env:EXPO_PUBLIC_API_URL='$BackendUrl'; `$env:REACT_NATIVE_PACKAGER_HOSTNAME='$LanIp'; npm run start -- --lan --clear"
+
+    if ($hasWt) {
+        Write-Host "[i] Launching with Windows Terminal split panes..." -ForegroundColor Cyan
+        Start-Process wt.exe -ArgumentList "-w 0 new-tab --title `"Presco Backend`" powershell -NoExit -Command `"$backendCmd`" `; split-pane -H --title `"Presco Frontend`" powershell -NoExit -Command `"$frontendCmd`""
+    } else {
+        Write-Host "[i] Launching separate PowerShell windows..." -ForegroundColor Cyan
+        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO BACKEND ===' -ForegroundColor Cyan; $backendCmd"
+        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO FRONTEND ===' -ForegroundColor Green; $frontendCmd"
+    }
+
+} else {
+    # Tunneling mode
+    Write-Host "[*] Starting localtunnel and services..." -ForegroundColor Yellow
+    $BackendUrl = "https://ini3a-eq3-api.loca.lt"
+    $FrontendUrl = "https://ini3a-eq3-app.loca.lt"
+
+    $backendCmd = "Set-Location '$backendDir'; `$env:DEBUG='*'; `$env:NODE_ENV='development'; npm run dev"
+    $frontendCmd = "Set-Location '$frontendDir'; `$env:EXPO_PUBLIC_API_URL='$BackendUrl'; `$env:EXPO_PACKAGER_PROXY_URL='$FrontendUrl'; `$env:EXPO_DEBUG='true'; npm run start -- --clear"
+    $tunnelCmd = "Write-Host 'Starting Localtunnel for API ($ServerPort) and Frontend (8081)...' -ForegroundColor Cyan; Start-Process npx -ArgumentList '--yes localtunnel --port $ServerPort --subdomain ini3a-eq3-api'; npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app"
+
+    if ($hasWt) {
+        Write-Host "[i] Launching with Windows Terminal tabs..." -ForegroundColor Cyan
+        Start-Process wt.exe -ArgumentList "-w 0 new-tab --title `"Presco Backend`" powershell -NoExit -Command `"$backendCmd`" `; split-pane -H --title `"Presco Frontend`" powershell -NoExit -Command `"$frontendCmd`" `; new-tab --title `"Presco Tunnels`" powershell -NoExit -Command `"$tunnelCmd`""
+    } else {
+        Write-Host "[i] Launching separate PowerShell windows..." -ForegroundColor Cyan
+        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO BACKEND ===' -ForegroundColor Cyan; $backendCmd"
+        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO TUNNELS ===' -ForegroundColor Yellow; $tunnelCmd"
+        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO FRONTEND ===' -ForegroundColor Green; $frontendCmd"
+    }
+}
+
+Write-Host ""
+Write-Host "========================================================" -ForegroundColor Green
+Write-Host " [OK] Presco Dev Environment started successfully!" -ForegroundColor Green
+Write-Host " To stop services, simply close the opened terminal windows." -ForegroundColor Gray
+Write-Host "========================================================" -ForegroundColor Green

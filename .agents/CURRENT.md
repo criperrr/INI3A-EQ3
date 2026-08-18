@@ -134,6 +134,7 @@ Direct relative paths from project root.
 - [x] Fix unauthenticated profile screen error (`ApiError: Token não fornecido`) by guarding `/auth/me` profile refresh and adding 1-tap test user and admin quick-connect actions (`usuario@presco.com` / `user123` and `admin@admin.org` / `admin`).
 - [x] Implement market proximity lookup in frontend map screen with instant location resolution (`getLastKnownPositionAsync`), local database markets fallback (`fetchMarkets`), Overpass in-memory caching, non-blocking OSRM routing, and instant client-side product/market caching.
 - [x] Fix profile ApiError and implement graceful session error handling in `api.ts`, `auth.ts`, and `authContext.tsx`.
+- [x] Create Windows dev launcher (`start_project.ps1` and `start_project.bat`) with automated TCP port checking, LAN IP detection, Windows Terminal split-pane orchestration, and `npm run dev:win` shortcuts.
 
 ---
 

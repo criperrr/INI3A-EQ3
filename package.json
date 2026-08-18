@@ -6,6 +6,8 @@
     "dev:local": "bash ./start_project.sh --local-nat",
     "dev:nat": "bash ./start_project.sh --local-nat",
     "dev:tunnel": "bash ./start_project.sh --tunnel",
+    "dev:win": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1",
+    "dev:win:local": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat",
     "db:reload": "bash ./reload_services.sh",
     "db:restart": "bash ./reload_services.sh --restart",
     "db:status": "bash ./reload_services.sh --status",

@@ -24,6 +24,23 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 11:28] - feat(infra): create Windows dev launcher (start_project.ps1 & start_project.bat)
+
+- **Description:** Created Windows-native dev launchers providing full functional parity with `start_project.sh`:
+  1. **PowerShell Dev Launcher (`start_project.ps1`):** Implemented automated `.env` parsing, .NET `TcpClient` port readiness checking (PostgreSQL, Redis, Backend), UDP socket LAN IPv4 detection, and dynamic mode switching (Tunneling vs 100% Local NAT).
+  2. **Terminal Orchestration:** Automated Windows Terminal (`wt.exe`) split-pane dashboard launch with fallback to titled PowerShell console windows.
+  3. **Batch Wrapper (`start_project.bat`):** Added a double-clickable batch launcher that automatically applies `-ExecutionPolicy Bypass`.
+  4. **NPM Shortcuts:** Added `dev:win` and `dev:win:local` scripts to root `package.json`.
+- **Files Modified:**
+  - `start_project.ps1`
+  - `start_project.bat`
+  - `package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers on Windows can now launch the full Presco stack with a single command (`npm run dev:win` or `.\start_project.ps1`) without requiring WSL or tmux.
+
+---
+
 ## [2026-08-18 11:20] - fix(auth): resolve profile ApiError and implement graceful session error handling
 
 - **Description:** Diagnosed and resolved the root cause of `[Auth] Error fetching user profile: ApiError: Erro inesperado`:
