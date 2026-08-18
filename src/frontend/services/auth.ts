@@ -167,10 +167,14 @@ export async function deleteAccount(): Promise<void> {
 }
 
 /**
-  * Fetches the full profile of the authenticated user (points, level, badges, stats).
-  */
+ * Fetches the full profile of the authenticated user (points, level, badges, stats).
+ */
 export async function fetchUserProfile(): Promise<UserProfileData | null> {
   try {
+    const tokens = await getStoredTokens();
+    if (!tokens.accessToken) {
+      return null;
+    }
     return await apiRequest<UserProfileData>("/auth/me", {
       method: "GET",
     });

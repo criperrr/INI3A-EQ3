@@ -24,6 +24,7 @@ interface AuthContextData {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginAsTestUser: (role?: "user" | "admin") => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<UserProfileData | null>;
@@ -38,6 +39,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     try {
+      const tokens = await getStoredTokens();
+      if (!tokens.accessToken) {
+        return null;
+      }
       const fullProfile = await fetchUserProfile();
       if (fullProfile) {
         setProfile(fullProfile);
@@ -125,6 +130,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const loginAsTestUser = useCallback(
+    async (type: "user" | "admin" = "user") => {
+      const email = type === "admin" ? "admin@admin.org" : "usuario@presco.com";
+      const pass = type === "admin" ? "admin" : "user123";
+      await login(email, pass);
+    },
+    [login],
+  );
+
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const result = await registerUser(name, email, password);
@@ -160,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginAsTestUser,
         register,
         logout,
         refreshProfile,

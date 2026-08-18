@@ -42,26 +42,48 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
   const { t } = useI18n();
-  const { user, profile, isAdmin, refreshProfile, logout } = useAuth();
+  const { user, profile, isAdmin, isAuthenticated, refreshProfile, loginAsTestUser, logout } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(!profile);
+  const [loading, setLoading] = useState(false);
+  const [connectingRole, setConnectingRole] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!isAuthenticated && !user) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       await refreshProfile();
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [refreshProfile]);
+  }, [refreshProfile, isAuthenticated, user]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (isAuthenticated || user) {
+      loadData();
+    }
+  }, [loadData, isAuthenticated, user]);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
+  };
+
+  const handleQuickConnect = async (type: "user" | "admin") => {
+    setConnectingRole(type);
+    try {
+      await loginAsTestUser(type);
+    } catch (e: any) {
+      Alert.alert(
+        t("common.error") || "Erro",
+        e?.message || "Falha ao conectar ao usuário de teste.",
+      );
+    } finally {
+      setConnectingRole(null);
+    }
   };
 
   const handleLogout = () => {
@@ -89,6 +111,23 @@ export default function ProfileScreen() {
         <Text style={[styles.loadingText, themeStyles.subText]}>
           {t("common.loading") || "Carregando perfil..."}
         </Text>
+      </View>
+    );
+  }
+
+  if (!isAuthenticated && !user && !profile) {
+    return (
+      <View style={[styles.container, themeStyles.bg]}>
+        <UnauthenticatedProfileView
+          accent={accent}
+          themeStyles={themeStyles}
+          isDark={isDark}
+          t={t}
+          connectingRole={connectingRole}
+          onQuickConnect={handleQuickConnect}
+          onGoToLogin={() => router.push("/login")}
+          onGoToRegister={() => router.push("/registerUser")}
+        />
       </View>
     );
   }
@@ -460,6 +499,147 @@ const ContributionHistory = ({
   );
 };
 
+interface UnauthenticatedProfileViewProps {
+  accent: string;
+  themeStyles: any;
+  isDark: boolean;
+  t: (key: any) => string;
+  connectingRole: string | null;
+  onQuickConnect: (type: "user" | "admin") => void;
+  onGoToLogin: () => void;
+  onGoToRegister: () => void;
+}
+
+const UnauthenticatedProfileView = ({
+  accent,
+  themeStyles,
+  isDark,
+  t,
+  connectingRole,
+  onQuickConnect,
+  onGoToLogin,
+  onGoToRegister,
+}: UnauthenticatedProfileViewProps) => {
+  return (
+    <ScrollView
+      contentContainerStyle={styles.guestContainer}
+      showsVerticalScrollIndicator={false}
+    >
+      <View style={styles.guestHero}>
+        <View
+          style={[
+            styles.guestIconCircle,
+            { backgroundColor: accent + "18", borderColor: accent + "40" },
+          ]}
+        >
+          <Ionicons name="person-circle-outline" size={76} color={accent} />
+        </View>
+        <Text style={[styles.guestTitle, themeStyles.text]}>
+          {t("navigation.profile") || "Perfil de Usuário"}
+        </Text>
+        <Text style={[styles.guestSubtitle, themeStyles.subText]}>
+          Conecte-se para acumular XP, subir de nível na comunidade e desbloquear medalhas exclusivas.
+        </Text>
+      </View>
+
+      {/* Quick Test Connection Box */}
+      <View
+        style={[
+          styles.quickConnectBox,
+          themeStyles.card,
+          themeStyles.border,
+          { borderColor: accent + "40" },
+        ]}
+      >
+        <View style={styles.quickConnectHeader}>
+          <Ionicons name="flash" size={18} color={accent} />
+          <Text style={[styles.quickConnectTitle, { color: accent }]}>
+            Acesso Rápido de Teste (Banco Local)
+          </Text>
+        </View>
+        <Text style={[styles.quickConnectDesc, themeStyles.subText]}>
+          Toque para conectar instantaneamente com as credenciais padrão do banco de dados:
+        </Text>
+
+        <View style={styles.quickConnectButtons}>
+          <TouchableOpacity
+            style={[styles.quickUserBtn, { backgroundColor: accent }]}
+            activeOpacity={0.8}
+            onPress={() => onQuickConnect("user")}
+            disabled={connectingRole !== null}
+          >
+            {connectingRole === "user" ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <>
+                <Ionicons name="person" size={18} color="#FFFFFF" />
+                <View style={styles.btnTextCol}>
+                  <Text style={styles.quickBtnText}>Entrar como Usuário Comum</Text>
+                  <Text style={styles.quickBtnSubText}>usuario@presco.com • Nv. 2 (150 XP)</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.quickAdminBtn,
+              themeStyles.inputBg,
+              themeStyles.border,
+              { borderColor: COLORS.gold },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => onQuickConnect("admin")}
+            disabled={connectingRole !== null}
+          >
+            {connectingRole === "admin" ? (
+              <ActivityIndicator size="small" color={COLORS.gold} />
+            ) : (
+              <>
+                <Ionicons name="shield-checkmark" size={18} color={COLORS.gold} />
+                <View style={styles.btnTextCol}>
+                  <Text style={[styles.quickAdminBtnText, { color: COLORS.gold }]}>
+                    Entrar como Administrador Master
+                  </Text>
+                  <Text style={[styles.quickAdminBtnSubText, themeStyles.subText]}>
+                    admin@admin.org • Nível MAX
+                  </Text>
+                </View>
+                <Ionicons name="arrow-forward" size={16} color={COLORS.gold} />
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Standard Actions */}
+      <View style={styles.standardActions}>
+        <TouchableOpacity
+          style={[styles.loginBtn, themeStyles.inputBg, themeStyles.border]}
+          activeOpacity={0.8}
+          onPress={onGoToLogin}
+        >
+          <Ionicons name="log-in-outline" size={20} color={themeStyles.text.color} />
+          <Text style={[styles.loginBtnText, themeStyles.text]}>
+            {t("auth.loginButton") || "Entrar com outra conta"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.registerBtn}
+          activeOpacity={0.7}
+          onPress={onGoToRegister}
+        >
+          <Text style={[styles.registerBtnText, { color: accent }]}>
+            {t("auth.signUp") || "Não tem uma conta? Cadastre-se"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+};
+
 const LogoutButton = ({
   onPress,
   t,
@@ -683,4 +863,122 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   logoutText: { fontSize: 16, fontWeight: "bold", color: COLORS.redLogout },
+  guestContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: 36,
+    paddingBottom: 40,
+    alignItems: "center",
+  },
+  guestHero: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  guestIconCircle: {
+    width: 108,
+    height: 108,
+    borderRadius: 54,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
+  guestTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 6,
+    textAlign: "center",
+  },
+  guestSubtitle: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 19,
+    paddingHorizontal: 16,
+  },
+  quickConnectBox: {
+    width: "100%",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1.5,
+    marginBottom: 20,
+  },
+  quickConnectHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  quickConnectTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  quickConnectDesc: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  quickConnectButtons: {
+    gap: 10,
+  },
+  quickUserBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    gap: 12,
+  },
+  btnTextCol: {
+    flex: 1,
+  },
+  quickBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  quickBtnSubText: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 11,
+  },
+  quickAdminBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 12,
+  },
+  quickAdminBtnText: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  quickAdminBtnSubText: {
+    fontSize: 11,
+  },
+  standardActions: {
+    width: "100%",
+    gap: 10,
+  },
+  loginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  loginBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  registerBtn: {
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  registerBtnText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
 });

@@ -24,6 +24,24 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 09:03] - fix(auth): resolve profile unauthenticated 401 error and add 1-tap test user connect
+
+- **Description:** Resolved unhandled `ApiError: Token não fornecido` when opening the Profile screen without an active session, and added quick test connection:
+  1. **Token Guard in `fetchUserProfile` & `refreshProfile`:** Checked presence of `accessToken` in storage before initiating `GET /auth/me` to prevent unnecessary 401 unauthenticated requests on startup or guest mode.
+  2. **Dedicated Guest / Unauthenticated Profile View:** Created `UnauthenticatedProfileView` in `profile.tsx` with Monet theme styling, displaying informative copy and direct 1-tap connection buttons to the test database accounts:
+     - 👤 **Usuário Comum:** `usuario@presco.com` (Nv. 2, 150 XP, password `user123`)
+     - 🛡️ **Administrador Master:** `admin@admin.org` (Nível MAX, password `admin`)
+  3. **`loginAsTestUser` Helper in AuthContext:** Added `loginAsTestUser("user" | "admin")` to `AuthContext` to instantly authenticate, store JWT/Refresh tokens, fetch full user statistics/badges, and transition into the dynamic profile view.
+- **Files Modified:**
+  - `src/frontend/services/auth.ts`
+  - `src/frontend/content/authContext.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Accessing the Profile screen while logged out now presents an informative, interactive guest screen with instant 1-tap test login buttons, eliminating console errors.
+
+---
+
 ## [2026-08-18 08:48] - fix(auth): allow short seed passwords on login and enhance fetchProducts response handling
 
 - **Description:** Resolved authentication and initial product listing errors right after login:

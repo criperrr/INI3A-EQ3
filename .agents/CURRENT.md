@@ -131,6 +131,7 @@ Direct relative paths from project root.
 - [x] Fix and polish Start Menu / ActionMenu layout on Home screen (activeView indicators, Monet tokens, concise i18n labels across 7 languages) and Sidebar drawer menu (safe area insets, brand header with close button, vector icons, user profile card).
 - [x] Fix PostgreSQL schema synchronization (`role.authority`, `user.birthdate`, PostGIS geography, drizzle migration tracking) and resolve Reanimated worklet `useRef` serialization warning in `SwipeTabNavigator`.
 - [x] Fix EAN product lookup and navigation pipeline: Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts multi-endpoint parallel fallback, barcode digit/leading-zero normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
+- [x] Fix unauthenticated profile screen error (`ApiError: Token não fornecido`) by guarding `/auth/me` profile refresh and adding 1-tap test user and admin quick-connect actions (`usuario@presco.com` / `user123` and `admin@admin.org` / `admin`).
 - [ ] Implement market proximity lookup in frontend map screen.
 
 ---
