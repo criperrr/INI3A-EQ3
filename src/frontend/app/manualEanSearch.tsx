@@ -56,11 +56,13 @@ export default function ManualEanSearch() {
       router.push({
         pathname: "/scannerConfirmation",
         params: {
+          id: product.id ? String(product.id) : undefined,
           category: product?.category || "Categoria Não Encontrada",
           name: product?.name || "Produto Não Encontrado",
-          imageUri: product?.imageUri || "https://via.placeholder.com/150",
+          imageUri: product?.imageUri || product?.icon || undefined,
           lastPrice: product?.lastPrice || "Preço não informado",
-          barcode: trimmedEan,
+          barcode: product?.barcode || trimmedEan,
+          ean: product?.ean || trimmedEan,
         },
       });
     } catch (error: any) {

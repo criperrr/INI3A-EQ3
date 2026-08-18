@@ -45,7 +45,8 @@ class ProductControllerClass {
 
   async getProductByBarcode(req: Request, res: Response, next: NextFunction) {
     try {
-      const ean = typeof req.params.ean === "string" ? req.params.ean.trim() : "";
+      const rawEan = req.params.ean || req.query.ean || req.query.barcode;
+      const ean = typeof rawEan === "string" ? rawEan.trim() : "";
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!ean) {

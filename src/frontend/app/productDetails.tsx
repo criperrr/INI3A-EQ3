@@ -127,8 +127,9 @@ export default function ProductDetails() {
     router.push({
       pathname: "/registerProduct",
       params: {
-        id: product?.id ? String(product.id) : undefined,
+        id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
         barcode: product?.barcode || targetBarcode,
+        ean: product?.ean || product?.barcode || targetBarcode,
         name: product?.name || params.name,
         category: product?.category || params.category,
         imageUri: product?.imageUri || params.imageUri,

@@ -37,6 +37,9 @@ export interface TranslationSchema {
     register: string;
     menu: string;
     closeMenu: string;
+    products: string;
+    help: string;
+    about: string;
   };
   auth: {
     loginTitle: string;
@@ -186,6 +189,43 @@ export interface TranslationSchema {
     locationPermissionDenied: string;
     recenter: string;
   };
+  help: {
+    title: string;
+    subtitle: string;
+    searchPlaceholder: string;
+    faqSectionTitle: string;
+    faq1Question: string;
+    faq1Answer: string;
+    faq2Question: string;
+    faq2Answer: string;
+    faq3Question: string;
+    faq3Answer: string;
+    faq4Question: string;
+    faq4Answer: string;
+    faq5Question: string;
+    faq5Answer: string;
+    supportSectionTitle: string;
+    contactSupport: string;
+    supportEmailText: string;
+    communityGuidelines: string;
+  };
+  about: {
+    title: string;
+    subtitle: string;
+    tagline: string;
+    missionTitle: string;
+    missionDescription: string;
+    howItWorksTitle: string;
+    howItWorksDescription: string;
+    openDataTitle: string;
+    openDataDescription: string;
+    versionInfo: string;
+    buildInfo: string;
+    privacyPolicy: string;
+    termsOfService: string;
+    creditsTitle: string;
+    creditsDescription: string;
+  };
   errors: {
     networkError: string;
     timeoutError: string;
@@ -215,4 +255,6 @@ export type TranslationKey =
   | `products.${keyof TranslationSchema["products"]}`
   | `profile.${keyof TranslationSchema["profile"]}`
   | `map.${keyof TranslationSchema["map"]}`
+  | `help.${keyof TranslationSchema["help"]}`
+  | `about.${keyof TranslationSchema["about"]}`
   | `errors.${keyof TranslationSchema["errors"]}`;

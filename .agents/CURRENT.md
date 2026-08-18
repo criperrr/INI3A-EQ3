@@ -104,6 +104,8 @@ Direct relative paths from project root.
 | `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, admin banner, and logout |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import encoded config, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
+| `src/frontend/app/help.tsx` | Help Center screen with FAQ accordions, search, and support contact |
+| `src/frontend/app/about.tsx` | About Us screen with mission, version, tech stack, open data, and repository links |
 | `src/frontend/content/authContext.tsx` | `AuthProvider`, `useAuth()` with `user`, `profile`, `isAdmin`, `refreshProfile()` |
 | `src/frontend/content/themeContent.tsx` | `ThemeProvider`, `useTheme()` with light/dark/amoled modes and dynamic Monet palette presets |
 | `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
@@ -126,7 +128,9 @@ Direct relative paths from project root.
 - [x] Complete Admin vs Regular User permission scheme, leveling and gamification (+15 XP price, +25 XP product, +5 XP vote), 100% dynamic profile screen without placeholders, Expo Go auto-detection with 1-tap admin login (`admin@admin.org`/`admin`), and occurrence submission across markets.
 - [x] Full mobile native performance optimization suite (Phase 0 Audit, Android 13-16 Predictive Back & Edge-to-Edge insets, iOS pop transitions, Metro `inlineRequires` lazy loading, full migration to `expo-image` with `memory-disk` cache, `@shopify/flash-list`, and pure UI thread memoization).
 - [x] Unify `.taagents` into `.agents` and generate comprehensive project documentation.
-- [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
+- [x] Fix and polish Start Menu / ActionMenu layout on Home screen (activeView indicators, Monet tokens, concise i18n labels across 7 languages) and Sidebar drawer menu (safe area insets, brand header with close button, vector icons, user profile card).
+- [x] Fix PostgreSQL schema synchronization (`role.authority`, `user.birthdate`, PostGIS geography, drizzle migration tracking) and resolve Reanimated worklet `useRef` serialization warning in `SwipeTabNavigator`.
+- [x] Fix EAN product lookup and navigation pipeline: OpenFoodFacts multi-endpoint fallback with User-Agent header, barcode format normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
 - [ ] Implement market proximity lookup in frontend map screen.
 
 ---

@@ -29,7 +29,10 @@ class ProductServiceClass {
   }
 
   async getProductByBarcode(barcode: string): Promise<ProductDTO | null> {
-    const localProduct = await ProductRepository.getProductByEan(barcode);
+    const cleanBarcode = barcode?.trim();
+    if (!cleanBarcode) return null;
+
+    const localProduct = await ProductRepository.getProductByEan(cleanBarcode);
     if (localProduct) {
       const latestPrice = await ProductRepository.getLatestPriceForProduct(localProduct.id);
       const stats = await ProductRepository.getPriceStats(localProduct.id);
@@ -44,21 +47,42 @@ class ProductServiceClass {
     }
 
     try {
-      const data = await ProductRepository.getProductFromOpenFoodFacts(barcode);
+      const data = await ProductRepository.getProductFromOpenFoodFacts(cleanBarcode);
       if (!data || data.status === 0 || !data.product) {
         return null;
       }
 
       const productData = data.product;
-      const name = productData.product_name || productData.product_name_pt || "Produto sem nome";
-      const category = productData.categories?.split(",")[0]?.trim() || "Sem Categoria";
-      const imageUri = productData.image_url || productData.image_front_url || "";
+      const rawName = (
+        productData.product_name_pt ||
+        productData.product_name ||
+        productData.generic_name_pt ||
+        productData.generic_name ||
+        productData.product_name_en ||
+        ""
+      ).trim();
+      const brand = (productData.brands || "").split(",")[0]?.trim();
+      let finalName = rawName;
+      if (brand && (!finalName || !finalName.toLowerCase().includes(brand.toLowerCase()))) {
+        finalName = finalName ? `${brand} ${finalName}` : brand;
+      }
+      if (!finalName) {
+        finalName = "Produto sem nome";
+      }
+
+      const safeName = finalName.slice(0, 195);
+      const category = (
+        productData.categories_tags?.[0]?.replace(/^[a-z]{2}:/, "") ||
+        productData.categories?.split(",")[0]?.trim() ||
+        "Geral"
+      ).slice(0, 100);
+      const imageUri = productData.image_url || productData.image_front_url || productData.image_small_url || "";
 
       let createdProduct = null;
       try {
         createdProduct = await ProductRepository.createProduct({
-          ean: barcode,
-          name,
+          ean: cleanBarcode,
+          name: safeName,
           description: category,
           icon: imageUri,
         });
@@ -72,10 +96,10 @@ class ProductServiceClass {
 
       return {
         id: 0,
-        barcode,
-        ean: barcode,
+        barcode: cleanBarcode,
+        ean: cleanBarcode,
         ncm: null,
-        name,
+        name: safeName,
         description: category,
         category,
         imageUri: imageUri || null,
@@ -121,6 +145,16 @@ class ProductServiceClass {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const offset = (page - 1) * limit;
+
+    const trimmedSearch = query.search?.trim();
+
+    // If search looks like an EAN barcode (numeric 8 to 14 digits), check if it exists or fetch from OpenFoodFacts on the fly
+    if (trimmedSearch && /^\d{8,14}$/.test(trimmedSearch)) {
+      const local = await ProductRepository.getProductByEan(trimmedSearch);
+      if (!local) {
+        await this.getProductByBarcode(trimmedSearch).catch(() => null);
+      }
+    }
 
     const [items, total] = await Promise.all([
       ProductRepository.searchProducts({

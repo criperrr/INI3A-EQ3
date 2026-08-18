@@ -16,7 +16,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useAuth } from "../content/authContext";
-import { fetchProductByEan, ProductData } from "../services/productService";
+import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
 import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence } from "../services/ocurrencyService";
 
@@ -59,13 +59,14 @@ export default function RegisterProduct() {
       }
     });
 
-    const hasValidParams =
-      params.name &&
-      params.name !== "Produto Não Encontrado" &&
-      params.name !== "Nome indisponível" &&
-      params.name !== "Novo Produto";
-
-    if (targetEan && !hasValidParams) {
+    if (targetId && !isNaN(targetId) && targetId > 0) {
+      setIsLoading(true);
+      fetchProductById(targetId)
+        .then((data) => {
+          if (data) setProduct(data);
+        })
+        .finally(() => setIsLoading(false));
+    } else if (targetEan) {
       setIsLoading(true);
       fetchProductByEan(targetEan)
         .then((data) => {
@@ -75,7 +76,7 @@ export default function RegisterProduct() {
         })
         .finally(() => setIsLoading(false));
     }
-  }, [targetEan, params.name]);
+  }, [targetEan, targetId]);
 
   const handleRegister = async () => {
     const rawPrice = price.trim().replace("R$", "").replace(",", ".").trim();
@@ -86,10 +87,24 @@ export default function RegisterProduct() {
       return;
     }
 
-    const effectiveProductId = product?.id || targetId;
+    let effectiveProductId = product?.id || targetId;
+
+    if (!effectiveProductId && targetEan) {
+      setIsSubmitting(true);
+      try {
+        const resolved = await fetchProductByEan(targetEan);
+        if (resolved?.id) {
+          effectiveProductId = resolved.id;
+          setProduct(resolved);
+        }
+      } catch {
+        // Continue
+      }
+    }
 
     if (!effectiveProductId) {
       Alert.alert("Aviso", "Identificador do produto não localizado para envio.");
+      setIsSubmitting(false);
       return;
     }
 
@@ -117,7 +132,7 @@ export default function RegisterProduct() {
                   barcode: targetEan || product?.barcode,
                   name: displayProduct.name,
                   category: displayProduct.category,
-                  imageUri: displayProduct.imageUri,
+                  imageUri: displayProduct.imageUri || undefined,
                   lastPrice: `R$ ${numPrice.toFixed(2)}`,
                 },
               });

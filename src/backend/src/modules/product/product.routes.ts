@@ -7,6 +7,7 @@ const router = Router();
 router.get("/", productController.getAllProducts);
 router.get("/categories", productController.getCategories);
 router.get("/barcode/:ean", productController.getProductByBarcode);
+router.get("/barcode", productController.getProductByBarcode);
 router.get("/:id", productController.getProductById);
 router.get("/:id/history", productController.getPriceHistory);
 router.post("/custom", productController.createCustomProduct);

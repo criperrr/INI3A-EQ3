@@ -5,18 +5,65 @@ import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
-    const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-    
-    if (!response.ok) {
-      throw new Error(`Erro ao acessar a API externa: ${response.status} ${response.statusText}`);
+    const cleanBarcode = barcode.trim();
+    if (!cleanBarcode) return null;
+
+    const urls = [
+      `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(cleanBarcode)}.json`,
+      `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(cleanBarcode)}.json`,
+      `https://world.openfoodfacts.net/api/v2/product/${encodeURIComponent(cleanBarcode)}`,
+    ];
+
+    for (const url of urls) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "PrescoApp - Mobile/Backend - Version 1.0 (contato@presco.app)",
+            "Accept": "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          continue;
+        }
+
+        const data = (await response.json()) as OpenFoodFactsResponse;
+        if (data && (data.status === 1 || (data as any).status_verbose === "product found") && data.product) {
+          return data;
+        }
+      } catch {
+        continue;
+      }
     }
-    
-    const data = (await response.json()) as OpenFoodFactsResponse;
-    return data;
+
+    return null;
   }
 
   async getProductByEan(ean: string) {
-    const result = await db.select().from(product).where(eq(product.ean, ean)).limit(1);
+    const cleanEan = ean.trim();
+    if (!cleanEan) return null;
+
+    const cleanWithoutZeroes = cleanEan.replace(/^0+/, "");
+    const withLeadingZero = cleanEan.length === 12 ? "0" + cleanEan : cleanEan;
+
+    const conditions = [
+      eq(product.ean, cleanEan),
+      eq(product.ean, cleanWithoutZeroes),
+      eq(product.ean, withLeadingZero),
+    ];
+
+    const result = await db
+      .select()
+      .from(product)
+      .where(or(...conditions))
+      .limit(1);
+
     return result[0] || null;
   }
 
@@ -39,7 +86,15 @@ class ProductRepositoryClass {
 
     if (search && search.trim().length > 0) {
       const term = `%${search.trim()}%`;
-      conditions.push(or(ilike(product.name, term), ilike(product.ean, term)));
+      const cleanTerm = search.trim();
+      conditions.push(
+        or(
+          ilike(product.name, term),
+          ilike(product.ean, term),
+          eq(product.ean, cleanTerm),
+          eq(product.ean, cleanTerm.replace(/^0+/, ""))
+        )
+      );
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
@@ -65,7 +120,15 @@ class ProductRepositoryClass {
 
     if (search && search.trim().length > 0) {
       const term = `%${search.trim()}%`;
-      conditions.push(or(ilike(product.name, term), ilike(product.ean, term)));
+      const cleanTerm = search.trim();
+      conditions.push(
+        or(
+          ilike(product.name, term),
+          ilike(product.ean, term),
+          eq(product.ean, cleanTerm),
+          eq(product.ean, cleanTerm.replace(/^0+/, ""))
+        )
+      );
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
@@ -83,12 +146,15 @@ class ProductRepositoryClass {
   }
 
   async createProduct(data: CreateProductDTO) {
+    const safeName = data.name.trim().slice(0, 195);
+    const safeDescription = (data.description || data.category || "").trim().slice(0, 250);
+
     const result = await db.insert(product).values({
-      ean: data.ean || null,
-      ncm: data.ncm || null,
-      name: data.name,
-      description: data.description || data.category || "",
-      icon: data.icon || "",
+      ean: data.ean?.trim() || null,
+      ncm: data.ncm?.trim() || null,
+      name: safeName,
+      description: safeDescription,
+      icon: data.icon?.trim() || "",
     }).returning();
     return result[0];
   }

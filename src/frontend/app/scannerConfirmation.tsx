@@ -24,22 +24,34 @@ interface ActionButtonsProps {
 
 export default function ScannerConfirmation() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{
+    id?: string;
+    barcode?: string;
+    ean?: string;
+    name?: string;
+    category?: string;
+    imageUri?: string;
+    lastPrice?: string;
+  }>();
   const { themeStyles, accent } = useTheme();
 
   const product = {
-    category: (params.category as string) || "Produto Encontrado",
-    name: (params.name as string) || "Nome indisponível",
-    imageUri: (params.imageUri as string) || "https://via.placeholder.com/150",
-    lastPrice: (params.lastPrice as string) || "Preço não informado",
-    barcode: (params.barcode as string) || "",
+    id: params.id,
+    category: params.category || "Produto Encontrado",
+    name: params.name || "Nome indisponível",
+    imageUri: params.imageUri || undefined,
+    lastPrice: params.lastPrice || "Preço não informado",
+    barcode: params.barcode || params.ean || "",
+    ean: params.ean || params.barcode || "",
   };
 
   const handleConfirm = () => {
     router.push({
       pathname: "/registerProduct",
       params: { 
+        id: product.id,
         barcode: product.barcode,
+        ean: product.ean,
         name: product.name,
         category: product.category,
         imageUri: product.imageUri,

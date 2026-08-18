@@ -138,31 +138,31 @@ export default function HomeScreen() {
   const actionTabs: TabType[] = [
     {
       id: "1",
-      label: t("navigation.scanner"),
-      icon: "barcode-outline",
+      label: t("navigation.map"),
+      icon: "location-outline",
       actionType: "route",
-      actionValue: "/scannerProduct",
+      actionValue: "/map",
     },
     {
       id: "2",
-      label: t("navigation.search"),
-      icon: "search-outline",
+      label: t("navigation.products"),
+      icon: "cube-outline",
       actionType: "route",
       actionValue: "/search",
     },
     {
       id: "3",
-      label: t("map.title"),
-      icon: "location-outline",
-      actionType: "view",
-      actionValue: "markets",
+      label: t("navigation.help"),
+      icon: "help-circle-outline",
+      actionType: "route",
+      actionValue: "/help",
     },
     {
       id: "4",
-      label: t("products.title"),
-      icon: "cube-outline",
-      actionType: "view",
-      actionValue: "products",
+      label: t("navigation.about"),
+      icon: "information-circle-outline",
+      actionType: "route",
+      actionValue: "/about",
     },
   ];
 
@@ -223,7 +223,11 @@ export default function HomeScreen() {
       showsVerticalScrollIndicator={false}
     >
       <Banner />
-      <ActionMenu onTabPress={handleTabAction} tabs={actionTabs} />
+      <ActionMenu
+        onTabPress={handleTabAction}
+        tabs={actionTabs}
+        activeView={activeView}
+      />
       <ItemsGrid
         title={gridTitle}
         data={gridData}
@@ -332,30 +336,56 @@ const Banner = memo(function Banner() {
 const ActionMenu = memo(function ActionMenu({
   onTabPress,
   tabs,
+  activeView,
 }: {
   onTabPress: (tab: TabType) => void;
   tabs: TabType[];
+  activeView: string;
 }) {
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles, isDark, accent } = useTheme();
   return (
     <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.id}
-          style={styles.tabButton}
-          activeOpacity={0.7}
-          onPress={() => onTabPress(tab)}
-        >
-          <View style={[styles.iconContainer, themeStyles.inputBg]}>
-            <Ionicons
-              name={tab.icon as any}
-              size={24}
-              color={isDark ? "#F0E6D3" : "#1A2E1A"}
-            />
-          </View>
-          <Text style={[styles.tabLabel, themeStyles.text]}>{tab.label}</Text>
-        </TouchableOpacity>
-      ))}
+      {tabs.map((tab) => {
+        const isSelected =
+          tab.actionType === "view" && tab.actionValue === activeView;
+
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            style={[styles.tabButton, isSelected && styles.tabButtonActive]}
+            activeOpacity={0.7}
+            onPress={() => onTabPress(tab)}
+          >
+            <View
+              style={[
+                styles.iconContainer,
+                themeStyles.inputBg,
+                isSelected && {
+                  backgroundColor: accent + "25",
+                  borderColor: accent,
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <Ionicons
+                name={tab.icon as any}
+                size={22}
+                color={isSelected ? accent : isDark ? "#F0E6D3" : "#1A2E1A"}
+              />
+            </View>
+            <Text
+              style={[
+                styles.tabLabel,
+                themeStyles.text,
+                isSelected && { color: accent, fontWeight: "700" },
+              ]}
+              numberOfLines={1}
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 });
@@ -428,26 +458,47 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D9D9D9" },
-  activeDot: { width: 10, height: 10, borderRadius: 5 },
+  activeDot: { width: 18, height: 8, borderRadius: 4 },
   centralMenuBar: {
     flexDirection: "row",
     marginHorizontal: 16,
-    borderRadius: 16,
-    padding: 12,
-    justifyContent: "space-around",
+    borderRadius: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
     borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  tabButton: { alignItems: "center", justifyContent: "center", gap: 6 },
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    borderRadius: 14,
+  },
+  tabButtonActive: {
+    transform: [{ scale: 1.02 }],
+  },
   iconContainer: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
-  tabLabel: { fontSize: 11, fontWeight: "600" },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    textAlign: "center",
+  },
   productsSection: { paddingHorizontal: 16 },
   sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 14 },
   productGrid: {

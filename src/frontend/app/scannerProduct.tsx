@@ -78,11 +78,13 @@ export default function ScannerProduct() {
       router.push({
         pathname: "/scannerConfirmation",
         params: {
+          id: product.id ? String(product.id) : undefined,
           category: product.category || t("scanner.category"),
           name: product.name || t("scanner.productName"),
-          imageUri: product.imageUri || "https://via.placeholder.com/150",
+          imageUri: product.imageUri || product.icon || undefined,
           lastPrice: product.lastPrice || t("products.pricePlaceholder"),
-          barcode: data,
+          barcode: product.barcode || data,
+          ean: product.ean || data,
         },
       });
     } catch (error: any) {

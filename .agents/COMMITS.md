@@ -24,6 +24,89 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 08:21] - fix(products): resolve EAN barcode lookup, OpenFoodFacts headers and ID propagation across scanner flow
+
+- **Description:** Fixed end-to-end product lookup by EAN across backend repositories, external services, and frontend navigation:
+  1. **OpenFoodFacts Fetch Resiliency & Headers:** Added mandatory `User-Agent` and `Accept` headers to OpenFoodFacts requests to prevent 403 Forbidden / 429 Rate Limiting, configured a 6-second timeout with `AbortController`, and added fallback URLs (`world.openfoodfacts.org`, `br.openfoodfacts.org`, `world.openfoodfacts.net/api/v2`).
+  2. **Data Normalization & PostgreSQL Safety:** Enriched name resolution by combining `brands`, `product_name_pt`, and `product_name`, and enforced string length safety (under 195 characters) to prevent PostgreSQL `VARCHAR(200)` overflow errors on external imports.
+  3. **Barcode Format Normalization:** Updated `getProductByEan` and `searchProducts` to match barcodes with and without leading zeros (supporting UPC 12-digit, EAN 13-digit, and GTIN 14-digit formats).
+  4. **On-the-Fly Barcode Search:** Updated backend `listProducts` so that searching for a barcode string in the search bar automatically triggers an external lookup & auto-cache if not previously in the database.
+  5. **Frontend Navigation ID Propagation:** Ensured `product.id`, `barcode`, and `ean` are consistently forwarded through `scannerProduct` → `scannerConfirmation` → `registerProduct` → `productDetails`, and updated `registerProduct` to automatically resolve the backend product ID if not passed directly.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** EAN lookups succeed immediately for both local and external products; occurrences can be registered without product ID loss.
+
+---
+
+## [2026-08-18 08:15] - fix(backend/frontend): synchronize PostgreSQL authority column, drizzle migrations, and resolve Reanimated worklet ref warning
+
+- **Description:** Fixed database schema mismatch and React Native Reanimated worklet runtime warning:
+  1. **PostgreSQL Column & Migration Sync:** Added missing column `role.authority` and `user.birthdate` to PostgreSQL, verified PostGIS geography point data types, and populated `drizzle.__drizzle_migrations` with existing migrations (`0000_wide_hitman`, `0001_fix_postgis_types`, `0002_empty_timeslip`). This resolves `error: column "authority" does not exist` during `seedDatabase()` on backend startup and prevents 500 error responses on frontend product queries.
+  2. **Reanimated Worklet Ref Warning:** Replaced `useRef` with `useSharedValue` for `isBusy` state in `src/frontend/components/SwipeTabNavigator.tsx`. This avoids serializing React ref objects across JS and UI worklet threads, eliminating the `WARN [Worklets] Tried to modify key 'current' of an object which has been already passed to a worklet` warning.
+- **Files Modified:**
+  - `src/frontend/components/SwipeTabNavigator.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Database migrations and seeding execute with 100% success; clean start of backend server and smooth Reanimated gesture transitions without warnings.
+
+---
+
+## [2026-08-18 08:05] - feat(ui): restructure Home ActionMenu with Mercados, Produtos, Ajuda, and Sobre Nós routes and new screens
+
+- **Description:** Updated the start/home screen middle action bar (`ActionMenu` in `src/frontend/app/index.tsx`) and created dedicated screens for Help and About:
+  1. **Home Action Bar (`ActionMenu`):** Configured 4 equal-width action tabs navigating to separate screens: **Mercados** (`/map`), **Produtos** (`/search`), **Ajuda** (`/help`), and **Sobre Nós** (`/about`).
+  2. **Help Center Screen (`src/frontend/app/help.tsx`):** Created interactive FAQ accordion screen with dynamic search filter, quick action shortcuts, answers for barcode scanning, XP/rewards, community price moderation, and direct support contact.
+  3. **About Us Screen (`src/frontend/app/about.tsx`):** Created institutional screen displaying app branding, collaborative inflation-fighting mission, how-it-works timeline, open-data tech stack (PostGIS, Drizzle, OpenFoodFacts), and repository links.
+  4. **Internationalization (i18n):** Added complete `help`, `about`, `navigation.help`, and `navigation.about` schemas and localizations across 7 languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`).
+  5. **Sidebar Drawer (`Sidebar.tsx`):** Added Help and About navigation items to drawer menu.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+- **Impact / Next Steps:** Seamless navigation across the 4 primary app portals directly from the home screen action bar.
+
+---
+
+## [2026-08-18 07:55] - fix(ui): refine start menu (ActionMenu) and sidebar drawer layout, active indicators, and safe insets
+
+- **Description:** Fixed layout, text clipping, and UX issues in the Start Menu / Home Action Bar (`ActionMenu` in `src/frontend/app/index.tsx`) and the Drawer Menu (`Sidebar.tsx`):
+  1. **Home Start Menu (`ActionMenu`):** Added concise i18n label keys (`navigation.products` across all 7 languages), connected `activeView` prop with dynamic Monet active indicators (accent border, glowing tint, bold text), and adjusted layout spacing, border radii, and shadows for balanced flex distribution.
+  2. **Drawer Menu (`Sidebar.tsx`):** Eliminated empty `ipePlaceholder` transparent box, added safe area insets via `useSafeAreaInsets()`, created a branded header with logo, title, and close button, added vector icons (`Ionicons`) and chevrons to all navigation links with active state highlighting, and integrated a dynamic `UserProfileCard` showing the authenticated user profile, level, XP, or login prompt.
+  3. **i18n Localization:** Added `products` translation keys across `pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, and `ja.ts`.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+- **Impact / Next Steps:** Clean, responsive, and accessible layout on both Home screen quick menu and Sidebar drawer across all supported screen sizes and languages.
+
+---
+
 ## [2026-08-18 07:45] - docs(agents): unify .taagents into .agents and structure complete project markdown documentation
 
 - **Description:** Consolidated all project guidelines, navigation index, commit history, design tokens, issue tracking, and custom project skills from the legacy `.taagents/` directory into `.agents/`. Updated memory files in `.agents/memory/`, created dedicated project skills `presco-backend` and `presco-frontend`, and rewrote/created comprehensive technical documentation across `README.md`, `src/backend/README.md`, `src/frontend/README.md`, `src/README.md`, and `docs/README.md`.

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { StyleSheet, View, Platform, Dimensions } from "react-native";
 import { usePathname } from "expo-router";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
@@ -36,11 +36,11 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
 
   const translateX = useSharedValue(0);
   const isDragging = useSharedValue(false);
-  const isBusy = useRef(false);
+  const isBusy = useSharedValue(false);
 
   // Sincroniza a entrada fluida da nova tela quando o pathname muda
   useEffect(() => {
-    isBusy.current = false;
+    isBusy.value = false;
     isDragging.value = false;
     translateX.value = withTiming(0, {
       duration: 180,
@@ -60,7 +60,7 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
     targetRoute: string,
     direction: "left" | "right"
   ) => {
-    isBusy.current = true;
+    isBusy.value = true;
     // Prepara a posição inicial de entrada da próxima tela para deslizar suavemente
     translateX.value = direction === "right" ? SCREEN_WIDTH * 0.22 : -SCREEN_WIDTH * 0.22;
     navigateToTab(targetRoute, direction);
@@ -71,11 +71,11 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
     .activeOffsetX([-15, 15])
     .failOffsetY([-30, 30])
     .onStart(() => {
-      if (isBusy.current) return;
+      if (isBusy.value) return;
       isDragging.value = true;
     })
     .onUpdate((event) => {
-      if (isBusy.current) return;
+      if (isBusy.value) return;
 
       const isFirst = currentIndex === 0;
       const isLast = currentIndex === MAIN_TABS.length - 1;
@@ -88,7 +88,7 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
       }
     })
     .onEnd((event) => {
-      if (isBusy.current) return;
+      if (isBusy.value) return;
       isDragging.value = false;
 
       const absX = Math.abs(event.translationX);
