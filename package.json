@@ -8,10 +8,15 @@
     "dev:tunnel": "bash ./start_project.sh --tunnel",
     "dev:win": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1",
     "dev:win:local": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat",
+    "dev:win:separate": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat -SeparateWindows",
     "db:reload": "bash ./reload_services.sh",
     "db:restart": "bash ./reload_services.sh --restart",
     "db:status": "bash ./reload_services.sh --status",
-    "db:check": "npm run --prefix src/backend db:check"
+    "db:check": "npm run --prefix src/backend db:check",
+    "install:all": "npm install && npm install --prefix src/backend && npm install --prefix src/frontend",
+    "install:clean": "npm run install:win:clean",
+    "install:win": "cmd /c install_dependencies.bat",
+    "install:win:clean": "cmd /c install_dependencies.bat --clean"
   },
   "dependencies": {
     "ngrok": "^5.0.0-beta.2"

@@ -17,8 +17,11 @@ param(
     [Alias("local-nat", "local", "nat", "l")]
     [switch]$LocalNat,
 
-    [Alias("tunnel", "t")]
+    [Alias("t")]
     [switch]$Tunnel,
+
+    [Alias("no-wt", "windows", "separate", "w")]
+    [switch]$SeparateWindows,
 
     [Alias("h")]
     [switch]$Help
@@ -39,9 +42,10 @@ if ($Help) {
     Write-Host "  .\start_project.ps1 [OPTIONS]"
     Write-Host ""
     Write-Host "Options:"
-    Write-Host "  -LocalNat, -l      Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
-    Write-Host "  -Tunnel, -t        Run in Tunneling mode via localtunnel (default)"
-    Write-Host "  -Help, -h          Show this help message"
+    Write-Host "  -LocalNat, -l         Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
+    Write-Host "  -Tunnel, -t           Run in Tunneling mode via localtunnel (default)"
+    Write-Host "  -SeparateWindows, -w  Open separate PowerShell windows instead of Windows Terminal tabs"
+    Write-Host "  -Help, -h             Show this help message"
     Write-Host ""
     Write-Host "NPM Shortcuts:"
     Write-Host "  npm run dev:win         -> Default tunneling mode"
@@ -68,7 +72,6 @@ Write-Host "========================================================" -Foregroun
 Write-Host "[i] Reading backend configuration..." -ForegroundColor Gray
 
 $backendDir = Join-Path $ScriptDir "src\backend"
-$frontendDir = Join-Path $ScriptDir "src\frontend"
 $envFile = Join-Path $backendDir ".env"
 
 $DbHost = "localhost"
@@ -192,7 +195,11 @@ Write-Host "[i] Detected Local LAN IP: $LanIp" -ForegroundColor Cyan
 # ------------------------------------------------------------------------------
 # 5. Launch Backend Server & Frontend Expo
 # ------------------------------------------------------------------------------
-$hasWt = (Get-Command wt.exe -ErrorAction SilentlyContinue) -ne $null
+$backendBat = Join-Path $ScriptDir "scripts\dev_backend.bat"
+$frontendBat = Join-Path $ScriptDir "scripts\dev_frontend.bat"
+$tunnelsBat = Join-Path $ScriptDir "scripts\dev_tunnels.bat"
+
+$hasWt = (-not $SeparateWindows) -and ($null -ne (Get-Command wt.exe -ErrorAction SilentlyContinue))
 
 if ($IsLocalNat) {
     $BackendUrl = "http://${LanIp}:${ServerPort}"
@@ -200,16 +207,27 @@ if ($IsLocalNat) {
     Write-Host "[+] Expo Bundler will serve over LAN (exp://${LanIp}:8081)" -ForegroundColor Green
     Write-Host "[i] Open Expo Go on your mobile (same Wi-Fi) and scan the QR code!" -ForegroundColor Yellow
 
-    $backendCmd = "Set-Location '$backendDir'; `$env:DEBUG='*'; `$env:NODE_ENV='development'; npm run dev"
-    $frontendCmd = "Set-Location '$frontendDir'; `$env:EXPO_PUBLIC_API_URL='$BackendUrl'; `$env:REACT_NATIVE_PACKAGER_HOSTNAME='$LanIp'; npm run start -- --lan --clear"
-
+    $launched = $false
     if ($hasWt) {
-        Write-Host "[i] Launching with Windows Terminal split panes..." -ForegroundColor Cyan
-        Start-Process wt.exe -ArgumentList "-w 0 new-tab --title `"Presco Backend`" powershell -NoExit -Command `"$backendCmd`" `; split-pane -H --title `"Presco Frontend`" powershell -NoExit -Command `"$frontendCmd`""
-    } else {
-        Write-Host "[i] Launching separate PowerShell windows..." -ForegroundColor Cyan
-        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO BACKEND ===' -ForegroundColor Cyan; $backendCmd"
-        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO FRONTEND ===' -ForegroundColor Green; $frontendCmd"
+        try {
+            Write-Host "[i] Launching with Windows Terminal split panes..." -ForegroundColor Cyan
+            $wtArgs = @(
+                "-w", "0",
+                "new-tab", "cmd.exe", "/k", $backendBat,
+                ";",
+                "split-pane", "-V", "cmd.exe", "/k", $frontendBat, $BackendUrl, $LanIp
+            )
+            Start-Process wt.exe -ArgumentList $wtArgs
+            $launched = $true
+        } catch {
+            Write-Host "[!] Windows Terminal launch failed, falling back to separate windows..." -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $launched) {
+        Write-Host "[i] Launching separate terminal windows..." -ForegroundColor Cyan
+        Start-Process cmd.exe -ArgumentList "/k `"$backendBat`""
+        Start-Process cmd.exe -ArgumentList "/k `"$frontendBat`" `"$BackendUrl`" `"$LanIp`""
     }
 
 } else {
@@ -218,18 +236,30 @@ if ($IsLocalNat) {
     $BackendUrl = "https://ini3a-eq3-api.loca.lt"
     $FrontendUrl = "https://ini3a-eq3-app.loca.lt"
 
-    $backendCmd = "Set-Location '$backendDir'; `$env:DEBUG='*'; `$env:NODE_ENV='development'; npm run dev"
-    $frontendCmd = "Set-Location '$frontendDir'; `$env:EXPO_PUBLIC_API_URL='$BackendUrl'; `$env:EXPO_PACKAGER_PROXY_URL='$FrontendUrl'; `$env:EXPO_DEBUG='true'; npm run start -- --clear"
-    $tunnelCmd = "Write-Host 'Starting Localtunnel for API ($ServerPort) and Frontend (8081)...' -ForegroundColor Cyan; Start-Process npx -ArgumentList '--yes localtunnel --port $ServerPort --subdomain ini3a-eq3-api'; npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app"
-
+    $launched = $false
     if ($hasWt) {
-        Write-Host "[i] Launching with Windows Terminal tabs..." -ForegroundColor Cyan
-        Start-Process wt.exe -ArgumentList "-w 0 new-tab --title `"Presco Backend`" powershell -NoExit -Command `"$backendCmd`" `; split-pane -H --title `"Presco Frontend`" powershell -NoExit -Command `"$frontendCmd`" `; new-tab --title `"Presco Tunnels`" powershell -NoExit -Command `"$tunnelCmd`""
-    } else {
-        Write-Host "[i] Launching separate PowerShell windows..." -ForegroundColor Cyan
-        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO BACKEND ===' -ForegroundColor Cyan; $backendCmd"
-        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO TUNNELS ===' -ForegroundColor Yellow; $tunnelCmd"
-        Start-Process powershell.exe -ArgumentList "-NoExit", "-Command", "Write-Host '=== PRESCO FRONTEND ===' -ForegroundColor Green; $frontendCmd"
+        try {
+            Write-Host "[i] Launching with Windows Terminal tabs..." -ForegroundColor Cyan
+            $wtArgs = @(
+                "-w", "0",
+                "new-tab", "cmd.exe", "/k", $backendBat,
+                ";",
+                "split-pane", "-V", "cmd.exe", "/k", $frontendBat, $BackendUrl, "", $FrontendUrl, "true", "--tunnel",
+                ";",
+                "new-tab", "cmd.exe", "/k", $tunnelsBat
+            )
+            Start-Process wt.exe -ArgumentList $wtArgs
+            $launched = $true
+        } catch {
+            Write-Host "[!] Windows Terminal launch failed, falling back to separate windows..." -ForegroundColor Yellow
+        }
+    }
+
+    if (-not $launched) {
+        Write-Host "[i] Launching separate terminal windows..." -ForegroundColor Cyan
+        Start-Process cmd.exe -ArgumentList "/k `"$backendBat`""
+        Start-Process cmd.exe -ArgumentList "/k `"$frontendBat`" `"$BackendUrl`" `"`" `"$FrontendUrl`" `"true`" `"--tunnel`""
+        Start-Process cmd.exe -ArgumentList "/k `"$tunnelsBat`""
     }
 }
 

@@ -82,6 +82,17 @@ Direct relative paths from project root.
 | `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken`, `verifyAccessToken`, `getTokenRemainingSeconds` |
 | `src/backend/src/shared/helpers/response.helper.ts` | `success(data, code?)` → `{ success: true, code: 200, data }` |
 
+### Dev Scripts & Launchers
+
+| File | Key exports / purpose |
+|---|---|
+| `start_project.ps1` | Windows PowerShell launcher with port auto-detection, LAN IP resolution, and multi-process runner |
+| `start_project.bat` / `start.bat` | Batch aliases bypassing PowerShell ExecutionPolicy |
+| `scripts/dev_backend.bat` | Dedicated backend runner script (port 3333, `DEBUG=*`, `NODE_ENV=development`) |
+| `scripts/dev_frontend.bat` | Dedicated frontend Expo runner script (port 8081, LAN/Tunnel modes) |
+| `scripts/dev_tunnels.bat` | Dedicated Localtunnel launcher script for API and Expo |
+| `install_dependencies.bat` / `install.bat` | Windows automated dependency installation with `--clean` and fallback |
+
 ### Frontend
 
 | File | Key exports / purpose |
@@ -135,8 +146,10 @@ Direct relative paths from project root.
 - [x] Implement market proximity lookup in frontend map screen with instant location resolution (`getLastKnownPositionAsync`), local database markets fallback (`fetchMarkets`), Overpass in-memory caching, non-blocking OSRM routing, and instant client-side product/market caching.
 - [x] Fix profile ApiError and implement graceful session error handling in `api.ts`, `auth.ts`, and `authContext.tsx`.
 - [x] Create Windows dev launcher (`start_project.ps1` and `start_project.bat`) with automated TCP port checking, LAN IP detection, Windows Terminal split-pane orchestration, and `npm run dev:win` shortcuts.
-- [x] Full application-wide translation & system locale detection: integrated `expo-localization`, auto-detect system language primarily with `resolveSystemLanguage()` (fallback to `pt-BR`), added "System Default (Auto)" setting option, synchronized 7 languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) across all screens, modals, camera scanner, forms, and maps.
 - [x] Full UI localization audit and completion across 100% of screens (`map.native.tsx`, `settings.tsx`, `aboutUs.tsx`, `helpUser.tsx`, `manualEanSearch.tsx`, `about.tsx`, `help.tsx`, `login.tsx`, `registerUser.tsx`, `profile.tsx`, `index.tsx`, `Sidebar.tsx`), ensuring dynamic usernames remain untranslated while all alerts, modals, dialogs, presets, and fallback labels are fully localized in all 7 languages with 0 TypeScript compilation errors.
+- [x] Create backend environment file (`src/backend/.env`) and templates (`src/backend/.env.example`, `.env.example`) with PostgreSQL, Redis, server port/host, and JWT secret configuration.
+- [x] Fix Windows Terminal (`wt.exe`) split pane / tab argument parsing and semicolon tokenization in `start_project.ps1`, add `start.bat` alias, and provide `-SeparateWindows` (`npm run dev:win:separate`) mode.
+- [x] Configure Windows Terminal split pane to vertical (`-V`, side-by-side) in `start_project.ps1` (invoked via `start.bat` and `start_project.bat`).
 
 ---
 
