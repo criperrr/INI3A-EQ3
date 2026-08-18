@@ -65,6 +65,9 @@ export interface UpdateProductParams {
   ncm?: string;
 }
 
+let memoryProductsCache: Record<string, { data: PaginatedProductsData; timestamp: number }> = {};
+let memoryCategoriesCache: { data: string[]; timestamp: number } | null = null;
+
 export const fetchProducts = async (params?: FetchProductsParams): Promise<PaginatedProductsData> => {
   const queryParts: string[] = [];
   if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
@@ -75,13 +78,27 @@ export const fetchProducts = async (params?: FetchProductsParams): Promise<Pagin
   if (params?.sortOrder) queryParts.push(`sortOrder=${params.sortOrder}`);
 
   const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
+  const cacheKey = queryString || "default";
+
+  // Check in-memory cache for immediate response (cache valid for 60s)
+  const cached = memoryProductsCache[cacheKey];
+  const isFresh = cached && Date.now() - cached.timestamp < 60000;
+
+  if (isFresh) {
+    return cached.data;
+  }
 
   try {
     const res = await apiRequest<PaginatedProductsData>(`/products${queryString}`, {
       method: "GET",
     });
-    return res || { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
+    const resultData = res || { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
+    memoryProductsCache[cacheKey] = { data: resultData, timestamp: Date.now() };
+    return resultData;
   } catch (error: any) {
+    if (cached) {
+      return cached.data;
+    }
     console.warn("[ProductService] Aviso ao carregar lista de produtos:", error?.message);
     return { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
   }
@@ -129,11 +146,20 @@ export const fetchProductByEan = async (ean: string): Promise<ProductData | null
 };
 
 export const fetchCategories = async (): Promise<string[]> => {
+  if (memoryCategoriesCache && Date.now() - memoryCategoriesCache.timestamp < 300000) {
+    return memoryCategoriesCache.data;
+  }
+
   try {
-    return await apiRequest<string[]>("/products/categories", {
+    const res = await apiRequest<string[]>("/products/categories", {
       method: "GET",
     });
+    if (res && res.length > 0) {
+      memoryCategoriesCache = { data: res, timestamp: Date.now() };
+    }
+    return res || [];
   } catch (error) {
+    if (memoryCategoriesCache) return memoryCategoriesCache.data;
     console.error("Erro ao buscar categorias:", error);
     return [];
   }

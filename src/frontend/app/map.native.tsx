@@ -16,6 +16,7 @@ import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
+import { fetchMarkets, MarketData } from "../services/marketService";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -47,6 +48,15 @@ const OVERPASS_ENDPOINTS = [
     "https://overpass.private.coffee/api/interpreter"
 ];
 
+// In-memory cache for Overpass queries to eliminate repeated HTTP calls
+const OVERPASS_CACHE = new Map<string, { elements: any[]; timestamp: number }>();
+
+// Default fallback coordinate (São Paulo Center)
+const DEFAULT_COORDINATE: Coordinate = {
+    latitude: -23.55052,
+    longitude: -46.633308,
+};
+
 interface Coordinate {
     latitude: number;
     longitude: number;
@@ -59,6 +69,7 @@ interface MarketMarker {
     straightDistance: number;
     routeDistance: number;
     openingHours?: string;
+    isBackendMarket?: boolean;
 }
 
 const formatOpeningHours = (hours: string | null | undefined): string => {
@@ -89,7 +100,10 @@ const fetchDrivingDistances = async (userLocation: Coordinate, markers: MarketMa
     const url = `https://router.project-osrm.org/table/v1/driving/${userLocation.longitude},${userLocation.latitude};${coordinatesString}?sources=0&annotations=distance`;
 
     try {
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (data.code === 'Ok' && data.distances?.[0]) {
@@ -101,22 +115,32 @@ const fetchDrivingDistances = async (userLocation: Coordinate, markers: MarketMa
                 };
             });
         }
-    } catch (error) {
-        console.error("Erro ao buscar distâncias de rota:", error);
+    } catch {
+        // Fallback to straight distance silently without error blocking
     }
     return markers;
 };
 
 const fetchMarketsData = async (latitude: number, longitude: number, radius: number, shopType: string) => {
+    const roundedLat = latitude.toFixed(2);
+    const roundedLon = longitude.toFixed(2);
+    const cacheKey = `${roundedLat}_${roundedLon}_${radius}_${shopType}`;
+
+    const cached = OVERPASS_CACHE.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 300000) {
+        return { elements: cached.elements };
+    }
+
     const shopFilter = shopType === "all"
         ? '["shop"~"supermarket|convenience|grocery|deli|general"]'
         : `["shop"="${shopType}"]`;
 
-    const query = `[out:json][timeout:25];nwr(around:${radius},${latitude},${longitude})${shopFilter};out center;`;
-    let lastErrorStatus = null;
+    const query = `[out:json][timeout:5];nwr(around:${radius},${latitude},${longitude})${shopFilter};out center;`;
 
     for (const endpoint of OVERPASS_ENDPOINTS) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
             const response = await fetch(endpoint, {
                 method: "POST",
                 headers: {
@@ -124,20 +148,25 @@ const fetchMarketsData = async (latitude: number, longitude: number, radius: num
                     "Accept": "application/json",
                     "User-Agent": "MarketFinderApp/1.0 (contato@marketfinder.com)"
                 },
-                body: `data=${encodeURIComponent(query)}`
+                body: `data=${encodeURIComponent(query)}`,
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
 
-            if (response.ok) return await response.json();
-
-            lastErrorStatus = response.status;
-        } catch (error) {
-            console.warn(`Falha no endpoint ${endpoint}. Tentando o próximo...`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.elements) {
+                    OVERPASS_CACHE.set(cacheKey, { elements: data.elements, timestamp: Date.now() });
+                }
+                return data;
+            }
+        } catch {
+            // Silently try next endpoint
         }
     }
 
-    if (lastErrorStatus === 406) throw new Error("Erro de cabeçalho na requisição ao servidor de mapas.");
-    if (lastErrorStatus === 429) throw new Error("Servidores sobrecarregados. Aguarde um instante.");
-    throw new Error("Não foi possível conectar à base de dados de mapas.");
+    if (cached) return { elements: cached.elements };
+    return { elements: [] };
 };
 
 export default function MapScreen() {
@@ -145,8 +174,9 @@ export default function MapScreen() {
     const mapRef = useRef<MapView>(null);
 
     const [appState, setAppState] = useState({ isLoading: true, error: null as string | null, isProcessing: false });
-    const [filters, setFilters] = useState({ shopType: "supermarket", maxDistance: 5000, hoursOption: "all" });
+    const [filters, setFilters] = useState({ shopType: "supermarket", maxDistance: 3000, hoursOption: "all" });
     const [mapData, setMapData] = useState<{ radius: number; type: string; elements: any[] }>({ radius: 0, type: "", elements: [] });
+    const [backendMarketsList, setBackendMarketsList] = useState<MarketMarker[]>([]);
 
     const [userLocation, setUserLocation] = useState<Coordinate | null>(null);
     const [visibleMarkers, setVisibleMarkers] = useState<MarketMarker[]>([]);
@@ -157,12 +187,37 @@ export default function MapScreen() {
         try {
             setAppState(prev => ({ ...prev, error: null, isLoading: true }));
             const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') throw new Error('Permissão de localização negada.');
 
-            const location = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-            setUserLocation({ latitude: location.coords.latitude, longitude: location.coords.longitude });
-        } catch (error: any) {
-            setAppState(prev => ({ ...prev, error: error.message || "Não foi possível obter a localização.", isLoading: false }));
+            if (status !== 'granted') {
+                setUserLocation(DEFAULT_COORDINATE);
+                setAppState(prev => ({ ...prev, isLoading: false }));
+                return;
+            }
+
+            // 1. Instant last known position (< 50ms)
+            const lastKnown = await Location.getLastKnownPositionAsync();
+            if (lastKnown) {
+                setUserLocation({ latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude });
+                setAppState(prev => ({ ...prev, isLoading: false }));
+            }
+
+            // 2. Refine in background with getCurrentPositionAsync without blocking
+            Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+                .then(loc => {
+                    if (loc) {
+                        setUserLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+                        setAppState(prev => ({ ...prev, isLoading: false }));
+                    }
+                })
+                .catch(() => {
+                    if (!lastKnown) {
+                        setUserLocation(DEFAULT_COORDINATE);
+                        setAppState(prev => ({ ...prev, isLoading: false }));
+                    }
+                });
+        } catch {
+            setUserLocation(DEFAULT_COORDINATE);
+            setAppState(prev => ({ ...prev, isLoading: false }));
         }
     }, []);
 
@@ -170,10 +225,49 @@ export default function MapScreen() {
         initializeUserLocation();
     }, [initializeUserLocation]);
 
+    // Fast initial load of local backend markets
     useEffect(() => {
         if (!userLocation) return;
 
-        const requiredRadius = Math.floor(filters.maxDistance * 1.3);
+        let isMounted = true;
+        fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: filters.maxDistance * 1.5 })
+            .then(markets => {
+                if (!isMounted || !markets || markets.length === 0) return;
+
+                const mapped: MarketMarker[] = [];
+                for (const m of markets) {
+                    let lat = userLocation.latitude;
+                    let lon = userLocation.longitude;
+                    if (m.location) {
+                        try {
+                            const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
+                            if (parsed?.coordinates) {
+                                lon = parsed.coordinates[0];
+                                lat = parsed.coordinates[1];
+                            }
+                        } catch {}
+                    }
+                    const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
+                    mapped.push({
+                        id: `backend_${m.id}`,
+                        title: m.name,
+                        coordinate: { latitude: lat, longitude: lon },
+                        straightDistance: straightDist,
+                        routeDistance: straightDist,
+                        isBackendMarket: true,
+                    });
+                }
+                setBackendMarketsList(mapped);
+            })
+            .catch(() => {});
+
+        return () => { isMounted = false; };
+    }, [userLocation, filters.maxDistance]);
+
+    useEffect(() => {
+        if (!userLocation) return;
+
+        const requiredRadius = Math.floor(filters.maxDistance * 1.2);
         const isDataCached = mapData.type === filters.shopType && mapData.radius >= requiredRadius;
 
         if (isDataCached) {
@@ -191,9 +285,9 @@ export default function MapScreen() {
                     setMapData({ radius: requiredRadius, type: filters.shopType, elements: data.elements || [] });
                     setAppState({ isLoading: false, error: null, isProcessing: false });
                 }
-            } catch (error: any) {
+            } catch {
                 if (isMounted) {
-                    setAppState({ isLoading: false, error: error.message || "Falha ao buscar estabelecimentos.", isProcessing: false });
+                    setAppState({ isLoading: false, error: null, isProcessing: false });
                 }
             }
         };
@@ -203,11 +297,11 @@ export default function MapScreen() {
     }, [userLocation, filters.shopType, filters.maxDistance]);
 
     const nearbyMarkets = useMemo(() => {
-        if (!userLocation || mapData.elements.length === 0) return [];
+        if (!userLocation) return backendMarketsList;
 
         const maxDistanceInKm = filters.maxDistance / 1000;
 
-        const processedMarkers = mapData.elements.reduce((acc, element) => {
+        const processedMarkers = (mapData.elements || []).reduce((acc, element) => {
             const lat = element.type === 'node' ? element.lat : element.center?.lat;
             const lon = element.type === 'node' ? element.lon : element.center?.lon;
             if (!lat || !lon) return acc;
@@ -228,8 +322,9 @@ export default function MapScreen() {
             return acc;
         }, [] as MarketMarker[]);
 
-        return processedMarkers.sort((a: MarketMarker, b: MarketMarker) => a.straightDistance - b.straightDistance);
-    }, [mapData, userLocation, filters.maxDistance, filters.hoursOption]);
+        const combined = [...backendMarketsList, ...processedMarkers];
+        return combined.sort((a: MarketMarker, b: MarketMarker) => a.straightDistance - b.straightDistance);
+    }, [mapData, userLocation, filters.maxDistance, filters.hoursOption, backendMarketsList]);
 
     useEffect(() => {
         if (nearbyMarkets.length === 0) {
@@ -238,13 +333,15 @@ export default function MapScreen() {
         }
 
         let isMounted = true;
+        // Instantly display markers using straight distance without waiting for OSRM
         setVisibleMarkers(nearbyMarkets);
-        setAppState(prev => ({ ...prev, isProcessing: true }));
+        setAppState(prev => ({ ...prev, isProcessing: false }));
 
-        const closestMarkets = nearbyMarkets.slice(0, 25);
+        // Background progressive enhancement with OSRM
+        const closestMarkets = nearbyMarkets.slice(0, 15);
 
         fetchDrivingDistances(userLocation!, closestMarkets).then(enrichedMarkets => {
-            if (isMounted) {
+            if (isMounted && enrichedMarkets.length > 0) {
                 const enrichedIds = new Set(enrichedMarkets.map((m: MarketMarker) => m.id));
                 const remainingMarkets = nearbyMarkets.filter((m: MarketMarker) => !enrichedIds.has(m.id));
 
@@ -253,17 +350,6 @@ export default function MapScreen() {
                     .sort((a, b) => a.routeDistance - b.routeDistance);
 
                 setVisibleMarkers(finalMarkers);
-                setAppState(prev => ({ ...prev, isProcessing: false }));
-
-                if (finalMarkers.length > 0 && mapRef.current) {
-                    requestAnimationFrame(() => {
-                        const coordinatesToFit = [...finalMarkers.map(m => m.coordinate), userLocation!];
-                        mapRef.current?.fitToCoordinates(coordinatesToFit, {
-                            edgePadding: { top: 70, right: 70, bottom: 70, left: 70 },
-                            animated: true,
-                        });
-                    });
-                }
             }
         });
 
@@ -285,11 +371,11 @@ export default function MapScreen() {
         Linking.openURL(url).catch(() => alert("Não foi possível abrir o Google Maps."));
     };
 
-    if (appState.isLoading) {
+    if (appState.isLoading && !userLocation) {
         return <LoadingScreen themeStyles={themeStyles} />;
     }
 
-    if (appState.error) {
+    if (appState.error && !userLocation) {
         return <ErrorScreen error={appState.error} onRetry={initializeUserLocation} themeStyles={themeStyles} />;
     }
 

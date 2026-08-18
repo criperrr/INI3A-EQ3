@@ -84,10 +84,13 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
     [router]
   );
 
+  const contextValue = React.useMemo<TabNavigationContextData>(
+    () => ({ animationType, navigateToTab, getTabIndex }),
+    [animationType, navigateToTab],
+  );
+
   return (
-    <TabNavigationContext.Provider
-      value={{ animationType, navigateToTab, getTabIndex }}
-    >
+    <TabNavigationContext.Provider value={contextValue}>
       {children}
     </TabNavigationContext.Provider>
   );

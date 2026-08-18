@@ -304,27 +304,45 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return { themeStyles: styles, accent: monetAccent };
   }, [isDark, amoledEnabled, monetEnabled, syncWithSystemAndroid, monetSeedColor]);
 
+  const contextValue = useMemo<ThemeContextType>(
+    () => ({
+      theme,
+      isDark,
+      amoledEnabled,
+      accent,
+      themeStyles,
+      monetEnabled,
+      syncWithSystemAndroid,
+      monetSeedColor,
+      setGlobalTheme,
+      setAmoledEnabled,
+      setMonetEnabled,
+      setSyncWithSystemAndroid,
+      setMonetSeedColor,
+      applyThemeSettingsBatch,
+    }),
+    [
+      theme,
+      isDark,
+      amoledEnabled,
+      accent,
+      themeStyles,
+      monetEnabled,
+      syncWithSystemAndroid,
+      monetSeedColor,
+      setGlobalTheme,
+      setAmoledEnabled,
+      setMonetEnabled,
+      setSyncWithSystemAndroid,
+      setMonetSeedColor,
+      applyThemeSettingsBatch,
+    ],
+  );
+
   return (
-      <ThemeContext.Provider
-          value={{
-            theme,
-            isDark,
-            amoledEnabled,
-            accent,
-            themeStyles,
-            monetEnabled,
-            syncWithSystemAndroid,
-            monetSeedColor,
-            setGlobalTheme,
-            setAmoledEnabled,
-            setMonetEnabled,
-            setSyncWithSystemAndroid,
-            setMonetSeedColor,
-            applyThemeSettingsBatch,
-          }}
-      >
-        {children}
-      </ThemeContext.Provider>
+    <ThemeContext.Provider value={contextValue}>
+      {children}
+    </ThemeContext.Provider>
   );
 };
 

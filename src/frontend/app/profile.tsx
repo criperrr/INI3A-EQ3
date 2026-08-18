@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import {
   View,
   StyleSheet,
@@ -201,7 +201,7 @@ export default function ProfileScreen() {
 
 // --- Componentes Internos ---
 
-const ProfileHeader = ({
+const ProfileHeader = memo(function ProfileHeader({
   name,
   email,
   roleTitle,
@@ -215,7 +215,7 @@ const ProfileHeader = ({
   level: number;
   isAdmin: boolean;
   accent: string;
-}) => {
+}) {
   const { themeStyles } = useTheme();
 
   const getInitials = (fullName: string) => {
@@ -282,35 +282,37 @@ const ProfileHeader = ({
       <Text style={[styles.userEmail, themeStyles.subText]}>{email}</Text>
     </View>
   );
-};
+});
 
-const AdminPrivilegesBanner = ({
+const AdminPrivilegesBanner = memo(function AdminPrivilegesBanner({
   accent,
   themeStyles,
 }: {
   accent: string;
   themeStyles: any;
-}) => (
-  <View style={[styles.adminCard, themeStyles.card, { borderColor: COLORS.adminGlow }]}>
-    <View style={styles.adminCardHeader}>
-      <Ionicons name="shield-checkmark" size={20} color={COLORS.adminGlow} />
-      <Text style={[styles.adminCardTitle, { color: COLORS.adminGlow }]}>
-        Painel de Permissões Master
+}) {
+  return (
+    <View style={[styles.adminCard, themeStyles.card, { borderColor: COLORS.adminGlow }]}>
+      <View style={styles.adminCardHeader}>
+        <Ionicons name="shield-checkmark" size={20} color={COLORS.adminGlow} />
+        <Text style={[styles.adminCardTitle, { color: COLORS.adminGlow }]}>
+          Painel de Permissões Master
+        </Text>
+      </View>
+      <Text style={[styles.adminCardDesc, themeStyles.subText]}>
+        Você tem autoridade total para editar e excluir qualquer produto no catálogo global, além de moderar e auditar ocorrências de todos os usuários.
       </Text>
     </View>
-    <Text style={[styles.adminCardDesc, themeStyles.subText]}>
-      Você tem autoridade total para editar e excluir qualquer produto no catálogo global, além de moderar e auditar ocorrências de todos os usuários.
-    </Text>
-  </View>
-);
+  );
+});
 
-const StatsCard = ({
+const StatsCard = memo(function StatsCard({
   stats,
   t,
 }: {
   stats: { rank: number; reportedPrices: number; points: number };
   t: (key: any) => string;
-}) => {
+}) {
   const { themeStyles } = useTheme();
   return (
     <View style={[styles.statsCard, themeStyles.card, themeStyles.border]}>
@@ -350,9 +352,9 @@ const StatsCard = ({
       </View>
     </View>
   );
-};
+});
 
-const LevelProgress = ({
+const LevelProgress = memo(function LevelProgress({
   currentXp,
   maxXp,
   level,
@@ -366,7 +368,7 @@ const LevelProgress = ({
   roleTitle: string;
   t: (key: any) => string;
   accent: string;
-}) => {
+}) {
   const { themeStyles } = useTheme();
   const safeMax = maxXp > 0 ? maxXp : 100;
   const progressPercentage = Math.min((currentXp / safeMax) * 100, 100);
@@ -396,9 +398,9 @@ const LevelProgress = ({
       </View>
     </View>
   );
-};
+});
 
-const BadgesSection = ({
+const BadgesSection = memo(function BadgesSection({
   badges,
   t,
   accent,
@@ -406,7 +408,7 @@ const BadgesSection = ({
   badges: BadgeItem[];
   t: (key: any) => string;
   accent: string;
-}) => {
+}) {
   const { themeStyles } = useTheme();
 
   if (!badges || badges.length === 0) return null;
@@ -449,9 +451,9 @@ const BadgesSection = ({
       </ScrollView>
     </View>
   );
-};
+});
 
-const ContributionHistory = ({
+const ContributionHistory = memo(function ContributionHistory({
   contributions,
   reportedCount,
   t,
@@ -459,7 +461,7 @@ const ContributionHistory = ({
   contributions: number[][];
   reportedCount: number;
   t: (key: any) => string;
-}) => {
+}) {
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={styles.achievementsSection}>
@@ -497,7 +499,7 @@ const ContributionHistory = ({
       </View>
     </View>
   );
-};
+});
 
 interface UnauthenticatedProfileViewProps {
   accent: string;
@@ -510,7 +512,7 @@ interface UnauthenticatedProfileViewProps {
   onGoToRegister: () => void;
 }
 
-const UnauthenticatedProfileView = ({
+const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
   accent,
   themeStyles,
   isDark,
@@ -519,7 +521,7 @@ const UnauthenticatedProfileView = ({
   onQuickConnect,
   onGoToLogin,
   onGoToRegister,
-}: UnauthenticatedProfileViewProps) => {
+}: UnauthenticatedProfileViewProps) {
   return (
     <ScrollView
       contentContainerStyle={styles.guestContainer}
@@ -638,15 +640,15 @@ const UnauthenticatedProfileView = ({
       </View>
     </ScrollView>
   );
-};
+});
 
-const LogoutButton = ({
+const LogoutButton = memo(function LogoutButton({
   onPress,
   t,
 }: {
   onPress: () => void;
   t: (key: any) => string;
-}) => {
+}) {
   const { themeStyles, isDark } = useTheme();
   return (
     <TouchableOpacity
@@ -662,7 +664,7 @@ const LogoutButton = ({
       <Text style={styles.logoutText}>{t("auth.logout") || "Sair da Conta"}</Text>
     </TouchableOpacity>
   );
-};
+});
 
 // --- Estilos ---
 const styles = StyleSheet.create({

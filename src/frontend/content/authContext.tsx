@@ -165,21 +165,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (profile?.authority !== undefined && profile.authority >= 10)
   );
 
+  const contextValue = React.useMemo(
+    () => ({
+      user,
+      profile,
+      isAdmin,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      loginAsTestUser,
+      register,
+      logout,
+      refreshProfile,
+    }),
+    [
+      user,
+      profile,
+      isAdmin,
+      isLoading,
+      login,
+      loginAsTestUser,
+      register,
+      logout,
+      refreshProfile,
+    ],
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        isAdmin,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        loginAsTestUser,
-        register,
-        logout,
-        refreshProfile,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

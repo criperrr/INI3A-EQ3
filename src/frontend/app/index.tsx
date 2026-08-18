@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { fetchProducts } from "../services/productService";
+import { fetchMarkets } from "../services/marketService";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -43,19 +44,19 @@ const MOCK_PRODUCTS: GridItemType[] = [
   },
   {
     id: 2,
-    name: "Leite Fresco",
+    name: "Café Especial Torrado",
+    image:
+      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Leite Integral Orgânico",
     image:
       "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
   },
   {
-    id: 3,
-    name: "Frutas Orgânicas",
-    image:
-      "https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=400&fit=crop",
-  },
-  {
     id: 4,
-    name: "Arroz Integral",
+    name: "Arroz Parboilizado 5kg",
     image:
       "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
   },
@@ -111,11 +112,11 @@ const MOCK_BANNERS = [
   },
   {
     id: "2",
-    title: "Frutas da Estação",
-    subtitle: "Qualidade fresca perto de você",
-    linkText: "Ver Mais",
+    title: "Comunidade Colaborativa",
+    subtitle: "Cadastre preços e ajude outros consumidores",
+    linkText: "Participar",
     image:
-      "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=800&h=400&fit=crop",
   },
   {
     id: "3",
@@ -134,6 +135,7 @@ export default function HomeScreen() {
   const { view } = useLocalSearchParams<{ view?: string }>();
   const [activeView, setActiveView] = useState<string>("products");
   const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
+  const [realMarkets, setRealMarkets] = useState<GridItemType[]>(MOCK_MARKETS);
 
   const actionTabs: TabType[] = [
     {
@@ -182,6 +184,25 @@ export default function HomeScreen() {
         }
       })
       .catch(() => {});
+
+    fetchMarkets()
+      .then((markets) => {
+        if (markets && markets.length > 0) {
+          const marketImages = [
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+            "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
+            "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
+            "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
+          ];
+          const mapped: GridItemType[] = markets.map((m, idx) => ({
+            id: m.id,
+            name: m.name,
+            image: marketImages[idx % marketImages.length]!,
+          }));
+          setRealMarkets(mapped);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -213,7 +234,7 @@ export default function HomeScreen() {
     }
   }, [router]);
 
-  const gridData = activeView === "products" ? realProducts : MOCK_MARKETS;
+  const gridData = activeView === "products" ? realProducts : realMarkets;
   const gridTitle =
     activeView === "products" ? t("products.title") : t("map.nearbyMarketsTitle");
 

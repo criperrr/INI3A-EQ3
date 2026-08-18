@@ -157,17 +157,6 @@ class ProductServiceClass {
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const offset = (page - 1) * limit;
 
-    const trimmedSearch = query.search?.trim();
-
-    // If search looks like an EAN barcode, check if it exists or fetch from OpenFoodFacts on the fly
-    const cleanDigits = trimmedSearch?.replace(/\D/g, "");
-    if (cleanDigits && cleanDigits.length >= 8 && cleanDigits.length <= 14) {
-      const local = await ProductRepository.getProductByEan(cleanDigits);
-      if (!local) {
-        await this.getProductByBarcode(cleanDigits).catch(() => null);
-      }
-    }
-
     const [items, total] = await Promise.all([
       ProductRepository.searchProducts({
         search: query.search,
@@ -183,12 +172,13 @@ class ProductServiceClass {
       }),
     ]);
 
-    const formattedItems: ProductDTO[] = await Promise.all(
-      items.map(async (item) => {
-        const latestPrice = await ProductRepository.getLatestPriceForProduct(item.id);
-        return this.formatProductDTO(item, latestPrice);
-      })
-    );
+    const productIds = items.map((item) => item.id);
+    const priceMap = await ProductRepository.getLatestPricesForProductIds(productIds);
+
+    const formattedItems: ProductDTO[] = items.map((item) => {
+      const latestPrice = priceMap.get(item.id) || null;
+      return this.formatProductDTO(item, latestPrice);
+    });
 
     return {
       items: formattedItems,

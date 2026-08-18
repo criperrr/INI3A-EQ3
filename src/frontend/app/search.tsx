@@ -5,11 +5,13 @@ import {
   Text,
   TextInput,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -82,7 +84,7 @@ export default function SearchScreen() {
     }
     debounceTimer.current = setTimeout(() => {
       loadProducts(searchText, selectedCategory);
-    }, 300);
+    }, 280);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -112,13 +114,99 @@ export default function SearchScreen() {
     router.push("/customRegisterProduct");
   }, [router]);
 
+  const renderItem = useCallback(
+    ({ item }: { item: ProductData }) => (
+      <ProductCardItem
+        product={item}
+        onPress={handleProductPress}
+        themeStyles={themeStyles}
+        accent={accent}
+      />
+    ),
+    [handleProductPress, themeStyles, accent]
+  );
+
+  const keyExtractor = useCallback(
+    (item: ProductData, index: number) =>
+      item.id ? String(item.id) : item.barcode ? `${item.barcode}_${index}` : `${item.name}_${index}`,
+    []
+  );
+
+  const ListHeader = (
+    <View style={styles.headerContainer}>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={[styles.screenTitle, themeStyles.text]}>Pesquisar Produtos</Text>
+          <Text style={[styles.screenSubtitle, themeStyles.subText]}>
+            Encontre itens e compare preços em mercados
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.addCustomBtn, { backgroundColor: accent }]}
+          activeOpacity={0.8}
+          onPress={handleCreateCustom}
+        >
+          <Ionicons name="add" size={20} color="#FFF" />
+          <Text style={styles.addCustomText}>Novo</Text>
+        </TouchableOpacity>
+      </View>
+
+      <SearchBar
+        value={searchText}
+        onChangeText={setSearchText}
+        onClear={() => setSearchText("")}
+        accent={accent}
+        themeStyles={themeStyles}
+        isDark={isDark}
+      />
+
+      <CategoryFilterChips
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        accent={accent}
+        themeStyles={themeStyles}
+        isDark={isDark}
+      />
+
+      {loading && !refreshing && (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="large" color={accent} />
+          <Text style={[styles.loadingLabel, themeStyles.subText]}>Buscando produtos...</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const ListEmpty = !loading && !refreshing ? (
+    <EmptyResults
+      searchTerm={searchText}
+      selectedCategory={selectedCategory}
+      onCreateCustom={handleCreateCustom}
+      onScanBarcode={() => router.push("/scannerProduct")}
+      themeStyles={themeStyles}
+      accent={accent}
+    />
+  ) : null;
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.container, themeStyles.bg]}>
-        <ScrollView
+        <FlatList
+          data={loading && !refreshing ? [] : products}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          numColumns={2}
+          columnWrapperStyle={products.length > 0 ? styles.columnWrapper : undefined}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={ListEmpty}
+          initialNumToRender={8}
+          maxToRenderPerBatch={8}
+          windowSize={5}
+          removeClippedSubviews={Platform.OS !== "web"}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -127,69 +215,7 @@ export default function SearchScreen() {
               colors={[accent]}
             />
           }
-        >
-          {/* Header Action / Title */}
-          <View style={styles.headerRow}>
-            <View>
-              <Text style={[styles.screenTitle, themeStyles.text]}>Pesquisar Produtos</Text>
-              <Text style={[styles.screenSubtitle, themeStyles.subText]}>
-                Encontre itens e compare preços em mercados
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.addCustomBtn, { backgroundColor: accent }]}
-              activeOpacity={0.8}
-              onPress={handleCreateCustom}
-            >
-              <Ionicons name="add" size={20} color="#FFF" />
-              <Text style={styles.addCustomText}>Novo</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Search Bar */}
-          <SearchBar
-            value={searchText}
-            onChangeText={setSearchText}
-            onClear={() => setSearchText("")}
-            accent={accent}
-            themeStyles={themeStyles}
-            isDark={isDark}
-          />
-
-          {/* Category Chips Carousel */}
-          <CategoryFilterChips
-            categories={categories}
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-            accent={accent}
-            themeStyles={themeStyles}
-            isDark={isDark}
-          />
-
-          {/* Product Results / Loading / Empty */}
-          {loading && !refreshing ? (
-            <View style={styles.centerBox}>
-              <ActivityIndicator size="large" color={accent} />
-              <Text style={[styles.loadingLabel, themeStyles.subText]}>Buscando produtos...</Text>
-            </View>
-          ) : products.length > 0 ? (
-            <ProductResultsGrid
-              products={products}
-              onProductPress={handleProductPress}
-              themeStyles={themeStyles}
-              accent={accent}
-            />
-          ) : (
-            <EmptyResults
-              searchTerm={searchText}
-              selectedCategory={selectedCategory}
-              onCreateCustom={handleCreateCustom}
-              onScanBarcode={() => router.push("/scannerProduct")}
-              themeStyles={themeStyles}
-              accent={accent}
-            />
-          )}
-        </ScrollView>
+        />
       </View>
     </TouchableWithoutFeedback>
   );
@@ -342,31 +368,7 @@ const ProductCardItem = memo(function ProductCardItem({
   );
 });
 
-const ProductResultsGrid = memo(function ProductResultsGrid({
-  products,
-  onProductPress,
-  themeStyles,
-  accent,
-}: {
-  products: ProductData[];
-  onProductPress: (p: ProductData) => void;
-  themeStyles: any;
-  accent: string;
-}) {
-  return (
-    <View style={styles.gridContainer}>
-      {products.map((product) => (
-        <ProductCardItem
-          key={product.id || product.barcode || product.name}
-          product={product}
-          onPress={onProductPress}
-          themeStyles={themeStyles}
-          accent={accent}
-        />
-      ))}
-    </View>
-  );
-});
+
 
 const EmptyResults = ({
   searchTerm,
@@ -492,17 +494,19 @@ const styles = StyleSheet.create({
   loadingLabel: {
     fontSize: 14,
   },
-  gridContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  headerContainer: {
+    marginBottom: 4,
+  },
+  columnWrapper: {
     justifyContent: "space-between",
     gap: 12,
+    marginBottom: 12,
   },
   productCard: {
-    width: "48%",
+    flex: 1,
+    maxWidth: "48.5%",
     borderRadius: 16,
     padding: 10,
-    marginBottom: 8,
     borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },

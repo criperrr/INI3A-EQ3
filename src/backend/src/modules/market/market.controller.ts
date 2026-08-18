@@ -4,9 +4,18 @@ import { success } from "@/shared/helpers/response.helper";
 import { ValidationError } from "@/shared/errors/errors";
 
 class MarketControllerClass {
-  async getAllMarkets(_: Request, res: Response, next: NextFunction) {
+  async getAllMarkets(req: Request, res: Response, next: NextFunction) {
     try {
-      const markets = await marketService.getAllMarkets();
+      const { latitude, longitude, radius } = req.query;
+      const lat = latitude ? Number(latitude) : undefined;
+      const lng = longitude ? Number(longitude) : undefined;
+      const rad = radius ? Number(radius) : undefined;
+
+      const markets = await marketService.getAllMarkets({
+        latitude: lat && !isNaN(lat) ? lat : undefined,
+        longitude: lng && !isNaN(lng) ? lng : undefined,
+        radius: rad && !isNaN(rad) ? rad : undefined,
+      });
       return res.status(200).json(success(markets));
     } catch (e) {
       next(e);

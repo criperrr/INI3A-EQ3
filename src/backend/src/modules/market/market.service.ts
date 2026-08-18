@@ -2,7 +2,14 @@ import { MarketRepository } from "@/shared/database/repositories/market.reposito
 import { NotFoundError } from "@/shared/errors/errors";
 
 class MarketServiceClass {
-  async getAllMarkets() {
+  async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined }) {
+    if (params?.latitude !== undefined && params?.longitude !== undefined) {
+      const radius = params.radius || 10000;
+      return MarketRepository.getMarketsByRadius(
+        { lat: params.latitude, lng: params.longitude },
+        radius
+      );
+    }
     return MarketRepository.getAllMarkets();
   }
 

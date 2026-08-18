@@ -63,18 +63,44 @@ export default function ProductDetails() {
     try {
       const list = await fetchProductOccurrences(productId);
       setOccurrences(list);
+    } catch {
+      // Occurrences error handled gracefully
     } finally {
       setLoadingOccurrences(false);
     }
   }, []);
 
   const loadProductData = useCallback(async () => {
+    // Immediate pre-population from route params for zero-latency initial paint
+    if (params.name && !product) {
+      setProduct({
+        id: targetId || undefined,
+        barcode: targetBarcode || "",
+        name: params.name,
+        category: params.category || "Sem Categoria",
+        imageUri: params.imageUri || null,
+        lastPrice: params.lastPrice || "Preço não informado",
+        priceHistory: [],
+      });
+      setEditName(params.name);
+      setEditCategory(params.category || "");
+      setEditEan(targetBarcode || "");
+    }
+
     setLoading(true);
     try {
       let data: ProductDetailData | null = null;
 
       if (targetId && !isNaN(targetId) && targetId > 0) {
-        data = await fetchProductById(targetId);
+        // Parallel fetch for product details and occurrences
+        setLoadingOccurrences(true);
+        const [productData, occurrencesList] = await Promise.all([
+          fetchProductById(targetId),
+          fetchProductOccurrences(targetId).catch(() => []),
+        ]);
+        data = productData;
+        setOccurrences(occurrencesList);
+        setLoadingOccurrences(false);
       } else if (targetBarcode) {
         const byBarcode = await fetchProductByEan(targetBarcode);
         if (byBarcode) {
@@ -83,8 +109,14 @@ export default function ProductDetails() {
             priceHistory: [],
           };
           if (byBarcode.id) {
-            const fullDetails = await fetchProductById(byBarcode.id);
+            setLoadingOccurrences(true);
+            const [fullDetails, occurrencesList] = await Promise.all([
+              fetchProductById(byBarcode.id).catch(() => byBarcode),
+              fetchProductOccurrences(byBarcode.id).catch(() => []),
+            ]);
             if (fullDetails) data = fullDetails;
+            setOccurrences(occurrencesList);
+            setLoadingOccurrences(false);
           }
         }
       }
@@ -94,10 +126,7 @@ export default function ProductDetails() {
         setEditName(data.name || "");
         setEditCategory(data.category || "");
         setEditEan(data.barcode || data.ean || "");
-        if (data.id) {
-          loadOccurrences(data.id);
-        }
-      } else if (params.name) {
+      } else if (params.name && !product) {
         const fallbackData: ProductDetailData = {
           id: targetId || undefined,
           barcode: targetBarcode || "",
@@ -116,8 +145,9 @@ export default function ProductDetails() {
       console.error("[ProductDetails] Error loading details:", err);
     } finally {
       setLoading(false);
+      setLoadingOccurrences(false);
     }
-  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, loadOccurrences]);
+  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice]);
 
   useEffect(() => {
     loadProductData();

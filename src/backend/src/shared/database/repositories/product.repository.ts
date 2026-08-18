@@ -1,9 +1,10 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { db } from "../database";
 import { market, ocurrency, product } from "../schema";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
+  private categoryCache: { data: string[]; expiry: number } | null = null;
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
     if (!barcode) return null;
     const cleanBarcode = barcode.trim();
@@ -188,6 +189,7 @@ class ProductRepositoryClass {
   }
 
   async createProduct(data: CreateProductDTO) {
+    this.categoryCache = null;
     const safeName = data.name.trim().slice(0, 195);
     const safeDescription = (data.description || data.category || "").trim().slice(0, 250);
 
@@ -202,6 +204,7 @@ class ProductRepositoryClass {
   }
 
   async updateProduct(id: number, data: UpdateProductDTO) {
+    this.categoryCache = null;
     const updatePayload: Record<string, any> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
     if (data.ean !== undefined) updatePayload.ean = data.ean;
@@ -221,11 +224,17 @@ class ProductRepositoryClass {
   }
 
   async deleteProduct(id: number) {
+    this.categoryCache = null;
     const res = await db.delete(product).where(eq(product.id, id));
     return (res.rowCount ?? 0) > 0;
   }
 
   async getCategories(): Promise<string[]> {
+    const now = Date.now();
+    if (this.categoryCache && this.categoryCache.expiry > now) {
+      return this.categoryCache.data;
+    }
+
     const rows = await db
       .select({ category: product.description })
       .from(product)
@@ -244,7 +253,9 @@ class ProductRepositoryClass {
         }
       }
     }
-    return Array.from(categoriesSet);
+    const resultList = Array.from(categoriesSet);
+    this.categoryCache = { data: resultList, expiry: now + 5 * 60 * 1000 };
+    return resultList;
   }
 
   async getLatestPriceForProduct(productId: number): Promise<string | null> {
@@ -258,6 +269,33 @@ class ProductRepositoryClass {
     if (!res[0] || !res[0].value) return null;
     const num = Number(res[0].value);
     return `R$ ${num.toFixed(2).replace(".", ",")}`;
+  }
+
+  async getLatestPricesForProductIds(productIds: number[]): Promise<Map<number, string>> {
+    const priceMap = new Map<number, string>();
+    if (!productIds || productIds.length === 0) return priceMap;
+
+    const uniqueIds = Array.from(new Set(productIds.filter((id) => id > 0)));
+    if (uniqueIds.length === 0) return priceMap;
+
+    const rows = await db
+      .select({
+        productId: ocurrency.productId,
+        value: ocurrency.value,
+        createdAt: ocurrency.createdAt,
+      })
+      .from(ocurrency)
+      .where(and(inArray(ocurrency.productId, uniqueIds), eq(ocurrency.isSuspended, false)))
+      .orderBy(desc(ocurrency.createdAt));
+
+    for (const row of rows) {
+      if (row.productId && !priceMap.has(row.productId) && row.value) {
+        const num = Number(row.value);
+        priceMap.set(row.productId, `R$ ${num.toFixed(2).replace(".", ",")}`);
+      }
+    }
+
+    return priceMap;
   }
 
   async getPriceStats(productId: number) {
