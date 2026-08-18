@@ -178,10 +178,18 @@ export async function fetchUserProfile(): Promise<UserProfileData | null> {
     return await apiRequest<UserProfileData>("/auth/me", {
       method: "GET",
     });
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.status === 401) {
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.ACCESS_TOKEN,
+        STORAGE_KEYS.REFRESH_TOKEN,
+      ]);
+      return null;
+    }
     console.error("[Auth] Error fetching user profile:", error);
     return null;
   }
 }
+
 
 

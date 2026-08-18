@@ -24,6 +24,22 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 11:20] - fix(auth): resolve profile ApiError and implement graceful session error handling
+
+- **Description:** Diagnosed and resolved the root cause of `[Auth] Error fetching user profile: ApiError: Erro inesperado`:
+  1. **Comprehensive HTTP Error Mapping:** Enhanced `handleResponse` in `src/frontend/services/api.ts` with `getDefaultErrorDetails(status)` to map all standard HTTP error statuses (400, 401, 403, 404, 408, 409, 422, 500, 502, 503, 504) and robustly extract error messages from `body.message`, `body.error`, `body.msg` or localized defaults, eliminating generic "Erro inesperado" fallbacks.
+  2. **Graceful 401 Handling on Profile Fetch:** In `fetchUserProfile` (`src/frontend/services/auth.ts`), intercepted expired/invalid session (401) responses to automatically purge stale storage tokens and return `null` without throwing unhandled exceptions to the console.
+  3. **Stale Session State Synchronization:** In `authContext.tsx` (`loadStoredAuth` and `refreshProfile`), added verification to purge stale optimistic user state if `fetchUserProfile()` fails due to expired or revoked tokens, preventing the app from being stuck in a half-authenticated state.
+- **Files Modified:**
+  - `src/frontend/services/api.ts`
+  - `src/frontend/services/auth.ts`
+  - `src/frontend/content/authContext.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Expired or revoked JWT tokens now smoothly reset user authentication to the guest/login state without spamming console errors or displaying vague "Erro inesperado" messages.
+
+---
+
 ## [2026-08-18 09:30] - feat(perf): accelerate map loading and instant client-side product caching
 
 - **Description:** Diagnosed and resolved the root causes of slow map initialization and products loading:

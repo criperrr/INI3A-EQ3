@@ -133,6 +133,7 @@ Direct relative paths from project root.
 - [x] Fix EAN product lookup and navigation pipeline: Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts multi-endpoint parallel fallback, barcode digit/leading-zero normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
 - [x] Fix unauthenticated profile screen error (`ApiError: Token não fornecido`) by guarding `/auth/me` profile refresh and adding 1-tap test user and admin quick-connect actions (`usuario@presco.com` / `user123` and `admin@admin.org` / `admin`).
 - [x] Implement market proximity lookup in frontend map screen with instant location resolution (`getLastKnownPositionAsync`), local database markets fallback (`fetchMarkets`), Overpass in-memory caching, non-blocking OSRM routing, and instant client-side product/market caching.
+- [x] Fix profile ApiError and implement graceful session error handling in `api.ts`, `auth.ts`, and `authContext.tsx`.
 
 ---
 

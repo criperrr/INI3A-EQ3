@@ -41,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const tokens = await getStoredTokens();
       if (!tokens.accessToken) {
+        setUser(null);
+        setProfile(null);
         return null;
       }
       const fullProfile = await fetchUserProfile();
@@ -62,6 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           levelTitle: fullProfile.levelTitle,
         }));
         return fullProfile;
+      } else {
+        const currentTokens = await getStoredTokens();
+        if (!currentTokens.accessToken) {
+          setUser(null);
+          setProfile(null);
+        }
       }
     } catch (e) {
       console.error("[AuthContext] Error refreshing profile:", e);
@@ -106,12 +114,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   maxXp: p.maxXp,
                   levelTitle: p.levelTitle,
                 }));
+              } else {
+                getStoredTokens().then((t) => {
+                  if (!t.accessToken) {
+                    setUser(null);
+                    setProfile(null);
+                  }
+                });
               }
             });
           }
         }
       } catch {
         // Tokens invalid or corrupted — start fresh
+        setUser(null);
+        setProfile(null);
       } finally {
         setIsLoading(false);
       }

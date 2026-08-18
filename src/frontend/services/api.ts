@@ -35,6 +35,33 @@ class ApiError extends Error {
   }
 }
 
+function getDefaultErrorDetails(status: number): { code: string; message: string } {
+  switch (status) {
+    case 400:
+      return { code: "BAD_REQUEST", message: "Requisição inválida." };
+    case 401:
+      return { code: "UNAUTHORIZED", message: "Sessão expirada ou não autorizada." };
+    case 403:
+      return { code: "FORBIDDEN", message: "Acesso negado. Permissões insuficientes." };
+    case 404:
+      return { code: "NOT_FOUND", message: "Recurso não encontrado." };
+    case 408:
+      return { code: "TIMEOUT", message: "A requisição demorou muito para responder." };
+    case 409:
+      return { code: "CONFLICT", message: "O recurso já existe ou conflita com dados atuais." };
+    case 422:
+      return { code: "VALIDATION_ERROR", message: "Dados fornecidos são inválidos." };
+    case 502:
+    case 503:
+    case 504:
+      return { code: "SERVICE_UNAVAILABLE", message: "Servidor ou túnel temporariamente indisponível." };
+    default:
+      return status >= 500
+        ? { code: "SERVER_ERROR", message: "Erro interno no servidor." }
+        : { code: "UNKNOWN_ERROR", message: "Ocorreu um erro na requisição." };
+  }
+}
+
 /**
  * Handles response parsing and error mapping.
  */
@@ -50,13 +77,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   if (!response.ok) {
-    const defaultCode = response.status === 404 ? "NOT_FOUND" : response.status >= 500 ? "SERVER_ERROR" : "UNKNOWN";
-    const defaultMessage = response.status === 404 ? "Recurso não encontrado." : "Erro inesperado.";
+    const defaults = getDefaultErrorDetails(response.status);
+    const resolvedCode = body?.code || body?.error || defaults.code;
+    const resolvedMessage =
+      body?.message ||
+      (typeof body?.error === "string" ? body.error : undefined) ||
+      body?.msg ||
+      defaults.message;
 
     throw new ApiError(
       response.status,
-      body?.code || defaultCode,
-      body?.message || defaultMessage,
+      resolvedCode,
+      resolvedMessage,
       body?.errors,
     );
   }
