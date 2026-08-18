@@ -6,9 +6,9 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 
 ## 1. Executive Summary
 
-INI3A-EQ3 is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts, and price reports (`ocurrency`) are submitted against a `market` and `product`. A complete role-based permission system differentiates **Administrators** (full delete/edit access across all products and price occurrences) and **Regular Users** (product analysis, market price suggestions, and community price auditing). Gamification tracks user points, unlocks badges, and levels up contributor ranks.
+INI3A-EQ3 (Presco) is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts (with auto-caching to PostgreSQL), and price reports (`ocurrency`) are submitted against a `market` and `product`. A complete role-based permission system differentiates **Administrators** (full delete/edit access across all products and price occurrences) and **Regular Users** (product analysis, market price suggestions, and community price auditing). Gamification tracks user points, unlocks badges, and levels up contributor ranks.
 
-**Backend** runs on port 3333 (Express, TypeScript, Drizzle ORM, Redis, PostGIS).
+**Backend** runs on port 3333 (Express 5, TypeScript, Drizzle ORM, Redis, PostGIS).
 Routes:
 - `POST /auth/register` — create user, returns tokens
 - `POST /auth/login` — authenticate, returns tokens
@@ -32,12 +32,15 @@ Routes:
 - `DELETE /ocurrency/:id` — delete price occurrence (requireAuth, author or admin)
 - `GET /markets` — list available markets
 - `POST /markets` — register new market (requireAuth)
+- `GET /health` — inspect database and Redis health
 
-**Frontend** is a React Native Expo app (SDK 54, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
+**Frontend** is a React Native Expo app (SDK 54, React Native 0.81.5, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 - `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
 - `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, and contribution activity heatmap.
 - `productDetails.tsx` displays market prices list, allows community price voting, and grants exclusive edit/delete controls to admins.
 - `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.
+- `settings.tsx` manages themes, system Monet color palettes, encoded config backup/import, cache clearing, and account security.
+- `SwipeTabNavigator.tsx` provides 1:1 real-time finger-tracking horizontal swipe navigation between main tabs using Reanimated spring physics.
 
 ---
 
@@ -49,7 +52,7 @@ Direct relative paths from project root.
 
 | File | Key exports / purpose |
 |---|---|
-| `src/backend/src/app.ts` | Express app, mounts `/auth`, `/products`, `/ocurrency`, `/markets` routers, `errorHandler` last |
+| `src/backend/src/app.ts` | Express app, mounts `/auth`, `/products`, `/ocurrency`, `/markets` routers, `/health`, `errorHandler` last |
 | `src/backend/src/server.ts` | `bootstrap()` — connects Redis, verifies DB, executes idempotent seed, starts HTTP |
 | `src/backend/src/shared/database/seed.ts` | `seedDatabase()` — seeds roles, badges, markets, test admin (`admin@admin.org`/`admin`), regular test user |
 | `src/backend/src/modules/auth/auth.routes.ts` | Auth Router (`/register`, `/login`, `/refresh`, `/me`, `/logout`, `/password`, `/account`) |
@@ -88,7 +91,7 @@ Direct relative paths from project root.
 | `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
 | `src/frontend/services/ocurrencyService.ts` | `submitPriceOccurrence`, `fetchProductOccurrences`, `voteOccurrence`, `updateOccurrence`, `deleteOccurrence` |
 | `src/frontend/services/marketService.ts` | `fetchMarkets`, `createMarket` |
-| `src/frontend/app/_layout.tsx` | Root stack layout and theme provider |
+| `src/frontend/app/_layout.tsx` | Root stack layout, gesture navigator wrapper and theme/i18n providers |
 | `src/frontend/app/index.tsx` | Home screen with dynamic products loading and item navigation |
 | `src/frontend/app/login.tsx` | Login screen with Expo Go / Dev detection and 1-tap quick login for `admin@admin.org` and regular test user |
 | `src/frontend/app/registerUser.tsx` | Registration screen |
@@ -99,9 +102,13 @@ Direct relative paths from project root.
 | `src/frontend/app/search.tsx` | Full live text & barcode search with debounce, category chips, pull-to-refresh, empty states, and product navigation |
 | `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, market occurrences list with community voting, and admin-only edit/delete controls |
 | `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, admin banner, and logout |
-| `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import JSON, cache clearing, password change, account deletion |
+| `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import encoded config, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
 | `src/frontend/content/authContext.tsx` | `AuthProvider`, `useAuth()` with `user`, `profile`, `isAdmin`, `refreshProfile()` |
+| `src/frontend/content/themeContent.tsx` | `ThemeProvider`, `useTheme()` with light/dark/amoled modes and dynamic Monet palette presets |
+| `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
+| `src/frontend/content/tabNavigationContext.tsx` | Directional screen navigation context for swipe gestures |
+| `src/frontend/components/SwipeTabNavigator.tsx` | 1:1 real-time finger-tracking Reanimated gesture navigator |
 
 ---
 
@@ -112,12 +119,13 @@ Direct relative paths from project root.
 - [x] Agent guidelines (`AGENTS.md`), project index (`CURRENT.md`), commit log (`COMMITS.md`).
 - [x] Align `productController` to use `success()` helper.
 - [x] Fix `market.repository.ts` and `getMarket`/`getAllMarkets` to use `ST_AsGeoJson`.
-- [x] Complete settings functionalities (export/import JSON backup, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics).
-- [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with haptic feedback.
+- [x] Complete settings functionalities (export/import encoded config, live password change via `PATCH /auth/password`, account deletion, cache clearing, scanner haptics).
+- [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with 1:1 finger tracking and haptic feedback.
 - [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager.
 - [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
-- [x] Complete Admin vs Regular User permission scheme, leveling and gamification (+15 XP price, +25 XP product, +5 XP vote), 100% dynamic profile screen without placeholders, Expo Go auto-detection with 1-tap admin login (`admin@admin.org`/`admin`), and occurrence submission across markets — done (2026-08-16).
-- [x] Full mobile native performance optimization suite (Phase 0 Audit, Android 13-16 Predictive Back & Edge-to-Edge insets, iOS pop transitions, Metro `inlineRequires` lazy loading, full migration to `expo-image` with `memory-disk` cache, `@shopify/flash-list`, and pure UI thread memoization) — done (2026-08-16).
+- [x] Complete Admin vs Regular User permission scheme, leveling and gamification (+15 XP price, +25 XP product, +5 XP vote), 100% dynamic profile screen without placeholders, Expo Go auto-detection with 1-tap admin login (`admin@admin.org`/`admin`), and occurrence submission across markets.
+- [x] Full mobile native performance optimization suite (Phase 0 Audit, Android 13-16 Predictive Back & Edge-to-Edge insets, iOS pop transitions, Metro `inlineRequires` lazy loading, full migration to `expo-image` with `memory-disk` cache, `@shopify/flash-list`, and pure UI thread memoization).
+- [x] Unify `.taagents` into `.agents` and generate comprehensive project documentation.
 - [ ] Wire `scannerProduct.tsx` → `scannerConfirmation.tsx` flow with market selection.
 - [ ] Implement market proximity lookup in frontend map screen.
 

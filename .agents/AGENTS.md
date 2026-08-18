@@ -17,33 +17,40 @@ Always read `.agents/CURRENT.md` at the start of any task before calling `list_d
 ### 1.3. Skills (Load Only When Relevant)
 Deep architecture references are split into skills — load them only if the task touches that area:
 
-- **Backend** (Express, Drizzle, Redis, Auth): `.agents/skills/backend/SKILL.md`
-  Covers: layer responsibilities, DB schema, error classes, Redis keys, `requireAuth`, type namespaces, endpoint checklist, module file structure.
-- **Frontend** (React Native, Expo Router, services): `.agents/skills/frontend/SKILL.md`
-  Covers: `apiRequest`, domain service patterns, screen map, component list, design token spec.
-- **Design tokens** (colors, typography, spacing): `.agents/DESIGN.md`
+- **Backend** (Express, Drizzle, Redis, Auth): `.agents/skills/presco-backend/SKILL.md`
+  Covers: layer responsibilities, DB schema, error classes, Redis keys, `requireAuth`, `requireAdmin`, type namespaces, endpoint checklist, module file structure.
+- **Frontend** (React Native, Expo Router, services, gestures, i18n): `.agents/skills/presco-frontend/SKILL.md`
+  Covers: `apiRequest`, domain service patterns, screen map, component list, design token spec, Reanimated swipe navigation, localization in 7 languages.
+- **Design tokens** (colors, typography, spacing, Monet): `.agents/DESIGN.md` or root `DESIGN.md`.
 
 ---
 
 ## 2. Project Architecture
 
 ### 2.1. Technology Stack
-- **Backend:** Node.js, Express, TypeScript. Path alias `@/*` resolves to `src/backend/src/*`.
+- **Backend:** Node.js, Express 5, TypeScript. Path alias `@/*` resolves to `src/backend/src/*`.
 - **ORM:** Drizzle ORM targeting PostgreSQL with PostGIS extension (for `geography` columns on `user` and `market`).
 - **Session layer:** Redis (`redis` package). All token data lives in Redis; no token columns on DB tables.
 - **Auth:** JWT access tokens (15 min, signed with `JWT_SECRET`, carry `id, email, name, roleId, jti`). Refresh tokens are 96-byte hex strings stored in Redis as `refresh:<token> → userId`.
-- **Frontend:** React Native, Expo (SDK), Expo Router for file-based routing, AsyncStorage for token persistence.
-- **Design:** Single design token source at `DESIGN.md`. All components must consume `useTheme()`.
+- **Permissions:** Multi-role authority system with `requireAuth`, `requireAdmin` (roleId 5), `requireMinAuthority`.
+- **Frontend:** React Native 0.81.5, Expo SDK 54, Expo Router for file-based routing, AsyncStorage for token persistence.
+- **Motion & Gestures:** React Native Reanimated 4 with 1:1 finger tracking, `react-native-gesture-handler` 2, and `expo-haptics`.
+- **Design:** Dynamic theming with Light, Dark, and AMOLED modes + System Monet color extraction via `useTheme()`.
+- **i18n:** Type-safe translation engine with 7 languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
 
-### 2.2. Environment
+### 2.2. Environment & Startup
 Required `.env` variables for the backend (`src/backend/.env`):
+```env
+DATABASE_URL=postgres://user:password@localhost:5432/dbname
+REDIS_URL=redis://localhost:6379
+SERVER_PORT=3333
+JWT_SECRET=<secret>
 ```
-DATABASE_URL   postgres://user:password@localhost:5432/dbname
-REDIS_URL      redis://localhost:6379
-SERVER_PORT    3333
-JWT_SECRET     <secret>
-```
-Dev startup: run `./start_project.sh` from project root. It opens a `tmux` session named `dev` with two panes (backend left, frontend right) and two localtunnel subdomains: `ini3a-eq3-api` (port 3333) and `ini3a-eq3-app` (port 8081). The backend must respond on port 3333 before the frontend starts. Frontend receives `EXPO_PUBLIC_API_URL` pointing at the tunnel URL.
+
+Dev startup: run `./start_project.sh` from project root:
+- Default: Tunneling mode (`ini3a-eq3-api` on port 3333 and `ini3a-eq3-app` on port 8081).
+- Local Wi-Fi NAT mode: `./start_project.sh --local-nat` (or `npm run dev:local`) for zero-latency local network testing with Expo Go QR code scanning.
+- Services manager: `npm run db:status`, `npm run db:restart`, `npm run db:reload`, `npm run db:check`.
 
 ---
 
@@ -54,31 +61,27 @@ Dev startup: run `./start_project.sh` from project root. It opens a `tmux` sessi
 Request flow: `Routes → Controller → Service → Repository → DB/Redis`
 
 **Routes** (`modules/[module]/[module].routes.ts`)
-- Instantiate `Router()`. Mount middleware (`requireAuth`) on protected routes. Delegate to controller method. No logic here.
+- Instantiate `Router()`. Mount middleware (`requireAuth`, `requireAdmin`) on protected routes. Delegate to controller method. No logic here.
 - Protected routes pass `req` as `Api.Request` (augmented with `req.user: { id, email, name, roleId, jti, exp }`).
-- Mounting in `app.ts`: `app.use("/auth", authRouter)`, `app.use("/products", productRouter)`.
+- Mounting in `app.ts`: `app.use("/auth", authRouter)`, `app.use("/products", productRouter)`, `app.use("/ocurrency", ocurrencyRouter)`, `app.use("/markets", marketRouter)`.
 
 **Controller** (`modules/[module]/[module].controller.ts`)
 - Class singleton: `export const xController = new XControllerClass()`.
 - Every method signature: `async method(req, res, next)` — always wrap in `try/catch`, forward to `next(e)` on error.
 - Validate `req.body`/`req.params` here. Build `errors: { field, message }[]` array and throw `new ValidationError(errors)` if invalid.
-- On success: `return res.status(201).json(success(result))`. The `success()` helper returns `{ success: true, code: 200, data }`.
-- NOTE: `product.controller.ts` currently does NOT use the `success()` helper — uses raw JSON. Fix to align pattern when touching that file.
+- On success: `return res.status(200 | 201).json(success(result))`. The `success()` helper returns `{ success: true, code: 200, data }`.
 
 **Service** (`modules/[module]/[module].service.ts`)
 - Class singleton: `export const xService = new XServiceClass()`.
-- All business logic, hashing (`bcrypt` cost 10), JWT signing (`signAccessToken`), token rotation, and domain validation live here.
+- All business logic, hashing (`bcrypt` cost 10), JWT signing (`signAccessToken`), token rotation, gamification XP calculation, and domain validation live here.
 - Throws typed AppError subclasses (see Section 3.3). Never returns HTTP status codes.
 - Calls only Repository singletons for data access.
 
 **Repository** (`shared/database/repositories/[entity].repository.ts`)
 - Class singleton: `export const EntityRepository = new EntityRepositoryClass(db)` (or without `db` for Redis-only repos).
 - The ONLY location where Drizzle ORM calls or Redis calls are made. No ORM/Redis outside repositories.
-- `UserRepository` and `ProductRepository` take `db` in constructor. `AuthRepository` and `MarketRepository` use module-level imports.
 
 ### 3.2. Database Schema (Drizzle — `shared/database/schema.ts`)
-
-All tables with their key columns:
 
 | Table | Key columns |
 |---|---|
@@ -103,6 +106,8 @@ All extend `AppError(internalCode, customMessage, httpCode)`:
 
 | Class | `internalCode` | `httpCode` | Notes |
 |---|---|---|---|
+| `ForbiddenError` | `FORBIDDEN` | 403 | Insufficient role or authority |
+| `NotFoundError` | `NOT_FOUND` | 404 | Resource not found in database |
 | `ValidationError` | `VALIDATION_ERROR` | 422 | Carries `errors: { field, message }[]` |
 | `UnauthorizedError` | `UNAUTHORIZED` | 401 | Default message: "Invalid credentials." |
 | `ConflictError` | `CONFLICT` | 409 | Default message: "Resource already exists." |
@@ -117,28 +122,22 @@ All extend `AppError(internalCode, customMessage, httpCode)`:
 ```
 Non-`AppError` exceptions produce HTTP 500 with `INTERNAL_SERVER_ERROR`.
 
-### 3.4. Auth Middleware (`requireAuth`)
+### 3.4. Auth Middleware (`requireAuth`, `requireAdmin`)
 
-`requireAuth` (`shared/middlewares/authMiddleware.ts`):
-1. Reads `Authorization: Bearer <token>` header.
-2. Calls `verifyAccessToken(token)` (throws if invalid/expired).
-3. Checks Redis `blacklist:<jti>` via `AuthRepository.isAccessTokenBlacklisted(jti)`. Throws `JTIrefused`/`UnauthorizedError` if blacklisted.
-4. Attaches decoded payload to `req.user: { id, email, name, roleId, jti, exp }`.
+- `requireAuth` (`shared/middlewares/authMiddleware.ts`):
+  1. Reads `Authorization: Bearer <token>` header.
+  2. Calls `verifyAccessToken(token)`.
+  3. Checks Redis `blacklist:<jti>` via `AuthRepository.isAccessTokenBlacklisted(jti)`.
+  4. Attaches decoded payload to `req.user: { id, email, name, roleId, jti, exp }`.
+- `requireAdmin`: Ensures `req.user.roleId >= 5` or authority level matches administrator privilege.
 
 ### 3.5. Redis Key Schema
 
 Managed exclusively through `AuthRepository`:
-- `refresh:<token>` → `userId` string. TTL = `REFRESH_TOKEN_EXPIRY_SECONDS` (7 days as of `jwt.ts`).
+- `refresh:<token>` → `userId` string. TTL = `REFRESH_TOKEN_EXPIRY_SECONDS` (7 days).
 - `blacklist:<jti>` → `"1"`. TTL = remaining seconds of the access token's lifetime.
 
 Rotation (on `/auth/refresh`): atomic Redis multi — sets new `refresh:` key, deletes old one.
-
-### 3.6. Type Namespaces
-
-- `Services.*` (`shared/types/services.ts`): types used in Service method signatures. `CreateUser = { name, email, password }`. `UpdateUser` omits system-managed fields.
-- `Repositories.*` (`shared/types/repositories.ts`): types used in Repository method signatures. `CreateUser = { name, email, passHash }` (note: has `passHash`, not `password`).
-- `Api.Request` (`shared/@types/`): Express Request extended with `req.user`.
-- `ProductInfo` (`shared/types/product.ts`): `{ barcode, name, category, imageUri, lastPrice }` — the DTO returned by product service.
 
 ---
 
@@ -147,50 +146,41 @@ Rotation (on `/auth/refresh`): atomic Redis multi — sets new `refresh:` key, d
 ### 4.1. HTTP Layer (`services/api.ts`)
 
 `apiRequest<T>(endpoint, options, retry = true)`:
-- Prepends `EXPO_PUBLIC_API_URL` (or `http://localhost:3000` fallback).
+- Prepends `EXPO_PUBLIC_API_URL` (or `http://localhost:3333` fallback).
 - Injects `Authorization: Bearer <token>` from AsyncStorage key `@presco:accessToken`.
 - Sets `Bypass-Tunnel-Reminder: true` header (required for localtunnel).
 - Enforces 15-second timeout via `AbortController`. Throws `ApiError(408, "TIMEOUT", ...)` on abort.
-- On HTTP 401 with `retry = true`: calls `tryRefreshToken()` (POSTs to `/auth/refresh`, updates both tokens in AsyncStorage), then retries once with `retry = false`.
+- On HTTP 401 with `retry = true`: calls `tryRefreshToken()`, then retries once.
 - Throws `ApiError(status, code, message, errors)` on non-OK responses.
 
-Storage keys (in `STORAGE_KEYS`):
+Storage keys (`STORAGE_KEYS`):
 - `@presco:accessToken`
 - `@presco:refreshToken`
 
-Never call `fetch` directly inside screens or components. Always use `apiRequest` or a domain service that wraps it.
+Never call `fetch` directly inside screens or components. Always use `apiRequest` or a domain service.
 
 ### 4.2. Domain Services (`services/`)
 
-- `auth.ts`: `registerUser(name, email, password)`, `loginUser(email, password)`, `logoutUser()`, `getStoredTokens()`. Registration and login store tokens in AsyncStorage. Logout calls `/auth/logout`, then clears storage regardless of API result.
-- `productService.ts`: `fetchProductByEan(ean)` — GET `/products/barcode/:ean`. Returns `ProductData | null` (silences errors and returns null on failure).
+- `auth.ts`: Authentication, profile data, password change, account deletion.
+- `productService.ts`: Product CRUD, barcode search, category filter, price stats and history.
+- `ocurrencyService.ts`: Price reports submission (+15 XP), product occurrence lists, voting (+5 XP), edit/delete.
+- `marketService.ts`: Market listings and registration.
 
-When adding a new domain service file: import only `apiRequest` from `./api`, define typed interfaces for request/response, export named async functions.
+### 4.3. Screens (`app/`) & Expo Router
 
-### 4.3. Screens (`app/`)
-
-File-based routing via Expo Router. Key screens:
-- `_layout.tsx` — root stack + theme provider
-- `index.tsx` — home/dashboard
-- `login.tsx` / `registerUser.tsx` — authentication flows
-- `scannerProduct.tsx` — camera EAN scan (uses `expo-barcode-scanner` or similar)
-- `scannerConfirmation.tsx` — confirm scanned product before submission
-- `customRegisterProduct.tsx` — manual product entry without EAN
-- `registerProduct.tsx` — price entry for a scanned/found product
-- `search.tsx` — text-based product search
-- `productDetails.tsx` — product detail view
-- `profile.tsx` — user profile and points
-- `settings.tsx` — theme toggle and app preferences
-- `map.native.tsx` / `map.web.tsx` / `map.tsx` — platform-split map screen (proximity markets)
-
-### 4.4. Design System
-
-All style values come from `useTheme()`. Available tokens (full spec in `DESIGN.md`):
-- `themeStyles.bg`, `.card`, `.headerBg`, `.border`, `.text`, `.subText`, `.inputBg`
-- `accent` — extracted from system Monet colors or preset fallback
-- Typography: headings 22px bold, section titles 18px bold, labels 14px semibold, inputs 16px medium
-- Border radius: cards 20–24, inputs/buttons 16–20, badges 12
-- Inputs: height 50–54px, left Ionicons icon in `accent`
+Key screens:
+- `_layout.tsx` — root stack + theme, i18n and gesture providers
+- `index.tsx` — home / dashboard screen
+- `login.tsx` / `registerUser.tsx` — authentication flows (with 1-tap dev login)
+- `scannerProduct.tsx` — camera EAN barcode scanning
+- `scannerConfirmation.tsx` — confirm scanned product
+- `customRegisterProduct.tsx` — manual product entry (+25 XP)
+- `registerProduct.tsx` — price submission for a product (+15 XP)
+- `search.tsx` — text-based and barcode debounced search
+- `productDetails.tsx` — dynamic product view with statistics, charts, occurrences and voting
+- `profile.tsx` — 100% dynamic profile with XP progress bar, unlocked badges and contribution grid
+- `settings.tsx` — preferences, Monet palettes, backup export/import, cache clear, account controls
+- `map.native.tsx` / `map.web.tsx` / `map.tsx` — proximity markets map
 
 ---
 
@@ -200,7 +190,7 @@ All style values come from `useTheme()`. Available tokens (full spec in `DESIGN.
 2. Repository: add method(s) to the relevant class in `shared/database/repositories/`.
 3. Service: add method(s) to the relevant class in `modules/[module]/[module].service.ts`.
 4. Controller: add method to the class in `modules/[module]/[module].controller.ts`. Validate inputs, call service, respond with `success()`.
-5. Routes: wire method in `modules/[module]/[module].routes.ts`. Apply `requireAuth` if protected.
+5. Routes: wire method in `modules/[module]/[module].routes.ts`. Apply `requireAuth` or `requireAdmin` if protected.
 6. Mount: if a new module, `app.use("/route", newRouter)` in `src/backend/src/app.ts`.
 
 ---
@@ -215,102 +205,7 @@ After any file modification or addition:
 
 ## 7. Code Style & Conventions
 
-### 7.1. Comments Policy
-
-Write the minimum number of comments possible. Code should be self-documenting through clear naming. The only acceptable comment cases are:
-
-- A single-line note for a non-obvious workaround or known technical constraint (e.g., the PostGIS `geography` custom type quirk in `schema.ts`).
-- A `// TODO:` marker for deferred work, with a brief reason.
-- A JSDoc comment on exported utility functions that are not self-evident from their signature (e.g., `response.helper.ts`).
-
-Do not add comments that restate what the code does. No section dividers, no "block headers", no inline explanations for standard patterns. Existing comments in files should not be removed unless they are actively misleading.
-
-### 7.2. TypeScript Style
-
-Follow the patterns already established in the codebase:
-
-- Use `type` for all DTO and alias definitions. Use `interface` only for object shapes that may be extended (e.g., `OpenFoodFactsProduct` in `product.ts`).
-- Import types with `import type` when the import is only used as a type (already done in services and controllers).
-- Prefer named exports over default exports, except for routers (`export default r`) and the Express app (`export default app`), which already use default exports.
-- Use `async/await` throughout. Never use `.then()` chains.
-- In controllers, always declare the `errors` array explicitly before validation and push into it, then check `errors.length > 0` — do not throw inline on the first failing field.
-- Avoid `any` types. When the shape is truly unknown, use `unknown` and narrow it. `any` is only acceptable in legacy spots already present in the codebase (e.g., `MultipleApiError.errors`).
-
-### 7.3. Naming Conventions
-
-| Artifact | Convention | Example |
-|---|---|---|
-| Classes | PascalCase suffixed with role | `AuthServiceClass`, `UserRepositoryClass` |
-| Exported singletons | camelCase, no suffix | `authService`, `UserRepository` |
-| Route files | `[module].routes.ts` | `auth.routes.ts` |
-| Controller files | `[module].controller.ts` | `product.controller.ts` |
-| Service files | `[module].service.ts` | `auth.service.ts` |
-| Repository files | `[entity].repository.ts` | `user.repository.ts` |
-| DB schema tables | camelCase variable, snake_case column names | `const user = pgTable("user", { passHash: varchar("pass_hash") })` |
-| Frontend service files | camelCase, descriptive noun | `productService.ts`, `auth.ts` |
-| React screens | camelCase, descriptive action | `registerUser.tsx`, `scannerProduct.tsx` |
-| React components | PascalCase | `Header.tsx`, `productCard.tsx` |
-
-### 7.4. Creating New Backend Module Files
-
-When creating a new module (e.g., `ocurrency`), create exactly these four files mirroring the existing structure:
-
-```
-src/backend/src/modules/ocurrency/
-  ocurrency.routes.ts     ← instantiate Router(), wire methods, export default
-  ocurrency.controller.ts ← class + singleton export, try/catch, success()
-  ocurrency.service.ts    ← class + singleton export, business logic only
-```
-
-The repository goes in `shared/database/repositories/ocurrency.repository.ts`.
-
-Minimal skeleton for a new controller method:
-```typescript
-async createOcurrency(req: Api.Request, res: Response, next: NextFunction) {
-  try {
-    const { productId, marketId, value } = req.body;
-    const errors: Array<{ field: string; message: string }> = [];
-
-    if (!productId) errors.push({ field: "productId", message: "Required." });
-    if (!marketId)  errors.push({ field: "marketId",  message: "Required." });
-    if (!value)     errors.push({ field: "value",     message: "Required." });
-
-    if (errors.length > 0) throw new ValidationError(errors);
-
-    const result = await ocurrencyService.create({ userId: req.user.id, productId, marketId, value });
-    return res.status(201).json(success(result));
-  } catch (e) {
-    next(e);
-  }
-}
-```
-
-### 7.5. Creating New Frontend Service Files
-
-Each domain service file follows this exact structure:
-
-```typescript
-import { apiRequest } from "./api";
-
-export interface SomethingData { ... }
-
-export async function doSomething(param: string): Promise<SomethingData> {
-  return apiRequest<SomethingData>("/endpoint", {
-    method: "POST",
-    body: JSON.stringify({ param }),
-  });
-}
-```
-
-Rules:
-- Only import `apiRequest` (and `STORAGE_KEYS` if storage access is needed) from `./api`.
-- Define and export typed interfaces for all request and response shapes in the same file.
-- Exported functions must be named and async.
-- If the function is a safe read that should not throw on error (like `fetchProductByEan`), catch internally and return `null`.
-
-### 7.6. Geography / PostGIS Handling
-
-The `geography` custom type in `schema.ts` only accepts `{ lat, lng }` as input. When reading geography columns back from the DB:
-- Direct Drizzle `.select()` returns raw WKB binary — do not use.
-- Always wrap the column with `sql\`ST_AsGeoJson(${table.location})\`` in the select shape to get a GeoJSON string back.
-- See `market.repository.ts` → `getMarketsByRadius` for the reference pattern.
+- **Comments:** Write minimal comments. Self-documenting code through clear naming.
+- **TypeScript:** Use `type` for DTOs; `interface` for extensible object shapes. Use `import type` for type-only imports. Use `async/await` throughout.
+- **Singletons:** Controllers and Services are exported as singleton instances (`export const authController = new AuthControllerClass()`).
+- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql\`ST_AsGeoJson(${table.location})\``.
