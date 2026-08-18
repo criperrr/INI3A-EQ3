@@ -5,19 +5,32 @@ import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
+    if (!barcode) return null;
     const cleanBarcode = barcode.trim();
     if (!cleanBarcode) return null;
 
-    const urls = [
-      `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(cleanBarcode)}.json`,
-      `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(cleanBarcode)}.json`,
-      `https://world.openfoodfacts.net/api/v2/product/${encodeURIComponent(cleanBarcode)}`,
-    ];
+    const digitsOnly = cleanBarcode.replace(/\D/g, "");
+    const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
 
-    for (const url of urls) {
+    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, cleanBarcode].filter(Boolean)));
+
+    const urls: string[] = [];
+    for (const code of codesToTry) {
+      urls.push(
+        `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openpetfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
+      );
+    }
+
+    const uniqueUrls = Array.from(new Set(urls));
+
+    const fetchUrl = async (url: string): Promise<OpenFoodFactsResponse | null> => {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 6000);
+        const timeout = setTimeout(() => controller.abort(), 3500);
 
         const response = await fetch(url, {
           headers: {
@@ -29,34 +42,45 @@ class ProductRepositoryClass {
 
         clearTimeout(timeout);
 
-        if (!response.ok) {
-          continue;
-        }
+        if (!response.ok) return null;
 
         const data = (await response.json()) as OpenFoodFactsResponse;
         if (data && (data.status === 1 || (data as any).status_verbose === "product found") && data.product) {
           return data;
         }
+        return null;
       } catch {
-        continue;
+        return null;
       }
+    };
+
+    // Run parallel batches of 3 requests for fast response
+    for (let i = 0; i < uniqueUrls.length; i += 3) {
+      const batch = uniqueUrls.slice(i, i + 3);
+      const results = await Promise.all(batch.map(fetchUrl));
+      const found = results.find((r) => r !== null);
+      if (found) return found;
     }
 
     return null;
   }
 
   async getProductByEan(ean: string) {
-    const cleanEan = ean.trim();
-    if (!cleanEan) return null;
+    if (!ean) return null;
+    const cleanRaw = ean.trim();
+    if (!cleanRaw) return null;
 
-    const cleanWithoutZeroes = cleanEan.replace(/^0+/, "");
-    const withLeadingZero = cleanEan.length === 12 ? "0" + cleanEan : cleanEan;
+    const digitsOnly = cleanRaw.replace(/\D/g, "");
+    const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+    const pad12 = digitsWithoutZero ? digitsWithoutZero.padStart(12, "0") : "";
+    const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+    const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
 
-    const conditions = [
-      eq(product.ean, cleanEan),
-      eq(product.ean, cleanWithoutZeroes),
-      eq(product.ean, withLeadingZero),
-    ];
+    const candidateValues = Array.from(
+      new Set([cleanRaw, digitsOnly, digitsWithoutZero, pad12, pad13, pad14].filter(Boolean))
+    );
+
+    const conditions = candidateValues.map((val) => eq(product.ean, val));
 
     const result = await db
       .select()
@@ -85,16 +109,25 @@ class ProductRepositoryClass {
     const conditions = [];
 
     if (search && search.trim().length > 0) {
-      const term = `%${search.trim()}%`;
-      const cleanTerm = search.trim();
-      conditions.push(
-        or(
-          ilike(product.name, term),
-          ilike(product.ean, term),
-          eq(product.ean, cleanTerm),
-          eq(product.ean, cleanTerm.replace(/^0+/, ""))
-        )
-      );
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      const digitsOnly = cleanSearch.replace(/\D/g, "");
+      const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+      const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+      const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
+
+      const searchConditions = [
+        ilike(product.name, term),
+        ilike(product.ean, term),
+        eq(product.ean, cleanSearch),
+      ];
+
+      if (digitsOnly) searchConditions.push(eq(product.ean, digitsOnly), ilike(product.ean, `%${digitsOnly}%`));
+      if (digitsWithoutZero) searchConditions.push(eq(product.ean, digitsWithoutZero));
+      if (pad13) searchConditions.push(eq(product.ean, pad13));
+      if (pad14) searchConditions.push(eq(product.ean, pad14));
+
+      conditions.push(or(...searchConditions));
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
@@ -119,16 +152,25 @@ class ProductRepositoryClass {
     const conditions = [];
 
     if (search && search.trim().length > 0) {
-      const term = `%${search.trim()}%`;
-      const cleanTerm = search.trim();
-      conditions.push(
-        or(
-          ilike(product.name, term),
-          ilike(product.ean, term),
-          eq(product.ean, cleanTerm),
-          eq(product.ean, cleanTerm.replace(/^0+/, ""))
-        )
-      );
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      const digitsOnly = cleanSearch.replace(/\D/g, "");
+      const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+      const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+      const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
+
+      const searchConditions = [
+        ilike(product.name, term),
+        ilike(product.ean, term),
+        eq(product.ean, cleanSearch),
+      ];
+
+      if (digitsOnly) searchConditions.push(eq(product.ean, digitsOnly), ilike(product.ean, `%${digitsOnly}%`));
+      if (digitsWithoutZero) searchConditions.push(eq(product.ean, digitsWithoutZero));
+      if (pad13) searchConditions.push(eq(product.ean, pad13));
+      if (pad14) searchConditions.push(eq(product.ean, pad14));
+
+      conditions.push(or(...searchConditions));
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {

@@ -130,7 +130,7 @@ Direct relative paths from project root.
 - [x] Unify `.taagents` into `.agents` and generate comprehensive project documentation.
 - [x] Fix and polish Start Menu / ActionMenu layout on Home screen (activeView indicators, Monet tokens, concise i18n labels across 7 languages) and Sidebar drawer menu (safe area insets, brand header with close button, vector icons, user profile card).
 - [x] Fix PostgreSQL schema synchronization (`role.authority`, `user.birthdate`, PostGIS geography, drizzle migration tracking) and resolve Reanimated worklet `useRef` serialization warning in `SwipeTabNavigator`.
-- [x] Fix EAN product lookup and navigation pipeline: OpenFoodFacts multi-endpoint fallback with User-Agent header, barcode format normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
+- [x] Fix EAN product lookup and navigation pipeline: Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts multi-endpoint parallel fallback, barcode digit/leading-zero normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
 - [ ] Implement market proximity lookup in frontend map screen.
 
 ---

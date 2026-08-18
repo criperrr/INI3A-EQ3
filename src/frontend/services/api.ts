@@ -27,9 +27,11 @@ class ApiError extends Error {
     errors?: Array<{ field: string; message: string }>,
   ) {
     super(message);
+    this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.errors = errors;
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
 
@@ -37,18 +39,33 @@ class ApiError extends Error {
  * Handles response parsing and error mapping.
  */
 async function handleResponse<T>(response: Response): Promise<T> {
-  const body = await response.json().catch(() => null);
+  let body: any = null;
+  try {
+    const text = await response.text();
+    if (text) {
+      body = JSON.parse(text);
+    }
+  } catch {
+    body = null;
+  }
 
   if (!response.ok) {
+    const defaultCode = response.status === 404 ? "NOT_FOUND" : response.status >= 500 ? "SERVER_ERROR" : "UNKNOWN";
+    const defaultMessage = response.status === 404 ? "Recurso não encontrado." : "Erro inesperado.";
+
     throw new ApiError(
       response.status,
-      body?.code || "UNKNOWN",
-      body?.message || "Erro inesperado.",
+      body?.code || defaultCode,
+      body?.message || defaultMessage,
       body?.errors,
     );
   }
 
-  return body?.data as T;
+  if (body && typeof body === "object" && "data" in body) {
+    return body.data as T;
+  }
+
+  return body as T;
 }
 
 /**
@@ -63,7 +80,10 @@ async function tryRefreshToken(): Promise<boolean> {
 
     const response = await fetch(`${BASE_URL}/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Bypass-Tunnel-Reminder": "true",
+      },
       body: JSON.stringify({ refreshToken }),
     });
 
@@ -76,7 +96,8 @@ async function tryRefreshToken(): Promise<boolean> {
       return false;
     }
 
-    const body = await response.json();
+    const text = await response.text();
+    const body = text ? JSON.parse(text) : null;
     const data = body?.data;
 
     if (data?.accessToken && data?.refreshToken) {

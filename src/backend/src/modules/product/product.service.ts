@@ -61,10 +61,20 @@ class ProductServiceClass {
         productData.product_name_en ||
         ""
       ).trim();
+
+      const genericDesc = (
+        productData.generic_name_pt ||
+        productData.generic_name ||
+        ""
+      ).trim();
+
       const brand = (productData.brands || "").split(",")[0]?.trim();
       let finalName = rawName;
       if (brand && (!finalName || !finalName.toLowerCase().includes(brand.toLowerCase()))) {
         finalName = finalName ? `${brand} ${finalName}` : brand;
+      }
+      if (genericDesc && finalName && !finalName.toLowerCase().includes(genericDesc.toLowerCase()) && finalName.length < 35) {
+        finalName = `${finalName} - ${genericDesc}`;
       }
       if (!finalName) {
         finalName = "Produto sem nome";
@@ -88,6 +98,7 @@ class ProductServiceClass {
         });
       } catch (saveErr) {
         console.warn("[ProductService] Could not persist external product:", saveErr);
+        createdProduct = await ProductRepository.getProductByEan(cleanBarcode);
       }
 
       if (createdProduct) {
@@ -148,11 +159,12 @@ class ProductServiceClass {
 
     const trimmedSearch = query.search?.trim();
 
-    // If search looks like an EAN barcode (numeric 8 to 14 digits), check if it exists or fetch from OpenFoodFacts on the fly
-    if (trimmedSearch && /^\d{8,14}$/.test(trimmedSearch)) {
-      const local = await ProductRepository.getProductByEan(trimmedSearch);
+    // If search looks like an EAN barcode, check if it exists or fetch from OpenFoodFacts on the fly
+    const cleanDigits = trimmedSearch?.replace(/\D/g, "");
+    if (cleanDigits && cleanDigits.length >= 8 && cleanDigits.length <= 14) {
+      const local = await ProductRepository.getProductByEan(cleanDigits);
       if (!local) {
-        await this.getProductByBarcode(trimmedSearch).catch(() => null);
+        await this.getProductByBarcode(cleanDigits).catch(() => null);
       }
     }
 

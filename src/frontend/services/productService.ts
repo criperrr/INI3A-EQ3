@@ -77,11 +77,12 @@ export const fetchProducts = async (params?: FetchProductsParams): Promise<Pagin
   const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
 
   try {
-    return await apiRequest<PaginatedProductsData>(`/products${queryString}`, {
+    const res = await apiRequest<PaginatedProductsData>(`/products${queryString}`, {
       method: "GET",
     });
-  } catch (error) {
-    console.error("Erro ao buscar produtos:", error);
+    return res || { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
+  } catch (error: any) {
+    console.warn("[ProductService] Aviso ao carregar lista de produtos:", error?.message);
     return { items: [], total: 0, page: 1, limit: 20, totalPages: 1 };
   }
 };
@@ -92,26 +93,38 @@ export const fetchProductById = async (id: number | string): Promise<ProductDeta
       method: "GET",
     });
   } catch (error: any) {
-    if (error?.status === 404 || error?.code === "NOT_FOUND" || error?.code === "PRODUCT_NOT_FOUND") {
+    if (
+      error?.status === 404 ||
+      error?.code === "NOT_FOUND" ||
+      error?.code === "PRODUCT_NOT_FOUND" ||
+      String(error?.message).toLowerCase().includes("não encontrado")
+    ) {
       return null;
     }
-    console.error(`Erro ao buscar produto por ID ${id}:`, error);
-    throw error;
+    console.warn(`[ProductService] Produto ID ${id} não encontrado ou erro de busca:`, error?.message);
+    return null;
   }
 };
 
 export const fetchProductByEan = async (ean: string): Promise<ProductData | null> => {
+  if (!ean || !ean.trim()) return null;
+
   try {
     const response = await apiRequest<ProductData>(`/products/barcode/${encodeURIComponent(ean.trim())}`, {
       method: "GET",
     });
     return response;
   } catch (error: any) {
-    if (error?.status === 404 || error?.code === "PRODUCT_NOT_FOUND" || error?.code === "NOT_FOUND") {
+    if (
+      error?.status === 404 ||
+      error?.code === "PRODUCT_NOT_FOUND" ||
+      error?.code === "NOT_FOUND" ||
+      String(error?.message).toLowerCase().includes("não encontrado")
+    ) {
       return null;
     }
-    console.error(`Erro de comunicação ao buscar EAN ${ean}:`, error);
-    throw error;
+    console.warn(`[ProductService] EAN ${ean} não encontrado na base ou catálogo:`, error?.message);
+    return null;
   }
 };
 

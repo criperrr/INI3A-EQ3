@@ -39,8 +39,8 @@ class AuthControllerClass {
       if (!email || typeof email !== "string" || !email.includes("@")) {
         errors.push({ field: "email", message: "E-mail inválido." });
       }
-      if (!password || typeof password !== "string" || password.length < 6) {
-        errors.push({ field: "password", message: "A senha deve ter no mínimo 6 caracteres." });
+      if (!password || typeof password !== "string" || password.trim().length === 0) {
+        errors.push({ field: "password", message: "A senha é obrigatória." });
       }
 
       if (errors.length > 0) {

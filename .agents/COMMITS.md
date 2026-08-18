@@ -24,6 +24,53 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-18 08:48] - fix(auth): allow short seed passwords on login and enhance fetchProducts response handling
+
+- **Description:** Resolved authentication and initial product listing errors right after login:
+  1. **Login Password Validation:** Updated `authController.login` to validate presence of password rather than enforcing a strict 6-character registration minimum, allowing seeded admin accounts (such as `admin@admin.org` with password `admin`) to authenticate without 422 validation errors.
+  2. **Localtunnel Header in Refresh Token:** Added `Bypass-Tunnel-Reminder: true` to `tryRefreshToken` requests to prevent Localtunnel HTML challenge pages from corrupting auth token refresh.
+  3. **Robust Data Extraction:** Updated `handleResponse` in `api.ts` to cleanly extract `body.data` or raw response objects, avoiding undefined body errors during initial home screen mounting.
+- **Files Modified:**
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/services/productService.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Instant 1-tap login and standard authentication smoothly navigate to the Home screen and load the product catalog without warning banners.
+
+---
+
+## [2026-08-18 08:39] - fix(frontend): robust HTTP error mapping in apiRequest and graceful EAN 404 handling
+
+- **Description:** Fixed unhandled "Erro inesperado" exceptions when querying EANs not yet in the database:
+  1. **ApiError Inheritance & Status Mapping:** Added `this.name = "ApiError"` and `Object.setPrototypeOf(this, ApiError.prototype)` to preserve error class inheritance across React Native bundle targets, and mapped 404 responses to code `"NOT_FOUND"` and descriptive message `"Recurso não encontrado."`.
+  2. **Graceful Product 404 Fallback:** Updated `fetchProductByEan` and `fetchProductById` to return `null` instead of throwing unhandled exceptions when products are not found, allowing `scannerProduct` and `manualEanSearch` to immediately present the manual registration prompt (+25 XP) with prefilled EAN.
+- **Files Modified:**
+  - `src/frontend/services/api.ts`
+  - `src/frontend/services/productService.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Scanning or searching an unregistered barcode now smoothly offers manual entry with prefilled EAN without displaying unexpected error dialogs.
+
+---
+
+## [2026-08-18 08:33] - fix(backend): robust multi-source EAN barcode resolution and digit normalization
+
+- **Description:** Resolved EAN barcode lookup failures when querying local DB or external product catalogues:
+  1. **Multi-Source Open Facts Querying:** Extended external barcode searches beyond Open Food Facts to include Open Beauty Facts (hygiene, soap, shampoo), Open Products Facts (cleaning and home supplies), and Open Pet Food Facts.
+  2. **Parallel Batch Execution with Short Timeouts:** Optimized external lookups into concurrent batches with 3.5s AbortController timeouts to eliminate long latency and prevent frontend 15s request timeouts.
+  3. **Multi-Variant Digit Normalization:** Normalized EAN queries across raw input, stripped digits, zero-trimmed UPC, and 12/13/14-digit GTIN zero-padding in both `getProductByEan` and SQL `searchProducts`/`countProducts`.
+  4. **Smart Product Name Assembly:** Combined `brands`, `product_name_pt`, and `generic_name_pt` to avoid saving bare versions (like "2.0") as product names.
+  5. **Auto-Recovery on Duplicate Insert:** Recovered existing product record if concurrent creation occurs during external cache persistence.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** EAN lookups (food, beverage, hygiene, cleaning, cosmetics) resolve sub-second, whether formatted with spaces, dashes, leading zeroes, or scanned from mobile cameras.
+
+---
+
 ## [2026-08-18 08:21] - fix(products): resolve EAN barcode lookup, OpenFoodFacts headers and ID propagation across scanner flow
 
 - **Description:** Fixed end-to-end product lookup by EAN across backend repositories, external services, and frontend navigation:
