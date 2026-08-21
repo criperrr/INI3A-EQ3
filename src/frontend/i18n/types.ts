@@ -153,6 +153,15 @@ export interface TranslationSchema {
     chartDays30: string;
     chartDays60: string;
     chartDays90: string;
+    period7D: string;
+    period1M: string;
+    period6M: string;
+    period1Y: string;
+    periodAll: string;
+    noHistoryForPeriod: string;
+    selectedPrice: string;
+    priceCount: string;
+    maxPricesInfo: string;
     confidence: string;
     reportedBy: string;
     date: string;
@@ -278,6 +287,9 @@ export interface TranslationSchema {
     rewardXp: string;
     productRegisteredSuccess: string;
     enterValidData: string;
+    recordDate: string;
+    todayBadge: string;
+    automaticDateNotice: string;
   };
   profile: {
     title: string;

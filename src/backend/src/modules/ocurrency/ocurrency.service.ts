@@ -11,6 +11,7 @@ class OcurrencyServiceClass {
     marketId: number;
     value: number | string;
     icon?: string | undefined;
+    createdAt?: string | Date | undefined;
   }) {
     const numValue = typeof data.value === "string" ? parseFloat(data.value.replace(/[^0-9.,]/g, "").replace(",", ".")) : data.value;
     if (isNaN(numValue) || numValue <= 0) {
@@ -33,6 +34,7 @@ class OcurrencyServiceClass {
       marketId: data.marketId,
       value: numValue,
       icon: data.icon,
+      createdAt: data.createdAt,
     });
 
     // Award +15 XP for contributing price

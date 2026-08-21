@@ -34,6 +34,7 @@ export async function submitPriceOccurrence(
   marketId: number,
   value: string | number,
   icon?: string,
+  createdAt?: string,
 ): Promise<SubmitOccurrenceResult> {
   return apiRequest<SubmitOccurrenceResult>("/ocurrency", {
     method: "POST",
@@ -42,6 +43,7 @@ export async function submitPriceOccurrence(
       marketId,
       value,
       icon,
+      createdAt,
     }),
   });
 }

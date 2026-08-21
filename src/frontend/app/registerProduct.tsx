@@ -47,7 +47,8 @@ export default function RegisterProduct() {
   }>();
   const { themeStyles, accent, isDark } = useTheme();
   const { refreshProfile } = useAuth();
-  const { t } = useI18n();
+  const { t, language } = useI18n();
+  const [recordDate] = useState<Date>(new Date());
 
   const targetEan = params.ean || params.barcode;
   const targetId = params.id ? Number(params.id) : null;
@@ -116,6 +117,8 @@ export default function RegisterProduct() {
         effectiveProductId,
         selectedMarketId,
         numPrice,
+        undefined,
+        recordDate.toISOString(),
       );
 
       await refreshProfile();
@@ -159,6 +162,13 @@ export default function RegisterProduct() {
     : null;
 
   const displayProduct = product || scannedProduct || FALLBACK_PRODUCT;
+
+  const formattedTodayDate = recordDate.toLocaleDateString(language, {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
@@ -258,6 +268,34 @@ export default function RegisterProduct() {
                   onChangeText={setPrice}
                   editable={!isSubmitting}
                 />
+              </View>
+            </View>
+
+            {/* Record Date (Data do Dia) */}
+            <View style={styles.inputGroup}>
+              <View style={styles.dateLabelRow}>
+                <Text style={[styles.inputLabel, themeStyles.subText]}>
+                  {t("products.recordDate")}
+                </Text>
+                <View style={[styles.todayBadgePill, { backgroundColor: `${accent}20`, borderColor: accent }]}>
+                  <Ionicons name="sparkles-outline" size={12} color={accent} style={{ marginRight: 4 }} />
+                  <Text style={[styles.todayBadgeText, { color: accent }]}>
+                    {t("products.todayBadge")}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.dateCard, themeStyles.inputBg, themeStyles.border]}>
+                <View style={[styles.dateIconCircle, { backgroundColor: `${accent}15` }]}>
+                  <Ionicons name="calendar" size={20} color={accent} />
+                </View>
+                <View style={styles.dateInfoCol}>
+                  <Text style={[styles.dateValueText, themeStyles.text]}>
+                    {formattedTodayDate}
+                  </Text>
+                  <Text style={[styles.dateNoticeText, themeStyles.subText]}>
+                    {t("products.automaticDateNotice")}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -443,6 +481,52 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginBottom: 8,
     marginLeft: 4,
+  },
+  dateLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  todayBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  todayBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  dateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  dateIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dateInfoCol: {
+    flex: 1,
+  },
+  dateValueText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    textTransform: "capitalize",
+  },
+  dateNoticeText: {
+    fontSize: 11,
+    marginTop: 2,
   },
   inputWrapper: {
     flexDirection: "row",

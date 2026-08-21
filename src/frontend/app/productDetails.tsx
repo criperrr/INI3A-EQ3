@@ -19,6 +19,7 @@ import { useI18n } from "../content/i18nContext";
 import {
   fetchProductById,
   fetchProductByEan,
+  fetchPriceHistory,
   updateProduct,
   deleteProduct,
   ProductDetailData,
@@ -381,7 +382,14 @@ export default function ProductDetails() {
           )}
 
           {/* Price History Chart */}
-          <PriceHistorySection history={history} accent={accent} themeStyles={themeStyles} t={t} />
+          <PriceHistorySection
+            productId={product.id || (targetId ? targetId : undefined)}
+            history={history}
+            accent={accent}
+            themeStyles={themeStyles}
+            t={t}
+            language={language}
+          />
 
           {/* Market Occurrences List */}
           <View style={[styles.occurrencesSection, themeStyles.card, themeStyles.border]}>
@@ -571,74 +579,284 @@ export default function ProductDetails() {
 
 // --- Componente de Histórico de Preços ---
 
-const PriceHistorySection = ({
-  history,
-  accent,
-  themeStyles,
-  t,
-}: {
+type PeriodType = "7d" | "1m" | "6m" | "1y" | "all";
+
+interface PriceHistorySectionProps {
+  productId?: number;
   history: PriceHistoryItem[];
   accent: string;
   themeStyles: any;
   t: (key: any) => string;
-}) => {
-  if (history.length === 0) {
-    return (
-      <View style={styles.historySection}>
-        <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
-        <View style={[styles.emptyHistoryBox, themeStyles.inputBg, themeStyles.border]}>
-          <Ionicons name="stats-chart-outline" size={28} color={accent} />
-          <Text style={[styles.emptyHistoryText, themeStyles.subText]}>
-            {t("productDetails.noOccurrences")}
-          </Text>
-        </View>
-      </View>
-    );
-  }
+  language?: string;
+}
 
-  const values = history.map((h) => h.value);
-  const minVal = Math.min(...values);
-  const maxVal = Math.max(...values);
+const PriceHistorySection = ({
+  productId,
+  history,
+  accent,
+  themeStyles,
+  t,
+  language = "pt-BR",
+}: PriceHistorySectionProps) => {
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("1m");
+  const [periodHistory, setPeriodHistory] = useState<PriceHistoryItem[]>([]);
+  const [loadingPeriod, setLoadingPeriod] = useState(false);
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
+
+  const periods: { id: PeriodType; label: string }[] = [
+    { id: "7d", label: t("productDetails.period7D") },
+    { id: "1m", label: t("productDetails.period1M") },
+    { id: "6m", label: t("productDetails.period6M") },
+    { id: "1y", label: t("productDetails.period1Y") },
+    { id: "all", label: t("productDetails.periodAll") },
+  ];
+
+  const filterByPeriod = useCallback((items: PriceHistoryItem[], period: PeriodType): PriceHistoryItem[] => {
+    if (!items || items.length === 0) return [];
+    if (period === "all") return items.slice(-15);
+
+    const now = Date.now();
+    let days = 30;
+    if (period === "7d") days = 7;
+    else if (period === "1m") days = 30;
+    else if (period === "6m") days = 180;
+    else if (period === "1y") days = 365;
+
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    const filtered = items.filter((item) => {
+      const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+      return itemTime >= cutoff;
+    });
+
+    return filtered.slice(-15);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const localFiltered = filterByPeriod(history, selectedPeriod);
+    setPeriodHistory(localFiltered);
+
+    if (productId && productId > 0) {
+      setLoadingPeriod(true);
+      fetchPriceHistory(productId, selectedPeriod, 15)
+        .then((data) => {
+          if (isMounted && data && data.length > 0) {
+            setPeriodHistory(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) setLoadingPeriod(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, selectedPeriod, history, filterByPeriod]);
+
+  const displayHistory = periodHistory.length > 0 ? periodHistory : filterByPeriod(history, selectedPeriod);
+  const values = displayHistory.map((h) => h.value);
+  const minVal = values.length > 0 ? Math.min(...values) : 0;
+  const maxVal = values.length > 0 ? Math.max(...values) : 0;
   const range = maxVal - minVal || 1;
+
+  const selectedItem = displayHistory.find((item) => item.id === selectedPointId) || null;
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString(language, { day: "2-digit", month: "2-digit" });
+    } catch {
+      return "";
+    }
+  };
+
+  const formatFullDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString(language, { day: "2-digit", month: "short", year: "numeric" });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <View style={styles.historySection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
-      
-      {/* Bars Chart */}
-      <View style={[styles.chartBox, themeStyles.inputBg, themeStyles.border]}>
-        <View style={styles.barsRow}>
-          {history.slice(-10).map((item, idx) => {
-            const pct = Math.max(20, Math.round(((item.value - minVal) / range) * 75) + 25);
-            return (
-              <View key={item.id || idx} style={styles.barColumn}>
-                <Text style={[styles.barValueLabel, themeStyles.subText]}>
-                  {item.value.toFixed(1).replace(".", ",")}
-                </Text>
-                <View style={styles.barTrack}>
-                  <View style={[styles.barFill, { height: `${pct}%`, backgroundColor: accent }]} />
-                </View>
-                <Text style={[styles.barMarketLabel, themeStyles.subText]} numberOfLines={1}>
-                  {item.marketName.split(" ")[0]}
-                </Text>
-              </View>
-            );
-          })}
+      {/* Header Aligned to Left */}
+      <View style={styles.historyHeaderRow}>
+        <View style={styles.historyHeaderLeft}>
+          <Ionicons name="stats-chart" size={18} color={accent} />
+          <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
+        </View>
+        <View style={[styles.historyCountPill, themeStyles.inputBg, themeStyles.border]}>
+          <Text style={[styles.historyCountPillText, themeStyles.subText]}>
+            {t("productDetails.maxPricesInfo")}
+          </Text>
         </View>
       </View>
 
-      {/* History List */}
-      <View style={styles.historyList}>
-        {history.slice(-5).reverse().map((item) => (
-          <View key={item.id} style={[styles.historyRow, themeStyles.inputBg, themeStyles.border]}>
-            <View style={styles.historyRowLeft}>
-              <Ionicons name="storefront-outline" size={16} color={accent} />
-              <Text style={[styles.historyMarketName, themeStyles.text]}>{item.marketName}</Text>
-            </View>
-            <Text style={[styles.historyPriceText, { color: accent }]}>{item.formattedValue}</Text>
+      {/* Time Period Filter Chips - Left Aligned */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodChipsContainer}
+        style={styles.periodScroll}
+      >
+        {periods.map((p) => {
+          const isActive = selectedPeriod === p.id;
+          return (
+            <TouchableOpacity
+              key={p.id}
+              style={[
+                styles.periodChip,
+                themeStyles.inputBg,
+                themeStyles.border,
+                isActive && { backgroundColor: accent, borderColor: accent },
+              ]}
+              onPress={() => {
+                setSelectedPeriod(p.id);
+                setSelectedPointId(null);
+              }}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.periodChipText,
+                  themeStyles.subText,
+                  isActive && styles.periodChipTextActive,
+                ]}
+              >
+                {p.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Selected Point Tooltip */}
+      {selectedItem && (
+        <View style={[styles.selectedPointCard, themeStyles.inputBg, { borderColor: accent }]}>
+          <View style={styles.selectedPointLeft}>
+            <Text style={[styles.selectedPointMarket, themeStyles.text]} numberOfLines={1}>
+              {selectedItem.marketName}
+            </Text>
+            <Text style={[styles.selectedPointDate, themeStyles.subText]}>
+              {formatFullDate(selectedItem.createdAt)}
+            </Text>
           </View>
-        ))}
-      </View>
+          <View style={styles.selectedPointRight}>
+            <Text style={[styles.selectedPointPrice, { color: accent }]}>
+              {selectedItem.formattedValue}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Chart Box or Empty State */}
+      {loadingPeriod && displayHistory.length === 0 ? (
+        <View style={[styles.chartBox, styles.chartBoxLoading, themeStyles.inputBg, themeStyles.border]}>
+          <ActivityIndicator size="small" color={accent} />
+        </View>
+      ) : displayHistory.length === 0 ? (
+        <View style={[styles.emptyHistoryBox, themeStyles.inputBg, themeStyles.border]}>
+          <Ionicons name="calendar-outline" size={24} color={accent} />
+          <Text style={[styles.emptyHistoryText, themeStyles.subText]}>
+            {t("productDetails.noHistoryForPeriod")}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.chartBox, themeStyles.inputBg, themeStyles.border]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.barsScrollContent}
+          >
+            {displayHistory.slice(-15).map((item, idx) => {
+              const pct = Math.max(18, Math.round(((item.value - minVal) / range) * 70) + 20);
+              const isSelected = selectedPointId === item.id;
+              const dateLabel = formatDate(item.createdAt);
+
+              return (
+                <TouchableOpacity
+                  key={item.id || idx}
+                  style={styles.barColumn}
+                  onPress={() => setSelectedPointId(isSelected ? null : item.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.barValueLabel,
+                      themeStyles.subText,
+                      isSelected && { color: accent, fontWeight: "bold" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.value.toFixed(1).replace(".", ",")}
+                  </Text>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        {
+                          height: `${pct}%`,
+                          backgroundColor: isSelected ? accent : `${accent}CC`,
+                        },
+                        isSelected && styles.barFillSelected,
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.barMarketLabel,
+                      themeStyles.subText,
+                      isSelected && { color: accent, fontWeight: "600" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {dateLabel || item.marketName.split(" ")[0]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* History List - Max 15 Items, Left Aligned */}
+      {displayHistory.length > 0 && (
+        <View style={styles.historyList}>
+          {displayHistory
+            .slice(-15)
+            .reverse()
+            .map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.historyRow,
+                  themeStyles.inputBg,
+                  themeStyles.border,
+                  selectedPointId === item.id && { borderColor: accent, borderWidth: 1.5 },
+                ]}
+                onPress={() => setSelectedPointId(selectedPointId === item.id ? null : item.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.historyRowLeft}>
+                  <Ionicons name="storefront-outline" size={16} color={accent} />
+                  <View style={styles.historyRowDetails}>
+                    <Text style={[styles.historyMarketName, themeStyles.text]} numberOfLines={1}>
+                      {item.marketName}
+                    </Text>
+                    <Text style={[styles.historyDateText, themeStyles.subText]}>
+                      {formatFullDate(item.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.historyPriceText, { color: accent }]}>{item.formattedValue}</Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+      )}
     </View>
   );
 };
@@ -756,10 +974,83 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 24,
   },
+  historyHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  historyHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "700",
+  },
+  historyCountPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  historyCountPillText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  periodScroll: {
     marginBottom: 12,
+  },
+  periodChipsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 1,
+  },
+  periodChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  periodChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  periodChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  selectedPointCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 12,
+  },
+  selectedPointLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  selectedPointMarket: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  selectedPointDate: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  selectedPointRight: {
+    alignItems: "flex-end",
+  },
+  selectedPointPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
   },
   emptyHistoryBox: {
     borderRadius: 14,
@@ -776,20 +1067,26 @@ const styles = StyleSheet.create({
   },
   chartBox: {
     borderRadius: 16,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
-    height: 140,
+    height: 145,
     marginBottom: 12,
+    justifyContent: "flex-end",
   },
-  barsRow: {
-    flex: 1,
+  chartBoxLoading: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  barsScrollContent: {
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "space-around",
-    gap: 6,
+    justifyContent: "flex-start",
+    gap: 10,
+    minWidth: "100%",
+    paddingHorizontal: 4,
   },
   barColumn: {
-    flex: 1,
+    width: 44,
     alignItems: "center",
     height: "100%",
     justifyContent: "flex-end",
@@ -797,11 +1094,12 @@ const styles = StyleSheet.create({
   barValueLabel: {
     fontSize: 9,
     marginBottom: 4,
+    textAlign: "center",
   },
   barTrack: {
     flex: 1,
     width: "100%",
-    maxWidth: 16,
+    maxWidth: 18,
     justifyContent: "flex-end",
     alignItems: "center",
   },
@@ -809,9 +1107,14 @@ const styles = StyleSheet.create({
     width: "100%",
     borderRadius: 6,
   },
+  barFillSelected: {
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
   barMarketLabel: {
     fontSize: 9,
     marginTop: 4,
+    textAlign: "center",
   },
   historyList: {
     gap: 8,
@@ -828,13 +1131,19 @@ const styles = StyleSheet.create({
   historyRowLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+    flex: 1,
+  },
+  historyRowDetails: {
     flex: 1,
   },
   historyMarketName: {
     fontSize: 13,
     fontWeight: "600",
-    flex: 1,
+  },
+  historyDateText: {
+    fontSize: 11,
+    marginTop: 2,
   },
   historyPriceText: {
     fontSize: 14,

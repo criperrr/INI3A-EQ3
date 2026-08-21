@@ -14,6 +14,7 @@ export interface CreateOccurrenceDTO {
   productId: number;
   value: string | number;
   icon?: string | undefined;
+  createdAt?: string | Date | undefined;
 }
 
 export interface UpdateOccurrenceDTO {
@@ -37,6 +38,7 @@ class OcurrencyRepositoryClass {
         productId: data.productId,
         value: formattedValue,
         icon: data.icon,
+        ...(data.createdAt ? { createdAt: new Date(data.createdAt).toISOString() } : {}),
       })
       .returning();
   }

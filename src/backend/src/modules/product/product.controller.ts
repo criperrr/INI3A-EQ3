@@ -161,6 +161,7 @@ class ProductControllerClass {
   async getPriceHistory(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      const { period, limit } = req.query;
       const numId = Number(id);
 
       const errors: Array<{ field: string; message: string }> = [];
@@ -170,7 +171,11 @@ class ProductControllerClass {
 
       if (errors.length > 0) throw new ValidationError(errors);
 
-      const history = await productService.getPriceHistory(numId);
+      const history = await productService.getPriceHistory(
+        numId,
+        typeof period === "string" ? period : undefined,
+        limit ? Number(limit) : 15
+      );
       return res.status(200).json(success(history));
     } catch (e) {
       next(e);

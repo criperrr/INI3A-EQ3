@@ -150,6 +150,9 @@ Direct relative paths from project root.
 - [x] Create backend environment file (`src/backend/.env`) and templates (`src/backend/.env.example`, `.env.example`) with PostgreSQL, Redis, server port/host, and JWT secret configuration.
 - [x] Fix Windows Terminal (`wt.exe`) split pane / tab argument parsing and semicolon tokenization in `start_project.ps1`, add `start.bat` alias, and provide `-SeparateWindows` (`npm run dev:win:separate`) mode.
 - [x] Configure Windows Terminal split pane to vertical (`-V`, side-by-side) in `start_project.ps1` (invoked via `start.bat` and `start_project.bat`).
+- [x] Fix Home icon navigation and state reset across all tabs, subpages and header/sidebar/footer components (`tabNavigationContext.tsx`, `Footer.tsx`, `Header.tsx`, `Sidebar.tsx`, `_layout.tsx`, `index.tsx`).
+- [x] Align price history to left, limit history to maximum 15 prices, and implement interactive time period filtering (`7D`, `1M`, `6M`, `1A`, `Tudo`) with full i18n localization in `productDetails.tsx`, `product.repository.ts`, `product.service.ts`, and `product.controller.ts`.
+- [x] Automatically capture and display current day date when registering product prices in `registerProduct.tsx` with dedicated date card, "Hoje" badge, i18n in 7 languages, and `createdAt` persistence in `ocurrency.repository.ts`, `ocurrency.service.ts`, and `ocurrency.controller.ts`.
 
 ---
 

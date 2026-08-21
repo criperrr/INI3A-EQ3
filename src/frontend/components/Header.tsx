@@ -47,7 +47,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
   const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   const handleLogoPress = () => {
-    navigateToTab("/");
+    navigateToTab("/", "left", true);
   };
 
   return (

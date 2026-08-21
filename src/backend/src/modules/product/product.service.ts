@@ -268,11 +268,27 @@ class ProductServiceClass {
     return ProductRepository.getCategories();
   }
 
-  async getPriceHistory(productId: number): Promise<PriceHistoryItem[]> {
+  async getPriceHistory(productId: number, period?: string, limit: number = 15): Promise<PriceHistoryItem[]> {
     if (!productId || isNaN(productId) || productId <= 0) {
       throw new ValidationError([{ field: "productId", message: "ID do produto inválido." }]);
     }
-    return ProductRepository.getPriceHistory(productId);
+
+    let since: Date | undefined;
+    const now = new Date();
+    const cleanPeriod = period?.toLowerCase();
+
+    if (cleanPeriod === "7d" || cleanPeriod === "7") {
+      since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    } else if (cleanPeriod === "1m" || cleanPeriod === "30d" || cleanPeriod === "30") {
+      since = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    } else if (cleanPeriod === "6m" || cleanPeriod === "180d" || cleanPeriod === "180") {
+      since = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+    } else if (cleanPeriod === "1y" || cleanPeriod === "1a" || cleanPeriod === "365d" || cleanPeriod === "365") {
+      since = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    }
+
+    const safeLimit = Math.min(Math.max(1, limit || 15), 15);
+    return ProductRepository.getPriceHistory(productId, safeLimit, since);
   }
 }
 

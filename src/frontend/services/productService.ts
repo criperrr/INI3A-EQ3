@@ -165,9 +165,18 @@ export const fetchCategories = async (): Promise<string[]> => {
   }
 };
 
-export const fetchPriceHistory = async (productId: number | string): Promise<PriceHistoryItem[]> => {
+export const fetchPriceHistory = async (
+  productId: number | string,
+  period?: "7d" | "1m" | "6m" | "1y" | "all" | string,
+  limit: number = 15
+): Promise<PriceHistoryItem[]> => {
   try {
-    return await apiRequest<PriceHistoryItem[]>(`/products/${productId}/history`, {
+    const queryParams = new URLSearchParams();
+    if (period && period !== "all") queryParams.append("period", period);
+    if (limit) queryParams.append("limit", String(limit));
+    const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
+
+    return await apiRequest<PriceHistoryItem[]>(`/products/${productId}/history${queryString}`, {
       method: "GET",
     });
   } catch (error) {

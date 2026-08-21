@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
+import { useTabNavigation } from "../content/tabNavigationContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -93,6 +94,7 @@ const NavigationLinks = memo(function NavigationLinks({
   menuLinks: MenuItem[];
 }) {
   const { accent, isDark } = useTheme();
+  const { navigateToTab } = useTabNavigation();
 
   return (
     <View style={styles.linksContainer}>
@@ -114,7 +116,9 @@ const NavigationLinks = memo(function NavigationLinks({
             activeOpacity={0.7}
             onPress={() => {
               onClose();
-              if (link.route.startsWith("/?view=")) {
+              if (link.id === "home" || link.route === "/") {
+                navigateToTab("/", "left", true);
+              } else if (link.route.startsWith("/?view=")) {
                 const viewParam = link.route.split("view=")[1];
                 router.push({ pathname: "/", params: { view: viewParam } });
               } else {

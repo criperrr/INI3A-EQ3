@@ -1,7 +1,7 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { db } from "../database";
 import { market, ocurrency, product } from "../schema";
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
   private categoryCache: { data: string[]; expiry: number } | null = null;
@@ -327,7 +327,16 @@ class ProductRepositoryClass {
     };
   }
 
-  async getPriceHistory(productId: number, limit: number = 15): Promise<PriceHistoryItem[]> {
+  async getPriceHistory(productId: number, limit: number = 15, since?: Date): Promise<PriceHistoryItem[]> {
+    const conditions = [
+      eq(ocurrency.productId, productId),
+      eq(ocurrency.isSuspended, false),
+    ];
+
+    if (since) {
+      conditions.push(gte(ocurrency.createdAt, since.toISOString()));
+    }
+
     const res = await db
       .select({
         id: ocurrency.id,
@@ -338,11 +347,16 @@ class ProductRepositoryClass {
       })
       .from(ocurrency)
       .leftJoin(market, eq(ocurrency.marketId, market.id))
-      .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)))
-      .orderBy(asc(ocurrency.createdAt))
+      .where(and(...conditions))
+      .orderBy(desc(ocurrency.createdAt))
       .limit(limit);
 
-    return res.map((r) => {
+    // Sort ascending chronologically so the timeline flows left-to-right (past to present)
+    const sorted = [...res].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return sorted.map((r) => {
       const numVal = Number(r.value);
       return {
         id: r.id,

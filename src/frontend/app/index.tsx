@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
+import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
 
@@ -132,10 +133,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const { themeStyles } = useTheme();
   const { t } = useI18n();
+  const { resetHomeTrigger } = useTabNavigation();
   const { view } = useLocalSearchParams<{ view?: string }>();
   const [activeView, setActiveView] = useState<string>("products");
   const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
   const [realMarkets, setRealMarkets] = useState<GridItemType[]>(MOCK_MARKETS);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const actionTabs: TabType[] = [
     {
@@ -211,6 +214,13 @@ export default function HomeScreen() {
     }
   }, [view]);
 
+  useEffect(() => {
+    if (resetHomeTrigger > 0) {
+      setActiveView("products");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }, [resetHomeTrigger]);
+
   const handleItemPress = useCallback((item: GridItemType) => {
     if (activeView === "products") {
       router.push({
@@ -240,6 +250,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
+      ref={scrollViewRef}
       contentContainerStyle={[styles.content, themeStyles.bg]}
       showsVerticalScrollIndicator={false}
     >

@@ -58,9 +58,13 @@ export default function Footer({ activeTab }: FooterProps) {
   const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
   const dynamicHeight = 60 + dynamicPaddingBottom;
 
-  const handleTabPress = (route: string, isActive: boolean) => {
+  const handleTabPress = (tab: TabConfig, isActive: boolean) => {
+    if (tab.key === "home") {
+      navigateToTab("/", "left", true);
+      return;
+    }
     if (isActive) return;
-    navigateToTab(route);
+    navigateToTab(tab.route);
   };
 
   return (
@@ -81,7 +85,7 @@ export default function Footer({ activeTab }: FooterProps) {
               key={tab.key}
               style={styles.centerItem}
               activeOpacity={0.8}
-              onPress={() => handleTabPress(tab.route, isActive)}
+              onPress={() => handleTabPress(tab, isActive)}
             >
               <View
                 style={[
@@ -104,7 +108,7 @@ export default function Footer({ activeTab }: FooterProps) {
             key={tab.key}
             style={styles.navItem}
             activeOpacity={0.7}
-            onPress={() => handleTabPress(tab.route, isActive)}
+            onPress={() => handleTabPress(tab, isActive)}
           >
             {isActive ? (
               <View style={[styles.activeCircle, { backgroundColor: accent }]}>

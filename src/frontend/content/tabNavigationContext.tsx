@@ -34,8 +34,14 @@ export const getTabIndex = (path: string | null | undefined): number => {
 
 interface TabNavigationContextData {
   animationType: StackAnimationType;
-  navigateToTab: (targetRoute: string, forcedDirection?: "left" | "right") => void;
+  navigateToTab: (
+    targetRoute: string,
+    forcedDirection?: "left" | "right",
+    forceReset?: boolean
+  ) => void;
   getTabIndex: (path: string | null | undefined) => number;
+  resetHomeTrigger: number;
+  triggerHomeReset: () => void;
 }
 
 const TabNavigationContext = createContext<TabNavigationContextData>(
@@ -44,15 +50,39 @@ const TabNavigationContext = createContext<TabNavigationContextData>(
 
 export function TabNavigationProvider({ children }: { children: ReactNode }) {
   const [animationType, setAnimationType] = useState<StackAnimationType>("slide_from_right");
+  const [resetHomeTrigger, setResetHomeTrigger] = useState<number>(0);
   const router = useRouter();
   const pathname = usePathname();
   const currentPathRef = useRef(pathname);
   currentPathRef.current = pathname;
 
+  const triggerHomeReset = useCallback(() => {
+    setResetHomeTrigger((prev) => prev + 1);
+  }, []);
+
   const navigateToTab = useCallback(
-    (targetRoute: string, forcedDirection?: "left" | "right") => {
+    (
+      targetRoute: string,
+      forcedDirection?: "left" | "right",
+      forceReset?: boolean
+    ) => {
       const currentPath = currentPathRef.current;
-      if (currentPath === targetRoute) return;
+
+      if (targetRoute === "/" || targetRoute === "") {
+        triggerHomeReset();
+      }
+
+      if (currentPath === targetRoute) {
+        if (targetRoute === "/" && forceReset) {
+          try {
+            if (router.canDismiss && router.canDismiss()) {
+              router.dismissAll();
+            }
+          } catch {}
+          triggerHomeReset();
+        }
+        return;
+      }
 
       const currentIndex = getTabIndex(currentPath);
       const targetIndex = getTabIndex(targetRoute);
@@ -69,6 +99,8 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
         } else {
           nextAnimation = "slide_from_right";
         }
+      } else if (targetRoute === "/") {
+        nextAnimation = "slide_from_left";
       }
 
       setAnimationType(nextAnimation);
@@ -81,12 +113,18 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
 
       router.replace(targetRoute as any);
     },
-    [router]
+    [router, triggerHomeReset]
   );
 
   const contextValue = React.useMemo<TabNavigationContextData>(
-    () => ({ animationType, navigateToTab, getTabIndex }),
-    [animationType, navigateToTab],
+    () => ({
+      animationType,
+      navigateToTab,
+      getTabIndex,
+      resetHomeTrigger,
+      triggerHomeReset,
+    }),
+    [animationType, navigateToTab, resetHomeTrigger, triggerHomeReset]
   );
 
   return (

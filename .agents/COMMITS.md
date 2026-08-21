@@ -24,6 +24,75 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-21 09:35] - feat(occurrence): automatically capture current day date when adding price
+
+- **Description:** Implemented automatic current day date retrieval and display when registering a product price:
+  1. **UI Date Card (`registerProduct.tsx`):** Added a date section to the price registration form with a calendar icon, localized full date format (e.g. "Hoje, 21 de agosto de 2026"), an accent-tinted "Hoje" badge with sparkle icon, and helper explanation text.
+  2. **Service & State Integration:** Initialized default state from `new Date()`, formatted with user's active locale (`useI18n`), and dispatched `createdAt` as ISO string upon submission.
+  3. **Backend Support:** Updated `OcurrencyRepository.create`, `ocurrencyService.create`, and `ocurrencyController.create` to accept and persist optional `createdAt` timestamps.
+  4. **Full 7-Language i18n:** Added `recordDate`, `todayBadge`, and `automaticDateNotice` to `pt`, `en`, `es`, `de`, `ru`, `zh`, and `ja` locales.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.controller.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/registerProduct.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** When users submit a price report, the current day's date is immediately shown in the form and stored alongside the price occurrence.
+
+## [2026-08-21 09:30] - feat(product): align price history to left, limit to 15 items, and add time period filtering
+
+- **Description:** Enhanced product price history across backend and frontend:
+  1. **Left-Aligned Chart & History:** Aligned the price history section header, time period chips, bar chart and history items to the left (`justifyContent: "flex-start"`), incorporating horizontal scrolling for the bars so that charts with few or many bars start cleanly on the left without awkward centered stretching.
+  2. **Max 15 Prices Limit:** Enforced a strict maximum of 15 prices in the history timeline and list across frontend slicing and backend querying (`limit = 15`), ensuring records are ordered chronologically from oldest to newest (left to right) for visual progression.
+  3. **Interactive Time Period Filtering:** Added dynamic time period filters (`7D`, `1M`, `6M`, `1A`, `Tudo`) with instant client-side responsiveness, interactive bar selection tooltip displaying market name, date and formatted price, and backend date-cutoff filtering (`since` parameter).
+  4. **Full 7-Language i18n:** Added translation keys (`period7D`, `period1M`, `period6M`, `period1Y`, `periodAll`, `noHistoryForPeriod`, `selectedPrice`, `priceCount`, `maxPricesInfo`) in `pt`, `en`, `es`, `de`, `ru`, `zh`, and `ja`.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The product details screen now provides a clean, responsive, left-aligned price history chart with period filtering and a maximum limit of 15 records.
+
+## [2026-08-21 08:45] - fix(navigation): enable Home icon navigation from any tab and reset view state
+
+- **Description:** Fixed Home icon button behavior in Footer, Header logo, and Sidebar drawer menu to properly navigate to Home from any active tab or nested sub-screen (such as `/settings`, `/productDetails`, `/help`, etc.) while cleanly resetting the screen view state and scroll position:
+  1. **Tab Navigation Context (`tabNavigationContext.tsx`):** Added `resetHomeTrigger` and `triggerHomeReset()`, enhanced `navigateToTab` to support `forceReset` and always dismiss any open modal/screen stacks with `slide_from_left` animation when navigating to `/`.
+  2. **Footer Navigation (`Footer.tsx`):** Updated `handleTabPress` to unconditionally allow pressing the Home tab with `forceReset=true`, guaranteeing the Home button is responsive even when already on Home or inside subpages.
+  3. **Layout Resolution (`_layout.tsx`):** Updated `getActiveTab()` to return `undefined` for nested/sub-screens, preventing non-tab routes from falsely marking the Home footer tab as active.
+  4. **Home Screen (`index.tsx`):** Added listener for `resetHomeTrigger` that automatically resets `activeView` to `"products"` and smoothly scrolls `ScrollView` back to the top `(y: 0)`.
+  5. **Header & Sidebar (`Header.tsx`, `Sidebar.tsx`):** Connected brand logo and sidebar home links to use `navigateToTab("/", "left", true)`.
+- **Files Modified:**
+  - `src/frontend/content/tabNavigationContext.tsx`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Tapping the Home icon from any tab or sub-screen now seamlessly returns to the root Home dashboard with default product view and top scroll position.
+
 ## [2026-08-18 13:40] - fix(scripts): configure Windows Terminal split pane to vertical (side-by-side)
 
 - **Description:** Updated Windows Terminal (`wt.exe`) split pane arguments in `start_project.ps1` from `-H` (horizontal / stacked top-and-bottom) to `-V` (vertical / side-by-side) in both Local NAT mode and Tunneling mode.

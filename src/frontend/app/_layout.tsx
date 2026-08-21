@@ -20,14 +20,14 @@ function LayoutContent() {
   const { animationType, getTabIndex } = useTabNavigation();
   const isMainTab = getTabIndex(pathname) !== -1;
 
-  const getActiveTab = (): TabKey => {
+  const getActiveTab = (): TabKey | undefined => {
     if (!pathname) return "home";
     if (pathname === "/") return "home";
     if (pathname.includes("/map")) return "map";
     if (pathname.includes("/scannerProduct")) return "registerProduct";
     if (pathname.includes("/search")) return "search";
     if (pathname.includes("/profile")) return "profile";
-    return "home";
+    return undefined;
   };
 
   // Hide header/footer on auth screens
