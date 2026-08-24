@@ -117,8 +117,11 @@ Direct relative paths from project root.
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
 | `src/frontend/app/help.tsx` | Help Center screen with FAQ accordions, search, and support contact |
 | `src/frontend/app/about.tsx` | About Us screen with mission, version, tech stack, open data, and repository links |
+| `src/frontend/theme/index.ts` | Design System root: primitives, semantics, ThemeProvider, `useTheme()`, `useThemeTokens()`, Monet presets |
+| `src/frontend/theme/tokens/primitives/` | Primitive tokens: colors (hex/alpha), spacing (4pt/8pt grid), typography, radii, shadows |
+| `src/frontend/theme/tokens/semantics/` | Semantic tokens: surfaces, texts, borders, icons, feedbacks, spacing, typography, radii, elevations |
 | `src/frontend/content/authContext.tsx` | `AuthProvider`, `useAuth()` with `user`, `profile`, `isAdmin`, `refreshProfile()` |
-| `src/frontend/content/themeContent.tsx` | `ThemeProvider`, `useTheme()` with light/dark/amoled modes and dynamic Monet palette presets |
+| `src/frontend/content/themeContent.tsx` | Retrocompatibility bridge to `src/frontend/theme` |
 | `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
 | `src/frontend/content/tabNavigationContext.tsx` | Directional screen navigation context for swipe gestures |
 | `src/frontend/components/SwipeTabNavigator.tsx` | 1:1 real-time finger-tracking Reanimated gesture navigator |
@@ -153,6 +156,7 @@ Direct relative paths from project root.
 - [x] Fix Home icon navigation and state reset across all tabs, subpages and header/sidebar/footer components (`tabNavigationContext.tsx`, `Footer.tsx`, `Header.tsx`, `Sidebar.tsx`, `_layout.tsx`, `index.tsx`).
 - [x] Align price history to left, limit history to maximum 15 prices, and implement interactive time period filtering (`7D`, `1M`, `6M`, `1A`, `Tudo`) with full i18n localization in `productDetails.tsx`, `product.repository.ts`, `product.service.ts`, and `product.controller.ts`.
 - [x] Automatically capture and display current day date when registering product prices in `registerProduct.tsx` with dedicated date card, "Hoje" badge, i18n in 7 languages, and `createdAt` persistence in `ocurrency.repository.ts`, `ocurrency.service.ts`, and `ocurrency.controller.ts`.
+- [x] Establish full 3-layer Design System token architecture (`src/frontend/theme/`: Primitives -> Semantics -> Component Consumption), eliminating raw literals while preserving 100% visual fidelity, Light/Dark/AMOLED theming and Monet dynamic palettes.
 
 ---
 

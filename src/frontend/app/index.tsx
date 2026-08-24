@@ -11,7 +11,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
@@ -102,36 +102,10 @@ const MOCK_MARKETS: GridItemType[] = [
   },
 ];
 
-const MOCK_BANNERS = [
-  {
-    id: "1",
-    title: "Economia Inteligente",
-    subtitle: "Compare e economize até 35% na sua feira",
-    linkText: "Conferir",
-    image:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
-  },
-  {
-    id: "2",
-    title: "Comunidade Colaborativa",
-    subtitle: "Cadastre preços e ajude outros consumidores",
-    linkText: "Participar",
-    image:
-      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=800&h=400&fit=crop",
-  },
-  {
-    id: "3",
-    title: "Mercados Locais",
-    subtitle: "Encontre os melhores preços do seu bairro",
-    linkText: "Explorar",
-    image:
-      "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&h=400&fit=crop",
-  },
-];
-
 export default function HomeScreen() {
   const router = useRouter();
-  const { themeStyles } = useTheme();
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
   const { t } = useI18n();
   const { resetHomeTrigger } = useTabNavigation();
   const { view } = useLocalSearchParams<{ view?: string }>();
@@ -251,7 +225,10 @@ export default function HomeScreen() {
   return (
     <ScrollView
       ref={scrollViewRef}
-      contentContainerStyle={[styles.content, themeStyles.bg]}
+      contentContainerStyle={[
+        styles.content,
+        { backgroundColor: semantic.colors.surface.background },
+      ]}
       showsVerticalScrollIndicator={false}
     >
       <Banner />
@@ -270,7 +247,8 @@ export default function HomeScreen() {
 }
 
 const Banner = memo(function Banner() {
-  const { themeStyles, accent } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
@@ -353,24 +331,53 @@ const Banner = memo(function Banner() {
             <View
               style={[
                 styles.bannerCardFull,
-                themeStyles.card,
-                themeStyles.border,
+                {
+                  backgroundColor: semantic.colors.surface.card,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.button,
+                  padding: semantic.spacing.elementGap,
+                },
               ]}
             >
               <Image
                 source={{ uri: item.image }}
-                style={styles.bannerImage}
+                style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
                 contentFit="cover"
                 cachePolicy="memory-disk"
                 transition={200}
               />
-              <Text style={[styles.bannerTitle, themeStyles.text]}>
+              <Text
+                style={[
+                  styles.bannerTitle,
+                  {
+                    color: semantic.colors.text.primary,
+                    ...semantic.typography.bodyBold,
+                  },
+                ]}
+              >
                 {item.title}
               </Text>
-              <Text style={[styles.bannerSubtitle, themeStyles.subText]}>
+              <Text
+                style={[
+                  styles.bannerSubtitle,
+                  {
+                    color: semantic.colors.text.secondary,
+                    ...semantic.typography.caption,
+                  },
+                ]}
+              >
                 {item.subtitle}
               </Text>
-              <Text style={[styles.bannerLink, { color: accent }]}>
+              <Text
+                style={[
+                  styles.bannerLink,
+                  {
+                    color: accent,
+                    ...semantic.typography.caption,
+                    fontWeight: "600",
+                  },
+                ]}
+              >
                 {item.linkText}
               </Text>
             </View>
@@ -384,6 +391,7 @@ const Banner = memo(function Banner() {
             key={index}
             style={[
               styles.dot,
+              { backgroundColor: semantic.colors.border.subtle },
               activeIndex === index && [
                 styles.activeDot,
                 { backgroundColor: accent },
@@ -405,9 +413,24 @@ const ActionMenu = memo(function ActionMenu({
   tabs: TabType[];
   activeView: string;
 }) {
-  const { themeStyles, isDark, accent } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
+
   return (
-    <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
+    <View
+      style={[
+        styles.centralMenuBar,
+        {
+          backgroundColor: semantic.colors.surface.card,
+          borderColor: semantic.colors.border.default,
+          borderRadius: semantic.radius.card,
+          paddingVertical: semantic.spacing.elementGap,
+          paddingHorizontal: semantic.spacing.microGap,
+          marginBottom: semantic.spacing.sectionGap,
+          ...semantic.elevation.card,
+        },
+      ]}
+    >
       {tabs.map((tab) => {
         const isSelected =
           tab.actionType === "view" && tab.actionValue === activeView;
@@ -415,14 +438,21 @@ const ActionMenu = memo(function ActionMenu({
         return (
           <TouchableOpacity
             key={tab.id}
-            style={[styles.tabButton, isSelected && styles.tabButtonActive]}
+            style={[
+              styles.tabButton,
+              { borderRadius: semantic.radius.chip },
+              isSelected && styles.tabButtonActive,
+            ]}
             activeOpacity={0.7}
             onPress={() => onTabPress(tab)}
           >
             <View
               style={[
                 styles.iconContainer,
-                themeStyles.inputBg,
+                {
+                  backgroundColor: semantic.colors.surface.input,
+                  borderRadius: semantic.radius.chip,
+                },
                 isSelected && {
                   backgroundColor: accent + "25",
                   borderColor: accent,
@@ -433,14 +463,16 @@ const ActionMenu = memo(function ActionMenu({
               <Ionicons
                 name={tab.icon as any}
                 size={22}
-                color={isSelected ? accent : isDark ? "#F0E6D3" : "#1A2E1A"}
+                color={isSelected ? accent : semantic.colors.icon.primary}
               />
             </View>
             <Text
               style={[
                 styles.tabLabel,
-                themeStyles.text,
-                isSelected && { color: accent, fontWeight: "700" },
+                {
+                  color: isSelected ? accent : semantic.colors.text.primary,
+                  fontWeight: isSelected ? "700" : "600",
+                },
               ]}
               numberOfLines={1}
             >
@@ -462,27 +494,57 @@ const ItemsGrid = memo(function ItemsGrid({
   data: GridItemType[];
   onItemPress: (item: GridItemType) => void;
 }) {
-  const { themeStyles } = useTheme();
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
+
   return (
-    <View style={styles.productsSection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>{title}</Text>
+    <View style={[styles.productsSection, { paddingHorizontal: semantic.spacing.itemGap }]}>
+      <Text
+        style={[
+          styles.sectionTitle,
+          {
+            color: semantic.colors.text.primary,
+            ...semantic.typography.sectionTitle,
+            marginBottom: semantic.spacing.elementGap + 2,
+          },
+        ]}
+      >
+        {title}
+      </Text>
       <View style={styles.productGrid}>
         {data.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={[styles.productItem, themeStyles.card, themeStyles.border]}
+            style={[
+              styles.productItem,
+              {
+                backgroundColor: semantic.colors.surface.card,
+                borderColor: semantic.colors.border.default,
+                borderRadius: semantic.radius.chip,
+                padding: semantic.spacing.elementGap,
+              },
+            ]}
             activeOpacity={0.8}
             onPress={() => onItemPress(item)}
           >
             <Image
               source={{ uri: item.image }}
-              style={styles.productImage}
+              style={[
+                styles.productImage,
+                { borderRadius: semantic.radius.badge },
+              ]}
               contentFit="cover"
               cachePolicy="memory-disk"
               transition={200}
             />
             <Text
-              style={[styles.productName, themeStyles.text]}
+              style={[
+                styles.productName,
+                {
+                  color: semantic.colors.text.primary,
+                  ...semantic.typography.bodyMedium,
+                },
+              ]}
               numberOfLines={2}
             >
               {item.name}
@@ -494,25 +556,22 @@ const ItemsGrid = memo(function ItemsGrid({
   );
 });
 
-// --- Estilos ---
+// --- Estilos Estruturais ---
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingVertical: 16 },
   bannerSection: { paddingHorizontal: 16, marginBottom: 20 },
   bannerCardFull: {
     width: "100%",
-    borderRadius: 16,
-    padding: 12,
     borderWidth: 1,
   },
   bannerImage: {
     width: "100%",
     height: 120,
-    borderRadius: 12,
     marginBottom: 8,
   },
-  bannerTitle: { fontSize: 14, fontWeight: "bold" },
-  bannerSubtitle: { fontSize: 11, marginTop: 2 },
-  bannerLink: { fontSize: 12, fontWeight: "600", marginTop: 6 },
+  bannerTitle: {},
+  bannerSubtitle: { marginTop: 2 },
+  bannerLink: { marginTop: 6 },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -520,23 +579,14 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 8,
   },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#D9D9D9" },
+  dot: { width: 8, height: 8, borderRadius: 4 },
   activeDot: { width: 18, height: 8, borderRadius: 4 },
   centralMenuBar: {
     flexDirection: "row",
     marginHorizontal: 16,
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
   },
   tabButton: {
     flex: 1,
@@ -545,7 +595,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 4,
     paddingHorizontal: 2,
-    borderRadius: 14,
   },
   tabButtonActive: {
     transform: [{ scale: 1.02 }],
@@ -553,17 +602,15 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 46,
     height: 46,
-    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: "600",
     textAlign: "center",
   },
-  productsSection: { paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 14 },
+  productsSection: {},
+  sectionTitle: {},
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -572,8 +619,6 @@ const styles = StyleSheet.create({
   },
   productItem: {
     width: "48%",
-    borderRadius: 14,
-    padding: 12,
     alignItems: "center",
     borderWidth: 1,
     marginBottom: 4,
@@ -581,8 +626,7 @@ const styles = StyleSheet.create({
   productImage: {
     width: "100%",
     aspectRatio: 1,
-    borderRadius: 10,
     marginBottom: 8,
   },
-  productName: { fontSize: 14, fontWeight: "600", textAlign: "center" },
+  productName: { textAlign: "center" },
 });

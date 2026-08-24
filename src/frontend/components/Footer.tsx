@@ -1,16 +1,9 @@
 import React from "react";
 import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../content/themeContent"; // Importação do tema
+import { useTheme } from "../theme";
 import { useTabNavigation } from "../content/tabNavigationContext";
-
-const COLORS = {
-  white: "#FFFFFF",
-  gray: "#8E8E93",
-  centerDarkBg: "#2C2C2E",
-};
 
 export type TabKey = "home" | "search" | "registerProduct" | "map" | "profile";
 
@@ -52,11 +45,12 @@ const NAV_TABS: TabConfig[] = [
 
 export default function Footer({ activeTab }: FooterProps) {
   const insets = useSafeAreaInsets();
-  const { themeStyles, isDark, accent } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
   const { navigateToTab } = useTabNavigation();
 
-  const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : 12;
-  const dynamicHeight = 60 + dynamicPaddingBottom;
+  const dynamicPaddingBottom = insets.bottom > 0 ? insets.bottom : semantic.spacing.microGap + 4; // 12
+  const dynamicHeight = semantic.spacing.tabBarHeight + dynamicPaddingBottom;
 
   const handleTabPress = (tab: TabConfig, isActive: boolean) => {
     if (tab.key === "home") {
@@ -71,9 +65,13 @@ export default function Footer({ activeTab }: FooterProps) {
     <View
       style={[
         styles.container,
-        themeStyles.headerBg,
-        themeStyles.border,
-        { height: dynamicHeight, paddingBottom: dynamicPaddingBottom },
+        {
+          backgroundColor: semantic.colors.surface.footer,
+          borderTopColor: semantic.colors.border.header,
+          height: dynamicHeight,
+          paddingBottom: dynamicPaddingBottom,
+          ...semantic.elevation.footer,
+        },
       ]}
     >
       {NAV_TABS.map((tab) => {
@@ -90,14 +88,18 @@ export default function Footer({ activeTab }: FooterProps) {
               <View
                 style={[
                   styles.centerCircle,
-                  isActive
-                    ? { backgroundColor: accent }
-                    : isDark
-                      ? { backgroundColor: "#374151" }
-                      : { backgroundColor: COLORS.centerDarkBg },
+                  {
+                    backgroundColor: isActive
+                      ? accent
+                      : semantic.colors.surface.centerCircle,
+                  },
                 ]}
               >
-                <Ionicons name={tab.icon} size={32} color={COLORS.white} />
+                <Ionicons
+                  name={tab.icon}
+                  size={32}
+                  color={semantic.colors.icon.inverse}
+                />
               </View>
             </TouchableOpacity>
           );
@@ -115,14 +117,14 @@ export default function Footer({ activeTab }: FooterProps) {
                 <Ionicons
                   name={tab.activeIcon}
                   size={24}
-                  color={COLORS.white}
+                  color={semantic.colors.icon.inverse}
                 />
               </View>
             ) : (
               <Ionicons
                 name={tab.icon}
                 size={26}
-                color={isDark ? "#9CA3AF" : COLORS.gray}
+                color={semantic.colors.icon.secondary}
               />
             )}
           </TouchableOpacity>
@@ -138,11 +140,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-around",
     alignItems: "center",
     borderTopWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 5,
   },
   navItem: {
     alignItems: "center",
@@ -176,5 +173,4 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  centerCircleActive: { backgroundColor: "#2E7D32" },
 });

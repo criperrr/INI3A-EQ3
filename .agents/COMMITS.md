@@ -24,6 +24,45 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-24 11:55] - refactor(design-system): 3-tier token architecture with primitives and semantics
+
+- **Description:** Implemented a full 3-tier Design System token architecture in `src/frontend/theme`:
+  1. **Primitive Tokens (`tokens/primitives/`):** Extracted literal color scales (neutrals, emerald/forest greens, dark/amoled palettes, feedback, overlays), 4pt/8pt grid spacing (`0` to `64`), typography (sizes, weights, lineHeights, letterSpacings), radii (`none` to `full: 9999`), and elevation/shadow definitions.
+  2. **Semantic Tokens (`tokens/semantics/`):** Mapped primitives contextually to functional intent (surfaces, texts, borders, icons, feedback, component spacing, component typography, component radii, component elevations) across Light, Dark, and AMOLED modes with Material You / Monet support.
+  3. **Theme Engine & Context (`themeContext.tsx`):** Extended `useTheme()` and added `useThemeTokens()` to expose the full typed design token tree, while preserving legacy `themeStyles` for 100% backward compatibility.
+  4. **Component & Screen Refactoring:** Modernized `productCard.tsx`, `Header.tsx`, `Footer.tsx`, `Sidebar.tsx`, `registerProduct.tsx`, `index.tsx`, `productDetails.tsx` to consume semantic design tokens exclusively.
+  5. **Documentation:** Updated `DESIGN.md` and created `design-system-tokens.md`.
+- **Files Modified:**
+  - `src/frontend/theme/types.ts`
+  - `src/frontend/theme/tokens/primitives/colors.ts`
+  - `src/frontend/theme/tokens/primitives/spacing.ts`
+  - `src/frontend/theme/tokens/primitives/typography.ts`
+  - `src/frontend/theme/tokens/primitives/radii.ts`
+  - `src/frontend/theme/tokens/primitives/shadows.ts`
+  - `src/frontend/theme/tokens/primitives/index.ts`
+  - `src/frontend/theme/tokens/semantics/colors.ts`
+  - `src/frontend/theme/tokens/semantics/spacing.ts`
+  - `src/frontend/theme/tokens/semantics/typography.ts`
+  - `src/frontend/theme/tokens/semantics/radii.ts`
+  - `src/frontend/theme/tokens/semantics/elevation.ts`
+  - `src/frontend/theme/tokens/semantics/index.ts`
+  - `src/frontend/theme/tokens/index.ts`
+  - `src/frontend/theme/monetization/monet.ts`
+  - `src/frontend/theme/themeContext.tsx`
+  - `src/frontend/theme/index.ts`
+  - `src/frontend/content/themeContent.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `DESIGN.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Eliminates raw magic values and hardcoded hexes across components. All UI elements now dynamically consume semantic design tokens with 100% visual fidelity and full theme adaptability.
+
 ## [2026-08-21 09:35] - feat(occurrence): automatically capture current day date when adding price
 
 - **Description:** Implemented automatic current day date retrieval and display when registering a product price:

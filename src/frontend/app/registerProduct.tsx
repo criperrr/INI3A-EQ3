@@ -14,7 +14,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
@@ -45,7 +45,8 @@ export default function RegisterProduct() {
     imageUri?: string;
     lastPrice?: string;
   }>();
-  const { themeStyles, accent, isDark } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
   const { refreshProfile } = useAuth();
   const { t, language } = useI18n();
   const [recordDate] = useState<Date>(new Date());
@@ -113,7 +114,7 @@ export default function RegisterProduct() {
 
     setIsSubmitting(true);
     try {
-      const result = await submitPriceOccurrence(
+      await submitPriceOccurrence(
         effectiveProductId,
         selectedMarketId,
         numPrice,
@@ -172,9 +173,12 @@ export default function RegisterProduct() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, themeStyles.bg]}>
+      <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: semantic.spacing.itemGap },
+          ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -183,18 +187,40 @@ export default function RegisterProduct() {
             <View
               style={[
                 styles.heroCard,
-                themeStyles.card,
-                themeStyles.border,
+                {
+                  backgroundColor: semantic.colors.surface.card,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.modal,
+                  marginBottom: semantic.spacing.sectionGap,
+                },
                 styles.loadingCard,
               ]}
             >
               <ActivityIndicator size="large" color={accent} />
-              <Text style={[styles.loadingText, themeStyles.text]}>
+              <Text
+                style={[
+                  styles.loadingText,
+                  {
+                    color: semantic.colors.text.primary,
+                    ...semantic.typography.body,
+                  },
+                ]}
+              >
                 {t("scanner.searchingProduct")}
               </Text>
             </View>
           ) : (
-            <View style={[styles.heroCard, themeStyles.card, themeStyles.border]}>
+            <View
+              style={[
+                styles.heroCard,
+                {
+                  backgroundColor: semantic.colors.surface.card,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.modal,
+                  marginBottom: semantic.spacing.sectionGap,
+                },
+              ]}
+            >
               {displayProduct.imageUri ? (
                 <Image
                   source={{ uri: displayProduct.imageUri }}
@@ -208,26 +234,75 @@ export default function RegisterProduct() {
                   <Ionicons name="cube-outline" size={60} color={accent} />
                 </View>
               )}
-              <View style={styles.heroContent}>
-                <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
-                  <Text style={styles.categoryText}>
+              <View style={[styles.heroContent, { padding: semantic.spacing.itemGap }]}>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    {
+                      backgroundColor: accent,
+                      borderRadius: semantic.radius.badge,
+                      borderColor: semantic.colors.text.inverse,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      {
+                        color: semantic.colors.text.inverse,
+                        ...semantic.typography.badge,
+                      },
+                    ]}
+                  >
                     {displayProduct.category.toUpperCase()}
                   </Text>
                 </View>
-                <Text style={[styles.productTitle, themeStyles.text]}>
+                <Text
+                  style={[
+                    styles.productTitle,
+                    {
+                      color: semantic.colors.text.primary,
+                      ...semantic.typography.sectionTitle,
+                    },
+                  ]}
+                >
                   {displayProduct.name}
                 </Text>
 
-                <View style={[styles.lastPriceContainer, themeStyles.inputBg]}>
+                <View
+                  style={[
+                    styles.lastPriceContainer,
+                    {
+                      backgroundColor: semantic.colors.surface.input,
+                      borderRadius: semantic.radius.chip,
+                    },
+                  ]}
+                >
                   <Ionicons
                     name="pricetag-outline"
                     size={16}
-                    color={isDark ? "#A0A0A0" : "#5A6B52"}
+                    color={semantic.colors.icon.secondary}
                   />
-                  <Text style={[styles.lastPriceText, themeStyles.subText]}>
+                  <Text
+                    style={[
+                      styles.lastPriceText,
+                      {
+                        color: semantic.colors.text.secondary,
+                        ...semantic.typography.caption,
+                      },
+                    ]}
+                  >
                     {t("productDetails.lastPrice")}:{" "}
                   </Text>
-                  <Text style={[styles.lastPriceValue, themeStyles.text]}>
+                  <Text
+                    style={[
+                      styles.lastPriceValue,
+                      {
+                        color: semantic.colors.text.primary,
+                        ...semantic.typography.bodyBold,
+                      },
+                    ]}
+                  >
                     {displayProduct.lastPrice || t("productDetails.noOccurrences")}
                   </Text>
                 </View>
@@ -237,20 +312,41 @@ export default function RegisterProduct() {
 
           {/* Register Form Section */}
           <View style={styles.formSection}>
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                {
+                  color: semantic.colors.text.primary,
+                  ...semantic.typography.sectionTitle,
+                  marginBottom: semantic.spacing.itemGap,
+                },
+              ]}
+            >
               {t("products.registerPrice")}
             </Text>
 
             {/* Price Input */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, themeStyles.subText]}>
+            <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  {
+                    color: semantic.colors.text.secondary,
+                    ...semantic.typography.bodyMedium,
+                  },
+                ]}
+              >
                 {t("products.enterPrice")} *
               </Text>
               <View
                 style={[
                   styles.inputWrapper,
-                  themeStyles.inputBg,
-                  themeStyles.border,
+                  {
+                    backgroundColor: semantic.colors.surface.input,
+                    borderColor: semantic.colors.border.input,
+                    borderRadius: semantic.radius.input,
+                    height: semantic.spacing.inputHeight,
+                  },
                 ]}
               >
                 <Ionicons
@@ -260,9 +356,15 @@ export default function RegisterProduct() {
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  style={[styles.input, themeStyles.text]}
+                  style={[
+                    styles.input,
+                    {
+                      color: semantic.colors.text.primary,
+                      ...semantic.typography.input,
+                    },
+                  ]}
                   placeholder={t("products.pricePlaceholder")}
-                  placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                  placeholderTextColor={semantic.colors.text.tertiary}
                   keyboardType="numeric"
                   value={price}
                   onChangeText={setPrice}
@@ -272,27 +374,86 @@ export default function RegisterProduct() {
             </View>
 
             {/* Record Date (Data do Dia) */}
-            <View style={styles.inputGroup}>
+            <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
               <View style={styles.dateLabelRow}>
-                <Text style={[styles.inputLabel, themeStyles.subText]}>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    {
+                      color: semantic.colors.text.secondary,
+                      ...semantic.typography.bodyMedium,
+                    },
+                  ]}
+                >
                   {t("products.recordDate")}
                 </Text>
-                <View style={[styles.todayBadgePill, { backgroundColor: `${accent}20`, borderColor: accent }]}>
+                <View
+                  style={[
+                    styles.todayBadgePill,
+                    {
+                      backgroundColor: `${accent}20`,
+                      borderColor: accent,
+                      borderRadius: semantic.radius.badge,
+                    },
+                  ]}
+                >
                   <Ionicons name="sparkles-outline" size={12} color={accent} style={{ marginRight: 4 }} />
-                  <Text style={[styles.todayBadgeText, { color: accent }]}>
+                  <Text
+                    style={[
+                      styles.todayBadgeText,
+                      {
+                        color: accent,
+                        ...semantic.typography.micro,
+                      },
+                    ]}
+                  >
                     {t("products.todayBadge")}
                   </Text>
                 </View>
               </View>
-              <View style={[styles.dateCard, themeStyles.inputBg, themeStyles.border]}>
-                <View style={[styles.dateIconCircle, { backgroundColor: `${accent}15` }]}>
+              <View
+                style={[
+                  styles.dateCard,
+                  {
+                    backgroundColor: semantic.colors.surface.input,
+                    borderColor: semantic.colors.border.default,
+                    borderRadius: semantic.radius.input,
+                    padding: semantic.spacing.elementGap,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.dateIconCircle,
+                    {
+                      backgroundColor: `${accent}15`,
+                      borderRadius: semantic.radius.chip,
+                    },
+                  ]}
+                >
                   <Ionicons name="calendar" size={20} color={accent} />
                 </View>
                 <View style={styles.dateInfoCol}>
-                  <Text style={[styles.dateValueText, themeStyles.text]}>
+                  <Text
+                    style={[
+                      styles.dateValueText,
+                      {
+                        color: semantic.colors.text.primary,
+                        ...semantic.typography.bodyBold,
+                      },
+                    ]}
+                  >
                     {formattedTodayDate}
                   </Text>
-                  <Text style={[styles.dateNoticeText, themeStyles.subText]}>
+                  <Text
+                    style={[
+                      styles.dateNoticeText,
+                      {
+                        color: semantic.colors.text.secondary,
+                        ...semantic.typography.caption,
+                      },
+                    ]}
+                  >
                     {t("products.automaticDateNotice")}
                   </Text>
                 </View>
@@ -300,8 +461,16 @@ export default function RegisterProduct() {
             </View>
 
             {/* Market Selection */}
-            <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, themeStyles.subText]}>
+            <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
+              <Text
+                style={[
+                  styles.inputLabel,
+                  {
+                    color: semantic.colors.text.secondary,
+                    ...semantic.typography.bodyMedium,
+                  },
+                ]}
+              >
                 {t("products.selectMarket")} *
               </Text>
               <ScrollView
@@ -316,9 +485,13 @@ export default function RegisterProduct() {
                       key={m.id}
                       style={[
                         styles.marketChip,
+                        { borderRadius: semantic.radius.chip },
                         isSelected
                           ? { backgroundColor: accent, borderColor: accent }
-                          : [themeStyles.card, themeStyles.border],
+                          : {
+                              backgroundColor: semantic.colors.surface.card,
+                              borderColor: semantic.colors.border.default,
+                            },
                       ]}
                       onPress={() => setSelectedMarketId(m.id)}
                       activeOpacity={0.7}
@@ -326,13 +499,18 @@ export default function RegisterProduct() {
                       <Ionicons
                         name="storefront-outline"
                         size={14}
-                        color={isSelected ? "#FFF" : themeStyles.text.color}
+                        color={isSelected ? semantic.colors.text.inverse : semantic.colors.text.primary}
                         style={{ marginRight: 6 }}
                       />
                       <Text
                         style={[
                           styles.marketChipText,
-                          isSelected ? styles.marketChipTextSelected : themeStyles.text,
+                          {
+                            color: isSelected
+                              ? semantic.colors.text.inverse
+                              : semantic.colors.text.primary,
+                            fontWeight: isSelected ? "700" : "600",
+                          },
                         ]}
                       >
                         {m.name}
@@ -344,9 +522,28 @@ export default function RegisterProduct() {
             </View>
 
             {/* Gamification Hint */}
-            <View style={[styles.rewardNotice, themeStyles.inputBg, themeStyles.border]}>
+            <View
+              style={[
+                styles.rewardNotice,
+                {
+                  backgroundColor: semantic.colors.surface.input,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.chip,
+                  padding: semantic.spacing.elementGap,
+                  marginBottom: semantic.spacing.cardPadding,
+                },
+              ]}
+            >
               <Ionicons name="sparkles" size={18} color={accent} />
-              <Text style={[styles.rewardText, themeStyles.subText]}>
+              <Text
+                style={[
+                  styles.rewardText,
+                  {
+                    color: semantic.colors.text.secondary,
+                    ...semantic.typography.caption,
+                  },
+                ]}
+              >
                 {t("productDetails.noOccurrencesSubtitle")}
               </Text>
             </View>
@@ -355,7 +552,12 @@ export default function RegisterProduct() {
             <TouchableOpacity
               style={[
                 styles.registerButton,
-                { backgroundColor: accent, shadowColor: accent },
+                {
+                  backgroundColor: accent,
+                  borderRadius: semantic.radius.button,
+                  height: semantic.spacing.buttonHeight,
+                  ...semantic.elevation.button,
+                },
                 isSubmitting && styles.registerButtonDisabled,
               ]}
               activeOpacity={0.8}
@@ -363,16 +565,24 @@ export default function RegisterProduct() {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <ActivityIndicator color="#FFF" size="small" />
+                <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
               ) : (
                 <>
                   <Ionicons
                     name="checkmark-circle-outline"
                     size={22}
-                    color="#FFF"
+                    color={semantic.colors.text.inverse}
                     style={styles.buttonIcon}
                   />
-                  <Text style={styles.registerButtonText}>
+                  <Text
+                    style={[
+                      styles.registerButtonText,
+                      {
+                        color: semantic.colors.text.inverse,
+                        ...semantic.typography.button,
+                      },
+                    ]}
+                  >
                     {t("products.submitPrice")} (+15 XP)
                   </Text>
                 </>
@@ -391,13 +601,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingTop: 16,
     paddingBottom: 40,
-    paddingHorizontal: 16,
   },
   heroCard: {
-    borderRadius: 24,
     overflow: "hidden",
     borderWidth: 1,
-    marginBottom: 24,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
@@ -410,7 +617,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
-    fontSize: 14,
   },
   heroImage: {
     width: "100%",
@@ -422,63 +628,42 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.03)",
   },
   heroContent: {
-    padding: 16,
     alignItems: "center",
   },
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
     marginBottom: 10,
     marginTop: -28,
     borderWidth: 2,
-    borderColor: "#FFF",
   },
   categoryText: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#FFF",
     letterSpacing: 1,
   },
   productTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
     textAlign: "center",
     marginBottom: 12,
-    lineHeight: 24,
   },
   lastPriceContainer: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 12,
     width: "100%",
     justifyContent: "center",
   },
   lastPriceText: {
-    fontSize: 12,
     marginLeft: 6,
   },
-  lastPriceValue: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
+  lastPriceValue: {},
   formSection: {
     width: "100%",
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 16,
     marginLeft: 4,
   },
-  inputGroup: {
-    marginBottom: 16,
-  },
+  inputGroup: {},
   inputLabel: {
-    fontSize: 13,
-    fontWeight: "600",
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -494,25 +679,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 10,
     borderWidth: 1,
   },
-  todayBadgeText: {
-    fontSize: 10,
-    fontWeight: "700",
-  },
+  todayBadgeText: {},
   dateCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 16,
     borderWidth: 1,
     gap: 12,
   },
   dateIconCircle: {
     width: 38,
     height: 38,
-    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -520,20 +698,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateValueText: {
-    fontSize: 14,
-    fontWeight: "bold",
     textTransform: "capitalize",
   },
   dateNoticeText: {
-    fontSize: 11,
     marginTop: 2,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
     borderWidth: 1,
-    height: 52,
     paddingHorizontal: 14,
   },
   inputIcon: {
@@ -541,8 +714,6 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: "bold",
     height: "100%",
   },
   marketsScroll: {
@@ -554,41 +725,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 14,
-    borderRadius: 14,
     borderWidth: 1,
   },
   marketChipText: {
     fontSize: 13,
-    fontWeight: "600",
-  },
-  marketChipTextSelected: {
-    color: "#FFF",
-    fontWeight: "bold",
   },
   rewardNotice: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 20,
     gap: 8,
   },
   rewardText: {
-    fontSize: 12,
     flex: 1,
-    lineHeight: 16,
   },
   registerButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 54,
-    borderRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
   },
   registerButtonDisabled: {
     opacity: 0.6,
@@ -596,9 +750,5 @@ const styles = StyleSheet.create({
   buttonIcon: {
     marginRight: 8,
   },
-  registerButtonText: {
-    color: "#FFF",
-    fontSize: 15,
-    fontWeight: "bold",
-  },
+  registerButtonText: {},
 });

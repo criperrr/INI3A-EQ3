@@ -5,22 +5,17 @@ import {
   Text,
   TouchableOpacity,
   Dimensions,
-  Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
 
 const { width, height } = Dimensions.get("window");
-
-const COLORS = {
-  overlay: "rgba(0, 0, 0, 0.45)",
-};
 
 interface SidebarProps {
   isOpen: boolean;
@@ -38,18 +33,23 @@ const LOGO_DARK = require("./images/logo-darkmode.png");
 const LOGO_LIGHT = require("./images/logo-presco.png");
 
 const SidebarHeader = memo(function SidebarHeader({
-  themeStyles,
   isDark,
   onClose,
 }: {
-  themeStyles: any;
   isDark: boolean;
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
 
   return (
-    <View style={[styles.headerContainer, themeStyles.border]}>
+    <View
+      style={[
+        styles.headerContainer,
+        { borderBottomColor: semantic.colors.border.default },
+      ]}
+    >
       <View style={styles.brandRow}>
         <Image
           source={isDark ? LOGO_DARK : LOGO_LIGHT}
@@ -59,21 +59,42 @@ const SidebarHeader = memo(function SidebarHeader({
           transition={150}
         />
         <View style={styles.brandInfo}>
-          <Text style={[styles.brandTitle, themeStyles.text]}>PResco</Text>
-          <Text style={[styles.brandSubtitle, themeStyles.subText]}>
+          <Text
+            style={[
+              styles.brandTitle,
+              {
+                color: semantic.colors.text.primary,
+                ...semantic.typography.sectionTitle,
+              },
+            ]}
+          >
+            PResco
+          </Text>
+          <Text
+            style={[
+              styles.brandSubtitle,
+              {
+                color: semantic.colors.text.secondary,
+                ...semantic.typography.caption,
+              },
+            ]}
+          >
             {t("home.welcomeSubtitle")}
           </Text>
         </View>
       </View>
       <TouchableOpacity
-        style={[styles.closeButton, themeStyles.inputBg]}
+        style={[
+          styles.closeButton,
+          { backgroundColor: semantic.colors.surface.input },
+        ]}
         activeOpacity={0.7}
         onPress={onClose}
       >
         <Ionicons
           name="close"
           size={20}
-          color={isDark ? "#E5E7EB" : "#374151"}
+          color={semantic.colors.icon.interactive}
         />
       </TouchableOpacity>
     </View>
@@ -81,19 +102,18 @@ const SidebarHeader = memo(function SidebarHeader({
 });
 
 const NavigationLinks = memo(function NavigationLinks({
-  themeStyles,
   router,
   pathname,
   onClose,
   menuLinks,
 }: {
-  themeStyles: any;
   router: any;
   pathname: string;
   onClose: () => void;
   menuLinks: MenuItem[];
 }) {
-  const { accent, isDark } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
   const { navigateToTab } = useTabNavigation();
 
   return (
@@ -108,9 +128,10 @@ const NavigationLinks = memo(function NavigationLinks({
             key={link.id}
             style={[
               styles.linkItem,
+              { borderRadius: semantic.radius.chip },
               isActive && [
                 styles.linkItemActive,
-                { backgroundColor: accent + "18" },
+                { backgroundColor: semantic.colors.surface.highlight },
               ],
             ]}
             activeOpacity={0.7}
@@ -129,7 +150,10 @@ const NavigationLinks = memo(function NavigationLinks({
             <View
               style={[
                 styles.linkIconBox,
-                themeStyles.inputBg,
+                {
+                  backgroundColor: semantic.colors.surface.input,
+                  borderRadius: semantic.radius.badge,
+                },
                 isActive && {
                   backgroundColor: accent + "25",
                 },
@@ -138,14 +162,16 @@ const NavigationLinks = memo(function NavigationLinks({
               <Ionicons
                 name={link.icon}
                 size={20}
-                color={isActive ? accent : isDark ? "#D1D5DB" : "#4B5563"}
+                color={isActive ? accent : semantic.colors.icon.interactive}
               />
             </View>
             <Text
               style={[
                 styles.linkText,
-                themeStyles.text,
-                isActive && { color: accent, fontWeight: "700" },
+                {
+                  color: isActive ? accent : semantic.colors.text.primary,
+                  fontWeight: isActive ? "700" : "600",
+                },
               ]}
             >
               {link.label}
@@ -153,7 +179,7 @@ const NavigationLinks = memo(function NavigationLinks({
             <Ionicons
               name="chevron-forward"
               size={18}
-              color={isActive ? accent : isDark ? "#6B7280" : "#9CA3AF"}
+              color={isActive ? accent : semantic.colors.icon.secondary}
               style={styles.chevron}
             />
           </TouchableOpacity>
@@ -164,16 +190,15 @@ const NavigationLinks = memo(function NavigationLinks({
 });
 
 const UserProfileCard = memo(function UserProfileCard({
-  themeStyles,
   onClose,
   router,
 }: {
-  themeStyles: any;
   onClose: () => void;
   router: any;
 }) {
   const { user, profile, isAuthenticated, isAdmin } = useAuth();
-  const { accent, isDark } = useTheme();
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
   const { t } = useI18n();
 
   const displayName = profile?.name || user?.name || t("common.guest");
@@ -194,33 +219,69 @@ const UserProfileCard = memo(function UserProfileCard({
     <TouchableOpacity
       style={[
         styles.userCard,
-        themeStyles.card,
-        themeStyles.border,
-        { borderColor: isDark ? "#2C2C2C" : "#E5E7EB" },
+        {
+          backgroundColor: semantic.colors.surface.card,
+          borderColor: semantic.colors.border.subtle,
+          borderRadius: semantic.radius.button,
+        },
       ]}
       activeOpacity={0.8}
       onPress={handleProfilePress}
     >
       <View style={[styles.avatarCircle, { backgroundColor: accent }]}>
-        <Text style={styles.avatarText}>{userInitial}</Text>
+        <Text
+          style={[
+            styles.avatarText,
+            { color: semantic.colors.text.inverse },
+          ]}
+        >
+          {userInitial}
+        </Text>
       </View>
       <View style={styles.userInfo}>
         <View style={styles.userNameRow}>
           <Text
-            style={[styles.userName, themeStyles.text]}
+            style={[
+              styles.userName,
+              {
+                color: semantic.colors.text.primary,
+                ...semantic.typography.bodyBold,
+              },
+            ]}
             numberOfLines={1}
           >
             {displayName}
           </Text>
           {isAdmin && (
-            <View style={[styles.adminBadge, { backgroundColor: accent + "25" }]}>
-              <Text style={[styles.adminBadgeText, { color: accent }]}>
+            <View
+              style={[
+                styles.adminBadge,
+                { backgroundColor: accent + "25" },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.adminBadgeText,
+                  {
+                    color: accent,
+                    ...semantic.typography.micro,
+                  },
+                ]}
+              >
                 {t("profile.adminBadge")}
               </Text>
             </View>
           )}
         </View>
-        <Text style={[styles.userStatus, themeStyles.subText]}>
+        <Text
+          style={[
+            styles.userStatus,
+            {
+              color: semantic.colors.text.secondary,
+              ...semantic.typography.caption,
+            },
+          ]}
+        >
           {isAuthenticated
             ? `${t("profile.level")} ${userLevel} • ${userPoints} XP`
             : t("auth.signIn")}
@@ -239,7 +300,8 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const { themeStyles, isDark } = useTheme();
+  const { tokens, isDark } = useTheme();
+  const { semantic } = tokens;
   const { t } = useI18n();
 
   const menuLinks: MenuItem[] = [
@@ -301,11 +363,16 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   if (!isOpen) return null;
 
-  const panelTopPadding = Math.max(insets.top + 8, 36);
-  const panelBottomPadding = Math.max(insets.bottom + 16, 24);
+  const panelTopPadding = Math.max(insets.top + semantic.spacing.microGap, 36);
+  const panelBottomPadding = Math.max(insets.bottom + semantic.spacing.itemGap, 24);
 
   return (
-    <View style={styles.overlay}>
+    <View
+      style={[
+        styles.overlay,
+        { backgroundColor: semantic.colors.surface.overlay },
+      ]}
+    >
       <TouchableOpacity
         style={styles.blurTouch}
         activeOpacity={1}
@@ -315,22 +382,21 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
       <View
         style={[
           styles.menuPanel,
-          themeStyles.card,
-          themeStyles.border,
           {
+            backgroundColor: semantic.colors.surface.card,
+            borderRightColor: semantic.colors.border.default,
+            paddingHorizontal: semantic.spacing.screenPaddingHorizontal,
+            borderTopRightRadius: semantic.radius.modal,
+            borderBottomRightRadius: semantic.radius.modal,
             paddingTop: panelTopPadding,
             paddingBottom: panelBottomPadding,
+            ...semantic.elevation.modal,
           },
         ]}
       >
-        <SidebarHeader
-          themeStyles={themeStyles}
-          isDark={isDark}
-          onClose={onClose}
-        />
+        <SidebarHeader isDark={isDark} onClose={onClose} />
 
         <NavigationLinks
-          themeStyles={themeStyles}
           router={router}
           pathname={pathname}
           onClose={onClose}
@@ -338,11 +404,7 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
 
         <View style={styles.footerSection}>
-          <UserProfileCard
-            themeStyles={themeStyles}
-            onClose={onClose}
-            router={router}
-          />
+          <UserProfileCard onClose={onClose} router={router} />
         </View>
       </View>
     </View>
@@ -358,7 +420,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.overlay,
     flexDirection: "row",
     zIndex: 100,
   },
@@ -370,15 +431,7 @@ const styles = StyleSheet.create({
   menuPanel: {
     width: Math.min(width * 0.8, 330),
     height: "100%",
-    paddingHorizontal: 20,
-    borderTopRightRadius: 24,
-    borderBottomRightRadius: 24,
     borderRightWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 4, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 10,
     justifyContent: "space-between",
   },
   headerContainer: {
@@ -401,12 +454,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   brandTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
     letterSpacing: -0.3,
   },
   brandSubtitle: {
-    fontSize: 11,
     marginTop: 1,
   },
   closeButton: {
@@ -426,22 +476,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 14,
   },
-  linkItemActive: {
-    borderRadius: 14,
-  },
+  linkItemActive: {},
   linkIconBox: {
     width: 36,
     height: 36,
-    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
   },
   linkText: {
     fontSize: 15,
-    fontWeight: "600",
     flex: 1,
   },
   chevron: {
@@ -454,7 +499,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    borderRadius: 16,
     borderWidth: 1,
     gap: 12,
   },
@@ -466,7 +510,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: {
-    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
   },
@@ -479,8 +522,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   userName: {
-    fontSize: 14,
-    fontWeight: "bold",
     maxWidth: 130,
   },
   adminBadge: {
@@ -488,12 +529,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: 6,
   },
-  adminBadgeText: {
-    fontSize: 10,
-    fontWeight: "bold",
-  },
+  adminBadgeText: {},
   userStatus: {
-    fontSize: 12,
     marginTop: 2,
   },
 });

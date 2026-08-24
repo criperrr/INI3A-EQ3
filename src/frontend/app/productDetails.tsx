@@ -44,7 +44,8 @@ export default function ProductDetails() {
   }>();
 
   const router = useRouter();
-  const { themeStyles, accent, isDark } = useTheme();
+  const { themeStyles, accent, isDark, tokens } = useTheme();
+  const { semantic } = tokens;
   const { isAdmin, user, refreshProfile } = useAuth();
   const { t, language } = useI18n();
 
@@ -314,7 +315,7 @@ export default function ProductDetails() {
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
           {isAdmin && (
             <View style={styles.adminTagBadge}>
-              <Ionicons name="shield-checkmark" size={14} color="#FFF" />
+              <Ionicons name="shield-checkmark" size={14} color={semantic.colors.text.inverse} />
               <Text style={styles.adminTagText}>{t("productDetails.adminActions").toUpperCase()}</Text>
             </View>
           )}
@@ -436,16 +437,16 @@ export default function ProductDetails() {
                         onPress={() => handleVote(occ.id, true)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="thumbs-up" size={12} color="#4CAF50" />
-                        <Text style={[styles.voteCount, { color: "#4CAF50" }]}>{occ.upvoteCount}</Text>
+                        <Ionicons name="thumbs-up" size={12} color={semantic.colors.feedback.success} />
+                        <Text style={[styles.voteCount, { color: semantic.colors.feedback.success }]}>{occ.upvoteCount}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.voteBtn, themeStyles.card, themeStyles.border]}
                         onPress={() => handleVote(occ.id, false)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="thumbs-down" size={12} color="#F44336" />
-                        <Text style={[styles.voteCount, { color: "#F44336" }]}>{occ.downvoteCount}</Text>
+                        <Ionicons name="thumbs-down" size={12} color={semantic.colors.feedback.error} />
+                        <Text style={[styles.voteCount, { color: semantic.colors.feedback.error }]}>{occ.downvoteCount}</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -455,7 +456,7 @@ export default function ProductDetails() {
                         onPress={() => handleDeleteOccurrence(occ.id)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="trash-outline" size={16} color="#E53935" />
+                        <Ionicons name="trash-outline" size={16} color={semantic.colors.feedback.error} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -471,7 +472,7 @@ export default function ProductDetails() {
               activeOpacity={0.8}
               onPress={handleRegisterPrice}
             >
-              <Ionicons name="pricetag-outline" size={20} color="#FFF" style={styles.btnIcon} />
+              <Ionicons name="pricetag-outline" size={20} color={semantic.colors.text.inverse} style={styles.btnIcon} />
               <Text style={styles.primaryActionText}>{t("productDetails.addPrice")}</Text>
             </TouchableOpacity>
 
@@ -494,8 +495,8 @@ export default function ProductDetails() {
                     activeOpacity={0.8}
                     onPress={handleDeleteProduct}
                   >
-                    <Ionicons name="trash-outline" size={18} color="#E53935" style={styles.btnIcon} />
-                    <Text style={[styles.secondaryActionText, { color: "#E53935" }]}>{t("productDetails.deleteProduct")}</Text>
+                    <Ionicons name="trash-outline" size={18} color={semantic.colors.feedback.error} style={styles.btnIcon} />
+                    <Text style={[styles.secondaryActionText, { color: semantic.colors.feedback.error }]}>{t("productDetails.deleteProduct")}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -528,7 +529,7 @@ export default function ProductDetails() {
               value={editName}
               onChangeText={setEditName}
               placeholder={t("products.productNamePlaceholder")}
-              placeholderTextColor={isDark ? "#888" : "#999"}
+              placeholderTextColor={semantic.colors.text.tertiary}
             />
 
             <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.category")}</Text>
@@ -537,7 +538,7 @@ export default function ProductDetails() {
               value={editCategory}
               onChangeText={setEditCategory}
               placeholder={t("products.categoryPlaceholder")}
-              placeholderTextColor={isDark ? "#888" : "#999"}
+              placeholderTextColor={semantic.colors.text.tertiary}
             />
 
             <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
@@ -546,7 +547,7 @@ export default function ProductDetails() {
               value={editEan}
               onChangeText={setEditEan}
               placeholder={t("scanner.barcode")}
-              placeholderTextColor={isDark ? "#888" : "#999"}
+              placeholderTextColor={semantic.colors.text.tertiary}
               keyboardType="numeric"
             />
 
@@ -564,9 +565,9 @@ export default function ProductDetails() {
                 disabled={savingEdit}
               >
                 {savingEdit ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
                 ) : (
-                  <Text style={[styles.modalBtnText, { color: "#FFF" }]}>{t("common.save")}</Text>
+                  <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>{t("common.save")}</Text>
                 )}
               </TouchableOpacity>
             </View>

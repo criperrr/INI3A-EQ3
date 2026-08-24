@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../content/themeContent"; // Importação do tema
+import { useTheme } from "../theme";
 import { useTabNavigation } from "../content/tabNavigationContext";
 
 interface HeaderProps {
@@ -41,10 +41,9 @@ const LogoBrand = memo(function LogoBrand({
 
 const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProps) {
   const insets = useSafeAreaInsets();
-  const { themeStyles, isDark } = useTheme(); // Consumo do tema
+  const { tokens, isDark } = useTheme();
+  const { semantic } = tokens;
   const { navigateToTab } = useTabNavigation();
-
-  const iconColor = isDark ? "#F0E6D3" : "#1A2E1A";
 
   const handleLogoPress = () => {
     navigateToTab("/", "left", true);
@@ -54,9 +53,13 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
     <View
       style={[
         styles.container,
-        themeStyles.headerBg,
-        themeStyles.border,
-        { paddingTop: insets.top + 8 },
+        {
+          backgroundColor: semantic.colors.surface.header,
+          borderBottomColor: semantic.colors.border.header,
+          paddingHorizontal: semantic.spacing.headerPaddingHorizontal,
+          paddingBottom: semantic.spacing.headerPaddingBottom,
+          paddingTop: insets.top + semantic.spacing.microGap,
+        },
       ]}
     >
       <TouchableOpacity
@@ -64,7 +67,11 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
         style={styles.iconButton}
         onPress={onPressMenu}
       >
-        <Ionicons name="menu-outline" size={26} color={iconColor} />
+        <Ionicons
+          name="menu-outline"
+          size={26}
+          color={semantic.colors.icon.primary}
+        />
       </TouchableOpacity>
 
       <LogoBrand isDark={isDark} onPress={handleLogoPress} />
@@ -74,7 +81,11 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
         style={styles.iconButton}
         onPress={onPressSettings}
       >
-        <Ionicons name="settings-outline" size={24} color={iconColor} />
+        <Ionicons
+          name="settings-outline"
+          size={24}
+          color={semantic.colors.icon.primary}
+        />
       </TouchableOpacity>
     </View>
   );
@@ -87,8 +98,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
     borderBottomWidth: 1,
     zIndex: 10,
   },

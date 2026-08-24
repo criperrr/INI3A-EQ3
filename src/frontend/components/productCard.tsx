@@ -1,7 +1,7 @@
 import React, { ReactNode, memo } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import { Image } from "expo-image";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 
 interface ProductCardProps {
@@ -17,19 +17,34 @@ const ProductCard = memo(function ProductCard({
   imageUri,
   children,
 }: ProductCardProps) {
-  const { themeStyles } = useTheme();
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
 
   return (
-    <View style={[styles.cardContainer, themeStyles.card, themeStyles.border]}>
-      <ProductImage imageUri={imageUri} themeStyles={themeStyles} />
+    <View
+      style={[
+        styles.cardContainer,
+        {
+          backgroundColor: semantic.colors.surface.card,
+          borderColor: semantic.colors.border.default,
+          borderRadius: semantic.radius.card,
+          padding: semantic.spacing.cardPadding,
+          ...semantic.elevation.card,
+        },
+      ]}
+    >
+      <ProductImage imageUri={imageUri} />
 
-      <ProductInfo name={name} category={category} themeStyles={themeStyles} />
+      <ProductInfo name={name} category={category} />
 
-      {/* O divisor usa a cor da borda do tema como backgroundColor */}
+      {/* Divisor semântico */}
       <View
         style={[
           styles.divider,
-          { backgroundColor: themeStyles.border.borderColor },
+          {
+            backgroundColor: semantic.colors.border.divider,
+            marginBottom: semantic.spacing.itemGap,
+          },
         ]}
       />
 
@@ -43,15 +58,24 @@ export default ProductCard;
 // --- Componentes Internos Memoizados ---
 const ProductImage = memo(function ProductImage({
   imageUri,
-  themeStyles,
 }: {
   imageUri?: string;
-  themeStyles: any;
 }) {
   const { t } = useI18n();
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
 
   return (
-    <View style={[styles.imageContainer, themeStyles.inputBg]}>
+    <View
+      style={[
+        styles.imageContainer,
+        {
+          backgroundColor: semantic.colors.surface.input,
+          borderRadius: semantic.radius.image,
+          marginBottom: semantic.spacing.itemGap,
+        },
+      ]}
+    >
       {imageUri ? (
         <Image
           source={{ uri: imageUri }}
@@ -62,7 +86,15 @@ const ProductImage = memo(function ProductImage({
         />
       ) : (
         <View style={styles.imagePlaceholder}>
-          <Text style={[styles.placeholderText, themeStyles.subText]}>
+          <Text
+            style={[
+              styles.placeholderText,
+              {
+                color: semantic.colors.text.secondary,
+                ...semantic.typography.bodyMedium,
+              },
+            ]}
+          >
             {t("common.noImage")}
           </Text>
         </View>
@@ -74,81 +106,83 @@ const ProductImage = memo(function ProductImage({
 const ProductInfo = memo(function ProductInfo({
   name,
   category,
-  themeStyles,
 }: {
   name: string;
   category?: string;
-  themeStyles: any;
 }) {
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
+
   return (
-    <View style={styles.infoContainer}>
+    <View
+      style={[
+        styles.infoContainer,
+        { marginBottom: semantic.spacing.itemGap },
+      ]}
+    >
       {category && (
-        <Text style={[styles.productCategory, themeStyles.subText]}>
+        <Text
+          style={[
+            styles.productCategory,
+            {
+              color: semantic.colors.text.secondary,
+              ...semantic.typography.badge,
+            },
+          ]}
+        >
           {category.toUpperCase()}
         </Text>
       )}
-      <Text style={[styles.productName, themeStyles.text]} numberOfLines={2}>
+      <Text
+        style={[
+          styles.productName,
+          {
+            color: semantic.colors.text.primary,
+            ...semantic.typography.productTitle,
+          },
+        ]}
+        numberOfLines={2}
+      >
         {name}
       </Text>
     </View>
   );
 });
 
-// --- Estilos ---
+// --- Estilos Estruturais ---
 const styles = StyleSheet.create({
   cardContainer: {
-    borderRadius: 20,
-    padding: 20,
     width: "100%",
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
   },
   imageContainer: {
     width: "100%",
     aspectRatio: 1.4,
-    borderRadius: 14,
     overflow: "hidden",
-    marginBottom: 16,
   },
   productImage: {
     width: "100%",
     height: "100%",
-    resizeMode: "contain",
   },
   imagePlaceholder: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  placeholderText: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  placeholderText: {},
   infoContainer: {
     alignItems: "center",
-    marginBottom: 16,
     paddingHorizontal: 8,
   },
   productCategory: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1,
     marginBottom: 4,
   },
   productName: {
-    fontSize: 20,
-    fontWeight: "bold",
     textAlign: "center",
-    lineHeight: 26,
   },
   divider: {
     height: 1,
     width: "100%",
-    marginBottom: 16,
   },
   actionContainer: {
     width: "100%",
