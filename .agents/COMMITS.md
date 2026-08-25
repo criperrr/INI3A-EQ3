@@ -24,6 +24,31 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 10:37] - fix(profile): revert style and formatting modifications from commit c59429f
+
+- **Description:** Reverted commit `c59429f` ("style: fix code formatting and inconsistent whitespace in profile.tsx"), restoring the original whitespace, spacing, and formatting in `profile.tsx`.
+- **Files Modified:**
+  - `src/frontend/app/profile.tsx`
+- **Impact / Next Steps:** `profile.tsx` restored cleanly to its previous code layout.
+
+## [2026-08-25 10:30] - refactor(profile-banners): natural and evocative names for banner customization items
+
+- **Description:** Renamed profile banner customization items and descriptions in `seed.ts` to natural, elegant, and evocative names directly matching the line art and themes:
+  1. **Banner Nomenclature (`src/backend/src/shared/database/seed.ts`):**
+     - `jungle`: *Presco Selva* → **Folhas Tropicais** ("Folhagens e plantas tropicais em traços finos sobre verde escuro.")
+     - `cyberpunk`: *Neon Cyberpunk* → **Circuitos Digitais** ("Padrão tecnológico de microchips e trilhas de circuitos integrados.")
+     - `sunset`: *Pôr do Sol Tropical* → **Brisa Suave** ("Arco-íris estilizados, nuvens e brisas em tom bordô aconchegante.")
+     - `obsidian`: *Obsidiana Noturna* → **Noite Estrelada** ("Constelações do zodíaco, luas crescentes e estrelas no céu noturno.")
+     - `aurora`: *Aurora Boreal* → **Ondas Cósmicas** ("Ondulações fluidas de luz estelar com planetas e astros celestes.")
+     - `gold`: *Ouro Imperial* → **Gemas & Cristais** ("Padrão geométrico de diamantes lapidados e cristais preciosos.")
+     - `nebula`: *Cósmico Nebulosa* → **Observatório Espacial** ("Telescópios astronômicos, planetas com anéis e instrumentos no espaço.")
+  2. **Database Re-seed:** Executed database seed update script to persist and apply the new names and descriptions directly into PostgreSQL.
+  3. **Reverted Unrelated Changes:** Reverted modifications made to Settings (`settings.tsx`, `locales/*.ts`).
+- **Files Modified:**
+  - `src/backend/src/shared/database/seed.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Banner items in the shop and user profiles now display accurate, natural, and beautiful names.
+
 ## [2026-08-25 09:35] - feat(profile-banners): standardized banner assets and integrated high-res images into profile and shop
 
 - **Description:** Renamed raw generated banner images to standard thematic filenames and integrated them seamlessly across the frontend:
