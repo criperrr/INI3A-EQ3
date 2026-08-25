@@ -46,7 +46,7 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
       duration: 180,
       easing: Easing.out(Easing.cubic),
     });
-  }, [pathname]);
+  }, [pathname, isBusy, isDragging, translateX]);
 
   const triggerHaptic = () => {
     if (Platform.OS !== "web") {

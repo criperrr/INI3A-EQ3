@@ -23,7 +23,6 @@ import {
   Sun,
   Moon,
   Bell,
-  Lock,
   User,
   X,
   Shield,
@@ -39,13 +38,12 @@ import {
   Info,
   Vibrate,
   KeyRound,
-  Database,
   Globe,
   Share2,
   Code2,
 } from "lucide-react-native";
 import { useTheme, MONET_PRESETS } from "../theme";
-import { useI18n, SupportedLanguage } from "../content/i18nContext";
+import { useI18n } from "../content/i18nContext";
 import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
 
@@ -142,7 +140,6 @@ const SettingsScreen: React.FC = () => {
   // i18n
   const {
     language: currentLanguage,
-    languagePreference,
     isSystemLanguage,
     setLanguage: setI18nLanguage,
     languages,
@@ -468,7 +465,7 @@ const SettingsScreen: React.FC = () => {
       setImportModalOpen(false);
       setImportCodeText("");
       Alert.alert(t("common.success"), t("settings.importSuccess"));
-    } catch (err: any) {
+    } catch {
       setImportError(t("settings.importInvalidCode"));
     }
   };
@@ -487,7 +484,7 @@ const SettingsScreen: React.FC = () => {
       }
       setClearCacheModalOpen(false);
       Alert.alert(t("settings.clearCache"), t("settings.cacheCleared"));
-    } catch (error) {
+    } catch {
       Alert.alert(t("common.error"), t("errors.serverError"));
     } finally {
       setIsClearingCache(false);

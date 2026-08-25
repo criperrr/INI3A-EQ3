@@ -153,6 +153,7 @@ Direct relative paths from project root.
 - [x] Standardized high-resolution banner image assets (`banner-*.jpg`) integrated into `profile.tsx` for `ProfileBanner`, shop previews, and item category swatches.
 - [x] Renamed profile customization banners in `seed.ts` to natural, evocative names matching the actual visual line art (*Folhas Tropicais*, *Circuitos Digitais*, *Brisa Suave*, *Noite Estrelada*, *Ondas Cósmicas*, *Gemas & Cristais*, *Observatório Espacial*).
 - [x] Design System Policy & Token Governance documentation in `DESIGN.md`, legacy dead screens cleanup (`aboutUs.tsx`, `helpUser.tsx`), and full unification of theme imports directly to `src/frontend/theme`.
+- [x] Full-Stack Security Audit, Zero-Breaking Performance Optimization & Code Hygiene (Express defensive security headers, payload body limits, 18 ESLint warnings elimination to 0 warnings, and complete typecheck verification).
 
 ---
 

@@ -12,8 +12,18 @@ import { redisClient } from "@/shared/redis/server";
 
 const app = e();
 
+// Defensive security headers
+app.use((_, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "0");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  next();
+});
+
 app.use(cors());
-app.use(e.json());
+app.use(e.json({ limit: "1mb" }));
+app.use(e.urlencoded({ extended: true, limit: "1mb" }));
 
 app.get("/health", async (_, res) => {
   const isDbHealthy = await checkDatabaseHealth();

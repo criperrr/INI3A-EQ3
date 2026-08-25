@@ -44,7 +44,7 @@ export default function ProductDetails() {
   }>();
 
   const router = useRouter();
-  const { themeStyles, accent, isDark, tokens } = useTheme();
+  const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
   const { isAdmin, user, refreshProfile } = useAuth();
   const { t, language } = useI18n();
@@ -76,19 +76,22 @@ export default function ProductDetails() {
 
   const loadProductData = useCallback(async () => {
     // Immediate pre-population from route params for zero-latency initial paint
-    if (params.name && !product) {
-      setProduct({
-        id: targetId || undefined,
-        barcode: targetBarcode || "",
-        name: params.name,
-        category: params.category || t("common.uncategorized"),
-        imageUri: params.imageUri || null,
-        lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
-        priceHistory: [],
+    if (params.name) {
+      setProduct((prev) => {
+        if (prev) return prev;
+        return {
+          id: targetId || undefined,
+          barcode: targetBarcode || "",
+          name: params.name || "",
+          category: params.category || t("common.uncategorized"),
+          imageUri: params.imageUri || null,
+          lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
+          priceHistory: [],
+        };
       });
-      setEditName(params.name);
-      setEditCategory(params.category || "");
-      setEditEan(targetBarcode || "");
+      setEditName((prev) => prev || params.name || "");
+      setEditCategory((prev) => prev || params.category || "");
+      setEditEan((prev) => prev || targetBarcode || "");
     }
 
     setLoading(true);
@@ -130,7 +133,7 @@ export default function ProductDetails() {
         setEditName(data.name || "");
         setEditCategory(data.category || "");
         setEditEan(data.barcode || data.ean || "");
-      } else if (params.name && !product) {
+      } else if (params.name) {
         const fallbackData: ProductDetailData = {
           id: targetId || undefined,
           barcode: targetBarcode || "",
@@ -151,7 +154,7 @@ export default function ProductDetails() {
       setLoading(false);
       setLoadingOccurrences(false);
     }
-  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice]);
+  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, t]);
 
   useEffect(() => {
     loadProductData();
@@ -174,7 +177,7 @@ export default function ProductDetails() {
 
   const handleVote = async (occId: number, verdict: boolean) => {
     try {
-      const res = await voteOccurrence(occId, verdict);
+      await voteOccurrence(occId, verdict);
       Alert.alert(
         t("common.success"),
         t("productDetails.votedSuccess"),

@@ -17,7 +17,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
-import type { BadgeItem, UserProfileData } from "../services/auth";
+import type { BadgeItem } from "../services/auth";
 import {
   fetchCustomizationCatalog,
   buyCustomizationItem,
@@ -1086,7 +1086,7 @@ function CustomizationShopModal({
   setCatalog,
   t,
 }: CustomizationShopModalProps) {
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState<"all" | "banner" | "avatar_frame" | "level_frame">("all");
   const [previewCustomizations, setPreviewCustomizations] = useState<EquippedCustomizations | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -1109,14 +1109,14 @@ function CustomizationShopModal({
   const categorizedSections = useMemo(() => {
     if (!catalog?.items) return [];
 
-    const categories: Array<{
+    const categories: {
       key: "banner" | "avatar_frame" | "level_frame";
       title: string;
       subtitle: string;
       icon: keyof typeof Ionicons.glyphMap;
       color: string;
       items: CustomizationItem[];
-    }> = [
+    }[] = [
       {
         key: "banner",
         title: t("profile.tabBanners"),
