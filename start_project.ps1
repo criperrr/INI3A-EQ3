@@ -89,7 +89,7 @@ if (Test-Path $envFile) {
             if ($eqIdx -gt 0) {
                 $k = $trimmed.Substring(0, $eqIdx).Trim()
                 $v = $trimmed.Substring($eqIdx + 1).Trim().Trim("`"'")
-                
+
                 if ($k -eq "SERVER_PORT" -and $v) {
                     $ServerPort = [int]$v
                 }
@@ -123,15 +123,16 @@ function Test-ServicePort {
         [string]$ServiceName,
         [int]$MaxAttempts = 30
     )
-    
+
     Write-Host -NoNewline "[...] Waiting for $ServiceName on ${HostName}:${Port}..."
     $attempt = 1
-    
+
     while ($attempt -le $MaxAttempts) {
         try {
             $tcp = New-Object System.Net.Sockets.TcpClient
             $async = $tcp.BeginConnect($HostName, $Port, $null, $null)
             $success = $async.AsyncWaitHandle.WaitOne(1000, $false)
+
             if ($success -and $tcp.Connected) {
                 $tcp.EndConnect($async)
                 $tcp.Close()
@@ -140,12 +141,12 @@ function Test-ServicePort {
             }
             $tcp.Close()
         } catch {}
-        
+
         Write-Host -NoNewline "."
         Start-Sleep -Seconds 1
         $attempt++
     }
-    
+
     Write-Host " Timeout!" -ForegroundColor Red
     Write-Host "[X] $ServiceName is not running on ${HostName}:${Port}." -ForegroundColor Red
     return $false
@@ -211,13 +212,8 @@ if ($IsLocalNat) {
     if ($hasWt) {
         try {
             Write-Host "[i] Launching with Windows Terminal split panes..." -ForegroundColor Cyan
-            $wtArgs = @(
-                "-w", "0",
-                "new-tab", "cmd.exe", "/k", $backendBat,
-                ";",
-                "split-pane", "-V", "cmd.exe", "/k", $frontendBat, $BackendUrl, $LanIp
-            )
-            Start-Process wt.exe -ArgumentList $wtArgs
+            $wtArgs = "-w 0 new-tab cmd.exe /k `"$backendBat`" `; split-pane -V cmd.exe /k `"$frontendBat`" `"$BackendUrl`" `"$LanIp`""
+            Start-Process wt.exe -ArgumentList $wtArgs -ErrorAction Stop
             $launched = $true
         } catch {
             Write-Host "[!] Windows Terminal launch failed, falling back to separate windows..." -ForegroundColor Yellow
@@ -240,15 +236,8 @@ if ($IsLocalNat) {
     if ($hasWt) {
         try {
             Write-Host "[i] Launching with Windows Terminal tabs..." -ForegroundColor Cyan
-            $wtArgs = @(
-                "-w", "0",
-                "new-tab", "cmd.exe", "/k", $backendBat,
-                ";",
-                "split-pane", "-V", "cmd.exe", "/k", $frontendBat, $BackendUrl, "", $FrontendUrl, "true", "--tunnel",
-                ";",
-                "new-tab", "cmd.exe", "/k", $tunnelsBat
-            )
-            Start-Process wt.exe -ArgumentList $wtArgs
+            $wtArgs = "-w 0 new-tab cmd.exe /k `"$backendBat`" `; split-pane -V cmd.exe /k `"$frontendBat`" `"$BackendUrl`" `"`" `"$FrontendUrl`" `"true`" `"--tunnel`" `; new-tab cmd.exe /k `"$tunnelsBat`""
+            Start-Process wt.exe -ArgumentList $wtArgs -ErrorAction Stop
             $launched = $true
         } catch {
             Write-Host "[!] Windows Terminal launch failed, falling back to separate windows..." -ForegroundColor Yellow
