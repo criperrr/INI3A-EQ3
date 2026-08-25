@@ -24,6 +24,28 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 11:32] - fix(security-hardening): seed password preservation, JWT blacklist on account deletion, CORS whitelist, Redis rate limiting, and coordinate bounds validation
+
+- **Description:** Implemented full defensive hardening across all remaining security findings:
+  1. **Seed Admin Password Preservation (`src/backend/src/shared/database/seed.ts`):** Removed `passHash: adminPassHash` from the update block when admin already exists, preventing server restart from silently resetting custom admin passwords to default `"admin"` (OWASP A07).
+  2. **JWT Revocation on Account Deletion (`src/backend/src/modules/auth/auth.controller.ts`):** Updated `deleteAccount` to immediately blacklist the active JWT `jti` in Redis with remaining expiration and revoke refresh tokens (OWASP A01/A07).
+  3. **Origin-Restricted CORS (`src/backend/src/app.ts`):** Configured CORS to filter origins against `ALLOWED_ORIGINS` when in production environment while keeping dev/tunnel origins open (OWASP A02).
+  4. **Redis-Backed Rate Limiting (`src/backend/src/shared/middlewares/rateLimiter.ts`, `errors.ts`, `auth.routes.ts`, `product.routes.ts`):** Implemented `createRateLimiter` using atomic Redis increments with sliding window fallback. Applied `authRateLimiter` (10 req/min) to `/auth/login`, `/auth/register`, `/auth/password` and `searchRateLimiter` (60 req/min) to `/products/barcode/:ean` (OWASP A02/A07).
+  5. **Geographic Coordinate Bounds Validation (`src/backend/src/modules/market/market.controller.ts`):** Added strict latitude (-90 to +90) and longitude (-180 to +180) range checks and radius bounds on market queries and registrations (OWASP A05).
+  6. **Verification Suite:** Executed TypeScript check with 0 errors across backend and frontend, and verified unified linting.
+- **Files Modified:**
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/backend/src/shared/errors/errors.ts`
+  - `src/backend/src/shared/middlewares/rateLimiter.ts`
+  - `src/backend/src/modules/auth/auth.routes.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/app.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Complete full-stack security baseline established with zero breaking changes or runtime regressions.
+
 ## [2026-08-25 11:25] - fix(security-vulnerabilities): auth requirement on product creation, XP farm exploit patch, 500 error sanitization, and backend typecheck script
 
 - **Description:** Remediated critical security vulnerabilities and business logic flaws identified in the deep security audit:

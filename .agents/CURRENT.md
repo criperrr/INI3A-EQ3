@@ -83,8 +83,9 @@ Direct relative paths from project root.
 | `src/backend/src/shared/database/repositories/ocurrency.repository.ts` | `OcurrencyRepository` — create, findById, findByProduct, findByUser, countByUser, update, delete, vote, getUserContributionGrid |
 | `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts, getProductByEan, getProductById, searchProducts, countProducts, createProduct, updateProduct, deleteProduct, getCategories, getPriceStats, getPriceHistory |
 | `src/backend/src/shared/database/repositories/market.repository.ts` | `MarketRepository` — createMarket, updateMarket, deleteMarket, getMarket, getAllMarkets, getMarketsByRadius (PostGIS `ST_DWithin`) |
-| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `ForbiddenError (403)`, `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
-| `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, 500 for unknown errors |
+| `src/backend/src/shared/errors/errors.ts` | `AppError` base + `ForbiddenError (403)`, `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `TooManyRequestsError (429)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
+| `src/backend/src/shared/middlewares/rateLimiter.ts` | `authRateLimiter`, `searchRateLimiter`, `createRateLimiter` (Redis atomic bucket with in-memory fallback) |
+| `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, sanitized 500 in production |
 | `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth`, `requireAdmin`, `requireMinAuthority` |
 | `src/backend/src/shared/redis/server.ts` | `redisClient`, `connectRedis`, helpers (`invalidateJWT`, `setRefreshToken`, `getUserIdByRefreshToken`) |
 | `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken`, `verifyAccessToken`, `getTokenRemainingSeconds` |
@@ -155,6 +156,7 @@ Direct relative paths from project root.
 - [x] Design System Policy & Token Governance documentation in `DESIGN.md`, legacy dead screens cleanup (`aboutUs.tsx`, `helpUser.tsx`), and full unification of theme imports directly to `src/frontend/theme`.
 - [x] Full-Stack Security Audit, Zero-Breaking Performance Optimization & Code Hygiene (Express defensive security headers, payload body limits, 18 ESLint warnings elimination to 0 warnings, and complete typecheck verification).
 - [x] Security Vulnerabilities Remediation & Business Logic Hardening (`POST /products` requireAuth access control, infinite XP vote farm exploit patch, HTTP 500 error sanitization in production, and backend build/typecheck scripts).
+- [x] Comprehensive Security Hardening & Vulnerability Sweep (seed admin password preservation, JWT revocation on account deletion, CORS whitelist policy, Redis rate limiting on auth & search endpoints, and strict geographic coordinate bounds validation).
 
 ---
 

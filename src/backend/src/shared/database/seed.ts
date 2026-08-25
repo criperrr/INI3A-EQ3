@@ -488,12 +488,11 @@ export async function seedDatabase() {
     }
     console.log("✅ [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
   } else {
-    // Ensure roleId, password, and customizations are synchronized
+    // Ensure roleId, points, and customizations are synchronized without resetting custom password
     await db
       .update(user)
       .set({
         roleId: 5,
-        passHash: adminPassHash,
         points: existingAdmin.points > 0 ? existingAdmin.points : 9999,
         equippedBannerId: existingAdmin.equippedBannerId || 6,
         equippedAvatarFrameId: existingAdmin.equippedAvatarFrameId || 16,

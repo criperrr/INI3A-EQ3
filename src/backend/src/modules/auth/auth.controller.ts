@@ -121,7 +121,11 @@ class AuthControllerClass {
 
   async deleteAccount(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { id } = req.user;
+      const { id, jti, exp } = req.user;
+      const remainingSeconds = getTokenRemainingSeconds({ exp });
+      const { refreshToken } = req.body as { refreshToken?: string };
+
+      await authService.logout(jti, remainingSeconds, refreshToken);
       await authService.deleteUser(id);
       return res.status(200).json(success({ message: "Conta excluída com sucesso." }));
     } catch (e) {

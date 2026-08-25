@@ -21,7 +21,23 @@ app.use((_, res, next) => {
   next();
 });
 
-app.use(cors());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : null;
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow mobile apps, curl, server-to-server requests with no origin
+      if (!origin) return callback(null, true);
+      if (process.env.NODE_ENV !== "production" || !allowedOrigins || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS: Origem não permitida pela política de segurança."));
+    },
+    credentials: true,
+  }),
+);
 app.use(e.json({ limit: "1mb" }));
 app.use(e.urlencoded({ extended: true, limit: "1mb" }));
 
