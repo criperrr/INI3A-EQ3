@@ -354,6 +354,8 @@ const Banner = memo(function Banner() {
                     ...semantic.typography.bodyBold,
                   },
                 ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.title}
               </Text>
@@ -365,6 +367,8 @@ const Banner = memo(function Banner() {
                     ...semantic.typography.caption,
                   },
                 ]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
               >
                 {item.subtitle}
               </Text>
@@ -377,6 +381,8 @@ const Banner = memo(function Banner() {
                     fontWeight: "600",
                   },
                 ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.linkText}
               </Text>
@@ -475,6 +481,7 @@ const ActionMenu = memo(function ActionMenu({
                 },
               ]}
               numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {tab.label}
             </Text>

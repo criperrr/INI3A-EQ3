@@ -55,10 +55,10 @@ export default function AboutScreen() {
           />
         </TouchableOpacity>
         <View style={styles.headerTitleBox}>
-          <Text style={[styles.headerTitle, themeStyles.text]}>
+          <Text style={[styles.headerTitle, themeStyles.text]} numberOfLines={1}>
             {t("about.title")}
           </Text>
-          <Text style={[styles.headerSubtitle, themeStyles.subText]}>
+          <Text style={[styles.headerSubtitle, themeStyles.subText]} numberOfLines={1}>
             {t("about.subtitle")}
           </Text>
         </View>
@@ -94,7 +94,7 @@ export default function AboutScreen() {
 
           <View style={[styles.versionPill, { backgroundColor: accent + "20" }]}>
             <Ionicons name="git-branch-outline" size={14} color={accent} />
-            <Text style={[styles.versionText, { color: accent }]}>
+            <Text style={[styles.versionText, { color: accent }]} numberOfLines={1}>
               {t("about.versionInfo")}
             </Text>
           </View>
@@ -117,7 +117,7 @@ export default function AboutScreen() {
             >
               <Ionicons name="sparkles" size={20} color={accent} />
             </View>
-            <Text style={[styles.cardTitle, themeStyles.text]}>
+            <Text style={[styles.cardTitle, themeStyles.text]} numberOfLines={1}>
               {t("about.missionTitle")}
             </Text>
           </View>
@@ -143,7 +143,7 @@ export default function AboutScreen() {
             >
               <Ionicons name="infinite-outline" size={20} color={accent} />
             </View>
-            <Text style={[styles.cardTitle, themeStyles.text]}>
+            <Text style={[styles.cardTitle, themeStyles.text]} numberOfLines={1}>
               {t("about.howItWorksTitle")}
             </Text>
           </View>
@@ -154,7 +154,7 @@ export default function AboutScreen() {
           <View style={styles.stepsRow}>
             <View style={[styles.stepItem, themeStyles.inputBg]}>
               <Ionicons name="barcode-outline" size={22} color={accent} />
-              <Text style={[styles.stepLabel, themeStyles.text]}>{t("about.scanStep")}</Text>
+              <Text style={[styles.stepLabel, themeStyles.text]} numberOfLines={2}>{t("about.scanStep")}</Text>
             </View>
             <Ionicons
               name="arrow-forward"
@@ -163,7 +163,7 @@ export default function AboutScreen() {
             />
             <View style={[styles.stepItem, themeStyles.inputBg]}>
               <Ionicons name="trending-up-outline" size={22} color={accent} />
-              <Text style={[styles.stepLabel, themeStyles.text]}>+15 XP</Text>
+              <Text style={[styles.stepLabel, themeStyles.text]} numberOfLines={1}>+15 XP</Text>
             </View>
             <Ionicons
               name="arrow-forward"
@@ -172,7 +172,7 @@ export default function AboutScreen() {
             />
             <View style={[styles.stepItem, themeStyles.inputBg]}>
               <Ionicons name="wallet-outline" size={22} color={accent} />
-              <Text style={[styles.stepLabel, themeStyles.text]}>{t("about.saveStep")}</Text>
+              <Text style={[styles.stepLabel, themeStyles.text]} numberOfLines={2}>{t("about.saveStep")}</Text>
             </View>
           </View>
         </View>
@@ -404,15 +404,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 4,
     borderRadius: 14,
     gap: 4,
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 2,
   },
   stepLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "bold",
+    textAlign: "center",
   },
   techTagsContainer: {
     flexDirection: "row",
@@ -440,10 +441,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    marginRight: 8,
   },
   linkText: {
     fontSize: 14,
     fontWeight: "600",
+    flex: 1,
   },
   footerInfo: {
     alignItems: "center",

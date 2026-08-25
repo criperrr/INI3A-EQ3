@@ -91,13 +91,15 @@ export default function HelpUser() {
             color={isDark ? "#F0E6D3" : "#1A2E1A"}
           />
         </TouchableOpacity>
-        <Text style={[styles.title, themeStyles.text]}>{t("help.title")}</Text>
+        <Text style={[styles.title, themeStyles.text, { flex: 1, textAlign: "center" }]} numberOfLines={1}>
+          {t("help.title")}
+        </Text>
 
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, themeStyles.text]}>
+        <Text style={[styles.sectionTitle, themeStyles.text]} numberOfLines={1}>
           {t("help.faqSectionTitle")}
         </Text>
         <View
@@ -114,7 +116,7 @@ export default function HelpUser() {
                   activeOpacity={0.7}
                   onPress={() => toggleFaq(item.id)}
                 >
-                  <Text style={[styles.faqQuestion, themeStyles.text]}>
+                  <Text style={[styles.faqQuestion, themeStyles.text]} numberOfLines={isExpanded ? undefined : 2}>
                     {item.question}
                   </Text>
                   <Ionicons
@@ -138,7 +140,7 @@ export default function HelpUser() {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, themeStyles.text]}>
+        <Text style={[styles.sectionTitle, themeStyles.text]} numberOfLines={1}>
           {t("help.supportSectionTitle")}
         </Text>
         <View style={styles.contactContainer}>
@@ -162,10 +164,10 @@ export default function HelpUser() {
                 />
               </View>
               <View style={styles.contactInfo}>
-                <Text style={[styles.contactTitle, themeStyles.text]}>
+                <Text style={[styles.contactTitle, themeStyles.text]} numberOfLines={1}>
                   {contact.title}
                 </Text>
-                <Text style={[styles.contactSubtitle, themeStyles.subText]}>
+                <Text style={[styles.contactSubtitle, themeStyles.subText]} numberOfLines={1}>
                   {contact.subtitle}
                 </Text>
               </View>

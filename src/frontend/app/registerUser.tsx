@@ -436,8 +436,11 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "center",
     marginTop: 32,
+    gap: 4,
   },
   footerText: { fontSize: 15 },
   loginText: { color: COLORS.accent, fontSize: 15, fontWeight: "bold" },

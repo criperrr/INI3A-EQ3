@@ -410,8 +410,11 @@ const styles = StyleSheet.create({
   },
   footerContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "center",
     marginTop: 32,
+    gap: 4,
   },
   footerText: {
     fontSize: 15,
@@ -463,6 +466,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "bold",
+    flexShrink: 1,
   },
   quickLoginBtnSecondary: {
     flexDirection: "row",
@@ -477,6 +481,7 @@ const styles = StyleSheet.create({
   quickLoginBtnTextSecondary: {
     fontSize: 13,
     fontWeight: "600",
+    flexShrink: 1,
   },
 });
 

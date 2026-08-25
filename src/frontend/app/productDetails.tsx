@@ -316,7 +316,9 @@ export default function ProductDetails() {
           {isAdmin && (
             <View style={styles.adminTagBadge}>
               <Ionicons name="shield-checkmark" size={14} color={semantic.colors.text.inverse} />
-              <Text style={styles.adminTagText}>{t("productDetails.adminActions").toUpperCase()}</Text>
+              <Text style={styles.adminTagText} numberOfLines={1} ellipsizeMode="tail">
+                {t("productDetails.adminActions").toUpperCase()}
+              </Text>
             </View>
           )}
 
@@ -334,7 +336,9 @@ export default function ProductDetails() {
             )}
             {product.category && (
               <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
-                <Text style={styles.categoryBadgeText}>{product.category.toUpperCase()}</Text>
+                <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                  {product.category.toUpperCase()}
+                </Text>
               </View>
             )}
           </View>
@@ -352,7 +356,7 @@ export default function ProductDetails() {
 
           {/* Last Price Highlight */}
           <View style={styles.priceHighlightBox}>
-            <Text style={[styles.lastPriceLabel, themeStyles.subText]}>{t("productDetails.lastPrice")}</Text>
+            <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
             <Text style={[styles.lastPriceValue, { color: accent }]}>
               {product.lastPrice || t("productDetails.noOccurrences")}
             </Text>
@@ -363,19 +367,19 @@ export default function ProductDetails() {
             <View style={styles.statsRow}>
               {product.minPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.lowestPrice")}</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.lowestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.minPrice}</Text>
                 </View>
               )}
               {product.avgPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.averagePrice")}</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.averagePrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.avgPrice}</Text>
                 </View>
               )}
               {product.maxPrice && (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]}>{t("productDetails.highestPrice")}</Text>
+                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.highestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.maxPrice}</Text>
                 </View>
               )}
@@ -395,11 +399,13 @@ export default function ProductDetails() {
           {/* Market Occurrences List */}
           <View style={[styles.occurrencesSection, themeStyles.card, themeStyles.border]}>
             <View style={styles.occurrencesHeaderRow}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, marginRight: 8 }}>
                 <Ionicons name="storefront-outline" size={18} color={accent} />
-                <Text style={[styles.occurrencesTitle, themeStyles.text]}>{t("productDetails.marketPrices")}</Text>
+                <Text style={[styles.occurrencesTitle, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                  {t("productDetails.marketPrices")}
+                </Text>
               </View>
-              <Text style={[styles.occurrencesCountText, { color: accent }]}>
+              <Text style={[styles.occurrencesCountText, { color: accent }]} numberOfLines={1}>
                 {occurrences.length} {t("common.details").toLowerCase()}
               </Text>
             </View>
@@ -419,13 +425,13 @@ export default function ProductDetails() {
               occurrences.map((occ) => (
                 <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
                   <View style={styles.occurrenceMainCol}>
-                    <Text style={[styles.occurrenceMarketName, themeStyles.text]}>
+                    <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
                       {occ.marketName || t("products.selectMarket")}
                     </Text>
                     <Text style={[styles.occurrenceValue, { color: accent }]}>
                       R$ {occ.value}
                     </Text>
-                    <Text style={[styles.occurrenceMeta, themeStyles.subText]}>
+                    <Text style={[styles.occurrenceMeta, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
                       {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {new Date(occ.createdAt).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}
                     </Text>
                   </View>
@@ -469,11 +475,11 @@ export default function ProductDetails() {
           <View style={styles.actionsContainer}>
             <TouchableOpacity
               style={[styles.primaryActionBtn, { backgroundColor: accent }]}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPress={handleRegisterPrice}
             >
               <Ionicons name="pricetag-outline" size={20} color={semantic.colors.text.inverse} style={styles.btnIcon} />
-              <Text style={styles.primaryActionText}>{t("productDetails.addPrice")}</Text>
+              <Text style={styles.primaryActionText} numberOfLines={1}>{t("productDetails.addPrice")}</Text>
             </TouchableOpacity>
 
             {isAdmin ? (
@@ -485,7 +491,9 @@ export default function ProductDetails() {
                     onPress={handleOpenEdit}
                   >
                     <Ionicons name="create-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
-                    <Text style={[styles.secondaryActionText, themeStyles.text]}>{t("productDetails.editProduct")}</Text>
+                    <Text style={[styles.secondaryActionText, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                      {t("productDetails.editProduct")}
+                    </Text>
                   </TouchableOpacity>
                 )}
 
@@ -496,7 +504,9 @@ export default function ProductDetails() {
                     onPress={handleDeleteProduct}
                   >
                     <Ionicons name="trash-outline" size={18} color={semantic.colors.feedback.error} style={styles.btnIcon} />
-                    <Text style={[styles.secondaryActionText, { color: semantic.colors.feedback.error }]}>{t("productDetails.deleteProduct")}</Text>
+                    <Text style={[styles.secondaryActionText, { color: semantic.colors.feedback.error }]} numberOfLines={1} ellipsizeMode="tail">
+                      {t("productDetails.deleteProduct")}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -963,9 +973,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     marginBottom: 2,
+    textAlign: "center",
   },
   statValue: {
     fontSize: 14,
@@ -985,6 +996,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flex: 1,
+    marginRight: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -1180,6 +1193,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
+    paddingHorizontal: 6,
     borderRadius: 14,
     borderWidth: 1,
   },
@@ -1258,6 +1272,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 14,
     right: 14,
+    maxWidth: "60%",
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#E6A100",

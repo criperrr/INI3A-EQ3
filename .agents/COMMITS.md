@@ -24,6 +24,38 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 07:27] - fix(ui-i18n): responsive flex containment and overflow prevention across all languages
+
+- **Description:** Systematically hardened all UI screens and components against text clipping and horizontal overflow across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP):
+  1. **Flex Containment & Bounds:** Added `flex: 1` and `flexShrink: 1` to text containers in rows with trailing action buttons, switches, or badges (e.g. `settings.tsx`, `search.tsx`, `productDetails.tsx`, `Sidebar.tsx`, `about.tsx`, `helpUser.tsx`).
+  2. **Text Ellipsizing & Multiline Safety:** Configured explicit `numberOfLines` and `ellipsizeMode="tail"` across headers, badges, chip cards, buttons, and sublabels to prevent sibling displacement when translations expand.
+  3. **Row Wrapping:** Converted fixed button rows and footer auth links to `flexWrap: "wrap"` with flexible percentage basis (e.g. `emptyActionsRow` in `search.tsx`, `footerContainer` in `login.tsx` and `registerUser.tsx`).
+  4. **Translation Optimization:** Streamlined verbose strings in German (`de.ts`) and Russian (`ru.ts`) without losing semantic meaning.
+  5. **Typecheck Verification:** Verified clean build with 0 TypeScript compilation errors in frontend and backend.
+- **Files Modified:**
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/components/Sidebar.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/aboutUs.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/helpUser.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+- **Impact / Next Steps:** Ensures seamless, robust, non-overflowing UI layout across mobile screens of all widths and across all localized languages.
+
 ## [2026-08-24 11:55] - refactor(design-system): 3-tier token architecture with primitives and semantics
 
 - **Description:** Implemented a full 3-tier Design System token architecture in `src/frontend/theme`:
