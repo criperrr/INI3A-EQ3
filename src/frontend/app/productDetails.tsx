@@ -31,6 +31,9 @@ import {
   deleteOccurrence,
   PriceOccurrence,
 } from "../services/ocurrencyService";
+import CategorySelector from "../components/CategorySelector";
+import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+
 
 export default function ProductDetails() {
   const params = useLocalSearchParams<{
@@ -339,8 +342,9 @@ export default function ProductDetails() {
             )}
             {product.category && (
               <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
+                <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
                 <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
-                  {product.category.toUpperCase()}
+                  {getLocalizedCategoryName(product.category, t).toUpperCase()}
                 </Text>
               </View>
             )}
@@ -545,14 +549,14 @@ export default function ProductDetails() {
               placeholderTextColor={semantic.colors.text.tertiary}
             />
 
-            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.category")}</Text>
-            <TextInput
-              style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
-              value={editCategory}
-              onChangeText={setEditCategory}
-              placeholder={t("products.categoryPlaceholder")}
-              placeholderTextColor={semantic.colors.text.tertiary}
-            />
+            <View style={{ marginVertical: 4 }}>
+              <CategorySelector
+                selectedCategory={editCategory}
+                onSelectCategory={setEditCategory}
+                label={t("productDetails.category")}
+                showCustomOption={true}
+              />
+            </View>
 
             <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
             <TextInput
@@ -912,9 +916,15 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 10,
     left: 10,
-    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    gap: 4,
+  },
+  categoryBadgeEmoji: {
+    fontSize: 12,
   },
   categoryBadgeText: {
     color: "#FFF",

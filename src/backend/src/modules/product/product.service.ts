@@ -268,6 +268,11 @@ class ProductServiceClass {
     return ProductRepository.getCategories();
   }
 
+  async getPredefinedCategories() {
+    return ProductRepository.getPredefinedCategories();
+  }
+
+
   async getPriceHistory(productId: number, period?: string, limit: number = 15): Promise<PriceHistoryItem[]> {
     if (!productId || isNaN(productId) || productId <= 0) {
       throw new ValidationError([{ field: "productId", message: "ID do produto inválido." }]);

@@ -74,7 +74,9 @@ Direct relative paths from project root.
 | `src/backend/src/modules/market/market.routes.ts` | Market Router (`GET /`, `GET /:id`, `POST /`) |
 | `src/backend/src/modules/market/market.controller.ts` | `marketController` singleton — getAllMarkets, getMarketById, createMarket |
 | `src/backend/src/modules/market/market.service.ts` | `marketService` singleton — market listing and creation |
+| `src/backend/src/shared/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, description, and normalization helpers) |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, customizationItem, userCustomization, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
+
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
 | `src/backend/src/shared/database/repositories/customization.repository.ts` | `CustomizationRepository` — getAllItems, getItemById, getUserInventory, isItemOwnedByUser, addCustomizationToUser, updateUserEquipped, getUserEquippedCustomizations |
@@ -134,6 +136,8 @@ Direct relative paths from project root.
 | `src/frontend/content/themeContent.tsx` | Retrocompatibility bridge to `src/frontend/theme` |
 | `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
 | `src/frontend/content/tabNavigationContext.tsx` | Directional screen navigation context for swipe gestures |
+| `src/frontend/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, and i18n localization helpers) |
+| `src/frontend/components/CategorySelector.tsx` | Reusable category selector with preset chips, emoji/icon badges, custom category option, and theme accent highlighting |
 | `src/frontend/components/SwipeTabNavigator.tsx` | 1:1 real-time finger-tracking Reanimated gesture navigator |
 
 ---
@@ -162,6 +166,8 @@ Direct relative paths from project root.
 - [x] Native Map Multi-Source Resilient Market Fetching (eliminated dead Overpass mirrors, added parallel Photon & Nominatim OpenStreetMap fallback, backend market radius fallback, and empty state banner).
 - [x] Native Map Progressive Loading & False Empty State Fix (eliminated loading race condition where empty banner flashed before fetch finished, added progressive Nominatim streaming callback, and separated `isLoadingMarkets` and `isProcessingLocation`).
 - [x] Native Map Duplicate Marker Keys Fix (guaranteed unique IDs and geo-hash deduplication across progressive Nominatim, Overpass, and Backend markets).
+- [x] Pre-established Product Categories & Types System across full-stack (15 standardized categories with emoji, icon, multilingual i18n support in 7 languages, backend /types and /categories/details routes, CategorySelector interactive component, category chips in search.tsx, and enriched badges in productDetails.tsx and productCard.tsx).
+
 
 ---
 

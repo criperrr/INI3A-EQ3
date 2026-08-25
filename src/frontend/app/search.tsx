@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
+import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
 
 export default function SearchScreen() {
   const { themeStyles, accent, isDark } = useTheme();
@@ -165,6 +166,8 @@ export default function SearchScreen() {
         accent={accent}
         themeStyles={themeStyles}
         isDark={isDark}
+        t={t}
+        allCategoryLabel={allCategoryLabel}
       />
 
       {loading && !refreshing && (
@@ -269,6 +272,8 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
   accent,
   themeStyles,
   isDark,
+  t,
+  allCategoryLabel,
 }: {
   categories: string[];
   selectedCategory: string;
@@ -276,6 +281,8 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
   accent: string;
   themeStyles: any;
   isDark: boolean;
+  t: (key: any) => string;
+  allCategoryLabel: string;
 }) {
   return (
     <View style={styles.categoriesWrapper}>
@@ -286,6 +293,10 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
       >
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat;
+          const isAll = cat === allCategoryLabel || cat === "Todos" || cat === "All";
+          const emoji = isAll ? "🔍" : getCategoryEmoji(cat);
+          const displayName = isAll ? allCategoryLabel : getLocalizedCategoryName(cat, t);
+
           return (
             <TouchableOpacity
               key={cat}
@@ -298,6 +309,7 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
               activeOpacity={0.8}
               onPress={() => onSelectCategory(cat)}
             >
+              <Text style={styles.categoryChipEmoji}>{emoji}</Text>
               <Text
                 style={[
                   styles.categoryChipText,
@@ -305,7 +317,7 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
                   isSelected && { color: "#FFFFFF", fontWeight: "700" },
                 ]}
               >
-                {cat}
+                {displayName}
               </Text>
             </TouchableOpacity>
           );
@@ -352,8 +364,9 @@ const ProductCardItem = memo(function ProductCardItem({
         )}
         {product.category && product.category !== "Sem Categoria" && (
           <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
+            <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
             <Text style={styles.categoryBadgeText} numberOfLines={1}>
-              {product.category.toUpperCase()}
+              {getLocalizedCategoryName(product.category, t).toUpperCase()}
             </Text>
           </View>
         )}
@@ -484,10 +497,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 16,
     borderWidth: 1,
+    gap: 6,
+  },
+  categoryChipEmoji: {
+    fontSize: 13,
   },
   categoryChipText: {
     fontSize: 13,
@@ -544,9 +563,15 @@ const styles = StyleSheet.create({
     top: 6,
     left: 6,
     maxWidth: "85%",
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    gap: 3,
+  },
+  categoryBadgeEmoji: {
+    fontSize: 10,
   },
   categoryBadgeText: {
     fontSize: 9,

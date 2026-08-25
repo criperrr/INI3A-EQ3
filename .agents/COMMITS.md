@@ -24,7 +24,40 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
-## [2026-08-25 12:15] - fix(map): deduplicate markers by ID and coordinates eliminating React duplicate key warning
+## [2026-08-25 12:28] - feat(products): pre-established product categories and types across full-stack with i18n support
+
+- **Description:** Implemented standardized pre-established product categories and types across backend and frontend:
+  1. **Backend Standardization (`src/backend/src/shared/constants/productCategories.ts`):** Defined 15 standardized grocery categories with slug, default name, emoji, icon, and descriptions (`alimentos_basicos`, `hortifruti`, `carnes_aves_peixes`, `laticinios_ovos`, `padaria_confeitaria`, `bebidas`, `congelados`, `doces_snacks`, `limpeza`, `higiene_beleza`, `bebes_infantil`, `pet_shop`, `farmacia_saude`, `utilidades_bazar`, `outros`). Added `normalizeCategoryName` and `findPredefinedCategory` helpers.
+  2. **Backend Repository & Routing (`product.repository.ts`, `product.service.ts`, `product.controller.ts`, `product.routes.ts`):** `getCategories()` returns predefined categories merged with database distinct entries; added `/products/types` and `/products/categories/details` endpoints; enhanced category search filtering to match both slugs and descriptive names.
+  3. **Frontend Constants & i18n (`src/frontend/constants/productCategories.ts`, `src/frontend/i18n/types.ts`, `locales/*.ts`):** Added localized category names and picker prompts across all 7 languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+  4. **Interactive Category Selector (`src/frontend/components/CategorySelector.tsx`):** Created a modern, accessible category chip selector component with emoji indicators, theme-aware accent focus, and a custom category fallback input.
+  5. **Screen Integrations (`customRegisterProduct.tsx`, `productDetails.tsx`, `search.tsx`, `productCard.tsx`):** Integrated `CategorySelector` in custom product creation and admin product edit modal; rendered category badges with emojis in product details and cards; added rich category filter chips in the search screen.
+  6. **Typecheck Verification:** `npx tsc --noEmit` passed with 0 errors in both `src/backend` and `src/frontend`.
+- **Files Modified:**
+  - `src/backend/src/shared/constants/productCategories.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/frontend/constants/productCategories.ts`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Standardizes product categorization across the app while allowing custom categories and full internationalization.
+
 
 - **Description:** Fixed React warning `Encountered two children with the same key, 'osm_382515095'`:
   1. **Dual Deduplication in `mergeElements` (`src/frontend/app/map.native.tsx`):** Added tracking for both `seenIds` (matching OSM entity IDs) and `seenGeo` (matching 4-decimal precision geographic coordinates).

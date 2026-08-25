@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { createCustomProduct } from "../services/productService";
+import CategorySelector from "../components/CategorySelector";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -109,17 +110,14 @@ export default function CustomRegisterProduct() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.category")}</Text>
-          <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
-            <TextInput
-              style={[styles.input, themeStyles.text]}
-              placeholder={t("products.categoryPlaceholder")}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-              value={category}
-              onChangeText={setCategory}
-            />
-          </View>
+          <CategorySelector
+            selectedCategory={category}
+            onSelectCategory={setCategory}
+            label={t("productDetails.category")}
+            showCustomOption={true}
+          />
         </View>
+
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: accent }]}

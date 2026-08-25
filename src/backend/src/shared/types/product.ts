@@ -89,3 +89,12 @@ export interface UpdateProductDTO {
   icon?: string | undefined;
 }
 
+export interface ProductCategoryDTO {
+  id: string;
+  name: string;
+  emoji: string;
+  icon: string;
+  description: string;
+}
+
+

@@ -7,6 +7,8 @@ const router = Router();
 
 router.get("/", productController.getAllProducts);
 router.get("/categories", productController.getCategories);
+router.get("/categories/details", productController.getPredefinedCategories);
+router.get("/types", productController.getPredefinedCategories);
 router.get("/barcode/:ean", searchRateLimiter, productController.getProductByBarcode);
 router.get("/barcode", searchRateLimiter, productController.getProductByBarcode);
 router.get("/:id", productController.getProductById);

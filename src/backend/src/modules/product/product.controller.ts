@@ -158,6 +158,16 @@ class ProductControllerClass {
     }
   }
 
+  async getPredefinedCategories(_: Request, res: Response, next: NextFunction) {
+    try {
+      const categories = await productService.getPredefinedCategories();
+      return res.status(200).json(success(categories));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+
   async getPriceHistory(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;

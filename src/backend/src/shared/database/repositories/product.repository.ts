@@ -1,10 +1,12 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
+import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
 import { market, ocurrency, product } from "../schema";
 import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
   private categoryCache: { data: string[]; expiry: number } | null = null;
+
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
     if (!barcode) return null;
     const cleanBarcode = barcode.trim();
@@ -132,7 +134,19 @@ class ProductRepositoryClass {
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
-      conditions.push(ilike(product.description, `%${category.trim()}%`));
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        conditions.push(
+          or(
+            ilike(product.description, `%${matched.name}%`),
+            ilike(product.description, `%${matched.id}%`),
+            ilike(product.description, `%${cleanCat}%`)
+          )
+        );
+      } else {
+        conditions.push(ilike(product.description, `%${cleanCat}%`));
+      }
     }
 
     let query = db.select().from(product);
@@ -175,7 +189,19 @@ class ProductRepositoryClass {
     }
 
     if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
-      conditions.push(ilike(product.description, `%${category.trim()}%`));
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        conditions.push(
+          or(
+            ilike(product.description, `%${matched.name}%`),
+            ilike(product.description, `%${matched.id}%`),
+            ilike(product.description, `%${cleanCat}%`)
+          )
+        );
+      } else {
+        conditions.push(ilike(product.description, `%${cleanCat}%`));
+      }
     }
 
     let query = db.select({ count: sql<number>`count(*)::int` }).from(product);
@@ -229,6 +255,10 @@ class ProductRepositoryClass {
     return (res.rowCount ?? 0) > 0;
   }
 
+  async getPredefinedCategories() {
+    return PREDEFINED_PRODUCT_CATEGORIES;
+  }
+
   async getCategories(): Promise<string[]> {
     const now = Date.now();
     if (this.categoryCache && this.categoryCache.expiry > now) {
@@ -241,7 +271,7 @@ class ProductRepositoryClass {
       .where(sql`${product.description} IS NOT NULL AND ${product.description} != ''`)
       .groupBy(product.description);
 
-    const categoriesSet = new Set<string>();
+    const categoriesSet = new Set<string>(PREDEFINED_CATEGORY_NAMES);
     for (const r of rows) {
       if (r.category) {
         const parts = r.category.split(",");

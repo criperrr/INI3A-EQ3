@@ -437,6 +437,28 @@ export interface TranslationSchema {
     tryAgainLater: string;
     genericError: string;
   };
+  productCategories: {
+    title: string;
+    selectPrompt: string;
+    customCategory: string;
+    customCategoryPlaceholder: string;
+    presetCategories: string;
+    alimentos_basicos: string;
+    hortifruti: string;
+    carnes_aves_peixes: string;
+    laticinios_ovos: string;
+    padaria_confeitaria: string;
+    bebidas: string;
+    congelados: string;
+    doces_snacks: string;
+    limpeza: string;
+    higiene_beleza: string;
+    bebes_infantil: string;
+    pet_shop: string;
+    farmacia_saude: string;
+    utilidades_bazar: string;
+    outros: string;
+  };
 }
 
 export type SupportedLanguage = "pt-BR" | "en-US" | "es-ES" | "de-DE" | "ru-RU" | "zh-CN" | "ja-JP";
@@ -462,4 +484,6 @@ export type TranslationKey =
   | `map.${keyof TranslationSchema["map"]}`
   | `help.${keyof TranslationSchema["help"]}`
   | `about.${keyof TranslationSchema["about"]}`
-  | `errors.${keyof TranslationSchema["errors"]}`;
+  | `errors.${keyof TranslationSchema["errors"]}`
+  | `productCategories.${keyof TranslationSchema["productCategories"]}`;
+
