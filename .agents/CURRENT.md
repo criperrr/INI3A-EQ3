@@ -158,6 +158,7 @@ Direct relative paths from project root.
 - [x] Security Vulnerabilities Remediation & Business Logic Hardening (`POST /products` requireAuth access control, infinite XP vote farm exploit patch, HTTP 500 error sanitization in production, and backend build/typecheck scripts).
 - [x] Comprehensive Security Hardening & Vulnerability Sweep (seed admin password preservation, JWT revocation on account deletion, CORS whitelist policy, Redis rate limiting on auth & search endpoints, and strict geographic coordinate bounds validation).
 - [x] Native Map Performance Optimization (instant 0ms client-side filter transitions, unified Overpass 10km pre-fetch with `nw` query, OSRM driving distance caching, and elimination of repeated network calls on filter changes).
+- [x] Native Map Instant Startup Optimization (elimination of full-screen loading blocker, frame-0 optimistic map mount, module session memory persistence, and parallel Overpass mirror race via `Promise.any`).
 
 ---
 
