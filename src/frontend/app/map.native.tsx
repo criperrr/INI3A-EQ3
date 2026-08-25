@@ -18,6 +18,7 @@ import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { fetchMarkets, MarketData } from "../services/marketService";
+import { FeatherIcon } from "../components/FeatherIcon";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -71,6 +72,7 @@ interface MarketMarker {
     routeDistance: number;
     openingHours?: string;
     isBackendMarket?: boolean;
+    shopType?: string; // Novo campo
 }
 
 const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
@@ -250,6 +252,7 @@ export default function MapScreen() {
                         straightDistance: straightDist,
                         routeDistance: straightDist,
                         isBackendMarket: true,
+                        shopType: "supermarket", // Adicionado o tipo do backend
                     });
                 }
             }
@@ -306,6 +309,7 @@ export default function MapScreen() {
                 straightDistance,
                 routeDistance: straightDistance,
                 openingHours: el.tags?.opening_hours,
+                shopType: el.tags?.shop, // Captura o tipo direto da tag OSM
             });
         }
 
@@ -384,14 +388,25 @@ export default function MapScreen() {
                         longitudeDelta: 0.04,
                     } : undefined}
                 >
-                    {visibleMarkers.map((marker) => (
-                        <Marker
-                            key={marker.id}
-                            coordinate={marker.coordinate}
-                            pinColor={isDark ? THEME_COLORS.accent : THEME_COLORS.darkBlue}
-                            onPress={() => setSelectedMarket(marker)}
-                        />
-                    ))}
+                    {visibleMarkers.map((marker) => {
+                        const isSelected = selectedMarket?.id === marker.id;
+                        return (
+                            <Marker
+                                key={marker.id}
+                                coordinate={marker.coordinate}
+                                onPress={() => setSelectedMarket(marker)}
+                                anchor={{ x: 0.5, y: 1 }}
+                                tracksViewChanges={isSelected}
+                            >
+                                <FeatherIcon
+                                    size={34}
+                                    isDark={isDark}
+                                    shopType={marker.shopType} // Passando a prop pro componente
+                                    selected={isSelected}
+                                />
+                            </Marker>
+                        );
+                    })}
                 </MapView>
 
                 <View style={styles.filtersWrapper}>
