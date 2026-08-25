@@ -24,6 +24,89 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 08:35] - feat(gamification-badges): 15 progressive achievements, anti-overflow responsive grid, filter tabs, and detail modal
+
+- **Description:** Expanded achievements system from 5 to 15 progressive badges and redesigned achievements UI for zero screen overflow:
+  1. **Database Schema & Seeding (`schema.ts`, `seed.ts`):** Added `description` column to `badge` table schema and seeded 15 balanced progression milestones (*Pioneiro*, *Primeiro Olhar*, *Caçador de Preços*, *Sentinela do Bairro*, *Economista Ativo*, *Auditor Comunitário*, *Detetive de Ofertas*, *Guardião da Economia*, *Mestre das Ofertas*, *Radar de Preços*, *Lendário*, *Patrono do Consumo*, *Oráculo dos Mercados*, *Soberano Supremo*, *Mito Presco*) covering 0 to 10,000 XP.
+  2. **Repository & Service (`user.repository.ts`, `auth.service.ts`):** Enhanced queries to include achievement descriptions and sort badges by `minPoints ASC, id ASC`.
+  3. **Zero-Overflow Responsive Grid (`profile.tsx`):** Redesigned `BadgesSection` inside a contained card container with a 3-column wrapped grid (`width: "30.8%"`, `minHeight: 112`), uniform 2-line title wrapping (`numberOfLines={2}`), status tags, and lock overlay badges, completely eliminating horizontal screen bleeding.
+  4. **Filter Tabs & Expand Action (`profile.tsx`):** Added filter chips for *Todas ({count})*, *Conquistadas ({unlocked})*, and *A Conquistar ({locked})*, plus an intuitive expand/collapse toggle for compact display.
+  5. **Interactive Achievement Detail Modal (`profile.tsx`):** Created a modal popup showing large glowing emoji, full achievement title, requirement, XP progress bar, unlocked timestamp, and descriptions.
+  6. **Multilingual Localization (i18n):** Added complete translations for all new badge actions, filters, requirements, and modal labels across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/repositories/user.repository.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/frontend/services/auth.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/profile.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unlocked badges scale smoothly on all device form factors without breaking viewport boundaries.
+
+## [2026-08-25 08:23] - feat(shop-mechanics): preserve lifetime XP on customization unlocks (milestone-based progression)
+
+- **Description:** Configured customization unlocks to function as non-depleting milestone rewards rather than consumable currency:
+  1. **Milestone Requirement (`customization.service.ts`):** Users must have accumulated the required threshold of contribution points (`points >= item.price`) and level (`level >= item.minLevel`) to unlock an item.
+  2. **XP Preservation:** When unlocking/buying an item, the user's total XP score is NOT deducted or decreased, preserving user level, rank progress, and lifetime contribution score.
+  3. **Verification:** Verified that `buyItem` successfully adds items to inventory and auto-equips them while preserving the user's exact balance in PostgreSQL.
+- **Files Modified:**
+  - `src/backend/src/modules/customization/customization.service.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unlocks reward progression without penalizing or reducing accumulated user XP.
+
+## [2026-08-25 08:20] - fix(shop-debug): deduct XP points unconditionally on item purchase and separate catalog by categories
+
+- **Description:** Investigated and resolved two shop behavior issues:
+  1. **Points Deduction Fix (`customization.service.ts`):** Removed `!isSuperAdmin` bypass that previously prevented point deduction when testing with administrator credentials. Now, any item with `price > 0` deducts its cost directly from the user's `points` balance in PostgreSQL and returns updated balance.
+  2. **Inventory Ownership Calculation (`customization.service.ts`):** Fixed `isOwned` computation so admin accounts don't automatically mark unpurchased items as owned, allowing users and admins to buy items with their points.
+  3. **Categorized Shop UI (`profile.tsx`):** Structured `CustomizationShopModal` catalog into explicit category sections (*Fundos de Perfil*, *Molduras de Avatar*, *Molduras & Insígnias de Nível*) with colored category icon badges, category titles/subtitles, and item count chips.
+- **Files Modified:**
+  - `src/backend/src/modules/customization/customization.service.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/frontend/app/profile.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Guaranteed that buying shop items deducts XP points accurately and displays a cleanly categorized store layout.
+
+## [2026-08-25 08:00] - feat(profile-customization): profile customization store, dynamic banners, avatar frames, level badges, and live preview
+
+- **Description:** Implemented a full-stack User Profile Customization and Shop system powered by user contribution XP/Points:
+  1. **Database & Schema (Drizzle ORM + PostgreSQL):** Added `customization_item` (catalog) and `user_customization` (inventory) tables with foreign keys and cascaded deletions. Augmented `user` entity with `equipped_banner_id`, `equipped_avatar_frame_id`, and `equipped_level_frame_id`.
+  2. **Database Seeding (`seed.ts`):** Seeded complete catalog of thematic Banners (*Presco Selva*, *Neon Cyberpunk*, *Pôr do Sol Tropical*, *Obsidiana Noturna*, *Aurora Boreal*, *Ouro Imperial*, *Cósmico Nebulosa*), Avatar Frames (*Clássico*, *Anel Esmeralda*, *Chama Carmesim*, *Aura Dourada*, *Prisma Diamante*, *Escudo Cibernético*, *Coroa Mítica*), and Level Badge Frames (*Distintivo Âmbar*, *Engrenagem Steampunk*, *Brasão Guardião*, *Asas Celestiais*, *Estrela Galáctica*, *Soberano Supremo*).
+  3. **Backend DDD Architecture:** Created `CustomizationRepository` singleton, `CustomizationService`, `CustomizationController`, and mounted `customizationRouter` (`GET /customizations/shop`, `POST /customizations/buy/:itemId`, `POST /customizations/equip/:itemId`, `POST /customizations/unequip/:category`). Enriched `authService.getProfile` (`GET /auth/me`) with `equippedCustomizations`.
+  4. **Frontend Architecture & Live Preview:** Created `customizationService.ts`, updated `auth.ts` interfaces, upgraded `profile.tsx` with dynamic visual banner renderers, animated/glow avatar frames, customizable level badges, and an interactive Customization Store & Inventory modal with real-time Live Avatar Preview and `expo-haptics`.
+  5. **Multilingual Localization (i18n):** Added complete translations for shop, inventory, pricing, level requirements, and actions across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+- **Files Modified/Created:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/repositories/customization.repository.ts` (NEW)
+  - `src/backend/src/shared/database/repositories/user.repository.ts`
+  - `src/backend/src/modules/customization/customization.service.ts` (NEW)
+  - `src/backend/src/modules/customization/customization.controller.ts` (NEW)
+  - `src/backend/src/modules/customization/customization.routes.ts` (NEW)
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/backend/src/app.ts`
+  - `src/frontend/services/customizationService.ts` (NEW)
+  - `src/frontend/services/auth.ts`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Users can now purchase and equip rich profile modifications using their earned contribution points/XP with real-time live preview feedback.
+
 ## [2026-08-25 07:27] - fix(ui-i18n): responsive flex containment and overflow prevention across all languages
 
 - **Description:** Systematically hardened all UI screens and components against text clipping and horizontal overflow across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP):

@@ -72,6 +72,29 @@ export const scope = pgTable(
   (table) => [unique("scope_scope_name_key").on(table.scopeName)],
 );
 
+export const customizationItem = pgTable(
+  "customization_item",
+  {
+    id: serial().primaryKey().notNull(),
+    name: varchar({ length: 100 }).notNull(),
+    category: varchar({ length: 30 }).notNull(), // "banner" | "avatar_frame" | "level_frame"
+    description: text(),
+    price: integer().default(0).notNull(),
+    minLevel: integer("min_level").default(1).notNull(),
+    previewValue: text("preview_value").notNull(),
+    config: text(), // JSON string with visual gradient/border/particle configs
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("customization_item_name_key").on(table.name),
+    check("customization_item_price_check", sql`price >= 0`),
+    check("customization_item_min_level_check", sql`min_level >= 1`),
+  ],
+);
+
 export const user = pgTable(
   "user",
   {
@@ -85,6 +108,9 @@ export const user = pgTable(
     dangerFlag: boolean("danger_flag").default(false).notNull(),
     location: geography("location"),
     roleId: integer("role_id").notNull().default(1),
+    equippedBannerId: integer("equipped_banner_id"),
+    equippedAvatarFrameId: integer("equipped_avatar_frame_id"),
+    equippedLevelFrameId: integer("equipped_level_frame_id"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -106,8 +132,50 @@ export const user = pgTable(
       foreignColumns: [role.id],
       name: "user_role_id_fkey",
     }),
+    foreignKey({
+      columns: [table.equippedBannerId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_banner_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedAvatarFrameId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_avatar_frame_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedLevelFrameId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_level_frame_id_fkey",
+    }).onDelete("set null"),
     unique("user_email_key").on(table.email),
     check("user_points_check", sql`points >= 0`),
+  ],
+);
+
+export const userCustomization = pgTable(
+  "user_customization",
+  {
+    userId: integer("user_id").notNull(),
+    itemId: integer("item_id").notNull(),
+    purchasedAt: timestamp("purchased_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "user_customization_user_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.itemId],
+      foreignColumns: [customizationItem.id],
+      name: "user_customization_item_id_fkey",
+    }).onDelete("cascade"),
+    primaryKey({
+      columns: [table.userId, table.itemId],
+      name: "user_customization_pkey",
+    }),
   ],
 );
 
@@ -117,6 +185,7 @@ export const badge = pgTable(
     id: serial().primaryKey().notNull(),
     name: varchar({ length: 100 }).notNull(),
     icon: text(),
+    description: text(),
     minPoints: integer("min_points").default(0).notNull(),
   },
   (table) => [

@@ -32,11 +32,15 @@ Routes:
 - `DELETE /ocurrency/:id` — delete price occurrence (requireAuth, author or admin)
 - `GET /markets` — list available markets
 - `POST /markets` — register new market (requireAuth)
+- `GET /customizations/shop` — list all profile customization items with ownership, equipped status, and points balance (requireAuth)
+- `POST /customizations/buy/:itemId` — buy a customization item using contribution points/XP (requireAuth)
+- `POST /customizations/equip/:itemId` — equip an owned banner, avatar frame or level badge (requireAuth)
+- `POST /customizations/unequip/:category` — restore a customization category to default (requireAuth)
 - `GET /health` — inspect database and Redis health
 
 **Frontend** is a React Native Expo app (SDK 54, React Native 0.81.5, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 - `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
-- `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, and contribution activity heatmap.
+- `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, contribution activity heatmap, dynamic visual banners, animated/glow avatar frames, custom level badges, and an interactive Customization Shop modal with live avatar preview.
 - `productDetails.tsx` displays market prices list, allows community price voting, and grants exclusive edit/delete controls to admins.
 - `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.
 - `settings.tsx` manages themes, system Monet color palettes, encoded config backup/import, cache clearing, and account security.
@@ -52,12 +56,15 @@ Direct relative paths from project root.
 
 | File | Key exports / purpose |
 |---|---|
-| `src/backend/src/app.ts` | Express app, mounts `/auth`, `/products`, `/ocurrency`, `/markets` routers, `/health`, `errorHandler` last |
+| `src/backend/src/app.ts` | Express app, mounts `/auth`, `/products`, `/ocurrency`, `/markets`, `/customizations` routers, `/health`, `errorHandler` last |
 | `src/backend/src/server.ts` | `bootstrap()` — connects Redis, verifies DB, executes idempotent seed, starts HTTP |
-| `src/backend/src/shared/database/seed.ts` | `seedDatabase()` — seeds roles, badges, markets, test admin (`admin@admin.org`/`admin`), regular test user |
+| `src/backend/src/shared/database/seed.ts` | `seedDatabase()` — seeds roles, badges, customization items (banners, avatar frames, level frames), markets, test admin (`admin@admin.org`/`admin`), regular test user |
 | `src/backend/src/modules/auth/auth.routes.ts` | Auth Router (`/register`, `/login`, `/refresh`, `/me`, `/logout`, `/password`, `/account`) |
 | `src/backend/src/modules/auth/auth.controller.ts` | `authController` singleton — register, login, refresh, getMe, logout, changePassword, deleteAccount |
 | `src/backend/src/modules/auth/auth.service.ts` | `authService` singleton — register, login, refreshTokens, getProfile, logout, changePassword, updateUser, deleteUser |
+| `src/backend/src/modules/customization/customization.routes.ts` | Customization Router (`GET /shop`, `POST /buy/:itemId`, `POST /equip/:itemId`, `POST /unequip/:category`) |
+| `src/backend/src/modules/customization/customization.controller.ts` | `customizationController` singleton — getCatalog, buyItem, equipItem, unequipItem |
+| `src/backend/src/modules/customization/customization.service.ts` | `customizationService` singleton — catalog calculation, purchase with XP points, equip, and unequip logic |
 | `src/backend/src/modules/product/product.routes.ts` | Product Router — REST CRUD with `requireAdmin` on PUT/PATCH/DELETE |
 | `src/backend/src/modules/product/product.controller.ts` | `productController` singleton — list, getById, getByBarcode, createCustomProduct (+25 XP), updateProduct, deleteProduct |
 | `src/backend/src/modules/product/product.service.ts` | `productService` singleton — full CRUD logic, dynamic price computation, statistics, OpenFoodFacts |
@@ -67,9 +74,10 @@ Direct relative paths from project root.
 | `src/backend/src/modules/market/market.routes.ts` | Market Router (`GET /`, `GET /:id`, `POST /`) |
 | `src/backend/src/modules/market/market.controller.ts` | `marketController` singleton — getAllMarkets, getMarketById, createMarket |
 | `src/backend/src/modules/market/market.service.ts` | `marketService` singleton — market listing and creation |
-| `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
+| `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, customizationItem, userCustomization, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
+| `src/backend/src/shared/database/repositories/customization.repository.ts` | `CustomizationRepository` — getAllItems, getItemById, getUserInventory, isItemOwnedByUser, addCustomizationToUser, updateUserEquipped, getUserEquippedCustomizations |
 | `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, incrementPoints, getUserWithRole, getUserBadges, getAllBadges, awardBadge, getUserRank, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
 | `src/backend/src/shared/database/repositories/ocurrency.repository.ts` | `OcurrencyRepository` — create, findById, findByProduct, findByUser, countByUser, update, delete, vote, getUserContributionGrid |
@@ -99,6 +107,7 @@ Direct relative paths from project root.
 |---|---|
 | `src/frontend/services/api.ts` | `apiRequest<T>`, `ApiError`, `STORAGE_KEYS`, `BASE_URL` |
 | `src/frontend/services/auth.ts` | `registerUser`, `loginUser`, `logoutUser`, `getStoredTokens`, `changePassword`, `deleteAccount`, `fetchUserProfile`, `AuthUser`, `UserProfileData` |
+| `src/frontend/services/customizationService.ts` | `fetchCustomizationCatalog`, `buyCustomizationItem`, `equipCustomizationItem`, `unequipCustomizationCategory`, `CustomizationItem`, `ShopCatalogData` |
 | `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
 | `src/frontend/services/ocurrencyService.ts` | `submitPriceOccurrence`, `fetchProductOccurrences`, `voteOccurrence`, `updateOccurrence`, `deleteOccurrence` |
 | `src/frontend/services/marketService.ts` | `fetchMarkets`, `createMarket` |
@@ -112,7 +121,7 @@ Direct relative paths from project root.
 | `src/frontend/app/registerProduct.tsx` | Price submission for a product at a selected market (+15 XP reward) |
 | `src/frontend/app/search.tsx` | Full live text & barcode search with debounce, category chips, pull-to-refresh, empty states, and product navigation |
 | `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, market occurrences list with community voting, and admin-only edit/delete controls |
-| `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, admin banner, and logout |
+| `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, visual banners, avatar frames, custom level badges, and interactive shop modal with live preview |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import encoded config, cache clearing, password change, account deletion |
 | `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
 | `src/frontend/app/help.tsx` | Help Center screen with FAQ accordions, search, and support contact |
@@ -139,25 +148,8 @@ Direct relative paths from project root.
 - [x] Horizontal pan/swipe tab navigation between main screens (TikTok-style) with 1:1 finger tracking and haptic feedback.
 - [x] Database & Redis auto-reconnect, idle error handling, `/health` endpoint, and `reload_services.sh` manager.
 - [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
-- [x] Complete Admin vs Regular User permission scheme, leveling and gamification (+15 XP price, +25 XP product, +5 XP vote), 100% dynamic profile screen without placeholders, Expo Go auto-detection with 1-tap admin login (`admin@admin.org`/`admin`), and occurrence submission across markets.
-- [x] Full mobile native performance optimization suite (Phase 0 Audit, Android 13-16 Predictive Back & Edge-to-Edge insets, iOS pop transitions, Metro `inlineRequires` lazy loading, full migration to `expo-image` with `memory-disk` cache, `@shopify/flash-list`, and pure UI thread memoization).
-- [x] Unify `.taagents` into `.agents` and generate comprehensive project documentation.
-- [x] Fix and polish Start Menu / ActionMenu layout on Home screen (activeView indicators, Monet tokens, concise i18n labels across 7 languages) and Sidebar drawer menu (safe area insets, brand header with close button, vector icons, user profile card).
-- [x] Fix PostgreSQL schema synchronization (`role.authority`, `user.birthdate`, PostGIS geography, drizzle migration tracking) and resolve Reanimated worklet `useRef` serialization warning in `SwipeTabNavigator`.
-- [x] Fix EAN product lookup and navigation pipeline: Open Food Facts, Open Beauty Facts, Open Products Facts and Open Pet Food Facts multi-endpoint parallel fallback, barcode digit/leading-zero normalization, string length safety in PostgreSQL, auto-lookup during search, and ID propagation across `scannerProduct` → `scannerConfirmation` → `registerProduct`.
-- [x] Fix unauthenticated profile screen error (`ApiError: Token não fornecido`) by guarding `/auth/me` profile refresh and adding 1-tap test user and admin quick-connect actions (`usuario@presco.com` / `user123` and `admin@admin.org` / `admin`).
-- [x] Implement market proximity lookup in frontend map screen with instant location resolution (`getLastKnownPositionAsync`), local database markets fallback (`fetchMarkets`), Overpass in-memory caching, non-blocking OSRM routing, and instant client-side product/market caching.
-- [x] Fix profile ApiError and implement graceful session error handling in `api.ts`, `auth.ts`, and `authContext.tsx`.
-- [x] Create Windows dev launcher (`start_project.ps1` and `start_project.bat`) with automated TCP port checking, LAN IP detection, Windows Terminal split-pane orchestration, and `npm run dev:win` shortcuts.
-- [x] Full UI localization audit and completion across 100% of screens (`map.native.tsx`, `settings.tsx`, `aboutUs.tsx`, `helpUser.tsx`, `manualEanSearch.tsx`, `about.tsx`, `help.tsx`, `login.tsx`, `registerUser.tsx`, `profile.tsx`, `index.tsx`, `Sidebar.tsx`), ensuring dynamic usernames remain untranslated while all alerts, modals, dialogs, presets, and fallback labels are fully localized in all 7 languages with 0 TypeScript compilation errors.
-- [x] Create backend environment file (`src/backend/.env`) and templates (`src/backend/.env.example`, `.env.example`) with PostgreSQL, Redis, server port/host, and JWT secret configuration.
-- [x] Fix Windows Terminal (`wt.exe`) split pane / tab argument parsing and semicolon tokenization in `start_project.ps1`, add `start.bat` alias, and provide `-SeparateWindows` (`npm run dev:win:separate`) mode.
-- [x] Configure Windows Terminal split pane to vertical (`-V`, side-by-side) in `start_project.ps1` (invoked via `start.bat` and `start_project.bat`).
-- [x] Fix Home icon navigation and state reset across all tabs, subpages and header/sidebar/footer components (`tabNavigationContext.tsx`, `Footer.tsx`, `Header.tsx`, `Sidebar.tsx`, `_layout.tsx`, `index.tsx`).
-- [x] Align price history to left, limit history to maximum 15 prices, and implement interactive time period filtering (`7D`, `1M`, `6M`, `1A`, `Tudo`) with full i18n localization in `productDetails.tsx`, `product.repository.ts`, `product.service.ts`, and `product.controller.ts`.
-- [x] Automatically capture and display current day date when registering product prices in `registerProduct.tsx` with dedicated date card, "Hoje" badge, i18n in 7 languages, and `createdAt` persistence in `ocurrency.repository.ts`, `ocurrency.service.ts`, and `ocurrency.controller.ts`.
-- [x] Establish full 3-layer Design System token architecture (`src/frontend/theme/`: Primitives -> Semantics -> Component Consumption), eliminating raw literals while preserving 100% visual fidelity, Light/Dark/AMOLED theming and Monet dynamic palettes.
-- [x] Comprehensive UI/i18n Overflow and Responsive Layout Fix across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) and all application screens/components (`Sidebar`, `productCard`, `index`, `productDetails`, `profile`, `registerProduct`, `customRegisterProduct`, `manualEanSearch`, `search`, `settings`, `map.native`, `login`, `registerUser`, `about`, `aboutUs`, `help`, `helpUser`, `scannerProduct`, `scannerConfirmation`), enforcing flex containment (`flex: 1`, `flexShrink: 1`), text clipping limits (`numberOfLines`, `ellipsizeMode="tail"`), wrapping rows (`flexWrap: "wrap"`), and concise localized phrases.
+- [x] Profile Customization Store & Inventory System with Points / XP milestone unlock, customizable banners, glow avatar frames, level badge frames, live avatar preview, categorized sections (Fundos, Molduras, Níveis) and multilingual support across all 7 languages without debiting user total XP score.
+- [x] Achievements & Badges Expansion (15 progressive milestones from 0 to 10.000 XP) with description support, Drizzle schema enhancement, zero-overflow responsive contained grid layout, filter tabs (Todas, Conquistadas, A Conquistar), and interactive achievement detail modal in profile.tsx.
 
 ---
 

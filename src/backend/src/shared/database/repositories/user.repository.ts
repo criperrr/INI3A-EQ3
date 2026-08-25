@@ -78,6 +78,9 @@ class UserRepositoryClass {
         roleId: User.roleId,
         dangerFlag: User.dangerFlag,
         birthdate: User.birthdate,
+        equippedBannerId: User.equippedBannerId,
+        equippedAvatarFrameId: User.equippedAvatarFrameId,
+        equippedLevelFrameId: User.equippedLevelFrameId,
         createdAt: User.createdAt,
         updatedAt: User.updatedAt,
         roleName: schema.role.name,
@@ -97,6 +100,7 @@ class UserRepositoryClass {
         id: schema.badge.id,
         name: schema.badge.name,
         icon: schema.badge.icon,
+        description: schema.badge.description,
         minPoints: schema.badge.minPoints,
         awardedAt: schema.userBadge.awardedAt,
       })
@@ -106,7 +110,9 @@ class UserRepositoryClass {
   }
 
   async getAllBadges() {
-    return this.db.query.badge.findMany();
+    return this.db.query.badge.findMany({
+      orderBy: (table, { asc }) => [asc(table.minPoints), asc(table.id)],
+    });
   }
 
   async awardBadge(userId: string | number, badgeId: number) {
