@@ -18,7 +18,6 @@ import { Stack } from "expo-router";
 import { useTheme } from "../content/themeContent";
 import { useI18n } from "../content/i18nContext";
 import { fetchMarkets, MarketData } from "../services/marketService";
-import { FeatherIcon } from "../components/FeatherIcon";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -72,47 +71,7 @@ interface MarketMarker {
     routeDistance: number;
     openingHours?: string;
     isBackendMarket?: boolean;
-    shopType?: string;
 }
-
-interface CustomMarkerProps {
-    marker: MarketMarker;
-    isSelected: boolean;
-    onPress: () => void;
-    isDark: boolean;
-}
-
-// Componente para gerenciar a renderização segura do marcador
-const CustomMarker = ({ marker, isSelected, onPress, isDark }: CustomMarkerProps) => {
-    const [trackChanges, setTrackChanges] = useState(true);
-
-    useEffect(() => {
-        if (isSelected) {
-            setTrackChanges(true);
-        } else {
-            const timer = setTimeout(() => {
-                setTrackChanges(false);
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [isSelected]);
-
-    return (
-        <Marker
-            coordinate={marker.coordinate}
-            onPress={onPress}
-            anchor={{ x: 0.5, y: 1 }}
-            tracksViewChanges={trackChanges}
-        >
-            <FeatherIcon
-                size={34}
-                isDark={isDark}
-                shopType={marker.shopType}
-                selected={isSelected}
-            />
-        </Marker>
-    );
-};
 
 const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
     if (!hours) return t ? t("map.hoursUnknown") : "Horário não informado";
@@ -291,7 +250,6 @@ export default function MapScreen() {
                         straightDistance: straightDist,
                         routeDistance: straightDist,
                         isBackendMarket: true,
-                        shopType: "supermarket",
                     });
                 }
             }
@@ -348,7 +306,6 @@ export default function MapScreen() {
                 straightDistance,
                 routeDistance: straightDistance,
                 openingHours: el.tags?.opening_hours,
-                shopType: el.tags?.shop,
             });
         }
 
@@ -428,12 +385,11 @@ export default function MapScreen() {
                     } : undefined}
                 >
                     {visibleMarkers.map((marker) => (
-                        <CustomMarker
+                        <Marker
                             key={marker.id}
-                            marker={marker}
-                            isSelected={selectedMarket?.id === marker.id}
+                            coordinate={marker.coordinate}
+                            pinColor={isDark ? THEME_COLORS.accent : THEME_COLORS.darkBlue}
                             onPress={() => setSelectedMarket(marker)}
-                            isDark={isDark}
                         />
                     ))}
                 </MapView>
@@ -523,7 +479,7 @@ const FilterButton = ({ icon, label, onPress, themeStyles, isDark }: any) => (
         onPress={onPress}
     >
         <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : THEME_COLORS.darkBlue} />
-        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={2}>{label}</Text>
+        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
 );
 
@@ -653,16 +609,14 @@ const styles = StyleSheet.create({
     filterCard: {
         borderRadius: 12,
         paddingVertical: 10,
-        paddingHorizontal: 6,
+        paddingHorizontal: 8,
         alignItems: "center",
         justifyContent: "center",
-        flex: 1,
-        marginHorizontal: 4,
-        minHeight: 64,
+        width: "31%",
         borderWidth: 1,
         elevation: 3,
     },
-    filterText: { fontSize: 10.5, marginTop: 4, textAlign: "center", fontWeight: "600" },
+    filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
     recenterButton: {
         position: "absolute",
         bottom: 30,
