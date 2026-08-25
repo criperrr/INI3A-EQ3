@@ -1,6 +1,7 @@
 import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
 import { OcurrencyRepository } from "@/shared/database/repositories/ocurrency.repository";
+import { CustomizationRepository } from "@/shared/database/repositories/customization.repository";
 import { hash, compare } from "bcrypt";
 import {
   signAccessToken,
@@ -263,11 +264,14 @@ class AuthServiceClass {
         id: b.id,
         name: b.name,
         icon: b.icon,
+        description: b.description || null,
         minPoints: b.minPoints,
         isUnlocked: !!awarded || isSuperAdmin || points >= b.minPoints,
         awardedAt: awarded?.awardedAt || null,
       };
     });
+
+    const equippedCustomizations = await CustomizationRepository.getUserEquippedCustomizations(Number(userId));
 
     return {
       id: user.id,
@@ -282,6 +286,7 @@ class AuthServiceClass {
       currentXp,
       maxXp,
       levelTitle,
+      equippedCustomizations,
       stats: {
         rank: rankPosition,
         reportedPrices: totalOccurrences,

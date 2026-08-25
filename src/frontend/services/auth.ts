@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { apiRequest, STORAGE_KEYS } from "./api";
+import type { EquippedCustomizations } from "./customizationService";
 
 export interface AuthUser {
   id: number;
@@ -22,6 +23,7 @@ export interface BadgeItem {
   id: number;
   name: string;
   icon: string | null;
+  description?: string | null;
   minPoints: number;
   isUnlocked: boolean;
   awardedAt?: string | null;
@@ -37,6 +39,7 @@ export interface UserStats {
 export interface UserProfileData extends AuthUser {
   stats: UserStats;
   badges: BadgeItem[];
+  equippedCustomizations?: EquippedCustomizations | null;
   contributionsGrid: number[][];
   recentContributions: Array<{
     id: number;
