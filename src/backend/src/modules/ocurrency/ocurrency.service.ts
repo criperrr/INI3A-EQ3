@@ -59,13 +59,23 @@ class OcurrencyServiceClass {
 
     const result = await OcurrencyRepository.vote(userId, ocurrencyId, verdict);
 
-    // Award +5 XP for active curation/audit
-    const updatedUser = await UserRepository.incrementPoints(userId, 5);
+    let pointsEarned = 0;
+    let currentPoints = 0;
+
+    if (result.isNewVote) {
+      // Award +5 XP only for new curation/audit
+      const updatedUser = await UserRepository.incrementPoints(userId, 5);
+      pointsEarned = 5;
+      currentPoints = updatedUser?.points ?? 0;
+    } else {
+      const user = await UserRepository.getUserById(userId);
+      currentPoints = user?.points ?? 0;
+    }
 
     return {
       ...result,
-      pointsEarned: 5,
-      currentPoints: updatedUser?.points ?? 0,
+      pointsEarned,
+      currentPoints,
     };
   }
 

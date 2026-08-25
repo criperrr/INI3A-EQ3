@@ -152,7 +152,7 @@ class OcurrencyRepositoryClass {
     if (existingVote) {
       if (existingVote.verdict === verdict) {
         // Vote already same, do nothing
-        return { changed: false, verdict };
+        return { changed: false, isNewVote: false, verdict };
       }
       // Update vote
       await db
@@ -177,7 +177,7 @@ class OcurrencyRepositoryClass {
           })
           .where(eq(Ocurrency.id, ocurrencyId));
       }
-      return { changed: true, verdict };
+      return { changed: true, isNewVote: false, verdict };
     }
 
     // Insert new vote
@@ -199,7 +199,7 @@ class OcurrencyRepositoryClass {
         .where(eq(Ocurrency.id, ocurrencyId));
     }
 
-    return { changed: true, verdict };
+    return { changed: true, isNewVote: true, verdict };
   }
 
   /**

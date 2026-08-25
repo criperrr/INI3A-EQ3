@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { productController } from "./product.controller";
-import { requireAdmin } from "@/shared/middlewares/authMiddleware";
+import { requireAuth, requireAdmin } from "@/shared/middlewares/authMiddleware";
 
 const router = Router();
 
@@ -10,8 +10,8 @@ router.get("/barcode/:ean", productController.getProductByBarcode);
 router.get("/barcode", productController.getProductByBarcode);
 router.get("/:id", productController.getProductById);
 router.get("/:id/history", productController.getPriceHistory);
-router.post("/custom", productController.createCustomProduct);
-router.post("/", productController.createCustomProduct);
+router.post("/custom", requireAuth as any, productController.createCustomProduct);
+router.post("/", requireAuth as any, productController.createCustomProduct);
 router.put("/:id", requireAdmin as any, productController.updateProduct);
 router.patch("/:id", requireAdmin as any, productController.updateProduct);
 router.delete("/:id", requireAdmin as any, productController.deleteProduct);

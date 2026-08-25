@@ -22,12 +22,12 @@ Routes:
 - `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts fallback with auto-cache)
 - `GET /products/:id` — get product details with latest price, min/max/avg statistics and occurrence history
 - `GET /products/:id/history` — get price history timeline for charts
-- `POST /products/custom` / `POST /products` — create product (+25 XP for user)
+- `POST /products/custom` / `POST /products` — create product (+25 XP for user, requireAuth)
 - `PUT /products/:id` / `PATCH /products/:id` — update product (requireAdmin)
 - `DELETE /products/:id` — delete product from database (requireAdmin)
 - `POST /ocurrency` — submit price report occurrence (+15 XP, requireAuth)
 - `GET /ocurrency/product/:productId` — list price reports for a product across markets
-- `POST /ocurrency/:id/vote` — audit / vote on price reliability (+5 XP, requireAuth)
+- `POST /ocurrency/:id/vote` — audit / vote on price reliability (+5 XP strictly on new votes, requireAuth)
 - `PUT /ocurrency/:id` — update price occurrence (requireAuth, author or admin)
 - `DELETE /ocurrency/:id` — delete price occurrence (requireAuth, author or admin)
 - `GET /markets` — list available markets
@@ -154,6 +154,7 @@ Direct relative paths from project root.
 - [x] Renamed profile customization banners in `seed.ts` to natural, evocative names matching the actual visual line art (*Folhas Tropicais*, *Circuitos Digitais*, *Brisa Suave*, *Noite Estrelada*, *Ondas Cósmicas*, *Gemas & Cristais*, *Observatório Espacial*).
 - [x] Design System Policy & Token Governance documentation in `DESIGN.md`, legacy dead screens cleanup (`aboutUs.tsx`, `helpUser.tsx`), and full unification of theme imports directly to `src/frontend/theme`.
 - [x] Full-Stack Security Audit, Zero-Breaking Performance Optimization & Code Hygiene (Express defensive security headers, payload body limits, 18 ESLint warnings elimination to 0 warnings, and complete typecheck verification).
+- [x] Security Vulnerabilities Remediation & Business Logic Hardening (`POST /products` requireAuth access control, infinite XP vote farm exploit patch, HTTP 500 error sanitization in production, and backend build/typecheck scripts).
 
 ---
 

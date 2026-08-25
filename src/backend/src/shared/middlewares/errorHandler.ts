@@ -28,9 +28,12 @@ export function errorHandler(
     return res.status(statusCode).json(responsePayload);
   }
 
+  const isProduction = process.env.NODE_ENV === "production";
   return res.status(500).json({
     success: false,
     code: "INTERNAL_SERVER_ERROR",
-    message: error.message || "An unexpected error occurred.",
+    message: isProduction
+      ? "Ocorreu um erro interno no servidor."
+      : (error.message || "An unexpected error occurred."),
   });
 }

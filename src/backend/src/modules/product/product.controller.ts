@@ -71,7 +71,7 @@ class ProductControllerClass {
     }
   }
 
-  async createCustomProduct(req: Request, res: Response, next: NextFunction) {
+  async createCustomProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
       const { name, category, description, icon, ean, ncm } = req.body;
 
@@ -91,8 +91,8 @@ class ProductControllerClass {
         ncm,
       });
 
-      if ((req as any).user?.id) {
-        await UserRepository.incrementPoints((req as any).user.id, 25).catch(() => {});
+      if (req.user?.id) {
+        await UserRepository.incrementPoints(req.user.id, 25).catch(() => {});
       }
 
       return res.status(201).json(success(product));

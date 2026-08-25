@@ -24,6 +24,25 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 11:25] - fix(security-vulnerabilities): auth requirement on product creation, XP farm exploit patch, 500 error sanitization, and backend typecheck script
+
+- **Description:** Remediated critical security vulnerabilities and business logic flaws identified in the deep security audit:
+  1. **Access Control Hardening (`src/backend/src/modules/product/product.routes.ts`, `product.controller.ts`):** Injected `requireAuth` middleware into `POST /products/custom` and `POST /products` endpoints (resolving OWASP A01 unauthenticated product spam). Updated `createCustomProduct` to receive `req: Api.Request` and securely award +25 XP using `req.user.id`.
+  2. **Gamification Infinite XP Exploit Fix (`src/backend/src/modules/ocurrency/ocurrency.service.ts`, `ocurrency.repository.ts`):** Updated `OcurrencyRepository.vote` to return `isNewVote: boolean` and configured `ocurrencyService.vote` to award +5 XP strictly on new community votes (`isNewVote === true`), eliminating identical vote spamming and vote toggle XP farming (resolving OWASP A06).
+  3. **Exceptional Conditions & Information Disclosure Defense (`src/backend/src/shared/middlewares/errorHandler.ts`):** Sanitized HTTP 500 error messages in production to return a generic message ("Ocorreu um erro interno no servidor."), preventing raw database driver syntax/error leakage to API clients (resolving OWASP A10).
+  4. **Build & Typecheck Scripts (`src/backend/package.json`):** Added `"build"` and `"typecheck"` scripts (`tsc -p tsconfig.json --noEmit`).
+  5. **Verification Suite:** Executed `typecheck` on backend and frontend (0 errors), `security_scan.py`, and `lint_runner.py`.
+- **Files Modified:**
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/middlewares/errorHandler.ts`
+  - `src/backend/package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Unauthenticated product pollution and XP inflation completely prevented; zero regression across all API endpoints and types.
+
 ## [2026-08-25 11:15] - chore(audit-optimization): security headers, body payload guard, and 0-warning lint optimization
 
 - **Description:** Executed full-stack multi-agent audit, security testing, and zero-breaking performance/quality optimization across backend and frontend:
