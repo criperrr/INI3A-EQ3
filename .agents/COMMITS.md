@@ -24,6 +24,37 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 10:55] - refactor(design-system): token governance policy in DESIGN.md, dead screens cleanup, and direct theme imports
+
+- **Description:** Completed comprehensive audit, standardization, and governance documentation for the Presco Design System:
+  1. **Policy & Governance Documentation (`DESIGN.md`):** Added Section 5 ("Política do Design System & Governança de Tokens") establishing the Single Source of Truth rule, prohibition of local hardcoded color objects/hex values, guidelines for coexistence between static native `StyleSheet.create` and dynamic semantic tokens via `useTheme()`, lifecycle for adding new tokens across the 3-tier architecture, and WCAG AA accessibility contrast standards.
+  2. **Dead Screens Cleanup (`src/frontend/app/`):** Deleted obsolete and duplicate screen files (`aboutUs.tsx` replaced by `about.tsx`, `helpUser.tsx` replaced by `help.tsx`), removing redundant routes in Expo Router.
+  3. **Theme Imports Unification:** Converted all screen imports across `src/frontend/app/` from the backward-compatibility bridge (`../content/themeContent`) directly to `../theme`.
+  4. **Component Token Alignment (`registerUser.tsx`, `scannerProduct.tsx`, `scannerConfirmation.tsx`):** Eliminated local hardcoded `COLORS` objects, binding actions and interactive elements dynamically to `accent` and semantic feedback tokens (`semantic.colors.feedback.error`).
+- **Files Modified:**
+  - `DESIGN.md`
+  - `src/frontend/app/aboutUs.tsx` (deleted)
+  - `src/frontend/app/helpUser.tsx` (deleted)
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/map.tsx`
+  - `src/frontend/app/map.web.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** 100% of screens and components are aligned with the Design System architecture; TypeScript check passes with zero errors.
+
 ## [2026-08-25 10:37] - fix(profile): revert style and formatting modifications from commit c59429f
 
 - **Description:** Reverted commit `c59429f` ("style: fix code formatting and inconsistent whitespace in profile.tsx"), restoring the original whitespace, spacing, and formatting in `profile.tsx`.

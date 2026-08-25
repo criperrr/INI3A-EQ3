@@ -2,7 +2,7 @@ import React from "react";
 import { View, StyleSheet, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Stack } from "expo-router";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 
 export default function MapScreen() {

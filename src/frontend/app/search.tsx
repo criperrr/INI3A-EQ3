@@ -16,7 +16,7 @@ import {
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
 

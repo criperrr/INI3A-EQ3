@@ -13,7 +13,7 @@ import {
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import {

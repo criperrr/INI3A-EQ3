@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { Stack } from "expo-router";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchMarkets, MarketData } from "../services/marketService";
 

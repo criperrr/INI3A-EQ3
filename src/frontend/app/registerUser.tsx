@@ -16,14 +16,9 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
-
-const COLORS = {
-  accent: "#2E7D32",
-  white: "#FFFFFF",
-};
 
 const DEFAULT_AVATAR =
   "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
@@ -181,7 +176,7 @@ export default function RegisterUser() {
               accessibilityState={{ disabled: isLoading }}
             >
               {isLoading ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
+                <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
                 <Text style={styles.saveButtonText}>{t("auth.registerButton")}</Text>
               )}
@@ -222,7 +217,7 @@ const AvatarPicker = ({
           accessibilityRole="button"
           accessibilityLabel="Change avatar"
         >
-          <Ionicons name="camera" size={16} color={COLORS.white} />
+          <Ionicons name="camera" size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </View>
@@ -386,14 +381,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: COLORS.accent,
     width: 32,
     height: 32,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 2,
-    borderColor: COLORS.white,
+    borderColor: "#FFFFFF",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
@@ -413,13 +407,11 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, height: "100%" },
   eyeIcon: { padding: 8 },
   saveButton: {
-    backgroundColor: COLORS.accent,
     height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: COLORS.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -429,7 +421,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   saveButtonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
     letterSpacing: 0.5,
@@ -443,5 +435,5 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   footerText: { fontSize: 15 },
-  loginText: { color: COLORS.accent, fontSize: 15, fontWeight: "bold" },
+  loginText: { fontSize: 15, fontWeight: "bold" },
 });

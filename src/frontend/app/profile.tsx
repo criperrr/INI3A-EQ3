@@ -14,7 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import type { BadgeItem, UserProfileData } from "../services/auth";

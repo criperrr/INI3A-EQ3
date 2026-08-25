@@ -4,7 +4,7 @@ import { StyleSheet, View, StatusBar, Platform } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Stack, usePathname, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { ThemeProvider, useTheme } from "../content/themeContent";
+import { ThemeProvider, useTheme } from "../theme";
 import { I18nProvider } from "../content/i18nContext";
 import { AuthProvider } from "../content/authContext";
 import { TabNavigationProvider, useTabNavigation } from "../content/tabNavigationContext";

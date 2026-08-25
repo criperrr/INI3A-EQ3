@@ -2,14 +2,9 @@ import React, { useState, useCallback, useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
-
-const COLORS = {
-  white: "#FFFFFF",
-  accent: "#2E7D32",
-};
 
 export default function ScannerProduct() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -17,7 +12,7 @@ export default function ScannerProduct() {
   const [loading, setLoading] = useState(false);
   const isProcessing = useRef(false);
   const router = useRouter();
-  const { themeStyles } = useTheme();
+  const { themeStyles, accent } = useTheme();
   const { t } = useI18n();
 
   useFocusEffect(
@@ -133,7 +128,7 @@ export default function ScannerProduct() {
         >
           {loading ? (
              <View style={styles.loadingOverlay}>
-               <ActivityIndicator size="large" color={COLORS.accent} />
+               <ActivityIndicator size="large" color={accent} />
                <Text style={styles.loadingText}>{t("scanner.searchingProduct")}</Text>
              </View>
           ) : (
@@ -169,14 +164,14 @@ const PermissionNotice = ({
   onRequestPermission: () => Promise<any>;
   t: (key: any) => string;
 }) => {
-  const { themeStyles } = useTheme();
+  const { themeStyles, accent } = useTheme();
   return (
     <View style={styles.permissionContainer}>
       <Text style={[styles.permissionText, themeStyles.text]}>
         {t("scanner.permissionRequired")}
       </Text>
       <TouchableOpacity
-        style={styles.tempButtonStatic}
+        style={[styles.tempButtonStatic, { backgroundColor: accent }]}
         activeOpacity={0.8}
         onPress={onRequestPermission}
       >
@@ -210,7 +205,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   cameraBackground: { flex: 1, alignItems: "center", justifyContent: "center" },
   loadingOverlay: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", width: "100%" },
-  loadingText: { color: COLORS.white, marginTop: 16, fontSize: 16, fontWeight: "bold" },
+  loadingText: { color: "#FFFFFF", marginTop: 16, fontSize: 16, fontWeight: "bold" },
   permissionContainer: {
     flex: 1,
     alignItems: "center",
@@ -234,10 +229,10 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: COLORS.white,
+    color: "#FFFFFF",
     marginBottom: 5,
   },
-  instructionText: { fontSize: 14, color: COLORS.white, opacity: 0.9 },
+  instructionText: { fontSize: 14, color: "#FFFFFF", opacity: 0.9 },
   scannerFrame: {
     width: 280,
     height: 180,
@@ -283,7 +278,6 @@ const styles = StyleSheet.create({
   },
   laserLine: { width: "85%", height: 2, backgroundColor: "red", opacity: 0.6 },
   tempButtonStatic: {
-    backgroundColor: COLORS.accent,
     paddingVertical: 15,
     paddingHorizontal: 25,
     borderRadius: 30,

@@ -8,13 +8,8 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import ProductCard from "../components/productCard";
-import { useTheme } from "../content/themeContent";
+import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
-
-const COLORS = {
-  white: "#FFFFFF",
-  redCancel: "#D32F2F",
-};
 
 interface ActionButtonsProps {
   onConfirm: () => void;
@@ -97,25 +92,29 @@ const PriceDetails = ({ lastPrice, themeStyles, t }: { lastPrice: string, themeS
   </View>
 );
 
-const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent, t }: ActionButtonsProps) => (
-  <View style={styles.buttonRow}>
-    <TouchableOpacity
-      style={[styles.button, { backgroundColor: accent }]}
-      activeOpacity={0.8}
-      onPress={onConfirm}
-    >
-      <Text style={styles.buttonText} numberOfLines={1}>{t("common.yes")}</Text>
-    </TouchableOpacity>
+const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent, t }: ActionButtonsProps) => {
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
+  return (
+    <View style={styles.buttonRow}>
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: accent }]}
+        activeOpacity={0.8}
+        onPress={onConfirm}
+      >
+        <Text style={styles.buttonText} numberOfLines={1}>{t("common.yes")}</Text>
+      </TouchableOpacity>
 
-    <TouchableOpacity
-      style={[styles.button, styles.buttonNo, themeStyles.border, { borderWidth: 1 }]}
-      activeOpacity={0.8}
-      onPress={onCancel}
-    >
-      <Text style={[styles.buttonText, { color: COLORS.redCancel }]} numberOfLines={1}>{t("common.no")}</Text>
-    </TouchableOpacity>
-  </View>
-);
+      <TouchableOpacity
+        style={[styles.button, styles.buttonNo, themeStyles.border, { borderWidth: 1 }]}
+        activeOpacity={0.8}
+        onPress={onCancel}
+      >
+        <Text style={[styles.buttonText, { color: semantic.colors.feedback.error }]} numberOfLines={1}>{t("common.no")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 // --- Estilos ---
 const styles = StyleSheet.create({
@@ -142,7 +141,7 @@ const styles = StyleSheet.create({
   },
   buttonNo: { backgroundColor: "transparent" },
   buttonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
     textTransform: "uppercase",

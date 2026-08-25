@@ -152,6 +152,7 @@ Direct relative paths from project root.
 - [x] Achievements & Badges Expansion (15 progressive milestones from 0 to 10.000 XP) with description support, Drizzle schema enhancement, zero-overflow responsive contained grid layout, filter tabs (Todas, Conquistadas, A Conquistar), and interactive achievement detail modal in profile.tsx.
 - [x] Standardized high-resolution banner image assets (`banner-*.jpg`) integrated into `profile.tsx` for `ProfileBanner`, shop previews, and item category swatches.
 - [x] Renamed profile customization banners in `seed.ts` to natural, evocative names matching the actual visual line art (*Folhas Tropicais*, *Circuitos Digitais*, *Brisa Suave*, *Noite Estrelada*, *Ondas Cósmicas*, *Gemas & Cristais*, *Observatório Espacial*).
+- [x] Design System Policy & Token Governance documentation in `DESIGN.md`, legacy dead screens cleanup (`aboutUs.tsx`, `helpUser.tsx`), and full unification of theme imports directly to `src/frontend/theme`.
 
 ---
 

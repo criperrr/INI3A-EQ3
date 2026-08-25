@@ -44,7 +44,7 @@ import {
   Share2,
   Code2,
 } from "lucide-react-native";
-import { useTheme, MONET_PRESETS } from "../content/themeContent";
+import { useTheme, MONET_PRESETS } from "../theme";
 import { useI18n, SupportedLanguage } from "../content/i18nContext";
 import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
