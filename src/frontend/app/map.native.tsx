@@ -72,8 +72,47 @@ interface MarketMarker {
     routeDistance: number;
     openingHours?: string;
     isBackendMarket?: boolean;
-    shopType?: string; // Novo campo
+    shopType?: string;
 }
+
+interface CustomMarkerProps {
+    marker: MarketMarker;
+    isSelected: boolean;
+    onPress: () => void;
+    isDark: boolean;
+}
+
+// Componente para gerenciar a renderização segura do marcador
+const CustomMarker = ({ marker, isSelected, onPress, isDark }: CustomMarkerProps) => {
+    const [trackChanges, setTrackChanges] = useState(true);
+
+    useEffect(() => {
+        if (isSelected) {
+            setTrackChanges(true);
+        } else {
+            const timer = setTimeout(() => {
+                setTrackChanges(false);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isSelected]);
+
+    return (
+        <Marker
+            coordinate={marker.coordinate}
+            onPress={onPress}
+            anchor={{ x: 0.5, y: 1 }}
+            tracksViewChanges={trackChanges}
+        >
+            <FeatherIcon
+                size={34}
+                isDark={isDark}
+                shopType={marker.shopType}
+                selected={isSelected}
+            />
+        </Marker>
+    );
+};
 
 const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
     if (!hours) return t ? t("map.hoursUnknown") : "Horário não informado";
@@ -252,7 +291,7 @@ export default function MapScreen() {
                         straightDistance: straightDist,
                         routeDistance: straightDist,
                         isBackendMarket: true,
-                        shopType: "supermarket", // Adicionado o tipo do backend
+                        shopType: "supermarket",
                     });
                 }
             }
@@ -309,7 +348,7 @@ export default function MapScreen() {
                 straightDistance,
                 routeDistance: straightDistance,
                 openingHours: el.tags?.opening_hours,
-                shopType: el.tags?.shop, // Captura o tipo direto da tag OSM
+                shopType: el.tags?.shop,
             });
         }
 
@@ -388,25 +427,15 @@ export default function MapScreen() {
                         longitudeDelta: 0.04,
                     } : undefined}
                 >
-                    {visibleMarkers.map((marker) => {
-                        const isSelected = selectedMarket?.id === marker.id;
-                        return (
-                            <Marker
-                                key={marker.id}
-                                coordinate={marker.coordinate}
-                                onPress={() => setSelectedMarket(marker)}
-                                anchor={{ x: 0.5, y: 1 }}
-                                tracksViewChanges={isSelected}
-                            >
-                                <FeatherIcon
-                                    size={34}
-                                    isDark={isDark}
-                                    shopType={marker.shopType} // Passando a prop pro componente
-                                    selected={isSelected}
-                                />
-                            </Marker>
-                        );
-                    })}
+                    {visibleMarkers.map((marker) => (
+                        <CustomMarker
+                            key={marker.id}
+                            marker={marker}
+                            isSelected={selectedMarket?.id === marker.id}
+                            onPress={() => setSelectedMarket(marker)}
+                            isDark={isDark}
+                        />
+                    ))}
                 </MapView>
 
                 <View style={styles.filtersWrapper}>
