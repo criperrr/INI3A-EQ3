@@ -24,6 +24,31 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-25 09:35] - feat(profile-banners): standardized banner assets and integrated high-res images into profile and shop
+
+- **Description:** Renamed raw generated banner images to standard thematic filenames and integrated them seamlessly across the frontend:
+  1. **Standardized Image Filenames (`src/frontend/components/images/banners/`):**
+     - `banner-jungle.jpg` (Presco Selva)
+     - `banner-cyberpunk.jpg` (Neon Cyberpunk)
+     - `banner-sunset.jpg` (Pôr do Sol Tropical)
+     - `banner-obsidian.jpg` (Obsidiana Noturna)
+     - `banner-aurora.jpg` (Aurora Boreal)
+     - `banner-gold.jpg` (Ouro Imperial)
+     - `banner-nebula.jpg` (Cósmico Nebulosa)
+  2. **ProfileBanner Integration (`profile.tsx`):** Configured `ProfileBanner` to dynamically render high-res image assets mapped to `banner.previewValue` with fallback to `banner-jungle.jpg`, accompanied by a subtle contrast overlay (`bannerDarkOverlay`) to ensure maximum legibility for badges and texts in all theme modes.
+  3. **Shop Swatches & Previews (`profile.tsx`):** Enhanced `ItemCategoryIcon` and `itemSwatchCircle` so banner items in the Customization Shop show crisp contained banner thumbnails, updating live in the avatar preview stage.
+- **Files Modified:**
+  - `src/frontend/components/images/banners/banner-jungle.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-cyberpunk.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-sunset.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-obsidian.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-aurora.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-gold.jpg` (renamed)
+  - `src/frontend/components/images/banners/banner-nebula.jpg` (renamed)
+  - `src/frontend/app/profile.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Profiles and customization shop now display real artistic banners for all 7 themes.
+
 ## [2026-08-25 08:35] - feat(gamification-badges): 15 progressive achievements, anti-overflow responsive grid, filter tabs, and detail modal
 
 - **Description:** Expanded achievements system from 5 to 15 progressive badges and redesigned achievements UI for zero screen overflow:

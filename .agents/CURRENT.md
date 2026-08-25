@@ -150,6 +150,7 @@ Direct relative paths from project root.
 - [x] Full multilingual i18n support across 7 main languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
 - [x] Profile Customization Store & Inventory System with Points / XP milestone unlock, customizable banners, glow avatar frames, level badge frames, live avatar preview, categorized sections (Fundos, Molduras, Níveis) and multilingual support across all 7 languages without debiting user total XP score.
 - [x] Achievements & Badges Expansion (15 progressive milestones from 0 to 10.000 XP) with description support, Drizzle schema enhancement, zero-overflow responsive contained grid layout, filter tabs (Todas, Conquistadas, A Conquistar), and interactive achievement detail modal in profile.tsx.
+- [x] Standardized high-resolution banner image assets (`banner-*.jpg`) integrated into `profile.tsx` for `ProfileBanner`, shop previews, and item category swatches.
 
 ---
 

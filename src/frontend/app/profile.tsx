@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -39,6 +40,16 @@ const COLORS = {
   obsidian: "#0F0C20",
   sunset: "#FF6F59",
   aurora: "#02C39A",
+};
+
+const BANNER_IMAGES: Record<string, any> = {
+  jungle: require("../components/images/banners/banner-jungle.jpg"),
+  cyberpunk: require("../components/images/banners/banner-cyberpunk.jpg"),
+  sunset: require("../components/images/banners/banner-sunset.jpg"),
+  obsidian: require("../components/images/banners/banner-obsidian.jpg"),
+  aurora: require("../components/images/banners/banner-aurora.jpg"),
+  gold: require("../components/images/banners/banner-gold.jpg"),
+  nebula: require("../components/images/banners/banner-nebula.jpg"),
 };
 
 const getGridColor = (intensity: number, isDark: boolean) => {
@@ -285,79 +296,16 @@ const ProfileBanner = memo(function ProfileBanner({
   t: (key: any) => string;
 }) {
   const preview = banner?.previewValue || "jungle";
+  const imageSource = BANNER_IMAGES[preview] || BANNER_IMAGES.jungle;
 
-  if (preview === "cyberpunk") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#0D0221" }]}>
-        <View style={styles.cyberGridOverlay}>
-          <Ionicons name="hardware-chip" size={130} color="#00F0FF" style={styles.bannerIconLeft} />
-          <Ionicons name="code-slash" size={90} color="#FF007F" style={styles.bannerIconRight} />
-        </View>
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  if (preview === "sunset") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#4A121A" }]}>
-        <View style={[styles.glowCircle, { backgroundColor: "#FF6F59", top: -20, right: 30 }]} />
-        <Ionicons name="sunny" size={100} color="#F7B05B" style={styles.bannerIconLeft} />
-        <Ionicons name="cloud" size={80} color="#FF6F59" style={styles.bannerIconRight} />
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  if (preview === "obsidian") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#0F0C20" }]}>
-        <View style={[styles.glowCircle, { backgroundColor: "#2D1B69", bottom: -20, left: 20 }]} />
-        <Ionicons name="moon" size={90} color="#9B5DE5" style={styles.bannerIconLeft} />
-        <Ionicons name="sparkles" size={70} color="#E0AAFF" style={styles.bannerIconRight} />
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  if (preview === "aurora") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#051923" }]}>
-        <View style={[styles.glowCircle, { backgroundColor: "#00A896", top: -10, left: 40 }]} />
-        <Ionicons name="planet" size={110} color="#02C39A" style={styles.bannerIconLeft} />
-        <Ionicons name="sparkles" size={60} color="#00E676" style={styles.bannerIconRight} />
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  if (preview === "gold") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#2B1A09" }]}>
-        <View style={[styles.glowCircle, { backgroundColor: "#C59B27", top: 0, right: 20 }]} />
-        <Ionicons name="diamond" size={100} color="#FFD700" style={styles.bannerIconLeft} />
-        <Ionicons name="sparkles" size={70} color="#FFE66D" style={styles.bannerIconRight} />
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  if (preview === "nebula") {
-    return (
-      <View style={[styles.bannerContainer, { backgroundColor: "#080710" }]}>
-        <View style={[styles.glowCircle, { backgroundColor: "#480CA8", bottom: 0, right: 10 }]} />
-        <Ionicons name="telescope" size={100} color="#7209B7" style={styles.bannerIconLeft} />
-        <Ionicons name="star" size={60} color="#F72585" style={styles.bannerIconRight} />
-        <AdminBadge isAdmin={isAdmin} t={t} />
-      </View>
-    );
-  }
-
-  // Default: Presco Jungle
   return (
-    <View style={[styles.bannerContainer, { backgroundColor: COLORS.jungleBg }]}>
-      <Ionicons name="leaf" size={120} color="#152E1E" style={styles.bannerIconLeft} />
-      <Ionicons name="leaf" size={90} color="#0F2417" style={styles.bannerIconRight} />
+    <View style={styles.bannerContainer}>
+      <Image
+        source={imageSource}
+        style={styles.bannerImage}
+        resizeMode="cover"
+      />
+      <View style={styles.bannerDarkOverlay} />
       <AdminBadge isAdmin={isAdmin} t={t} />
     </View>
   );
@@ -1631,6 +1579,16 @@ const ItemCategoryIcon = memo(function ItemCategoryIcon({
 }) {
   const config = item.config || {};
   if (item.category === "banner") {
+    const bannerImg = BANNER_IMAGES[item.previewValue || "jungle"];
+    if (bannerImg) {
+      return (
+        <Image
+          source={bannerImg}
+          style={styles.bannerThumbnailIcon}
+          resizeMode="cover"
+        />
+      );
+    }
     const iconName = config.icon || "image";
     return <Ionicons name={iconName as any} size={22} color={config.accentColor || accent} />;
   }
@@ -1830,28 +1788,18 @@ const styles = StyleSheet.create({
     top: 0,
     overflow: "hidden",
   },
-  cyberGridOverlay: {
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+  },
+  bannerDarkOverlay: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.25,
+    backgroundColor: "rgba(0, 0, 0, 0.22)",
   },
-  glowCircle: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    position: "absolute",
-    opacity: 0.35,
-  },
-  bannerIconLeft: {
-    position: "absolute",
-    left: -20,
-    bottom: -20,
-    opacity: 0.22,
-  },
-  bannerIconRight: {
-    position: "absolute",
-    right: -10,
-    top: -10,
-    opacity: 0.2,
+  bannerThumbnailIcon: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 23,
   },
   adminBannerBadge: {
     position: "absolute",
@@ -2513,6 +2461,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(150, 150, 150, 0.12)",
+    overflow: "hidden",
   },
   itemInfoCol: { flex: 1 },
   itemNameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
