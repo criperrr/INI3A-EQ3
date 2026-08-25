@@ -106,8 +106,8 @@ export default function ProfileScreen() {
 
   const openShop = async () => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    } catch {}
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
+    } catch { }
     setShopModalVisible(true);
     setLoadingShop(true);
     try {
@@ -710,7 +710,7 @@ const BadgesSection = memo(function BadgesSection({
   const handleSelectBadge = (b: BadgeItem) => {
     try {
       Haptics.selectionAsync();
-    } catch {}
+    } catch { }
     setSelectedBadge(b);
   };
 
@@ -743,7 +743,7 @@ const BadgesSection = memo(function BadgesSection({
               : [themeStyles.card, themeStyles.border],
           ]}
           onPress={() => {
-            try { Haptics.selectionAsync(); } catch {}
+            try { Haptics.selectionAsync(); } catch { }
             setActiveFilter("all");
           }}
           activeOpacity={0.7}
@@ -766,7 +766,7 @@ const BadgesSection = memo(function BadgesSection({
               : [themeStyles.card, themeStyles.border],
           ]}
           onPress={() => {
-            try { Haptics.selectionAsync(); } catch {}
+            try { Haptics.selectionAsync(); } catch { }
             setActiveFilter("unlocked");
           }}
           activeOpacity={0.7}
@@ -789,7 +789,7 @@ const BadgesSection = memo(function BadgesSection({
               : [themeStyles.card, themeStyles.border],
           ]}
           onPress={() => {
-            try { Haptics.selectionAsync(); } catch {}
+            try { Haptics.selectionAsync(); } catch { }
             setActiveFilter("locked");
           }}
           activeOpacity={0.7}
@@ -874,7 +874,7 @@ const BadgesSection = memo(function BadgesSection({
         <TouchableOpacity
           style={[styles.badgeExpandBtn, themeStyles.border]}
           onPress={() => {
-            try { Haptics.selectionAsync(); } catch {}
+            try { Haptics.selectionAsync(); } catch { }
             setIsExpanded(!isExpanded);
           }}
           activeOpacity={0.7}
@@ -947,8 +947,8 @@ const BadgesSection = memo(function BadgesSection({
                   {selectedBadge.isUnlocked
                     ? selectedBadge.awardedAt
                       ? t("profile.badgeEarnedOn", {
-                          date: new Date(selectedBadge.awardedAt).toLocaleDateString(),
-                        })
+                        date: new Date(selectedBadge.awardedAt).toLocaleDateString(),
+                      })
                       : t("profile.unlocked")
                     : t("profile.locked")}
                 </Text>
@@ -1117,31 +1117,31 @@ function CustomizationShopModal({
       color: string;
       items: CustomizationItem[];
     }> = [
-      {
-        key: "banner",
-        title: t("profile.tabBanners"),
-        subtitle: t("profile.customBanner"),
-        icon: "color-palette",
-        color: "#9B5DE5",
-        items: catalog.items.filter((i) => i.category === "banner"),
-      },
-      {
-        key: "avatar_frame",
-        title: t("profile.tabAvatarFrames"),
-        subtitle: t("profile.customAvatarFrame"),
-        icon: "scan-circle",
-        color: "#00F0FF",
-        items: catalog.items.filter((i) => i.category === "avatar_frame"),
-      },
-      {
-        key: "level_frame",
-        title: t("profile.tabLevelFrames"),
-        subtitle: t("profile.customLevelBadge"),
-        icon: "ribbon",
-        color: COLORS.gold,
-        items: catalog.items.filter((i) => i.category === "level_frame"),
-      },
-    ];
+        {
+          key: "banner",
+          title: t("profile.tabBanners"),
+          subtitle: t("profile.customBanner"),
+          icon: "color-palette",
+          color: "#9B5DE5",
+          items: catalog.items.filter((i) => i.category === "banner"),
+        },
+        {
+          key: "avatar_frame",
+          title: t("profile.tabAvatarFrames"),
+          subtitle: t("profile.customAvatarFrame"),
+          icon: "scan-circle",
+          color: "#00F0FF",
+          items: catalog.items.filter((i) => i.category === "avatar_frame"),
+        },
+        {
+          key: "level_frame",
+          title: t("profile.tabLevelFrames"),
+          subtitle: t("profile.customLevelBadge"),
+          icon: "ribbon",
+          color: COLORS.gold,
+          items: catalog.items.filter((i) => i.category === "level_frame"),
+        },
+      ];
 
     if (selectedCategory === "all") {
       return categories.filter((c) => c.items.length > 0);
@@ -1151,8 +1151,8 @@ function CustomizationShopModal({
 
   const handlePreviewItem = (item: CustomizationItem) => {
     try {
-      Haptics.selectionAsync().catch(() => {});
-    } catch {}
+      Haptics.selectionAsync().catch(() => { });
+    } catch { }
     setPreviewCustomizations((prev) => {
       if (!prev) return null;
       if (item.category === "banner") {
@@ -1171,7 +1171,7 @@ function CustomizationShopModal({
   const handleBuy = async (item: CustomizationItem) => {
     setActionLoadingId(item.id);
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
       const res = await buyCustomizationItem(item.id);
       setCatalog(res.catalog);
       setPreviewCustomizations(res.catalog.equipped);
@@ -1187,7 +1187,7 @@ function CustomizationShopModal({
   const handleEquip = async (item: CustomizationItem) => {
     setActionLoadingId(item.id);
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
       const res = await equipCustomizationItem(item.id);
       setCatalog(res.catalog);
       setPreviewCustomizations(res.catalog.equipped);
@@ -1202,7 +1202,7 @@ function CustomizationShopModal({
 
   const handleUnequip = async (category: "banner" | "avatar_frame" | "level_frame") => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
       const res = await unequipCustomizationCategory(category);
       setCatalog(res.catalog);
       setPreviewCustomizations(res.catalog.equipped);
