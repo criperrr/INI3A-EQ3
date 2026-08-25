@@ -76,13 +76,13 @@ export default function CustomRegisterProduct() {
           keyboardShouldPersistTaps="handled"
         >
         <Ionicons name="cube-outline" size={80} color={accent} style={styles.icon} />
-        <Text style={[styles.title, themeStyles.text]}>{t("products.customProductTitle")}</Text>
-        <Text style={[styles.subtitle, themeStyles.subText]}>
+        <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>{t("products.customProductTitle")}</Text>
+        <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
           {t("products.customProductSubtitle")}
         </Text>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.ean")} ({t("common.optional")})</Text>
+          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.ean")} ({t("common.optional")})</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
@@ -96,7 +96,7 @@ export default function CustomRegisterProduct() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.productName")} *</Text>
+          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.productName")} *</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
@@ -109,7 +109,7 @@ export default function CustomRegisterProduct() {
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]}>{t("productDetails.category")}</Text>
+          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.category")}</Text>
           <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
             <TextInput
               style={[styles.input, themeStyles.text]}
@@ -130,7 +130,9 @@ export default function CustomRegisterProduct() {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.buttonText}>{t("products.registerCustomButton")} (+25 XP)</Text>
+            <Text style={styles.buttonText} numberOfLines={1} ellipsizeMode="tail">
+              {t("products.registerCustomButton")} (+25 XP)
+            </Text>
           )}
         </TouchableOpacity>
       </ScrollView>

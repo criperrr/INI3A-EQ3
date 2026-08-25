@@ -479,7 +479,7 @@ const FilterButton = ({ icon, label, onPress, themeStyles, isDark }: any) => (
         onPress={onPress}
     >
         <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : THEME_COLORS.darkBlue} />
-        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={2}>{label}</Text>
     </TouchableOpacity>
 );
 
@@ -609,14 +609,16 @@ const styles = StyleSheet.create({
     filterCard: {
         borderRadius: 12,
         paddingVertical: 10,
-        paddingHorizontal: 8,
+        paddingHorizontal: 6,
         alignItems: "center",
         justifyContent: "center",
-        width: "31%",
+        flex: 1,
+        marginHorizontal: 4,
+        minHeight: 64,
         borderWidth: 1,
         elevation: 3,
     },
-    filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
+    filterText: { fontSize: 10.5, marginTop: 4, textAlign: "center", fontWeight: "600" },
     recenterButton: {
         position: "absolute",
         bottom: 30,

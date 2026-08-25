@@ -188,8 +188,8 @@ const PermissionNotice = ({
 
 const ScannerInstructions = ({ t }: { t: (key: any) => string }) => (
   <View style={styles.overlayTextContainer}>
-    <Text style={styles.placeholderText}>{t("scanner.title")}</Text>
-    <Text style={styles.instructionText}>
+    <Text style={styles.placeholderText} numberOfLines={1}>{t("scanner.title")}</Text>
+    <Text style={styles.instructionText} numberOfLines={2}>
       {t("scanner.alignBarcode")}
     </Text>
   </View>

@@ -247,7 +247,9 @@ const ProfileHeader = memo(function ProfileHeader({
         {isAdmin && (
           <View style={styles.adminBannerBadge}>
             <Ionicons name="shield-checkmark" size={14} color="#FFF" />
-            <Text style={styles.adminBannerText}>{t("profile.adminBadge").toUpperCase()}</Text>
+            <Text style={styles.adminBannerText} numberOfLines={1} ellipsizeMode="tail">
+              {t("profile.adminBadge").toUpperCase()}
+            </Text>
           </View>
         )}
       </View>
@@ -278,11 +280,19 @@ const ProfileHeader = memo(function ProfileHeader({
         </View>
       </View>
 
-      <Text style={[styles.userName, themeStyles.text]}>{name}</Text>
-      <Text style={[styles.userRole, { color: isAdmin ? COLORS.adminGlow : accent }]}>
+      <Text style={[styles.userName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+        {name}
+      </Text>
+      <Text
+        style={[styles.userRole, { color: isAdmin ? COLORS.adminGlow : accent }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {roleTitle}
       </Text>
-      <Text style={[styles.userEmail, themeStyles.subText]}>{email}</Text>
+      <Text style={[styles.userEmail, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
+        {email}
+      </Text>
     </View>
   );
 });
@@ -381,15 +391,15 @@ const LevelProgress = memo(function LevelProgress({
   return (
     <View style={styles.levelSection}>
       <View style={styles.levelInfoRow}>
-        <View style={styles.levelTitleCol}>
-          <Text style={[styles.levelText, themeStyles.text]}>
+        <View style={[styles.levelTitleCol, { flex: 1, marginRight: 8 }]}>
+          <Text style={[styles.levelText, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
             {t("profile.level")} {level} • {roleTitle}
           </Text>
-          <Text style={[styles.levelSubText, themeStyles.subText]}>
+          <Text style={[styles.levelSubText, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
             {t("profile.xpRewardHint")}
           </Text>
         </View>
-        <Text style={[styles.levelProgressNumber, { color: accent }]}>
+        <Text style={[styles.levelProgressNumber, { color: accent }]} numberOfLines={1}>
           {currentXp}/{safeMax} XP
         </Text>
       </View>
@@ -421,10 +431,10 @@ const BadgesSection = memo(function BadgesSection({
   return (
     <View style={styles.badgesSection}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, themeStyles.text]}>
+        <Text style={[styles.sectionTitle, themeStyles.text, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
           {t("profile.badges")}
         </Text>
-        <Text style={[styles.badgeCountText, { color: accent }]}>
+        <Text style={[styles.badgeCountText, { color: accent }]} numberOfLines={1}>
           {badges.filter((b) => b.isUnlocked).length}/{badges.length} {t("profile.unlockedCount")}
         </Text>
       </View>
@@ -445,10 +455,10 @@ const BadgesSection = memo(function BadgesSection({
             ]}
           >
             <Text style={styles.badgeIcon}>{b.icon || "🏅"}</Text>
-            <Text style={[styles.badgeName, themeStyles.text]} numberOfLines={1}>
+            <Text style={[styles.badgeName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
               {b.name}
             </Text>
-            <Text style={[styles.badgeMinPoints, themeStyles.subText]}>
+            <Text style={[styles.badgeMinPoints, themeStyles.subText]} numberOfLines={1}>
               {b.isUnlocked ? t("profile.unlocked") : `${b.minPoints} XP`}
             </Text>
           </View>
@@ -470,7 +480,7 @@ const ContributionHistory = memo(function ContributionHistory({
   const { themeStyles, isDark } = useTheme();
   return (
     <View style={styles.achievementsSection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>
+      <Text style={[styles.sectionTitle, themeStyles.text]} numberOfLines={1}>
         {t("profile.contributionStats")}
       </Text>
 
@@ -478,10 +488,10 @@ const ContributionHistory = memo(function ContributionHistory({
         style={[styles.contributionsCard, themeStyles.card, themeStyles.border]}
       >
         <View style={styles.contributionsHeaderRow}>
-          <Text style={[styles.contributionsTitle, themeStyles.text]}>
+          <Text style={[styles.contributionsTitle, themeStyles.text, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
             {t("profile.weeklyHistory")}
           </Text>
-          <Text style={[styles.contributionsSubtitle, themeStyles.subText]}>
+          <Text style={[styles.contributionsSubtitle, themeStyles.subText]} numberOfLines={1}>
             {t("profile.contributionsCount", { count: reportedCount })}
           </Text>
         </View>
@@ -541,10 +551,10 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
         >
           <Ionicons name="person-circle-outline" size={76} color={accent} />
         </View>
-        <Text style={[styles.guestTitle, themeStyles.text]}>
+        <Text style={[styles.guestTitle, themeStyles.text]} numberOfLines={1}>
           {t("navigation.profile")}
         </Text>
-        <Text style={[styles.guestSubtitle, themeStyles.subText]}>
+        <Text style={[styles.guestSubtitle, themeStyles.subText]} numberOfLines={2}>
           {t("profile.guestJoinHint")}
         </Text>
       </View>
@@ -560,11 +570,11 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
       >
         <View style={styles.quickConnectHeader}>
           <Ionicons name="flash" size={18} color={accent} />
-          <Text style={[styles.quickConnectTitle, { color: accent }]}>
+          <Text style={[styles.quickConnectTitle, { color: accent }]} numberOfLines={1}>
             {t("profile.quickTestTitle")}
           </Text>
         </View>
-        <Text style={[styles.quickConnectDesc, themeStyles.subText]}>
+        <Text style={[styles.quickConnectDesc, themeStyles.subText]} numberOfLines={2}>
           {t("profile.quickTestSubtitle")}
         </Text>
 
@@ -581,8 +591,12 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
               <>
                 <Ionicons name="person" size={18} color="#FFFFFF" />
                 <View style={styles.btnTextCol}>
-                  <Text style={styles.quickBtnText}>{t("profile.loginAsRegular")}</Text>
-                  <Text style={styles.quickBtnSubText}>usuario@presco.com • {t("common.levelShort")} 2 (150 XP)</Text>
+                  <Text style={styles.quickBtnText} numberOfLines={1} ellipsizeMode="tail">
+                    {t("profile.loginAsRegular")}
+                  </Text>
+                  <Text style={styles.quickBtnSubText} numberOfLines={1} ellipsizeMode="tail">
+                    usuario@presco.com • {t("common.levelShort")} 2 (150 XP)
+                  </Text>
                 </View>
                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
               </>
@@ -606,10 +620,10 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
               <>
                 <Ionicons name="shield-checkmark" size={18} color={COLORS.gold} />
                 <View style={styles.btnTextCol}>
-                  <Text style={[styles.quickAdminBtnText, { color: COLORS.gold }]}>
+                  <Text style={[styles.quickAdminBtnText, { color: COLORS.gold }]} numberOfLines={1} ellipsizeMode="tail">
                     {t("profile.loginAsAdmin")}
                   </Text>
-                  <Text style={[styles.quickAdminBtnSubText, themeStyles.subText]}>
+                  <Text style={[styles.quickAdminBtnSubText, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
                     admin@admin.org • {t("profile.level")} MAX
                   </Text>
                 </View>

@@ -78,8 +78,8 @@ export default function ManualEanSearch() {
       <View style={[styles.container, themeStyles.bg]}>
         <View style={styles.content}>
         <Ionicons name="barcode-outline" size={80} color={accent} style={styles.icon} />
-        <Text style={[styles.title, themeStyles.text]}>{t("scanner.manualSearchTitle")}</Text>
-        <Text style={[styles.subtitle, themeStyles.subText]}>
+        <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>{t("scanner.manualSearchTitle")}</Text>
+        <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
           {t("scanner.manualSearchSubtitle")}
         </Text>
 
@@ -103,7 +103,9 @@ export default function ManualEanSearch() {
           {loading ? (
             <ActivityIndicator color="#FFF" />
           ) : (
-            <Text style={styles.buttonText}>{t("scanner.searchProductBtn")}</Text>
+            <Text style={styles.buttonText} numberOfLines={1} ellipsizeMode="tail">
+              {t("scanner.searchProductBtn")}
+            </Text>
           )}
         </TouchableOpacity>
       </View>

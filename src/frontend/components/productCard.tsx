@@ -129,6 +129,8 @@ const ProductInfo = memo(function ProductInfo({
               ...semantic.typography.badge,
             },
           ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
           {category.toUpperCase()}
         </Text>
@@ -142,6 +144,7 @@ const ProductInfo = memo(function ProductInfo({
           },
         ]}
         numberOfLines={2}
+        ellipsizeMode="tail"
       >
         {name}
       </Text>

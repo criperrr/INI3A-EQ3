@@ -40,29 +40,29 @@ export default function AboutUs() {
 
       {/* Cabeçalho da Tela */}
       <View style={styles.headerSection}>
-        <Text style={[styles.title, themeStyles.text]}>{t("about.title")}</Text>
-        <Text style={[styles.subtitle, themeStyles.subText]}>
+        <Text style={[styles.title, themeStyles.text]} numberOfLines={1}>{t("about.title")}</Text>
+        <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
           {t("about.subtitle")}
         </Text>
       </View>
 
       {/* Seções de Conteúdo */}
       <View style={[styles.card, themeStyles.card, themeStyles.border]}>
-        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.missionTitle")}</Text>
+        <Text style={[styles.cardTitle, themeStyles.text]} numberOfLines={2}>{t("about.missionTitle")}</Text>
         <Text style={[styles.cardBody, themeStyles.subText]}>
           {t("about.missionDescription")}
         </Text>
       </View>
 
       <View style={[styles.card, themeStyles.card, themeStyles.border]}>
-        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.howItWorksTitle")}</Text>
+        <Text style={[styles.cardTitle, themeStyles.text]} numberOfLines={2}>{t("about.howItWorksTitle")}</Text>
         <Text style={[styles.cardBody, themeStyles.subText]}>
           {t("about.howItWorksDescription")}
         </Text>
       </View>
 
       <View style={[styles.card, themeStyles.card, themeStyles.border]}>
-        <Text style={[styles.cardTitle, themeStyles.text]}>{t("about.openDataTitle")}</Text>
+        <Text style={[styles.cardTitle, themeStyles.text]} numberOfLines={2}>{t("about.openDataTitle")}</Text>
         <Text style={[styles.cardBody, themeStyles.subText]}>
           {t("about.openDataDescription")}
         </Text>

@@ -78,6 +78,8 @@ const SidebarHeader = memo(function SidebarHeader({
                 ...semantic.typography.caption,
               },
             ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
             {t("home.welcomeSubtitle")}
           </Text>
@@ -173,6 +175,8 @@ const NavigationLinks = memo(function NavigationLinks({
                   fontWeight: isActive ? "700" : "600",
                 },
               ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
             >
               {link.label}
             </Text>
@@ -249,6 +253,7 @@ const UserProfileCard = memo(function UserProfileCard({
               },
             ]}
             numberOfLines={1}
+            ellipsizeMode="tail"
           >
             {displayName}
           </Text>
@@ -267,6 +272,7 @@ const UserProfileCard = memo(function UserProfileCard({
                     ...semantic.typography.micro,
                   },
                 ]}
+                numberOfLines={1}
               >
                 {t("profile.adminBadge")}
               </Text>
@@ -281,6 +287,8 @@ const UserProfileCard = memo(function UserProfileCard({
               ...semantic.typography.caption,
             },
           ]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
         >
           {isAuthenticated
             ? `${t("profile.level")} ${userLevel} • ${userPoints} XP`
@@ -445,13 +453,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
+    marginRight: 8,
   },
   brandLogo: {
     width: 38,
     height: 38,
+    flexShrink: 0,
   },
   brandInfo: {
     justifyContent: "center",
+    flex: 1,
   },
   brandTitle: {
     letterSpacing: -0.3,
@@ -465,6 +477,7 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   linksContainer: {
     flex: 1,
@@ -508,6 +521,7 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   avatarText: {
     fontSize: 16,
@@ -522,12 +536,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   userName: {
-    maxWidth: 130,
+    flexShrink: 1,
   },
   adminBadge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
+    flexShrink: 0,
   },
   adminBadgeText: {},
   userStatus: {

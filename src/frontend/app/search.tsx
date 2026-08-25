@@ -132,9 +132,9 @@ export default function SearchScreen() {
   const ListHeader = (
     <View style={styles.headerContainer}>
       <View style={styles.headerRow}>
-        <View>
-          <Text style={[styles.screenTitle, themeStyles.text]}>{t("search.title")}</Text>
-          <Text style={[styles.screenSubtitle, themeStyles.subText]}>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={[styles.screenTitle, themeStyles.text]} numberOfLines={1}>{t("search.title")}</Text>
+          <Text style={[styles.screenSubtitle, themeStyles.subText]} numberOfLines={1}>
             {t("home.welcomeSubtitle")}
           </Text>
         </View>
@@ -144,7 +144,7 @@ export default function SearchScreen() {
           onPress={handleCreateCustom}
         >
           <Ionicons name="add" size={20} color="#FFF" />
-          <Text style={styles.addCustomText}>{t("products.customProductTitle").split(" ")[0]}</Text>
+          <Text style={styles.addCustomText} numberOfLines={1}>{t("products.customProductTitle").split(" ")[0]}</Text>
         </TouchableOpacity>
       </View>
 
@@ -407,7 +407,9 @@ const EmptyResults = ({
           onPress={onScanBarcode}
         >
           <Ionicons name="barcode-outline" size={18} color="#FFF" style={styles.btnIcon} />
-          <Text style={styles.emptyActionText}>{t("scanner.title")}</Text>
+          <Text style={styles.emptyActionText} numberOfLines={1} ellipsizeMode="tail">
+            {t("scanner.title")}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -416,7 +418,9 @@ const EmptyResults = ({
           onPress={onCreateCustom}
         >
           <Ionicons name="add-circle-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
-          <Text style={[styles.emptyActionText, themeStyles.text]}>{t("products.customProductTitle")}</Text>
+          <Text style={[styles.emptyActionText, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+            {t("products.customProductTitle")}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -448,6 +452,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 14,
     gap: 4,
+    flexShrink: 0,
   },
   addCustomText: {
     color: "#FFF",
@@ -519,17 +524,16 @@ const styles = StyleSheet.create({
   },
   productImageContainer: {
     width: "100%",
-    aspectRatio: 1.1,
+    aspectRatio: 1.2,
     borderRadius: 12,
-    marginBottom: 10,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
+    marginBottom: 8,
   },
   productImage: {
-    width: "90%",
-    height: "90%",
+    width: "100%",
+    height: "100%",
   },
   placeholderIconContainer: {
     alignItems: "center",
@@ -556,7 +560,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 13,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 6,
     minHeight: 34,
     lineHeight: 17,
   },
@@ -592,14 +596,21 @@ const styles = StyleSheet.create({
   },
   emptyActionsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 12,
+    width: "100%",
   },
   emptyActionBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: 14,
+    flexGrow: 1,
+    flexBasis: "45%",
+    maxWidth: "100%",
   },
   emptyOutlineBtn: {
     backgroundColor: "transparent",

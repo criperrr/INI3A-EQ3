@@ -157,6 +157,7 @@ Direct relative paths from project root.
 - [x] Align price history to left, limit history to maximum 15 prices, and implement interactive time period filtering (`7D`, `1M`, `6M`, `1A`, `Tudo`) with full i18n localization in `productDetails.tsx`, `product.repository.ts`, `product.service.ts`, and `product.controller.ts`.
 - [x] Automatically capture and display current day date when registering product prices in `registerProduct.tsx` with dedicated date card, "Hoje" badge, i18n in 7 languages, and `createdAt` persistence in `ocurrency.repository.ts`, `ocurrency.service.ts`, and `ocurrency.controller.ts`.
 - [x] Establish full 3-layer Design System token architecture (`src/frontend/theme/`: Primitives -> Semantics -> Component Consumption), eliminating raw literals while preserving 100% visual fidelity, Light/Dark/AMOLED theming and Monet dynamic palettes.
+- [x] Comprehensive UI/i18n Overflow and Responsive Layout Fix across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP) and all application screens/components (`Sidebar`, `productCard`, `index`, `productDetails`, `profile`, `registerProduct`, `customRegisterProduct`, `manualEanSearch`, `search`, `settings`, `map.native`, `login`, `registerUser`, `about`, `aboutUs`, `help`, `helpUser`, `scannerProduct`, `scannerConfirmation`), enforcing flex containment (`flex: 1`, `flexShrink: 1`), text clipping limits (`numberOfLines`, `ellipsizeMode="tail"`), wrapping rows (`flexWrap: "wrap"`), and concise localized phrases.
 
 ---
 

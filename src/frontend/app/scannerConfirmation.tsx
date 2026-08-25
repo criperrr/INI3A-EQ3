@@ -90,10 +90,10 @@ export default function ScannerConfirmation() {
 
 const PriceDetails = ({ lastPrice, themeStyles, t }: { lastPrice: string, themeStyles: any, t: (key: any) => string }) => (
   <View style={styles.detailsContainer}>
-    <Text style={[styles.priceLabel, themeStyles.subText]}>
+    <Text style={[styles.priceLabel, themeStyles.subText]} numberOfLines={1}>
       {t("productDetails.lastPrice")}:
     </Text>
-    <Text style={[styles.priceValue, themeStyles.text]}>{lastPrice}</Text>
+    <Text style={[styles.priceValue, themeStyles.text]} numberOfLines={1}>{lastPrice}</Text>
   </View>
 );
 
@@ -104,7 +104,7 @@ const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent, t }: ActionBu
       activeOpacity={0.8}
       onPress={onConfirm}
     >
-      <Text style={styles.buttonText}>{t("common.yes")}</Text>
+      <Text style={styles.buttonText} numberOfLines={1}>{t("common.yes")}</Text>
     </TouchableOpacity>
 
     <TouchableOpacity
@@ -112,7 +112,7 @@ const ActionButtons = ({ onConfirm, onCancel, themeStyles, accent, t }: ActionBu
       activeOpacity={0.8}
       onPress={onCancel}
     >
-      <Text style={[styles.buttonText, { color: COLORS.redCancel }]}>{t("common.no")}</Text>
+      <Text style={[styles.buttonText, { color: COLORS.redCancel }]} numberOfLines={1}>{t("common.no")}</Text>
     </TouchableOpacity>
   </View>
 );

@@ -105,10 +105,10 @@ export default function HelpScreen() {
           />
         </TouchableOpacity>
         <View style={styles.headerTitleBox}>
-          <Text style={[styles.headerTitle, themeStyles.text]}>
+          <Text style={[styles.headerTitle, themeStyles.text]} numberOfLines={1}>
             {t("help.title")}
           </Text>
-          <Text style={[styles.headerSubtitle, themeStyles.subText]}>
+          <Text style={[styles.headerSubtitle, themeStyles.subText]} numberOfLines={1}>
             {t("help.subtitle")}
           </Text>
         </View>
@@ -165,10 +165,10 @@ export default function HelpScreen() {
             <View style={[styles.quickIconBox, { backgroundColor: accent + "20" }]}>
               <Ionicons name="barcode-outline" size={24} color={accent} />
             </View>
-            <Text style={[styles.quickCardTitle, themeStyles.text]}>
+            <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
               {t("navigation.scanner")}
             </Text>
-            <Text style={[styles.quickCardSub, themeStyles.subText]}>
+            <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
               {t("products.registerPrice")}
             </Text>
           </TouchableOpacity>
@@ -181,10 +181,10 @@ export default function HelpScreen() {
             <View style={[styles.quickIconBox, { backgroundColor: accent + "20" }]}>
               <Ionicons name="search-outline" size={24} color={accent} />
             </View>
-            <Text style={[styles.quickCardTitle, themeStyles.text]}>
+            <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
               {t("navigation.search")}
             </Text>
-            <Text style={[styles.quickCardSub, themeStyles.subText]}>
+            <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
               {t("home.startPriceCheck")}
             </Text>
           </TouchableOpacity>

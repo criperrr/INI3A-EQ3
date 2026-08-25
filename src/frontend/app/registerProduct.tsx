@@ -382,8 +382,13 @@ export default function RegisterProduct() {
                     {
                       color: semantic.colors.text.secondary,
                       ...semantic.typography.bodyMedium,
+                      flex: 1,
+                      marginRight: 8,
+                      marginBottom: 0,
                     },
                   ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
                 >
                   {t("products.recordDate")}
                 </Text>
@@ -394,6 +399,7 @@ export default function RegisterProduct() {
                       backgroundColor: `${accent}20`,
                       borderColor: accent,
                       borderRadius: semantic.radius.badge,
+                      flexShrink: 0,
                     },
                   ]}
                 >
@@ -406,6 +412,7 @@ export default function RegisterProduct() {
                         ...semantic.typography.micro,
                       },
                     ]}
+                    numberOfLines={1}
                   >
                     {t("products.todayBadge")}
                   </Text>
@@ -582,6 +589,8 @@ export default function RegisterProduct() {
                         ...semantic.typography.button,
                       },
                     ]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
                   >
                     {t("products.submitPrice")} (+15 XP)
                   </Text>
@@ -595,57 +604,89 @@ export default function RegisterProduct() {
   );
 }
 
+// --- Estilos Estruturais ---
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   content: {
-    flexGrow: 1,
+    paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 40,
-  },
-  heroCard: {
-    overflow: "hidden",
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-  },
-  loadingCard: {
-    padding: 30,
     alignItems: "center",
   },
-  loadingText: {
-    marginTop: 10,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    alignItems: "center",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+    borderWidth: 1,
+  },
+  loadingText: {},
+  productCard: {
+    width: "100%",
+    borderWidth: 1,
+    alignItems: "center",
+  },
+  heroCard: {
+    width: "100%",
+    borderWidth: 1,
+    alignItems: "center",
+    overflow: "hidden",
+  },
+  imageContainer: {
+    width: "100%",
+    aspectRatio: 1.6,
+    overflow: "hidden",
+  },
+  productImage: {
+    width: "100%",
+    height: "100%",
   },
   heroImage: {
     width: "100%",
-    height: 160,
+    aspectRatio: 1.6,
+  },
+  imagePlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   placeholderIconBox: {
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.03)",
   },
+  productInfo: {
+    width: "100%",
+    alignItems: "center",
+  },
   heroContent: {
+    width: "100%",
     alignItems: "center",
   },
   categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    marginBottom: 10,
-    marginTop: -28,
-    borderWidth: 2,
+    marginBottom: 8,
   },
-  categoryText: {
-    letterSpacing: 1,
-  },
+  categoryText: {},
   productTitle: {
     textAlign: "center",
     marginBottom: 12,
   },
   lastPriceContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,

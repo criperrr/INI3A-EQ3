@@ -532,11 +532,11 @@ const SettingsScreen: React.FC = () => {
           </View>
 
           <View style={styles.row}>
-            <View>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
                 {t("settings.themeDark")}
               </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+              <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
                 {isSettingsDark ? t("settings.active") : t("settings.inactive")}
               </Text>
             </View>
@@ -560,11 +560,11 @@ const SettingsScreen: React.FC = () => {
                   style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
                 >
                   <Zap size={16} color={accent} />
-                  <Text style={[styles.rowLabel, themeStyles.text]}>
+                  <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
                     {t("settings.amoledDark")}
                   </Text>
                 </View>
-                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={2}>
                   {t("settings.amoledSubtitle")}
                 </Text>
               </View>
@@ -581,20 +581,20 @@ const SettingsScreen: React.FC = () => {
           )}
 
           <TouchableOpacity style={styles.row} onPress={handleLanguageSelect}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingRight: 10 }}>
               <Globe size={18} color={accent} />
-              <View>
-                <Text style={[styles.rowLabel, themeStyles.text]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
                   {t("settings.language")}
                 </Text>
-                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
                   {isSystemLanguage
                     ? `⚙️ ${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
                     : `${languageInfo.flag} ${languageInfo.nativeName}`}
                 </Text>
               </View>
             </View>
-            <Text style={[styles.linkText, { color: accent }]}>{t("common.edit")}</Text>
+            <Text style={[styles.linkText, { color: accent, flexShrink: 0 }]}>{t("common.edit")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -858,7 +858,7 @@ const SettingsScreen: React.FC = () => {
 
           <View style={styles.row}>
             <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
+              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
                 {t("settings.twoFactor")}
               </Text>
             </View>
@@ -996,19 +996,25 @@ const SettingsScreen: React.FC = () => {
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("common.version")}</Text>
-            <Text style={[styles.infoValue, themeStyles.text]}>1.0.0 (Build 42)</Text>
+            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+              {t("common.version")}
+            </Text>
+            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>1.0.0 (Build 42)</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("common.environment")}</Text>
-            <Text style={[styles.infoValue, themeStyles.text]}>
+            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+              {t("common.environment")}
+            </Text>
+            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
               {Platform.OS.toUpperCase()} • Expo SDK 54
             </Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText]}>{t("settings.backendStatus")}</Text>
+            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
+              {t("settings.backendStatus")}
+            </Text>
             <View style={styles.badgeContainer}>
               <View
                 style={[
@@ -1023,7 +1029,7 @@ const SettingsScreen: React.FC = () => {
                   },
                 ]}
               />
-              <Text style={[styles.infoValue, themeStyles.text]}>
+              <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
                 {apiStatus === "online"
                   ? t("settings.connected")
                   : apiStatus === "offline"
@@ -1450,13 +1456,14 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderBottomWidth: 1,
   },
-  headerTitleContainer: { flexDirection: "row", alignItems: "center" },
+  headerTitleContainer: { flexDirection: "row", alignItems: "center", flex: 1, marginRight: 8 },
   headerTitle: { fontSize: 22, fontWeight: "bold", marginLeft: 10 },
   savedAlert: {
     backgroundColor: "#D1FAE5",
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 6,
+    flexShrink: 0,
   },
   savedAlertText: { color: "#065F46", fontSize: 12, fontWeight: "600" },
   content: { padding: 16 },
@@ -1617,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   colorOption: {
     alignItems: "center",
-    width: 66,
+    width: 72,
     padding: 6,
     borderRadius: 12,
     borderWidth: 2,
@@ -1635,7 +1642,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   colorName: {
-    fontSize: 11,
+    fontSize: 10,
     marginTop: 4,
     textAlign: "center",
   },
