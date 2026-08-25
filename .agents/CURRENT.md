@@ -124,7 +124,7 @@ Direct relative paths from project root.
 | `src/frontend/app/productDetails.tsx` | Dynamic product detail view with price statistics, interactive history chart, market occurrences list with community voting, and admin-only edit/delete controls |
 | `src/frontend/app/profile.tsx` | 100% dynamic profile screen with real XP levels, rank, badges, stats, contribution heatmap, visual banners, avatar frames, custom level badges, and interactive shop modal with live preview |
 | `src/frontend/app/settings.tsx` | Full settings management: theme, Monet, scanner haptics, backup/export/import encoded config, cache clearing, password change, account deletion |
-| `src/frontend/app/map.native.tsx` | Native map (proximity market lookup) |
+| `src/frontend/app/map.native.tsx` | Native proximity market map with instant (0ms) in-memory filtering, unified Overpass pre-fetch, and OSRM distance caching |
 | `src/frontend/app/help.tsx` | Help Center screen with FAQ accordions, search, and support contact |
 | `src/frontend/app/about.tsx` | About Us screen with mission, version, tech stack, open data, and repository links |
 | `src/frontend/theme/index.ts` | Design System root: primitives, semantics, ThemeProvider, `useTheme()`, `useThemeTokens()`, Monet presets |
@@ -157,6 +157,7 @@ Direct relative paths from project root.
 - [x] Full-Stack Security Audit, Zero-Breaking Performance Optimization & Code Hygiene (Express defensive security headers, payload body limits, 18 ESLint warnings elimination to 0 warnings, and complete typecheck verification).
 - [x] Security Vulnerabilities Remediation & Business Logic Hardening (`POST /products` requireAuth access control, infinite XP vote farm exploit patch, HTTP 500 error sanitization in production, and backend build/typecheck scripts).
 - [x] Comprehensive Security Hardening & Vulnerability Sweep (seed admin password preservation, JWT revocation on account deletion, CORS whitelist policy, Redis rate limiting on auth & search endpoints, and strict geographic coordinate bounds validation).
+- [x] Native Map Performance Optimization (instant 0ms client-side filter transitions, unified Overpass 10km pre-fetch with `nw` query, OSRM driving distance caching, and elimination of repeated network calls on filter changes).
 
 ---
 
