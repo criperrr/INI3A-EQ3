@@ -159,6 +159,9 @@ Direct relative paths from project root.
 - [x] Comprehensive Security Hardening & Vulnerability Sweep (seed admin password preservation, JWT revocation on account deletion, CORS whitelist policy, Redis rate limiting on auth & search endpoints, and strict geographic coordinate bounds validation).
 - [x] Native Map Performance Optimization (instant 0ms client-side filter transitions, unified Overpass 10km pre-fetch with `nw` query, OSRM driving distance caching, and elimination of repeated network calls on filter changes).
 - [x] Native Map Instant Startup Optimization (elimination of full-screen loading blocker, frame-0 optimistic map mount, module session memory persistence, and parallel Overpass mirror race via `Promise.any`).
+- [x] Native Map Multi-Source Resilient Market Fetching (eliminated dead Overpass mirrors, added parallel Photon & Nominatim OpenStreetMap fallback, backend market radius fallback, and empty state banner).
+- [x] Native Map Progressive Loading & False Empty State Fix (eliminated loading race condition where empty banner flashed before fetch finished, added progressive Nominatim streaming callback, and separated `isLoadingMarkets` and `isProcessingLocation`).
+- [x] Native Map Duplicate Marker Keys Fix (guaranteed unique IDs and geo-hash deduplication across progressive Nominatim, Overpass, and Backend markets).
 
 ---
 

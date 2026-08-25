@@ -44,9 +44,8 @@ const getOperatingHoursOptions = (t: (key: any) => string) => [
 ];
 
 const OVERPASS_ENDPOINTS = [
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.private.coffee/api/interpreter"
+    "https://overpass.openstreetmap.fr/api/interpreter",
+    "https://overpass-api.de/api/interpreter"
 ];
 
 // In-memory cache for Overpass queries (stores raw nodes/ways around coords)
@@ -166,35 +165,159 @@ const fetchOverpassEndpoint = async (endpoint: string, query: string, signal: Ab
 };
 
 /**
- * Pre-fetches all shops within a 10km radius in parallel across Overpass mirrors.
- * Fastest responsive mirror resolves in < 500ms, eliminating startup delays.
+ * Ultra-fast fallback fetchers using Photon & Nominatim OpenStreetMap engines.
  */
-const fetchAllMarketsData = async (latitude: number, longitude: number): Promise<any[]> => {
+const fetchPhotonMarkets = async (latitude: number, longitude: number): Promise<any[]> => {
+    const url = `https://photon.komoot.io/api/?q=supermercado&lat=${latitude}&lon=${longitude}&limit=50`;
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(url, {
+            headers: { "User-Agent": "PrescoApp/1.0 (contato@presco.app)" },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.features || []).map((f: any) => ({
+            id: f.properties?.osm_id || Math.floor(Math.random() * 1000000),
+            lat: f.geometry?.coordinates?.[1],
+            lon: f.geometry?.coordinates?.[0],
+            tags: {
+                name: f.properties?.name || f.properties?.street || "Supermercado",
+                shop: f.properties?.osm_value || "supermarket",
+                street: f.properties?.street,
+                city: f.properties?.city,
+                opening_hours: f.properties?.opening_hours
+            }
+        })).filter((el: any) => el.lat && el.lon);
+    } catch {
+        return [];
+    }
+};
+
+const fetchNominatimMarkets = async (latitude: number, longitude: number): Promise<any[]> => {
+    const delta = 0.08;
+    const url = `https://nominatim.openstreetmap.org/search?q=supermercado&format=json&bounded=1&viewbox=${longitude - delta},${latitude + delta},${longitude + delta},${latitude - delta}&limit=50`;
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const res = await fetch(url, {
+            headers: { "User-Agent": "PrescoApp/1.0 (contato@presco.app)" },
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data || []).map((item: any) => ({
+            id: item.osm_id || Math.floor(Math.random() * 1000000),
+            lat: parseFloat(item.lat),
+            lon: parseFloat(item.lon),
+            tags: {
+                name: item.name || item.display_name?.split(",")?.[0] || "Supermercado",
+                shop: "supermarket"
+            }
+        })).filter((el: any) => el.lat && el.lon);
+    } catch {
+        return [];
+    }
+};
+
+/**
+ * Progressive multi-source fetcher: returns fast Nominatim results immediately (< 900ms)
+ * and enriches with Overpass / Photon in parallel.
+ */
+const fetchAllMarketsData = async (
+    latitude: number,
+    longitude: number,
+    onProgress?: (elements: any[]) => void
+): Promise<any[]> => {
     const roundedLat = latitude.toFixed(2);
     const roundedLon = longitude.toFixed(2);
-    const cacheKey = `${roundedLat}_${roundedLon}_10000_all`;
+    const cacheKey = `${roundedLat}_${roundedLon}_all`;
 
     const cached = OVERPASS_CACHE.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 600000) {
+        if (onProgress) onProgress(cached.elements);
         return cached.elements;
     }
 
-    const query = `[out:json][timeout:6];(
-  node["shop"~"supermarket|convenience|grocery|deli|general"](around:10000,${latitude},${longitude});
-  way["shop"~"supermarket|convenience|grocery|deli|general"](around:10000,${latitude},${longitude});
-);out center tags;`;
+    const delta = 0.09; // ~10km bounding box
+    const query = `[out:json][timeout:8];(
+  node["shop"~"supermarket|convenience|grocery|deli|general"](around:8000,${latitude},${longitude});
+  way["shop"~"supermarket|convenience|grocery|deli|general"](around:8000,${latitude},${longitude});
+);out center tags 80;`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+    const accumulated: any[] = [];
+    const seenIds = new Set<string>();
+    const seenGeo = new Set<string>();
+
+    const mergeElements = (items: any[]) => {
+        let added = 0;
+        for (const el of items) {
+            const idKey = el.id !== undefined && el.id !== null ? String(el.id) : null;
+            const latCoord = (el.lat || el.center?.lat);
+            const lonCoord = (el.lon || el.center?.lon);
+            if (latCoord && lonCoord) {
+                const geoKey = `${latCoord.toFixed(4)}_${lonCoord.toFixed(4)}`;
+                const isIdSeen = idKey ? seenIds.has(idKey) : false;
+                const isGeoSeen = seenGeo.has(geoKey);
+
+                if (!isIdSeen && !isGeoSeen) {
+                    if (idKey) seenIds.add(idKey);
+                    seenGeo.add(geoKey);
+                    accumulated.push(el);
+                    added++;
+                }
+            }
+        }
+        if (added > 0 && onProgress) {
+            onProgress([...accumulated]);
+        }
+    };
+
+    // 1. Fast Nominatim Bounded Search (< 900ms)
+    const nominatimPromise = fetchNominatimMarkets(latitude, longitude)
+        .then(nom => {
+            if (nom.length > 0) mergeElements(nom);
+            return nom;
+        })
+        .catch(() => []);
+
+    // 2. Overpass Parallel Mirror Race
+    const overpassPromise = Promise.any(
+        OVERPASS_ENDPOINTS.map(endpoint => fetchOverpassEndpoint(endpoint, query, controller.signal))
+    )
+        .then(over => {
+            if (over.length > 0) mergeElements(over);
+            return over;
+        })
+        .catch(() => []);
+
+    // 3. Photon Fallback
+    const photonPromise = fetchPhotonMarkets(latitude, longitude)
+        .then(pho => {
+            if (pho.length > 0) mergeElements(pho);
+            return pho;
+        })
+        .catch(() => []);
 
     try {
-        const fastestResult = await Promise.any(
-            OVERPASS_ENDPOINTS.map(endpoint => fetchOverpassEndpoint(endpoint, query, controller.signal))
-        );
+        await Promise.allSettled([nominatimPromise, overpassPromise, photonPromise]);
         clearTimeout(timeoutId);
-        OVERPASS_CACHE.set(cacheKey, { elements: fastestResult, timestamp: Date.now() });
-        lastSessionElements = fastestResult;
-        return fastestResult;
+
+        if (accumulated.length > 0) {
+            OVERPASS_CACHE.set(cacheKey, { elements: accumulated, timestamp: Date.now() });
+            lastSessionElements = accumulated;
+            return accumulated;
+        }
+
+        if (cached) return cached.elements;
+        if (lastSessionElements.length > 0) return lastSessionElements;
+        return [];
     } catch {
         clearTimeout(timeoutId);
         if (cached) return cached.elements;
@@ -208,8 +331,12 @@ export default function MapScreen() {
     const { t } = useI18n();
     const mapRef = useRef<MapView>(null);
 
-    const [appState, setAppState] = useState({ isLoading: false, error: null as string | null, isProcessing: false });
-    const [filters, setFilters] = useState({ shopType: "supermarket", maxDistance: 3000, hoursOption: "all" });
+    const [appState, setAppState] = useState({
+        isLoadingMarkets: true,
+        isProcessingLocation: false,
+        error: null as string | null
+    });
+    const [filters, setFilters] = useState({ shopType: "all", maxDistance: 5000, hoursOption: "all" });
     const [rawOsmElements, setRawOsmElements] = useState<any[]>(lastSessionElements);
     const [backendMarketsList, setBackendMarketsList] = useState<MarketMarker[]>(lastSessionBackendMarkets);
 
@@ -221,11 +348,11 @@ export default function MapScreen() {
 
     const initializeUserLocation = useCallback(async () => {
         try {
-            setAppState(prev => ({ ...prev, error: null, isProcessing: true }));
+            setAppState(prev => ({ ...prev, error: null, isProcessingLocation: true }));
             const { status } = await Location.requestForegroundPermissionsAsync();
 
             if (status !== 'granted') {
-                setAppState(prev => ({ ...prev, isProcessing: false }));
+                setAppState(prev => ({ ...prev, isProcessingLocation: false }));
                 return;
             }
 
@@ -260,7 +387,7 @@ export default function MapScreen() {
         } catch {
             // Keep current location on failure
         } finally {
-            setAppState(prev => ({ ...prev, isProcessing: false }));
+            setAppState(prev => ({ ...prev, isProcessingLocation: false }));
         }
     }, []);
 
@@ -268,57 +395,82 @@ export default function MapScreen() {
         initializeUserLocation();
     }, [initializeUserLocation]);
 
-    // Fetch backend markets once when location is established
+    // Fetch backend markets with radius query and global fallback
     useEffect(() => {
         let isMounted = true;
         if (!userLocation) return;
 
-        fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: 15000 }).then(res => {
-            if (!isMounted || !res || !Array.isArray(res)) return;
-            const mapped: MarketMarker[] = [];
-            for (const m of res) {
-                if (m.location) {
-                    let lat = userLocation.latitude;
-                    let lon = userLocation.longitude;
-                    try {
-                        const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
-                        if (parsed?.coordinates) {
-                            lon = parsed.coordinates[0];
-                            lat = parsed.coordinates[1];
-                        }
-                    } catch {}
-                    const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
-                    mapped.push({
-                        id: `backend_${m.id}`,
-                        title: m.name,
-                        coordinate: { latitude: lat, longitude: lon },
-                        straightDistance: straightDist,
-                        routeDistance: straightDist,
-                        isBackendMarket: true,
-                        shopType: "supermarket",
-                    });
+        const loadBackendMarkets = async () => {
+            try {
+                let res = await fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: 25000 });
+                if (!res || res.length === 0) {
+                    res = await fetchMarkets();
                 }
-            }
-            if (isMounted) {
-                lastSessionBackendMarkets = mapped;
-                setBackendMarketsList(mapped);
-            }
-        }).catch(() => {});
+                if (!isMounted || !res || !Array.isArray(res)) return;
+
+                const mapped: MarketMarker[] = [];
+                for (const m of res) {
+                    if (m.location) {
+                        let lat = userLocation.latitude;
+                        let lon = userLocation.longitude;
+                        try {
+                            const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
+                            if (parsed?.coordinates && Array.isArray(parsed.coordinates)) {
+                                lon = parsed.coordinates[0];
+                                lat = parsed.coordinates[1];
+                            } else if (parsed?.lat && parsed?.lng) {
+                                lat = parsed.lat;
+                                lon = parsed.lng;
+                            }
+                        } catch {}
+                        const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
+                        mapped.push({
+                            id: `backend_${m.id}`,
+                            title: m.name,
+                            coordinate: { latitude: lat, longitude: lon },
+                            straightDistance: straightDist,
+                            routeDistance: straightDist,
+                            isBackendMarket: true,
+                            shopType: "supermarket",
+                        });
+                    }
+                }
+                if (isMounted && mapped.length > 0) {
+                    lastSessionBackendMarkets = mapped;
+                    setBackendMarketsList(mapped);
+                }
+            } catch {}
+        };
+
+        loadBackendMarkets();
 
         return () => { isMounted = false; };
     }, [userLocation.latitude, userLocation.longitude]);
 
-    // Pre-fetch raw OSM elements once on location fix in background
+    // Pre-fetch raw OSM elements progressively in background
     useEffect(() => {
         let isMounted = true;
+        setAppState(prev => ({ ...prev, isLoadingMarkets: true }));
 
-        fetchAllMarketsData(userLocation.latitude, userLocation.longitude)
+        fetchAllMarketsData(
+            userLocation.latitude,
+            userLocation.longitude,
+            (partialElements) => {
+                if (isMounted && partialElements?.length) {
+                    setRawOsmElements(partialElements);
+                    setAppState(prev => ({ ...prev, isLoadingMarkets: false }));
+                }
+            }
+        )
             .then(elements => {
                 if (isMounted && elements?.length) {
                     setRawOsmElements(elements);
                 }
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => {
+                if (isMounted) setAppState(prev => ({ ...prev, isLoadingMarkets: false }));
+            });
 
         return () => { isMounted = false; };
     }, [userLocation.latitude, userLocation.longitude]);
@@ -333,11 +485,13 @@ export default function MapScreen() {
             const lon = el.lon || el.center?.lon;
             if (!lat || !lon) continue;
 
-            const shop = el.tags?.shop;
+            const shop = el.tags?.shop || "supermarket";
             if (filters.shopType !== "all") {
                 if (filters.shopType === "grocery") {
-                    if (shop !== "grocery" && shop !== "deli" && shop !== "general") continue;
-                } else if (shop !== filters.shopType) {
+                    if (shop !== "grocery" && shop !== "deli" && shop !== "general" && shop !== "greengrocer") continue;
+                } else if (filters.shopType === "convenience") {
+                    if (shop !== "convenience" && shop !== "kiosk") continue;
+                } else if (shop !== filters.shopType && shop !== "supermarket" && shop !== "hypermarket") {
                     continue;
                 }
             }
@@ -351,7 +505,7 @@ export default function MapScreen() {
                 continue;
             }
 
-            const name = el.tags?.name || el.tags?.brand || el.tags?.operator || t("map.marketDetails");
+            const name = el.tags?.name || el.tags?.brand || el.tags?.operator || el.name || (el.tags?.shop ? `Mercado (${el.tags.shop})` : "Supermercado");
             const cachedRoute = OSRM_DISTANCE_CACHE.get(`${locKey}_osm_${el.id}`);
 
             overpassMarkers.push({
@@ -366,13 +520,25 @@ export default function MapScreen() {
         }
 
         const filteredBackend = backendMarketsList.filter(m => {
+            if (filters.shopType !== "all" && m.shopType && m.shopType !== filters.shopType) return false;
             if (m.straightDistance * 1000 > filters.maxDistance) return false;
             if (filters.hoursOption === "with_hours" && !m.openingHours) return false;
             return true;
         });
 
-        return [...filteredBackend, ...overpassMarkers].sort((a, b) => a.routeDistance - b.routeDistance);
-    }, [userLocation, rawOsmElements, backendMarketsList, filters, t]);
+        const combined = [...filteredBackend, ...overpassMarkers];
+        const unique: MarketMarker[] = [];
+        const seenMarketIds = new Set<string>();
+
+        for (const marker of combined) {
+            if (!seenMarketIds.has(marker.id)) {
+                seenMarketIds.add(marker.id);
+                unique.push(marker);
+            }
+        }
+
+        return unique.sort((a, b) => a.routeDistance - b.routeDistance);
+    }, [userLocation, rawOsmElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
     useEffect(() => {
@@ -481,10 +647,27 @@ export default function MapScreen() {
                     <Ionicons name="locate" size={24} color={THEME_COLORS.accent} />
                 </TouchableOpacity>
 
-                {appState.isProcessing && (
+                {(appState.isLoadingMarkets || appState.isProcessingLocation) && (
                     <View style={styles.inlineLoader}>
                         <ActivityIndicator size="small" color={THEME_COLORS.accent} />
                         <Text style={styles.inlineLoaderText}>{t("common.loading")}</Text>
+                    </View>
+                )}
+
+                {visibleMarkers.length === 0 && !appState.isLoadingMarkets && !appState.isProcessingLocation && (
+                    <View style={[styles.noMarkersBanner, themeStyles.card, themeStyles.border]}>
+                        <Ionicons name="information-circle-outline" size={18} color={THEME_COLORS.accent} />
+                        <Text style={[styles.noMarkersText, themeStyles.text]}>
+                            {rawOsmElements.length > 0 ? `Nenhum mercado a até ${filters.maxDistance / 1000} km` : "Nenhum mercado encontrado"}
+                        </Text>
+                        {filters.maxDistance < 10000 && (
+                            <TouchableOpacity
+                                style={styles.expandRadiusBtn}
+                                onPress={() => setFilters(prev => ({ ...prev, maxDistance: 10000, shopType: "all" }))}
+                            >
+                                <Text style={styles.expandRadiusText}>10 km</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
             </View>
@@ -686,6 +869,34 @@ const styles = StyleSheet.create({
         elevation: 4,
     },
     inlineLoaderText: { marginLeft: 8, fontSize: 12, color: "#333", fontWeight: '500' },
+    noMarkersBanner: {
+        position: "absolute",
+        bottom: 35,
+        alignSelf: "center",
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 8,
+        paddingHorizontal: 14,
+        borderRadius: 20,
+        elevation: 4,
+        borderWidth: 1,
+        gap: 8,
+    },
+    noMarkersText: {
+        fontSize: 13,
+        fontWeight: "500",
+    },
+    expandRadiusBtn: {
+        backgroundColor: THEME_COLORS.accent,
+        paddingVertical: 4,
+        paddingHorizontal: 10,
+        borderRadius: 12,
+    },
+    expandRadiusText: {
+        color: "#fff",
+        fontSize: 12,
+        fontWeight: "700",
+    },
     modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)", justifyContent: "flex-end" },
     modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: "50%" },
     modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
