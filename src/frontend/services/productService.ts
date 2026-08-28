@@ -20,10 +20,16 @@ export interface ProductData {
   imageUri?: string | null;
   icon?: string | null;
   lastPrice?: string;
+  bestPrice?: string | null;
   minPrice?: string | null;
   maxPrice?: string | null;
   avgPrice?: string | null;
   occurrencesCount?: number;
+  nearestMarketName?: string | null;
+  nearestMarketDistance?: number | null;
+  formattedDistance?: string | null;
+  isPromotion?: boolean;
+  discountPercentage?: number | null;
 }
 
 export interface ProductDetailData extends ProductData {
@@ -43,8 +49,12 @@ export interface FetchProductsParams {
   category?: string;
   page?: number;
   limit?: number;
-  sortBy?: "name" | "createdAt" | "id";
+  sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount";
   sortOrder?: "asc" | "desc";
+  latitude?: number;
+  longitude?: number;
+  radius?: number;
+  onlyPromotions?: boolean;
 }
 
 export interface CreateProductParams {
@@ -76,6 +86,10 @@ export const fetchProducts = async (params?: FetchProductsParams): Promise<Pagin
   if (params?.limit) queryParts.push(`limit=${params.limit}`);
   if (params?.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
   if (params?.sortOrder) queryParts.push(`sortOrder=${params.sortOrder}`);
+  if (params?.latitude !== undefined && params?.latitude !== null) queryParts.push(`latitude=${params.latitude.toFixed(5)}`);
+  if (params?.longitude !== undefined && params?.longitude !== null) queryParts.push(`longitude=${params.longitude.toFixed(5)}`);
+  if (params?.radius) queryParts.push(`radius=${params.radius}`);
+  if (params?.onlyPromotions) queryParts.push(`onlyPromotions=true`);
 
   const queryString = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
   const cacheKey = queryString || "default";

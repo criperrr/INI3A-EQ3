@@ -113,6 +113,8 @@ export const ja: TranslationSchema = {
     banner3Title: "地域の店舗",
     banner3Subtitle: "近所のベストプライスを見つける",
     banner3Action: "探索する",
+    nearbyOffers: "周辺のお得な商品・最安値",
+    radiusFilter15km: "15km圏内",
   },
   search: {
     title: "商品を検索",
@@ -292,6 +294,9 @@ export const ja: TranslationSchema = {
     recordDate: "記録日",
     todayBadge: "今日",
     automaticDateNotice: "本日の日付が自動的に適用されます",
+    promoBadge: "特売",
+    bestPrice: "最安値",
+    atDistance: "{distance} • {market}",
   },
   profile: {
     title: "マイページ",

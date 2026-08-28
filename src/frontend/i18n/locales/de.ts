@@ -113,6 +113,8 @@ export const de: TranslationSchema = {
     banner3Title: "Lokale Märkte",
     banner3Subtitle: "Finden Sie die besten Angebote in Ihrer Nähe",
     banner3Action: "Erkunden",
+    nearbyOffers: "Angebote & Beste Preise in der Nähe",
+    radiusFilter15km: "15 km Umkreis",
   },
   search: {
     title: "Produkte suchen",
@@ -292,6 +294,9 @@ export const de: TranslationSchema = {
     recordDate: "Erfassungsdatum",
     todayBadge: "Heute",
     automaticDateNotice: "Tagesdatum wird automatisch erfasst",
+    promoBadge: "Angebot",
+    bestPrice: "Bester Preis",
+    atDistance: "{distance} entfernt bei {market}",
   },
   profile: {
     title: "Mein Profil",

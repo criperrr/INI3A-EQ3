@@ -104,11 +104,48 @@ class ProductRepositoryClass {
     category?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
-    sortBy?: "name" | "createdAt" | "id" | undefined;
+    sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
     sortOrder?: "asc" | "desc" | undefined;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+    radius?: number | undefined;
+    onlyPromotions?: boolean | undefined;
   }) {
-    const { search, category, limit = 20, offset = 0, sortBy = "id", sortOrder = "desc" } = params;
+    const {
+      search,
+      category,
+      limit = 20,
+      offset = 0,
+      sortBy = "id",
+      sortOrder = "desc",
+      latitude,
+      longitude,
+      radius = 15000,
+      onlyPromotions = false,
+    } = params;
 
+    // 1. Spatial Proximity Query when coordinates are provided
+    if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+      const nearbyResults = await this.searchProductsNearby({
+        latitude,
+        longitude,
+        radius,
+        search,
+        category,
+        limit,
+        offset,
+        sortBy,
+        sortOrder,
+        onlyPromotions,
+      });
+
+      // If nearby items found, return them directly
+      if (nearbyResults && nearbyResults.length > 0) {
+        return nearbyResults;
+      }
+    }
+
+    // 2. Standard Catalog Query Fallback (when no coordinates or no nearby occurrences found)
     const conditions = [];
 
     if (search && search.trim().length > 0) {
@@ -162,8 +199,245 @@ class ProductRepositoryClass {
     return items;
   }
 
-  async countProducts(params: { search?: string | undefined; category?: string | undefined }): Promise<number> {
-    const { search, category } = params;
+  async searchProductsNearby(params: {
+    latitude: number;
+    longitude: number;
+    radius?: number;
+    search?: string | undefined;
+    category?: string | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+    sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
+    onlyPromotions?: boolean | undefined;
+  }) {
+    const {
+      latitude,
+      longitude,
+      radius = 15000,
+      search,
+      category,
+      limit = 20,
+      offset = 0,
+      sortBy = "id",
+      sortOrder = "desc",
+      onlyPromotions = false,
+    } = params;
+
+    const wktPoint = `POINT(${longitude} ${latitude})`;
+
+    // Construct search & category SQL fragments safely
+    const filterClauses: any[] = [sql`1=1`];
+
+    if (search && search.trim().length > 0) {
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      filterClauses.push(sql`(p.name ILIKE ${term} OR p.ean ILIKE ${term} OR p.ean = ${cleanSearch})`);
+    }
+
+    if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        filterClauses.push(
+          sql`(p.description ILIKE ${`%${matched.name}%`} OR p.description ILIKE ${`%${matched.id}%`} OR p.description ILIKE ${`%${cleanCat}%`})`
+        );
+      } else {
+        filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
+      }
+    }
+
+    if (onlyPromotions) {
+      filterClauses.push(sql`ps.is_promotion = TRUE`);
+    }
+
+    // Determine ordering clause
+    let orderSql = sql`
+      ps.is_promotion DESC,
+      ((COALESCE(ps.min_distance_meters, 5000) / 1000.0) * 0.25 + ps.min_price * 0.75) ASC,
+      ps.min_distance_meters ASC,
+      p.id DESC
+    `;
+
+    if (sortBy === "distance") {
+      orderSql = sortOrder === "asc"
+        ? sql`ps.min_distance_meters ASC, ps.min_price ASC`
+        : sql`ps.min_distance_meters DESC, ps.min_price ASC`;
+    } else if (sortBy === "price") {
+      orderSql = sortOrder === "asc"
+        ? sql`ps.min_price ASC, ps.min_distance_meters ASC`
+        : sql`ps.min_price DESC, ps.min_distance_meters ASC`;
+    } else if (sortBy === "discount") {
+      orderSql = sql`ps.discount_percentage DESC, ps.min_price ASC`;
+    } else if (sortBy === "name") {
+      orderSql = sortOrder === "asc" ? sql`p.name ASC` : sql`p.name DESC`;
+    } else if (sortBy === "createdAt") {
+      orderSql = sortOrder === "asc" ? sql`p.created_at ASC` : sql`p.created_at DESC`;
+    }
+
+    const query = sql`
+      WITH product_stats AS (
+        SELECT 
+          p.id AS product_id,
+          MIN(o.value::numeric) AS min_price,
+          MAX(o.value::numeric) AS max_price,
+          AVG(o.value::numeric) AS avg_price,
+          COUNT(o.id)::int AS occurrences_count,
+          MIN(ST_Distance(m.location, ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
+          (
+            SELECT m2.name 
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_name,
+          (
+            SELECT m3.name
+            FROM ocurrency o3
+            JOIN market m3 ON o3.market_id = m3.id
+            WHERE o3.product_id = p.id
+              AND o3.is_suspended = false
+              AND ST_DWithin(m3.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY o3.value::numeric ASC, ST_Distance(m3.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS best_market_name,
+          CASE 
+            WHEN AVG(o.value::numeric) > MIN(o.value::numeric) * 1.04 THEN ROUND(((AVG(o.value::numeric) - MIN(o.value::numeric)) / AVG(o.value::numeric)) * 100)::int
+            ELSE 0 
+          END AS discount_percentage,
+          CASE 
+            WHEN (AVG(o.value::numeric) >= MIN(o.value::numeric) * 1.05 AND COUNT(o.id) >= 1) THEN TRUE
+            ELSE FALSE
+          END AS is_promotion
+        FROM product p
+        JOIN ocurrency o ON o.product_id = p.id AND o.is_suspended = false
+        JOIN market m ON o.market_id = m.id
+        WHERE ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+        GROUP BY p.id
+      )
+      SELECT 
+        p.id,
+        p.ean,
+        p.ncm,
+        p.name,
+        p.description,
+        p.icon,
+        p.created_at AS "createdAt",
+        ps.min_price AS "minPriceNumeric",
+        ps.max_price AS "maxPriceNumeric",
+        ps.avg_price AS "avgPriceNumeric",
+        ps.occurrences_count AS "occurrencesCount",
+        ps.min_distance_meters AS "nearestMarketDistance",
+        COALESCE(ps.best_market_name, ps.nearest_market_name) AS "nearestMarketName",
+        ps.discount_percentage AS "discountPercentage",
+        ps.is_promotion AS "isPromotion"
+      FROM product_stats ps
+      JOIN product p ON p.id = ps.product_id
+      WHERE ${sql.join(filterClauses, sql` AND `)}
+      ORDER BY ${orderSql}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    try {
+      const result = await db.execute(query);
+      const rows = (result.rows || result) as any[];
+      return rows.map((row) => ({
+        id: Number(row.id),
+        ean: row.ean || null,
+        ncm: row.ncm || null,
+        name: String(row.name),
+        description: row.description || null,
+        icon: row.icon || null,
+        createdAt: row.createdAt || new Date().toISOString(),
+        minPriceNumeric: row.minPriceNumeric ? Number(row.minPriceNumeric) : null,
+        maxPriceNumeric: row.maxPriceNumeric ? Number(row.maxPriceNumeric) : null,
+        avgPriceNumeric: row.avgPriceNumeric ? Number(row.avgPriceNumeric) : null,
+        occurrencesCount: Number(row.occurrencesCount || 0),
+        nearestMarketDistance: row.nearestMarketDistance !== null && row.nearestMarketDistance !== undefined ? Math.round(Number(row.nearestMarketDistance)) : null,
+        nearestMarketName: row.nearestMarketName ? String(row.nearestMarketName) : null,
+        discountPercentage: row.discountPercentage ? Number(row.discountPercentage) : 0,
+        isPromotion: Boolean(row.isPromotion),
+      }));
+    } catch (err) {
+      console.warn("[ProductRepository] Erro ao executar busca espacial por proximidade:", err);
+      return [];
+    }
+  }
+
+  async countProducts(params: {
+    search?: string | undefined;
+    category?: string | undefined;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+    radius?: number | undefined;
+    onlyPromotions?: boolean | undefined;
+  }): Promise<number> {
+    const { search, category, latitude, longitude, radius = 15000, onlyPromotions = false } = params;
+
+    // If coordinates provided, count nearby matching products
+    if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+      const wktPoint = `POINT(${longitude} ${latitude})`;
+      const filterClauses: any[] = [sql`1=1`];
+
+      if (search && search.trim().length > 0) {
+        const cleanSearch = search.trim();
+        const term = `%${cleanSearch}%`;
+        filterClauses.push(sql`(p.name ILIKE ${term} OR p.ean ILIKE ${term} OR p.ean = ${cleanSearch})`);
+      }
+
+      if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+        const cleanCat = category.trim();
+        const matched = findPredefinedCategory(cleanCat);
+        if (matched) {
+          filterClauses.push(
+            sql`(p.description ILIKE ${`%${matched.name}%`} OR p.description ILIKE ${`%${matched.id}%`} OR p.description ILIKE ${`%${cleanCat}%`})`
+          );
+        } else {
+          filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
+        }
+      }
+
+      if (onlyPromotions) {
+        filterClauses.push(sql`ps.is_promotion = TRUE`);
+      }
+
+      const countQuery = sql`
+        WITH product_stats AS (
+          SELECT 
+            p.id AS product_id,
+            MIN(o.value::numeric) AS min_price,
+            AVG(o.value::numeric) AS avg_price,
+            COUNT(o.id)::int AS occurrences_count,
+            CASE 
+              WHEN (AVG(o.value::numeric) >= MIN(o.value::numeric) * 1.05 AND COUNT(o.id) >= 1) THEN TRUE
+              ELSE FALSE
+            END AS is_promotion
+          FROM product p
+          JOIN ocurrency o ON o.product_id = p.id AND o.is_suspended = false
+          JOIN market m ON o.market_id = m.id
+          WHERE ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+          GROUP BY p.id
+        )
+        SELECT COUNT(DISTINCT p.id)::int AS count
+        FROM product_stats ps
+        JOIN product p ON p.id = ps.product_id
+        WHERE ${sql.join(filterClauses, sql` AND `)}
+      `;
+
+      try {
+        const res = await db.execute(countQuery);
+        const rows = (res.rows || res) as any[];
+        const count = Number(rows[0]?.count || 0);
+        if (count > 0) return count;
+      } catch (err) {
+        console.warn("[ProductRepository] Erro ao contar produtos por proximidade:", err);
+      }
+    }
+
+    // Standard count fallback
     const conditions = [];
 
     if (search && search.trim().length > 0) {

@@ -113,6 +113,8 @@ export const zh: TranslationSchema = {
     banner3Title: "本地超市",
     banner3Subtitle: "寻找您附近的最佳价格",
     banner3Action: "探索",
+    nearbyOffers: "附近特惠与最低价",
+    radiusFilter15km: "15公里范围内",
   },
   search: {
     title: "搜索商品",
@@ -292,6 +294,9 @@ export const zh: TranslationSchema = {
     recordDate: "记录日期",
     todayBadge: "今天",
     automaticDateNotice: "已自动绑定当天日期",
+    promoBadge: "特惠",
+    bestPrice: "最低价",
+    atDistance: "距您 {distance} • {market}",
   },
   profile: {
     title: "个人中心",

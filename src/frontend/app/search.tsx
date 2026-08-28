@@ -7,8 +7,6 @@ import {
   ScrollView,
   FlatList,
   TouchableOpacity,
-  Keyboard,
-  TouchableWithoutFeedback,
   ActivityIndicator,
   RefreshControl,
   Platform,
@@ -20,6 +18,7 @@ import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { getUserLocation } from "../utils/userLocation";
 
 export default function SearchScreen() {
   const { themeStyles, accent, isDark } = useTheme();
@@ -55,9 +54,14 @@ export default function SearchScreen() {
       if (!isRefresh) setLoading(true);
       try {
         const isAll = category === allCategoryLabel || category === "Todos" || category === "All";
+        const loc = await getUserLocation();
+
         const response = await fetchProducts({
           search: searchTerm.trim() || undefined,
           category: !isAll ? category : undefined,
+          latitude: loc?.latitude,
+          longitude: loc?.longitude,
+          radius: 15000,
           limit: 30,
         });
         setProducts(response.items || []);
@@ -192,34 +196,33 @@ export default function SearchScreen() {
   ) : null;
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, themeStyles.bg]}>
-        <FlatList
-          data={loading && !refreshing ? [] : products}
-          renderItem={renderItem}
-          keyExtractor={keyExtractor}
-          numColumns={2}
-          columnWrapperStyle={products.length > 0 ? styles.columnWrapper : undefined}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={ListHeader}
-          ListEmptyComponent={ListEmpty}
-          initialNumToRender={8}
-          maxToRenderPerBatch={8}
-          windowSize={5}
-          removeClippedSubviews={Platform.OS !== "web"}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={accent}
-              colors={[accent]}
-            />
-          }
-        />
-      </View>
-    </TouchableWithoutFeedback>
+    <View style={[styles.container, themeStyles.bg]}>
+      <FlatList
+        data={loading && !refreshing ? [] : products}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        numColumns={2}
+        columnWrapperStyle={products.length > 0 ? styles.columnWrapper : undefined}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={ListEmpty}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={Platform.OS !== "web"}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={accent}
+            colors={[accent]}
+          />
+        }
+      />
+    </View>
   );
 }
 
@@ -344,7 +347,11 @@ const ProductCardItem = memo(function ProductCardItem({
 
   return (
     <TouchableOpacity
-      style={[styles.productCard, themeStyles.card, themeStyles.border]}
+      style={[
+        styles.productCard,
+        themeStyles.card,
+        product.isPromotion ? { borderColor: accent + "70", borderWidth: 1.5 } : themeStyles.border,
+      ]}
       activeOpacity={0.8}
       onPress={() => onPress(product)}
     >
@@ -362,13 +369,21 @@ const ProductCardItem = memo(function ProductCardItem({
             <Ionicons name="cube-outline" size={32} color={accent} />
           </View>
         )}
-        {product.category && product.category !== "Sem Categoria" && (
-          <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
-            <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
-            <Text style={styles.categoryBadgeText} numberOfLines={1}>
-              {getLocalizedCategoryName(product.category, t).toUpperCase()}
+        {product.isPromotion ? (
+          <View style={styles.promoBadge}>
+            <Text style={styles.promoBadgeText}>
+              🔥 {product.discountPercentage ? `-${product.discountPercentage}%` : t("products.promoBadge")}
             </Text>
           </View>
+        ) : (
+          product.category && product.category !== "Sem Categoria" && (
+            <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
+              <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
+              <Text style={styles.categoryBadgeText} numberOfLines={1}>
+                {getLocalizedCategoryName(product.category, t).toUpperCase()}
+              </Text>
+            </View>
+          )
         )}
       </View>
 
@@ -377,8 +392,16 @@ const ProductCardItem = memo(function ProductCardItem({
           {product.name}
         </Text>
         <Text style={[styles.productPrice, { color: accent }]}>
-          {product.lastPrice || t("productDetails.noOccurrences")}
+          {product.bestPrice || product.lastPrice || t("productDetails.noOccurrences")}
         </Text>
+        {product.formattedDistance && (
+          <View style={[styles.distancePill, { backgroundColor: themeStyles.card.backgroundColor, borderColor: themeStyles.border.borderColor }]}>
+            <Ionicons name="location" size={10} color={accent} />
+            <Text style={[styles.distanceText, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
+              {product.formattedDistance}{product.nearestMarketName ? ` • ${product.nearestMarketName}` : ""}
+            </Text>
+          </View>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -579,19 +602,52 @@ const styles = StyleSheet.create({
     color: "#FFF",
     letterSpacing: 0.5,
   },
+  promoBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#E53935",
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  promoBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
   productInfo: {
     alignItems: "flex-start",
+    width: "100%",
   },
   productName: {
     fontSize: 13,
     fontWeight: "600",
-    marginBottom: 6,
+    marginBottom: 4,
     minHeight: 34,
     lineHeight: 17,
   },
   productPrice: {
     fontSize: 14,
     fontWeight: "bold",
+    marginBottom: 2,
+  },
+  distancePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    gap: 4,
+    width: "100%",
+    marginTop: 2,
+  },
+  distanceText: {
+    fontSize: 10,
+    fontWeight: "500",
+    flex: 1,
   },
   emptyContainer: {
     alignItems: "center",

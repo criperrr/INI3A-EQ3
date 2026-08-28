@@ -97,6 +97,20 @@ export default function RegisterUser() {
           <View
             style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
+            <TouchableOpacity
+              style={[
+                styles.topBackButton,
+                themeStyles.inputBg,
+                themeStyles.border,
+              ]}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Voltar"
+            >
+              <Ionicons name="chevron-back" size={22} color={accent} />
+            </TouchableOpacity>
+
             <Text style={[styles.welcomeText, themeStyles.text]}>
               {t("auth.registerTitle")}
             </Text>
@@ -436,4 +450,14 @@ const styles = StyleSheet.create({
   },
   footerText: { fontSize: 15 },
   loginText: { fontSize: 15, fontWeight: "bold" },
+  topBackButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
 });

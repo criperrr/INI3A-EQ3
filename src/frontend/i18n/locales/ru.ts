@@ -113,6 +113,8 @@ export const ru: TranslationSchema = {
     banner3Title: "Местные магазины",
     banner3Subtitle: "Найдите лучшие цены в вашем районе",
     banner3Action: "Исследовать",
+    nearbyOffers: "Выгодные предложения рядом",
+    radiusFilter15km: "Радиус 15 км",
   },
   search: {
     title: "Поиск товаров",
@@ -292,6 +294,9 @@ export const ru: TranslationSchema = {
     recordDate: "Дата фиксации",
     todayBadge: "Сегодня",
     automaticDateNotice: "Текущая дата автоматически прикреплена к записи",
+    promoBadge: "Скидка",
+    bestPrice: "Лучшая цена",
+    atDistance: "{distance} в {market}",
   },
   profile: {
     title: "Мой профиль",
