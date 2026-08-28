@@ -44,10 +44,16 @@ export interface ProductDTO {
   icon: string | null;
   createdAt: string;
   lastPrice: string;
-  minPrice?: string | null;
-  maxPrice?: string | null;
-  avgPrice?: string | null;
-  occurrencesCount?: number;
+  bestPrice?: string | null | undefined;
+  minPrice?: string | null | undefined;
+  maxPrice?: string | null | undefined;
+  avgPrice?: string | null | undefined;
+  occurrencesCount?: number | undefined;
+  nearestMarketName?: string | null | undefined;
+  nearestMarketDistance?: number | null | undefined;
+  formattedDistance?: string | null | undefined;
+  isPromotion?: boolean | undefined;
+  discountPercentage?: number | null | undefined;
 }
 
 export interface ProductDetailDTO extends ProductDTO {
@@ -59,8 +65,12 @@ export interface SearchProductsQuery {
   category?: string | undefined;
   page?: number | undefined;
   limit?: number | undefined;
-  sortBy?: "name" | "createdAt" | "id" | undefined;
+  sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
   sortOrder?: "asc" | "desc" | undefined;
+  latitude?: number | undefined;
+  longitude?: number | undefined;
+  radius?: number | undefined;
+  onlyPromotions?: boolean | undefined;
 }
 
 export interface PaginatedProductsResult {

@@ -13,6 +13,34 @@ import type {
 class ProductServiceClass {
   private formatProductDTO(raw: any, latestPrice?: string | null): ProductDTO {
     const category = raw.description || "Sem Categoria";
+
+    let formattedDistance: string | null = null;
+    if (raw.nearestMarketDistance !== undefined && raw.nearestMarketDistance !== null) {
+      const d = Number(raw.nearestMarketDistance);
+      if (d < 1000) {
+        formattedDistance = `${Math.round(d)} m`;
+      } else {
+        formattedDistance = `${(d / 1000).toFixed(1).replace(".", ",")} km`;
+      }
+    }
+
+    const minPriceFormatted =
+      raw.minPriceNumeric !== undefined && raw.minPriceNumeric !== null
+        ? `R$ ${Number(raw.minPriceNumeric).toFixed(2).replace(".", ",")}`
+        : null;
+
+    const maxPriceFormatted =
+      raw.maxPriceNumeric !== undefined && raw.maxPriceNumeric !== null
+        ? `R$ ${Number(raw.maxPriceNumeric).toFixed(2).replace(".", ",")}`
+        : null;
+
+    const avgPriceFormatted =
+      raw.avgPriceNumeric !== undefined && raw.avgPriceNumeric !== null
+        ? `R$ ${Number(raw.avgPriceNumeric).toFixed(2).replace(".", ",")}`
+        : null;
+
+    const finalLastPrice = minPriceFormatted || latestPrice || "Preço não informado";
+
     return {
       id: raw.id,
       barcode: raw.ean || `ID-${raw.id}`,
@@ -24,7 +52,17 @@ class ProductServiceClass {
       imageUri: raw.icon || null,
       icon: raw.icon || null,
       createdAt: raw.createdAt || new Date().toISOString(),
-      lastPrice: latestPrice || "Preço não informado",
+      lastPrice: finalLastPrice,
+      bestPrice: minPriceFormatted || finalLastPrice,
+      minPrice: minPriceFormatted,
+      maxPrice: maxPriceFormatted,
+      avgPrice: avgPriceFormatted,
+      occurrencesCount: raw.occurrencesCount !== undefined ? Number(raw.occurrencesCount) : undefined,
+      nearestMarketName: raw.nearestMarketName || null,
+      nearestMarketDistance: raw.nearestMarketDistance !== undefined ? raw.nearestMarketDistance : null,
+      formattedDistance,
+      isPromotion: Boolean(raw.isPromotion),
+      discountPercentage: raw.discountPercentage ? Number(raw.discountPercentage) : 0,
     };
   }
 
@@ -165,10 +203,18 @@ class ProductServiceClass {
         offset,
         sortBy: query.sortBy,
         sortOrder: query.sortOrder,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radius: query.radius,
+        onlyPromotions: query.onlyPromotions,
       }),
       ProductRepository.countProducts({
         search: query.search,
         category: query.category,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radius: query.radius,
+        onlyPromotions: query.onlyPromotions,
       }),
     ]);
 

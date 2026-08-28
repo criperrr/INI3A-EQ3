@@ -33,6 +33,7 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
 
   const currentIndex = getTabIndex(pathname);
   const isMainTab = currentIndex !== -1;
+  const isSwipeEnabled = isMainTab && !pathname.includes("/map");
 
   const translateX = useSharedValue(0);
   const isDragging = useSharedValue(false);
@@ -64,19 +65,22 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
     // Prepara a posição inicial de entrada da próxima tela para deslizar suavemente
     translateX.value = direction === "right" ? SCREEN_WIDTH * 0.22 : -SCREEN_WIDTH * 0.22;
     navigateToTab(targetRoute, direction);
+    setTimeout(() => {
+      isBusy.value = false;
+    }, 250);
   };
 
   const panGesture = Gesture.Pan()
-    .enabled(isMainTab)
-    .activeOffsetX([-15, 15])
-    .failOffsetY([-30, 30])
+    .enabled(isSwipeEnabled)
+    .minPointers(1)
+    .maxPointers(1)
+    .activeOffsetX([-28, 28])
+    .failOffsetY([-16, 16])
     .onStart(() => {
-      if (isBusy.value) return;
+      isBusy.value = false;
       isDragging.value = true;
     })
     .onUpdate((event) => {
-      if (isBusy.value) return;
-
       const isFirst = currentIndex === 0;
       const isLast = currentIndex === MAIN_TABS.length - 1;
 
@@ -88,16 +92,16 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
       }
     })
     .onEnd((event) => {
-      if (isBusy.value) return;
       isDragging.value = false;
 
       const absX = Math.abs(event.translationX);
       const absY = Math.abs(event.translationY);
-      const isHorizontal = absX > absY * 1.3;
-      const isDecisiveDistance = absX >= 65;
-      const isDecisiveVelocity = Math.abs(event.velocityX) >= 450;
+      // Exige direcionalidade predominantemente horizontal
+      const isStrictlyHorizontal = absX > absY * 1.35;
+      const isDecisiveDistance = absX >= 60;
+      const isDecisiveVelocity = Math.abs(event.velocityX) >= 420 && absX >= 32;
 
-      const shouldSwitch = isHorizontal && (isDecisiveDistance || isDecisiveVelocity);
+      const shouldSwitch = isStrictlyHorizontal && (isDecisiveDistance || isDecisiveVelocity);
 
       if (shouldSwitch) {
         if (event.translationX < 0 && currentIndex < MAIN_TABS.length - 1) {
@@ -159,7 +163,7 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
     };
   });
 
-  if (!isMainTab) {
+  if (!isSwipeEnabled) {
     return <View style={styles.container}>{children}</View>;
   }
 

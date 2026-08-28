@@ -111,6 +111,8 @@ export interface TranslationSchema {
     banner3Title: string;
     banner3Subtitle: string;
     banner3Action: string;
+    nearbyOffers: string;
+    radiusFilter15km: string;
   };
   search: {
     title: string;
@@ -290,6 +292,9 @@ export interface TranslationSchema {
     recordDate: string;
     todayBadge: string;
     automaticDateNotice: string;
+    promoBadge: string;
+    bestPrice: string;
+    atDistance: string;
   };
   profile: {
     title: string;

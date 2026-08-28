@@ -16,6 +16,7 @@ import { useI18n } from "../content/i18nContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
+import { getUserLocation } from "../utils/userLocation";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -33,45 +34,77 @@ type GridItemType = {
   id: number;
   name: string;
   image: string;
+  price?: string;
+  category?: string;
+  isPromotion?: boolean;
+  discountPercentage?: number | null;
+  formattedDistance?: string | null;
+  nearestMarketName?: string | null;
 };
 
 // --- Mocks ---
 const MOCK_PRODUCTS: GridItemType[] = [
   {
     id: 1,
-    name: "Pão Artesanal",
+    name: "Café Especial Torrado 500g",
     image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+    price: "R$ 14,90",
+    isPromotion: true,
+    discountPercentage: 40,
+    formattedDistance: "1.2 km",
+    nearestMarketName: "Mercado Central",
   },
   {
     id: 2,
-    name: "Café Especial Torrado",
+    name: "Azeite de Oliva Extra Virgem",
     image:
-      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
+    price: "R$ 26,90",
+    isPromotion: true,
+    discountPercentage: 32,
+    formattedDistance: "1.8 km",
+    nearestMarketName: "Supermercado Extra",
   },
   {
     id: 3,
     name: "Leite Integral Orgânico",
     image:
       "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
+    price: "R$ 4,29",
+    isPromotion: true,
+    discountPercentage: 34,
+    formattedDistance: "2.1 km",
+    nearestMarketName: "Carrefour Express",
   },
   {
     id: 4,
-    name: "Arroz Parboilizado 5kg",
+    name: "Arroz Nobre Tipo 1 5kg",
     image:
       "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+    price: "R$ 22,90",
+    formattedDistance: "1.2 km",
+    nearestMarketName: "Mercado Central",
   },
   {
     id: 5,
-    name: "Frutas Tropicais",
+    name: "Pão Artesanal 500g",
     image:
-      "https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+    price: "R$ 7,90",
+    formattedDistance: "3.4 km",
+    nearestMarketName: "Pão de Açúcar",
   },
   {
     id: 6,
-    name: "Legumes Selecionados",
+    name: "Chocolate Meio Amargo 70%",
     image:
-      "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
+    price: "R$ 5,99",
+    isPromotion: true,
+    discountPercentage: 33,
+    formattedDistance: "1.2 km",
+    nearestMarketName: "Mercado Central",
   },
 ];
 
@@ -112,6 +145,7 @@ export default function HomeScreen() {
   const [activeView, setActiveView] = useState<string>("products");
   const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
   const [realMarkets, setRealMarkets] = useState<GridItemType[]>(MOCK_MARKETS);
+  const [hasLocation, setHasLocation] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const actionTabs: TabType[] = [
@@ -145,42 +179,61 @@ export default function HomeScreen() {
     },
   ];
 
-  useEffect(() => {
-    fetchProducts({ limit: 6 })
-      .then((res) => {
-        if (res.items && res.items.length > 0) {
-          const mapped: GridItemType[] = res.items.map((p) => ({
-            id: p.id || Math.random(),
-            name: p.name,
-            image:
-              p.imageUri ||
-              p.icon ||
-              "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-          }));
-          setRealProducts(mapped);
-        }
-      })
-      .catch(() => {});
+  const loadProductsAndMarkets = useCallback(async () => {
+    try {
+      const loc = await getUserLocation();
+      if (loc) setHasLocation(true);
 
-    fetchMarkets()
-      .then((markets) => {
-        if (markets && markets.length > 0) {
-          const marketImages = [
+      const res = await fetchProducts({
+        latitude: loc?.latitude,
+        longitude: loc?.longitude,
+        radius: 15000,
+        limit: 6,
+      });
+
+      if (res.items && res.items.length > 0) {
+        const mapped: GridItemType[] = res.items.map((p) => ({
+          id: p.id || Math.random(),
+          name: p.name,
+          category: p.category,
+          price: p.bestPrice || p.lastPrice,
+          image:
+            p.imageUri ||
+            p.icon ||
             "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-            "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
-            "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
-            "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
-          ];
-          const mapped: GridItemType[] = markets.map((m, idx) => ({
-            id: m.id,
-            name: m.name,
-            image: marketImages[idx % marketImages.length]!,
-          }));
-          setRealMarkets(mapped);
-        }
-      })
-      .catch(() => {});
+          isPromotion: p.isPromotion,
+          discountPercentage: p.discountPercentage,
+          formattedDistance: p.formattedDistance,
+          nearestMarketName: p.nearestMarketName,
+        }));
+        setRealProducts(mapped);
+      }
+    } catch {
+      // Graceful fallback
+    }
+
+    try {
+      const markets = await fetchMarkets();
+      if (markets && markets.length > 0) {
+        const marketImages = [
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
+        ];
+        const mapped: GridItemType[] = markets.map((m, idx) => ({
+          id: m.id,
+          name: m.name,
+          image: marketImages[idx % marketImages.length]!,
+        }));
+        setRealMarkets(mapped);
+      }
+    } catch {}
   }, []);
+
+  useEffect(() => {
+    loadProductsAndMarkets();
+  }, [loadProductsAndMarkets]);
 
   useEffect(() => {
     if (view === "markets" || view === "products") {
@@ -203,6 +256,7 @@ export default function HomeScreen() {
           id: String(item.id),
           name: item.name,
           imageUri: item.image,
+          lastPrice: item.price,
         },
       });
     } else {
@@ -220,7 +274,10 @@ export default function HomeScreen() {
 
   const gridData = activeView === "products" ? realProducts : realMarkets;
   const gridTitle =
-    activeView === "products" ? t("products.title") : t("map.nearbyMarketsTitle");
+    activeView === "products"
+      ? (hasLocation ? t("home.nearbyOffers") : t("products.title"))
+      : t("map.nearbyMarketsTitle");
+  const gridSubtitle = activeView === "products" ? t("home.radiusFilter15km") : undefined;
 
   return (
     <ScrollView
@@ -239,7 +296,9 @@ export default function HomeScreen() {
       />
       <ItemsGrid
         title={gridTitle}
+        subtitle={gridSubtitle}
         data={gridData}
+        isProductView={activeView === "products"}
         onItemPress={handleItemPress}
       />
     </ScrollView>
@@ -494,30 +553,42 @@ const ActionMenu = memo(function ActionMenu({
 
 const ItemsGrid = memo(function ItemsGrid({
   title,
+  subtitle,
   data,
+  isProductView = false,
   onItemPress,
 }: {
   title: string;
+  subtitle?: string;
   data: GridItemType[];
+  isProductView?: boolean;
   onItemPress: (item: GridItemType) => void;
 }) {
-  const { tokens } = useTheme();
+  const { tokens, accent } = useTheme();
   const { semantic } = tokens;
+  const { t } = useI18n();
 
   return (
     <View style={[styles.productsSection, { paddingHorizontal: semantic.spacing.itemGap }]}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: semantic.colors.text.primary,
-            ...semantic.typography.sectionTitle,
-            marginBottom: semantic.spacing.elementGap + 2,
-          },
-        ]}
-      >
-        {title}
-      </Text>
+      <View style={styles.sectionHeaderRow}>
+        <Text
+          style={[
+            styles.sectionTitle,
+            {
+              color: semantic.colors.text.primary,
+              ...semantic.typography.sectionTitle,
+            },
+          ]}
+        >
+          {title}
+        </Text>
+        {subtitle && (
+          <View style={[styles.radiusTag, { backgroundColor: accent + "18", borderColor: accent + "40" }]}>
+            <Ionicons name="navigate-circle-outline" size={13} color={accent} />
+            <Text style={[styles.radiusTagText, { color: accent }]}>{subtitle}</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.productGrid}>
         {data.map((item) => (
           <TouchableOpacity
@@ -526,7 +597,7 @@ const ItemsGrid = memo(function ItemsGrid({
               styles.productItem,
               {
                 backgroundColor: semantic.colors.surface.card,
-                borderColor: semantic.colors.border.default,
+                borderColor: item.isPromotion ? accent + "60" : semantic.colors.border.default,
                 borderRadius: semantic.radius.chip,
                 padding: semantic.spacing.elementGap,
               },
@@ -534,16 +605,25 @@ const ItemsGrid = memo(function ItemsGrid({
             activeOpacity={0.8}
             onPress={() => onItemPress(item)}
           >
-            <Image
-              source={{ uri: item.image }}
-              style={[
-                styles.productImage,
-                { borderRadius: semantic.radius.badge },
-              ]}
-              contentFit="cover"
-              cachePolicy="memory-disk"
-              transition={200}
-            />
+            <View style={styles.imageWrapper}>
+              <Image
+                source={{ uri: item.image }}
+                style={[
+                  styles.productImage,
+                  { borderRadius: semantic.radius.badge },
+                ]}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={200}
+              />
+              {isProductView && item.isPromotion && (
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>
+                    🔥 {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[
                 styles.productName,
@@ -556,6 +636,27 @@ const ItemsGrid = memo(function ItemsGrid({
             >
               {item.name}
             </Text>
+
+            {isProductView && item.price && item.price !== "Preço não informado" && (
+              <View style={styles.priceRow}>
+                <Text style={[styles.productPrice, { color: accent }]}>
+                  {item.price}
+                </Text>
+              </View>
+            )}
+
+            {isProductView && item.formattedDistance && (
+              <View style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}>
+                <Ionicons name="location" size={11} color={accent} />
+                <Text
+                  style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -616,8 +717,29 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: "center",
   },
-  productsSection: {},
+  productsSection: { marginBottom: 24 },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 8,
+  },
   sectionTitle: {},
+  radiusTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  radiusTagText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
   productGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -626,14 +748,59 @@ const styles = StyleSheet.create({
   },
   productItem: {
     width: "48%",
-    alignItems: "center",
+    alignItems: "flex-start",
     borderWidth: 1,
     marginBottom: 4,
   },
+  imageWrapper: {
+    width: "100%",
+    aspectRatio: 1.15,
+    marginBottom: 8,
+    position: "relative",
+  },
   productImage: {
     width: "100%",
-    aspectRatio: 1,
-    marginBottom: 8,
+    height: "100%",
   },
-  productName: { textAlign: "center" },
+  promoBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#E53935",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  promoBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  productName: {
+    minHeight: 34,
+    marginBottom: 4,
+  },
+  priceRow: {
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  distancePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
+    width: "100%",
+    marginTop: 2,
+  },
+  distanceText: {
+    fontSize: 10,
+    fontWeight: "600",
+    flex: 1,
+  },
 });

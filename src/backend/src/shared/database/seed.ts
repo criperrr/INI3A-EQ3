@@ -2,7 +2,7 @@ import "dotenv/config";
 import { hash } from "bcrypt";
 import { eq, sql } from "drizzle-orm";
 import { db, pool } from "./database";
-import { role, user, badge, userBadge, market, customizationItem, userCustomization } from "./schema";
+import { role, user, badge, userBadge, market, customizationItem, userCustomization, product, ocurrency } from "./schema";
 
 export async function seedDatabase() {
   console.log("🌱 [Seed] Checking and seeding database initial data...");
@@ -555,6 +555,109 @@ export async function seedDatabase() {
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 1 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 10 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 20 }).onConflictDoNothing();
+  }
+
+  // 7. Seed Sample Products & Occurrences across Markets for Real Proximity & Promotion Testing
+  const existingProducts = await db.select().from(product);
+  if (existingProducts.length === 0) {
+    const adminUserRecord = await db.query.user.findFirst({ where: (t, { eq }) => eq(t.email, adminEmail) });
+    const uId = adminUserRecord?.id || 1;
+
+    const allMarkets = await db.select().from(market);
+    const m1 = allMarkets[0]?.id || 1;
+    const m2 = allMarkets[1]?.id || 2;
+    const m3 = allMarkets[2]?.id || 3;
+    const m4 = allMarkets[3]?.id || 4;
+
+    const sampleProducts = [
+      {
+        ean: "7891000100101",
+        name: "Café Especial Torrado 500g",
+        description: "Bebidas",
+        icon: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100102",
+        name: "Azeite de Oliva Extra Virgem 500ml",
+        description: "Alimentos Básicos",
+        icon: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100103",
+        name: "Leite Integral Orgânico 1L",
+        description: "Laticínios e Ovos",
+        icon: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100104",
+        name: "Arroz Nobre Tipo 1 5kg",
+        description: "Alimentos Básicos",
+        icon: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100105",
+        name: "Pão de Forma Artesanal 500g",
+        description: "Padaria e Confeitaria",
+        icon: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100106",
+        name: "Chocolate Meio Amargo 70% 90g",
+        description: "Doces e Snacks",
+        icon: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100107",
+        name: "Detergente Líquido Concentrado 500ml",
+        description: "Limpeza",
+        icon: "https://images.unsplash.com/photo-1585670270608-b4b4f1da0d01?w=400&h=400&fit=crop",
+      },
+      {
+        ean: "7891000100108",
+        name: "Maçã Fuji Selecionada 1kg",
+        description: "Hortifrúti",
+        icon: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=400&fit=crop",
+      },
+    ];
+
+    for (const p of sampleProducts) {
+      const [createdP] = await db.insert(product).values(p).returning();
+      if (createdP) {
+        // Create occurrences across markets (some with big promotional discounts!)
+        if (createdP.ean === "7891000100101") {
+          // Café: Normal R$ 24,90, Promoção no Extra R$ 14,90 (-40%)
+          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "14.90", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "24.90", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "23.50", trustFlag: true });
+        } else if (createdP.ean === "7891000100102") {
+          // Azeite: Normal R$ 39,90, Promoção R$ 26,90 (-32%)
+          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "26.90", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "39.90", trustFlag: true });
+        } else if (createdP.ean === "7891000100103") {
+          // Leite: Normal R$ 6,50, Promoção R$ 4,29 (-34%)
+          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "4.29", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m4, productId: createdP.id, value: "6.50", trustFlag: true });
+        } else if (createdP.ean === "7891000100104") {
+          // Arroz: R$ 22,90
+          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "22.90", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "24.50", trustFlag: true });
+        } else if (createdP.ean === "7891000100105") {
+          // Pão: R$ 7,90
+          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "7.90", trustFlag: true });
+        } else if (createdP.ean === "7891000100106") {
+          // Chocolate: Promoção R$ 5,99 vs R$ 8,90
+          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "5.99", trustFlag: true });
+          await db.insert(ocurrency).values({ userId: uId, marketId: m4, productId: createdP.id, value: "8.90", trustFlag: true });
+        } else if (createdP.ean === "7891000100107") {
+          // Detergente: R$ 2,89
+          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "2.89", trustFlag: true });
+        } else if (createdP.ean === "7891000100108") {
+          // Maçã: R$ 8,50
+          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "8.50", trustFlag: true });
+        }
+      }
+    }
+    console.log("✅ [Seed] Seeded initial sample products & occurrences with promotions and multi-market prices.");
   }
 
   console.log("✨ [Seed] Database initial seed completed successfully.");

@@ -7,15 +7,37 @@ import { ValidationError } from "@/shared/errors/errors";
 class ProductControllerClass {
   async getAllProducts(req: Request, res: Response, next: NextFunction) {
     try {
-      const { search, category, page, limit, sortBy, sortOrder } = req.query;
+      const { search, category, page, limit, sortBy, sortOrder, latitude, longitude, radius, onlyPromotions } = req.query;
+
+      const lat = latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : undefined;
+      const lng = longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : undefined;
+      const rad = radius !== undefined && radius !== null && radius !== "" ? Number(radius) : undefined;
+      const promoOnly = String(onlyPromotions) === "true" || String(onlyPromotions) === "1";
+
+      const errors: Array<{ field: string; message: string }> = [];
+      if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) {
+        errors.push({ field: "latitude", message: "Latitude deve estar entre -90 e 90 graus." });
+      }
+      if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
+        errors.push({ field: "longitude", message: "Longitude deve estar entre -180 e 180 graus." });
+      }
+      if (rad !== undefined && (isNaN(rad) || rad <= 0 || rad > 1000000)) {
+        errors.push({ field: "radius", message: "Raio deve ser um valor positivo em metros (máximo 1000km)." });
+      }
+
+      if (errors.length > 0) throw new ValidationError(errors);
 
       const result = await productService.listProducts({
         search: typeof search === "string" ? search : undefined,
         category: typeof category === "string" ? category : undefined,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
-        sortBy: (sortBy as "name" | "createdAt" | "id") || "id",
+        sortBy: (sortBy as "name" | "createdAt" | "id" | "distance" | "price" | "discount") || "id",
         sortOrder: (sortOrder as "asc" | "desc") || "desc",
+        latitude: lat,
+        longitude: lng,
+        radius: rad || 15000,
+        onlyPromotions: promoOnly,
       });
 
       return res.status(200).json(success(result));

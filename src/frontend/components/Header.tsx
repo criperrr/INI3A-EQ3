@@ -1,7 +1,9 @@
 import React, { memo } from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter, usePathname } from "expo-router";
+import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useTabNavigation } from "../content/tabNavigationContext";
@@ -44,6 +46,28 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
   const { tokens, isDark } = useTheme();
   const { semantic } = tokens;
   const { navigateToTab } = useTabNavigation();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isHomeScreen = !pathname || pathname === "/";
+
+  const handleLeftPress = () => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+
+    if (isHomeScreen) {
+      onPressMenu?.();
+    } else {
+      if (router.canGoBack && router.canGoBack()) {
+        router.back();
+      } else {
+        navigateToTab("/", "left", true);
+      }
+    }
+  };
 
   const handleLogoPress = () => {
     navigateToTab("/", "left", true);
@@ -64,12 +88,22 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
     >
       <TouchableOpacity
         activeOpacity={0.7}
-        style={styles.iconButton}
-        onPress={onPressMenu}
+        style={[
+          styles.iconButton,
+          !isHomeScreen && {
+            backgroundColor: semantic.colors.surface.card,
+            borderRadius: semantic.radius.badge,
+            borderWidth: 1,
+            borderColor: semantic.colors.border.default,
+          },
+        ]}
+        onPress={handleLeftPress}
+        accessibilityRole="button"
+        accessibilityLabel={isHomeScreen ? "Abrir menu" : "Voltar"}
       >
         <Ionicons
-          name="menu-outline"
-          size={26}
+          name={isHomeScreen ? "menu-outline" : "chevron-back"}
+          size={isHomeScreen ? 26 : 24}
           color={semantic.colors.icon.primary}
         />
       </TouchableOpacity>
@@ -80,6 +114,8 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
         activeOpacity={0.7}
         style={styles.iconButton}
         onPress={onPressSettings}
+        accessibilityRole="button"
+        accessibilityLabel="Configurações"
       >
         <Ionicons
           name="settings-outline"
@@ -102,7 +138,10 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   iconButton: {
-    padding: 6,
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
   },
   logoContainer: {
     alignItems: "center",

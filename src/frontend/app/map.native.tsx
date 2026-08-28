@@ -327,9 +327,11 @@ const fetchAllMarketsData = async (
 };
 
 export default function MapScreen() {
-    const { themeStyles, isDark } = useTheme();
+    const { themeStyles, isDark, accent, tokens } = useTheme();
     const { t } = useI18n();
     const mapRef = useRef<MapView>(null);
+
+    const themeAccentColor = typeof accent === "string" ? accent : (tokens?.semantic?.colors?.text?.accent || (isDark ? "#F5B731" : "#1565C0"));
 
     const [appState, setAppState] = useState({
         isLoadingMarkets: true,
@@ -609,7 +611,7 @@ export default function MapScreen() {
                         <Marker
                             key={marker.id}
                             coordinate={marker.coordinate}
-                            pinColor={isDark ? THEME_COLORS.accent : THEME_COLORS.darkBlue}
+                            pinColor={themeAccentColor}
                             onPress={() => setSelectedMarket(marker)}
                         />
                     ))}
@@ -622,6 +624,7 @@ export default function MapScreen() {
                         onPress={() => setActiveFilterModal("type")}
                         themeStyles={themeStyles}
                         isDark={isDark}
+                        accentColor={themeAccentColor}
                     />
                     <FilterButton
                         icon="navigate-outline"
@@ -629,6 +632,7 @@ export default function MapScreen() {
                         onPress={() => setActiveFilterModal("distance")}
                         themeStyles={themeStyles}
                         isDark={isDark}
+                        accentColor={themeAccentColor}
                     />
                     <FilterButton
                         icon="time-outline"
@@ -636,6 +640,7 @@ export default function MapScreen() {
                         onPress={() => setActiveFilterModal("hours")}
                         themeStyles={themeStyles}
                         isDark={isDark}
+                        accentColor={themeAccentColor}
                     />
                 </View>
 
@@ -644,25 +649,25 @@ export default function MapScreen() {
                     activeOpacity={0.8}
                     onPress={centerMapOnUser}
                 >
-                    <Ionicons name="locate" size={24} color={THEME_COLORS.accent} />
+                    <Ionicons name="locate" size={24} color={themeAccentColor} />
                 </TouchableOpacity>
 
                 {(appState.isLoadingMarkets || appState.isProcessingLocation) && (
                     <View style={styles.inlineLoader}>
-                        <ActivityIndicator size="small" color={THEME_COLORS.accent} />
+                        <ActivityIndicator size="small" color={themeAccentColor} />
                         <Text style={styles.inlineLoaderText}>{t("common.loading")}</Text>
                     </View>
                 )}
 
                 {visibleMarkers.length === 0 && !appState.isLoadingMarkets && !appState.isProcessingLocation && (
                     <View style={[styles.noMarkersBanner, themeStyles.card, themeStyles.border]}>
-                        <Ionicons name="information-circle-outline" size={18} color={THEME_COLORS.accent} />
+                        <Ionicons name="information-circle-outline" size={18} color={themeAccentColor} />
                         <Text style={[styles.noMarkersText, themeStyles.text]}>
                             {rawOsmElements.length > 0 ? `Nenhum mercado a até ${filters.maxDistance / 1000} km` : "Nenhum mercado encontrado"}
                         </Text>
                         {filters.maxDistance < 10000 && (
                             <TouchableOpacity
-                                style={styles.expandRadiusBtn}
+                                style={[styles.expandRadiusBtn, { backgroundColor: themeAccentColor }]}
                                 onPress={() => setFilters(prev => ({ ...prev, maxDistance: 10000, shopType: "all" }))}
                             >
                                 <Text style={styles.expandRadiusText}>10 km</Text>
@@ -679,6 +684,7 @@ export default function MapScreen() {
                 onUpdateFilters={(newFilters: any) => setFilters(prev => ({ ...prev, ...newFilters }))}
                 themeStyles={themeStyles}
                 isDark={isDark}
+                accentColor={themeAccentColor}
                 t={t}
             />
 
@@ -688,24 +694,25 @@ export default function MapScreen() {
                 onNavigate={navigateToMarket}
                 themeStyles={themeStyles}
                 isDark={isDark}
+                accentColor={themeAccentColor}
                 t={t}
             />
         </View>
     );
 }
 
-const FilterButton = ({ icon, label, onPress, themeStyles, isDark }: any) => (
+const FilterButton = ({ icon, label, onPress, themeStyles, isDark, accentColor }: any) => (
     <TouchableOpacity
         style={[styles.filterCard, themeStyles.card, themeStyles.border]}
         activeOpacity={0.8}
         onPress={onPress}
     >
-        <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : THEME_COLORS.darkBlue} />
+        <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : (accentColor || "#1565C0")} />
         <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
 );
 
-const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark, t }: any) => {
+const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark, accentColor, t }: any) => {
     if (!activeModal) return null;
 
     const getModalTitle = () => {
@@ -753,7 +760,7 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
                                     onPress={() => handleSelectOption(item.value)}
                                 >
                                     <Text style={[styles.optionText, themeStyles.text]}>{item.label}</Text>
-                                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={THEME_COLORS.accent} />}
+                                    {isSelected && <Ionicons name="checkmark-circle" size={20} color={accentColor} />}
                                 </TouchableOpacity>
                             );
                         })}
@@ -764,7 +771,7 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
     );
 };
 
-const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, t }: any) => {
+const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, accentColor, t }: any) => {
     if (!market) return null;
 
     return (
@@ -787,19 +794,19 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, t
                         </TouchableOpacity>
                     </View>
                     <View style={styles.marketInfoRow}>
-                        <Ionicons name="navigate-outline" size={22} color={THEME_COLORS.accent} />
+                        <Ionicons name="navigate-outline" size={22} color={accentColor} />
                         <Text style={[styles.marketInfoText, themeStyles.text]}>
                             {market.routeDistance.toFixed(2)} km {t("map.distanceRadius")}
                         </Text>
                     </View>
                     <View style={styles.marketInfoRow}>
-                        <Ionicons name="time-outline" size={22} color={THEME_COLORS.accent} />
+                        <Ionicons name="time-outline" size={22} color={accentColor} />
                         <Text style={[styles.marketInfoText, themeStyles.text]}>
                             {formatOpeningHours(market.openingHours, t)}
                         </Text>
                     </View>
                     <TouchableOpacity
-                        style={styles.routesButton}
+                        style={[styles.routesButton, { backgroundColor: accentColor }]}
                         activeOpacity={0.8}
                         onPress={() => onNavigate(market)}
                     >

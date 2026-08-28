@@ -17,7 +17,7 @@ function LayoutContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const { isDark, themeStyles } = useTheme();
-  const { animationType, getTabIndex } = useTabNavigation();
+  const { getTabIndex } = useTabNavigation();
   const isMainTab = getTabIndex(pathname) !== -1;
 
   const getActiveTab = (): TabKey | undefined => {
@@ -58,10 +58,14 @@ function LayoutContent() {
           <Stack
             screenOptions={{
               headerShown: false,
-              gestureEnabled: Platform.OS !== "web",
+              gestureEnabled: Platform.OS !== "web" && !isMainTab,
               gestureDirection: "horizontal",
-              animation: isMainTab ? "none" : (Platform.OS === "android" ? "default" : animationType),
-              fullScreenGestureEnabled: Platform.OS === "ios",
+              animation: isMainTab
+                ? "none"
+                : Platform.OS === "ios"
+                ? "default"
+                : "slide_from_right",
+              fullScreenGestureEnabled: false,
               animationDuration: 220,
             }}
           />

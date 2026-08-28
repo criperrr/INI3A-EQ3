@@ -168,7 +168,6 @@ Direct relative paths from project root.
 - [x] Native Map Progressive Loading & False Empty State Fix (eliminated loading race condition where empty banner flashed before fetch finished, added progressive Nominatim streaming callback, and separated `isLoadingMarkets` and `isProcessingLocation`).
 - [x] Native Map Duplicate Marker Keys Fix (guaranteed unique IDs and geo-hash deduplication across progressive Nominatim, Overpass, and Backend markets).
 - [x] Pre-established Product Categories & Types System across full-stack (15 standardized categories with emoji, icon, multilingual i18n support in 7 languages, backend /types and /categories/details routes, CategorySelector interactive component, category chips in search.tsx, and enriched badges in productDetails.tsx and productCard.tsx).
-- [x] Resilient Redis Connection, Unified Multi-Path Env Loader & Transparent In-Memory Fallback (multi-path `.env` loader in `shared/config/env.ts`, root `.env` synchronization, SSL/TLS `rediss://` support with `rejectUnauthorized: false`, non-blocking reconnection strategy, in-memory cache fallback for `AuthRepository` & rate limiting, resilient `/health` endpoint, and non-blocking startup scripts).
 
 
 ---
