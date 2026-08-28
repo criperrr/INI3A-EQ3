@@ -1,12 +1,15 @@
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
+import { env } from "../config/env";
 
-if (!process.env.DATABASE_URL)
+const databaseUrl = process.env.DATABASE_URL || env.DATABASE_URL;
+
+if (!databaseUrl)
   throw new Error("INTERNAL: DATABASE_URL NOT DEFINED");
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,

@@ -24,11 +24,16 @@ async function runHealthCheck() {
   // 2. Check Redis
   try {
     const start = Date.now();
-    await connectRedis(2, 500);
-    const pingResponse = await redisClient.ping();
-    const duration = Date.now() - start;
-    console.log(`✅ Redis: Connected successfully (${pingResponse}, ${duration}ms)`);
-    redisSuccess = true;
+    const isConnected = await connectRedis(2, 500);
+    if (isConnected && redisClient.isOpen) {
+      const pingResponse = await redisClient.ping();
+      const duration = Date.now() - start;
+      console.log(`✅ Redis: Connected successfully (${pingResponse}, ${duration}ms)`);
+      redisSuccess = true;
+    } else {
+      console.log(`ℹ️ Redis: Server offline -> In-Memory Fallback active (OK for local dev)`);
+      redisSuccess = true;
+    }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`❌ Redis: Connection failed -> ${msg}`);

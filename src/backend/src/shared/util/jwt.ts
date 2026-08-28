@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { env } from "../config/env";
 
-if (!process.env.JWT_SECRET) {
+const JWT_SECRET = process.env.JWT_SECRET || env.JWT_SECRET;
+
+if (!JWT_SECRET) {
   throw new Error("JWT_SECRET not defined in .env");
 }
-
-const JWT_SECRET = process.env.JWT_SECRET as string;
 
 export const ACCESS_TOKEN_EXPIRY = "15m";
 export const REFRESH_TOKEN_EXPIRY_SECONDS = 60 * 60 * 24 * 7; // 7 dias

@@ -127,7 +127,11 @@ check_port() {
 
 # 1. Verify Database (PostgreSQL) and Redis
 check_port "$DB_HOST" "$DB_PORT" "PostgreSQL"
-check_port "$REDIS_HOST" "$REDIS_PORT" "Redis"
+if nc -z "$REDIS_HOST" "$REDIS_PORT" 2>/dev/null; then
+  echo "✅ Redis on $REDIS_HOST:$REDIS_PORT: OK!"
+else
+  echo "⚠️ Redis is offline on $REDIS_HOST:$REDIS_PORT. Backend will run in In-Memory fallback mode."
+fi
 
 # 2. Setup tmux session for background services
 echo "Setting up tmux dashboard..."

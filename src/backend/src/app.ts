@@ -44,12 +44,13 @@ app.use(e.urlencoded({ extended: true, limit: "1mb" }));
 app.get("/health", async (_, res) => {
   const isDbHealthy = await checkDatabaseHealth();
   const isRedisHealthy = redisClient.isOpen && (await redisClient.ping().then(() => true).catch(() => false));
-  const isHealthy = isDbHealthy && isRedisHealthy;
+  const redisMode = isRedisHealthy ? "connected" : "in-memory-fallback";
+  const isHealthy = isDbHealthy;
 
   return res.status(isHealthy ? 200 : 503).json({
-    status: isHealthy ? "ok" : "degraded",
+    status: isHealthy ? (isRedisHealthy ? "ok" : "healthy (in-memory redis)") : "degraded",
     database: isDbHealthy ? "connected" : "disconnected",
-    redis: isRedisHealthy ? "connected" : "disconnected",
+    redis: redisMode,
     timestamp: new Date().toISOString(),
   });
 });

@@ -26,31 +26,39 @@ export function createRateLimiter(options: RateLimiterOptions) {
       const key = `ratelimit:${keyPrefix}:${ip}`;
 
       if (redisClient.isOpen) {
-        // Atomic Redis increment
-        const count = await redisClient.incr(key);
-        if (count === 1) {
-          await redisClient.expire(key, windowSeconds);
-        }
+        try {
+          // Atomic Redis increment
+          const count = await redisClient.incr(key);
+          if (count === 1) {
+            await redisClient.expire(key, windowSeconds);
+          }
 
-        if (count > maxRequests) {
-          throw new TooManyRequestsError(
-            message || "Muitas requisições. Por favor, aguarde antes de tentar novamente.",
-          );
-        }
-      } else {
-        // In-memory fallback
-        const now = Date.now();
-        const bucket = memoryBuckets.get(key);
-
-        if (!bucket || now > bucket.resetTime) {
-          memoryBuckets.set(key, { count: 1, resetTime: now + windowMs });
-        } else {
-          bucket.count += 1;
-          if (bucket.count > maxRequests) {
+          if (count > maxRequests) {
             throw new TooManyRequestsError(
               message || "Muitas requisições. Por favor, aguarde antes de tentar novamente.",
             );
           }
+          return next();
+        } catch (err) {
+          if (err instanceof TooManyRequestsError) {
+            throw err;
+          }
+          // On transient Redis network error, fall through to in-memory bucket
+        }
+      }
+
+      // In-memory fallback
+      const now = Date.now();
+      const bucket = memoryBuckets.get(key);
+
+      if (!bucket || now > bucket.resetTime) {
+        memoryBuckets.set(key, { count: 1, resetTime: now + windowMs });
+      } else {
+        bucket.count += 1;
+        if (bucket.count > maxRequests) {
+          throw new TooManyRequestsError(
+            message || "Muitas requisições. Por favor, aguarde antes de tentar novamente.",
+          );
         }
       }
 

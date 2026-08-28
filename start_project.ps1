@@ -161,10 +161,9 @@ if (-not $pgReady) {
     exit 1
 }
 
-$redisReady = Test-ServicePort -HostName $RedisHost -Port $RedisPort -ServiceName "Redis"
+$redisReady = Test-ServicePort -HostName $RedisHost -Port $RedisPort -ServiceName "Redis" -MaxAttempts 3
 if (-not $redisReady) {
-    Write-Host "[!] Redis is not responding. Please make sure Redis service or container is running." -ForegroundColor Red
-    exit 1
+    Write-Host "[i] Redis is offline on ${RedisHost}:${RedisPort}. Presco Backend will operate in In-Memory session mode." -ForegroundColor Yellow
 }
 
 # ------------------------------------------------------------------------------

@@ -24,6 +24,31 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-28 08:10] - fix(redis): resilient redis connection, unified multi-path env loader and transparent in-memory fallback
+
+- **Description:** Fixed Redis connection, environment variable discovery, and stability across backend and scripts:
+  1. **Unified Environment Configuration Loader (`src/backend/src/shared/config/env.ts` & `.env`):** Created a resilient environment variable loader that automatically scans candidate paths (`process.cwd()/.env`, `src/backend/.env`, and relative module root paths). Synchronized root `.env` to eliminate `undefined` variables when running commands from workspace root.
+  2. **Resilient Redis Client & TLS Support (`src/backend/src/shared/redis/server.ts`):** Added URL trimming/cleaning, automatic TLS handling for `rediss://` with `rejectUnauthorized: false` for cloud Redis providers (Upstash, Redis Cloud, Aiven, etc.), capped exponential reconnection strategy (max 5 retries returning `false` instead of unhandled exceptions), and clean sanitized logging.
+  3. **Transparent In-Memory Fallback (`InMemoryStore` & `AuthRepository`):** Implemented an in-memory TTL store for refresh tokens, access token JTI blacklists, token rotations, and rate limits. If Redis is offline or fails to connect, the backend automatically transitions to in-memory fallback without crashing the server or throwing 500 errors.
+  4. **Rate Limiter & Health Endpoint Hardening (`rateLimiter.ts`, `app.ts`, `healthCheck.ts`):** Wrapped atomic Redis increments in try/catch to fall through to in-memory buckets on transient hiccups. Updated `/health` endpoint to report `redis: "connected"` or `redis: "in-memory-fallback"`.
+  5. **Non-Blocking Dev Launchers (`start_project.ps1`, `start_project.sh`):** Converted hard 30-second blocking timeouts on Redis port probes to non-blocking soft checks with fallback warnings.
+  6. **Automated Verification:** Verified with `test_redis_fallback.ts` and `npm run typecheck` (0 errors).
+- **Files Modified:**
+  - `src/backend/src/shared/config/env.ts`
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/shared/database/repositories/auth.repository.ts`
+  - `src/backend/src/shared/database/database.ts`
+  - `src/backend/src/shared/util/jwt.ts`
+  - `src/backend/src/shared/database/healthCheck.ts`
+  - `src/backend/src/shared/middlewares/rateLimiter.ts`
+  - `src/backend/src/app.ts`
+  - `start_project.ps1`
+  - `start_project.sh`
+  - `.env`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Ensures the backend runs seamlessly whether Redis is running locally, hosted remotely with TLS, or offline in local dev mode.
+
 ## [2026-08-25 12:28] - feat(products): pre-established product categories and types across full-stack with i18n support
 
 - **Description:** Implemented standardized pre-established product categories and types across backend and frontend:

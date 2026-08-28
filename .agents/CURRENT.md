@@ -89,7 +89,8 @@ Direct relative paths from project root.
 | `src/backend/src/shared/middlewares/rateLimiter.ts` | `authRateLimiter`, `searchRateLimiter`, `createRateLimiter` (Redis atomic bucket with in-memory fallback) |
 | `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, sanitized 500 in production |
 | `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth`, `requireAdmin`, `requireMinAuthority` |
-| `src/backend/src/shared/redis/server.ts` | `redisClient`, `connectRedis`, helpers (`invalidateJWT`, `setRefreshToken`, `getUserIdByRefreshToken`) |
+| `src/backend/src/shared/config/env.ts` | Unified environment config loader with multi-path resolution and type-safe fallbacks |
+| `src/backend/src/shared/redis/server.ts` | `redisClient`, `connectRedis`, `inMemoryStore` (resilient in-memory fallback, TLS support, JWT revocation & session helpers) |
 | `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken`, `verifyAccessToken`, `getTokenRemainingSeconds` |
 | `src/backend/src/shared/helpers/response.helper.ts` | `success(data, code?)` → `{ success: true, code: 200, data }` |
 
@@ -167,6 +168,7 @@ Direct relative paths from project root.
 - [x] Native Map Progressive Loading & False Empty State Fix (eliminated loading race condition where empty banner flashed before fetch finished, added progressive Nominatim streaming callback, and separated `isLoadingMarkets` and `isProcessingLocation`).
 - [x] Native Map Duplicate Marker Keys Fix (guaranteed unique IDs and geo-hash deduplication across progressive Nominatim, Overpass, and Backend markets).
 - [x] Pre-established Product Categories & Types System across full-stack (15 standardized categories with emoji, icon, multilingual i18n support in 7 languages, backend /types and /categories/details routes, CategorySelector interactive component, category chips in search.tsx, and enriched badges in productDetails.tsx and productCard.tsx).
+- [x] Resilient Redis Connection, Unified Multi-Path Env Loader & Transparent In-Memory Fallback (multi-path `.env` loader in `shared/config/env.ts`, root `.env` synchronization, SSL/TLS `rediss://` support with `rejectUnauthorized: false`, non-blocking reconnection strategy, in-memory cache fallback for `AuthRepository` & rate limiting, resilient `/health` endpoint, and non-blocking startup scripts).
 
 
 ---
