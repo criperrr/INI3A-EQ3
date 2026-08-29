@@ -173,8 +173,8 @@ Direct relative paths from project root.
 - [x] Platform-Native Back Gestures & iPhone Sensitivity Calibration (restricted iOS interactive pop back gesture strictly to the left screen edge with `fullScreenGestureEnabled: false`, eliminating accidental triggers, and tuned `activeOffsetX: [-28, 28]`, `isDecisiveDistance: 60px` in `SwipeTabNavigator` for deliberate navigation).
 - [x] Redundant Top-Left Back Button Navigation (added dynamic back button with haptic feedback to `Header.tsx` on all non-home screens and sub-screens, and added dedicated top-left back button on `registerUser.tsx`).
 - [x] Nearest Market Auto-Selection & Progressive Currency Input Mask (integrated `getUserLocation()` on `registerProduct.tsx`, PostGIS `ST_Distance` proximity ordering in `MarketRepository`, auto-selection of closest market with distance badge pill, and progressive ATM-style centavos currency mask with digit-by-digit backspace).
-
-
+- [x] Concise & Simplified Product Categories System (streamlined all 15 category names to short, 1-word/2-word terms like *Alimentos*, *Carnes*, *Laticínios*, *Padaria*, *Limpeza*, *Higiene*, *Bebês*, *Pets*, *Utilidades*, *Outros*, added backward-compatible alias resolver in backend and frontend, and updated translations across all 7 supported languages).
+- [x] Full-Stack Category Deduplication & Alias Normalization (eliminated duplicate/rogue categories like "Líquido" vs "Limpeza" by embedding comprehensive keyword aliases in backend and frontend category definitions, mapping database rows to canonical categories in `ProductRepository.getCategories()`, normalizing categories in `formatProductDTO` and OpenFoodFacts fallback, and deduplicating category chips in `SearchScreen`).
 
 ---
 

@@ -24,6 +24,47 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-29 12:05] - fix(categories): eliminate duplicate rogue categories with comprehensive keyword aliases & full-stack normalization
+
+- **Description:** Resolved duplicate and fragmented category chips (e.g. "Líquido" vs "Limpeza" having separate products) through comprehensive full-stack normalization:
+  1. **Enriched Keyword Aliases (`productCategories.ts`):** Added complete lists of grocery item keywords to `aliases` in backend and frontend (e.g. `limpeza` includes `"detergente"`, `"líquido"`, `"sabão"`, `"alvejante"`, `"amaciante"`, `"limpador"`).
+  2. **Multi-Tier Alias Matcher (`findPredefinedCategory` & `findCategoryDefinition`):** Upgraded category matching algorithm to evaluate exact IDs, exact names, exact alias matches, and partial alias/category substrings.
+  3. **Repository Category Deduplication (`product.repository.ts`):** In `getCategories()`, database rows are now mapped strictly through `findPredefinedCategory(trimmed)` to ensure only canonical predefined category names are added to the list, eliminating rogue/duplicate unmapped entries.
+  4. **Product Output Normalization (`product.service.ts`):** In `formatProductDTO`, `raw.description` is passed through `normalizeCategoryName` so all products consistently belong to a canonical category. Normalized OpenFoodFacts scraped categories before database insertion.
+  5. **Frontend Search Chips Deduplication (`search.tsx`):** Added normalization and `Set` deduplication in `loadCategories` to guarantee zero duplicated category chips in the UI.
+  6. **Verification:** Executed backend TypeScript check (`npm run typecheck`) and frontend TypeScript check (`npx tsc --noEmit`), with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/constants/productCategories.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/frontend/constants/productCategories.ts`
+  - `src/frontend/app/search.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Eliminates duplicate category chips (such as "Líquido" alongside "Limpeza"). All items belonging to cleaning and laundry now correctly aggregate under "Limpeza", and all search category filters work seamlessly.
+
+## [2026-08-29 11:58] - feat(categories): streamline and simplify item category names across full stack
+
+- **Description:** Simplified and shortened product category names for cleaner mobile UX, responsive chips, and badge formatting:
+  1. **Concise Naming Structure (`productCategories.ts`):** Replaced compound, verbose category labels with single-word/short standard terms (*Alimentos*, *Hortifrúti*, *Carnes*, *Laticínios*, *Padaria*, *Bebidas*, *Congelados*, *Doces & Snacks*, *Limpeza*, *Higiene*, *Bebês*, *Pets*, *Farmácia*, *Utilidades*, *Outros*).
+  2. **Backward-Compatible Alias Resolution:** Enhanced `findPredefinedCategory` (backend) and `findCategoryDefinition` (frontend) with alias matching (`["Alimentos Básicos", "mercearia", "pantry", ...]`), preserving compatibility with existing database records, legacy descriptions, OpenFoodFacts tags, and custom user input.
+  3. **Multilingual i18n Alignment:** Updated translation strings across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`) ensuring all localized category names remain short, clean, and elegant on mobile displays.
+  4. **Verification:** Executed backend TypeScript compilation (`npm run build` / `typecheck`) and frontend TypeScript typecheck (`npx tsc --noEmit`), with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/constants/productCategories.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/frontend/constants/productCategories.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Category chips, filter bars, product card badges, and category selection lists are noticeably more compact and readable, preventing text truncation or awkward line wraps on mobile screens.
+
 ## [2026-08-29 11:40] - feat(products): auto-select nearest market & progressive currency input mask
 
 - **Description:** Implemented nearest market auto-detection and progressive currency input mask in product price registration:

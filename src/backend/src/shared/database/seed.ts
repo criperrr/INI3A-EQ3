@@ -579,31 +579,31 @@ export async function seedDatabase() {
       {
         ean: "7891000100102",
         name: "Azeite de Oliva Extra Virgem 500ml",
-        description: "Alimentos Básicos",
+        description: "Alimentos",
         icon: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
       },
       {
         ean: "7891000100103",
         name: "Leite Integral Orgânico 1L",
-        description: "Laticínios e Ovos",
+        description: "Laticínios",
         icon: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
       },
       {
         ean: "7891000100104",
         name: "Arroz Nobre Tipo 1 5kg",
-        description: "Alimentos Básicos",
+        description: "Alimentos",
         icon: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
       },
       {
         ean: "7891000100105",
         name: "Pão de Forma Artesanal 500g",
-        description: "Padaria e Confeitaria",
+        description: "Padaria",
         icon: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
       },
       {
         ean: "7891000100106",
         name: "Chocolate Meio Amargo 70% 90g",
-        description: "Doces e Snacks",
+        description: "Doces & Snacks",
         icon: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
       },
       {

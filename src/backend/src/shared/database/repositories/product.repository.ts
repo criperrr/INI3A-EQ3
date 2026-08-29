@@ -174,13 +174,17 @@ class ProductRepositoryClass {
       const cleanCat = category.trim();
       const matched = findPredefinedCategory(cleanCat);
       if (matched) {
-        conditions.push(
-          or(
-            ilike(product.description, `%${matched.name}%`),
-            ilike(product.description, `%${matched.id}%`),
-            ilike(product.description, `%${cleanCat}%`)
-          )
-        );
+        const matchConditions = [
+          ilike(product.description, `%${matched.name}%`),
+          ilike(product.description, `%${matched.id}%`),
+          ilike(product.description, `%${cleanCat}%`),
+        ];
+        if (matched.aliases) {
+          for (const alias of matched.aliases) {
+            matchConditions.push(ilike(product.description, `%${alias}%`));
+          }
+        }
+        conditions.push(or(...matchConditions));
       } else {
         conditions.push(ilike(product.description, `%${cleanCat}%`));
       }
@@ -239,9 +243,11 @@ class ProductRepositoryClass {
       const cleanCat = category.trim();
       const matched = findPredefinedCategory(cleanCat);
       if (matched) {
-        filterClauses.push(
-          sql`(p.description ILIKE ${`%${matched.name}%`} OR p.description ILIKE ${`%${matched.id}%`} OR p.description ILIKE ${`%${cleanCat}%`})`
+        const matchTerms = [matched.name, matched.id, cleanCat, ...(matched.aliases || [])];
+        const subConditions = matchTerms.map(
+          (t) => sql`p.description ILIKE ${`%${t}%`}`
         );
+        filterClauses.push(sql`(${sql.join(subConditions, sql` OR `)})`);
       } else {
         filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
       }
@@ -392,9 +398,11 @@ class ProductRepositoryClass {
         const cleanCat = category.trim();
         const matched = findPredefinedCategory(cleanCat);
         if (matched) {
-          filterClauses.push(
-            sql`(p.description ILIKE ${`%${matched.name}%`} OR p.description ILIKE ${`%${matched.id}%`} OR p.description ILIKE ${`%${cleanCat}%`})`
+          const matchTerms = [matched.name, matched.id, cleanCat, ...(matched.aliases || [])];
+          const subConditions = matchTerms.map(
+            (t) => sql`p.description ILIKE ${`%${t}%`}`
           );
+          filterClauses.push(sql`(${sql.join(subConditions, sql` OR `)})`);
         } else {
           filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
         }
@@ -466,13 +474,17 @@ class ProductRepositoryClass {
       const cleanCat = category.trim();
       const matched = findPredefinedCategory(cleanCat);
       if (matched) {
-        conditions.push(
-          or(
-            ilike(product.description, `%${matched.name}%`),
-            ilike(product.description, `%${matched.id}%`),
-            ilike(product.description, `%${cleanCat}%`)
-          )
-        );
+        const matchConditions = [
+          ilike(product.description, `%${matched.name}%`),
+          ilike(product.description, `%${matched.id}%`),
+          ilike(product.description, `%${cleanCat}%`),
+        ];
+        if (matched.aliases) {
+          for (const alias of matched.aliases) {
+            matchConditions.push(ilike(product.description, `%${alias}%`));
+          }
+        }
+        conditions.push(or(...matchConditions));
       } else {
         conditions.push(ilike(product.description, `%${cleanCat}%`));
       }
@@ -551,8 +563,16 @@ class ProductRepositoryClass {
         const parts = r.category.split(",");
         for (const p of parts) {
           const trimmed = p.trim();
-          if (trimmed && trimmed !== "Categoria Indisponível") {
-            categoriesSet.add(trimmed);
+          if (
+            trimmed &&
+            trimmed !== "Categoria Indisponível" &&
+            trimmed !== "Sem Categoria" &&
+            trimmed !== "Geral"
+          ) {
+            const matched = findPredefinedCategory(trimmed);
+            if (matched) {
+              categoriesSet.add(matched.name);
+            }
           }
         }
       }

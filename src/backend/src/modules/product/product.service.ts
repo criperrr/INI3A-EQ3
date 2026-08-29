@@ -1,5 +1,6 @@
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import { ConflictError, NotFoundError, ValidationError } from "@/shared/errors/errors";
+import { normalizeCategoryName } from "@/shared/constants/productCategories";
 import type {
   CreateProductDTO,
   PaginatedProductsResult,
@@ -12,7 +13,7 @@ import type {
 
 class ProductServiceClass {
   private formatProductDTO(raw: any, latestPrice?: string | null): ProductDTO {
-    const category = raw.description || "Sem Categoria";
+    const category = normalizeCategoryName(raw.description);
 
     let formattedDistance: string | null = null;
     if (raw.nearestMarketDistance !== undefined && raw.nearestMarketDistance !== null) {
@@ -119,11 +120,11 @@ class ProductServiceClass {
       }
 
       const safeName = finalName.slice(0, 195);
-      const category = (
+      const rawCategory =
         productData.categories_tags?.[0]?.replace(/^[a-z]{2}:/, "") ||
         productData.categories?.split(",")[0]?.trim() ||
-        "Geral"
-      ).slice(0, 100);
+        "Outros";
+      const category = normalizeCategoryName(rawCategory);
       const imageUri = productData.image_url || productData.image_front_url || productData.image_small_url || "";
 
       let createdProduct = null;

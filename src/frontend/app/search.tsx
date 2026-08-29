@@ -17,7 +17,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
-import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import {
+  findCategoryDefinition,
+  getCategoryEmoji,
+  getLocalizedCategoryName,
+} from "../constants/productCategories";
 import { getUserLocation } from "../utils/userLocation";
 
 export default function SearchScreen() {
@@ -39,7 +43,15 @@ export default function SearchScreen() {
     try {
       const remoteCategories = await fetchCategories();
       if (remoteCategories && remoteCategories.length > 0) {
-        const merged = [allCategoryLabel, ...Array.from(new Set(remoteCategories))];
+        const normalized = Array.from(
+          new Set(
+            remoteCategories.map((c) => {
+              const def = findCategoryDefinition(c);
+              return def ? def.name : c;
+            })
+          )
+        );
+        const merged = [allCategoryLabel, ...normalized];
         setCategories(merged);
       } else {
         setCategories([allCategoryLabel]);
