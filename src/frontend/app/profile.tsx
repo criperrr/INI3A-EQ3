@@ -377,6 +377,31 @@ const AvatarWithFrame = memo(function AvatarWithFrame({
     borderWidth = 5;
     topBadgeIcon = "ribbon";
     glowStyle = { shadowColor: "#FF9900", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
+  } else if (framePreset === "atomic_heart") {
+    borderColor = "#ff0095ff";
+    borderWidth = 5;
+    topBadgeIcon = "heart";
+    glowStyle = { shadowColor: "#ff0095ff", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
+  } else if (framePreset === "code_laptop") {
+    borderColor = "#003cffff";
+    borderWidth = 5;
+    topBadgeIcon = "laptop";
+    glowStyle = { shadowColor: "#003cffff", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
+  } else if (framePreset === "dark_moon") {
+    borderColor = "#cc00ffff";
+    borderWidth = 5;
+    topBadgeIcon = "moon";
+    glowStyle = { shadowColor: "#cc00ffff", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
+  } else if (framePreset === "harmonic-note") {
+    borderColor = "#af5f03ff";
+    borderWidth = 5;
+    topBadgeIcon = "note";
+    glowStyle = { shadowColor: "#af5f03ff", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
+  } else if (framePreset === "little_star") {
+    borderColor = "#070991ff";
+    borderWidth = 5;
+    topBadgeIcon = "star";
+    glowStyle = { shadowColor: "#070991ff", shadowOpacity: 0.8, shadowRadius: 10, elevation: 10 };
   }
 
   return (
