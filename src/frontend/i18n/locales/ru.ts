@@ -297,6 +297,8 @@ export const ru: TranslationSchema = {
     promoBadge: "Скидка",
     bestPrice: "Лучшая цена",
     atDistance: "{distance} в {market}",
+    closestMarket: "Ближайший",
+    closestMarketAutoSelected: "Ближайший магазин выбран автоматически",
   },
   profile: {
     title: "Мой профиль",

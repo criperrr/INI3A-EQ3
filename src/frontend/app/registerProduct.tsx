@@ -20,6 +20,7 @@ import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
 import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence } from "../services/ocurrencyService";
+import { getUserLocation, UserCoordinates } from "../utils/userLocation";
 
 const FALLBACK_PRODUCT = {
   category: "Produto",
@@ -35,6 +36,7 @@ export default function RegisterProduct() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [markets, setMarkets] = useState<MarketData[]>([]);
   const [selectedMarketId, setSelectedMarketId] = useState<number>(1);
+  const [hasLocation, setHasLocation] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string;
@@ -55,14 +57,46 @@ export default function RegisterProduct() {
   const targetId = params.id ? Number(params.id) : null;
 
   useEffect(() => {
-    // Fetch available markets
-    fetchMarkets().then((list) => {
-      if (list && list.length > 0) {
-        setMarkets(list);
-        setSelectedMarketId(list[0]!.id);
-      }
-    });
+    let isMounted = true;
 
+    async function loadMarketsAndLocation() {
+      try {
+        const coords = await getUserLocation();
+        if (!isMounted) return;
+
+        if (coords) {
+          setHasLocation(true);
+        }
+
+        const list = await fetchMarkets(
+          coords ? { latitude: coords.latitude, longitude: coords.longitude } : undefined
+        );
+
+        if (!isMounted) return;
+
+        if (list && list.length > 0) {
+          setMarkets(list);
+          setSelectedMarketId(list[0]!.id);
+        }
+      } catch (err) {
+        console.warn("[registerProduct] Erro ao carregar mercados:", err);
+        if (!isMounted) return;
+        const fallbackList = await fetchMarkets();
+        if (fallbackList && fallbackList.length > 0) {
+          setMarkets(fallbackList);
+          setSelectedMarketId(fallbackList[0]!.id);
+        }
+      }
+    }
+
+    loadMarketsAndLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (targetId && !isNaN(targetId) && targetId > 0) {
       setIsLoading(true);
       fetchProductById(targetId)
@@ -82,9 +116,33 @@ export default function RegisterProduct() {
     }
   }, [targetEan, targetId]);
 
+  const handlePriceChange = (text: string) => {
+    const cleanDigits = text.replace(/\D/g, "");
+
+    if (!cleanDigits) {
+      setPrice("");
+      return;
+    }
+
+    const truncated = cleanDigits.slice(0, 8);
+    const intVal = parseInt(truncated, 10);
+
+    if (isNaN(intVal) || intVal === 0) {
+      setPrice("");
+      return;
+    }
+
+    const padded = intVal.toString().padStart(3, "0");
+    const integerPart = padded.slice(0, -2);
+    const decimalPart = padded.slice(-2);
+    const formattedInteger = parseInt(integerPart, 10).toLocaleString("pt-BR");
+
+    setPrice(`${formattedInteger},${decimalPart}`);
+  };
+
   const handleRegister = async () => {
-    const rawPrice = price.trim().replace("R$", "").replace("$", "").replace("€", "").replace("¥", "").replace("₽", "").replace(",", ".").trim();
-    const numPrice = parseFloat(rawPrice);
+    const cleanDigits = price.replace(/\D/g, "");
+    const numPrice = cleanDigits ? parseInt(cleanDigits, 10) / 100 : 0;
 
     if (!price.trim() || isNaN(numPrice) || numPrice <= 0) {
       Alert.alert(t("common.error"), t("products.invalidPriceFormat"));
@@ -355,6 +413,17 @@ export default function RegisterProduct() {
                   color={accent}
                   style={styles.inputIcon}
                 />
+                <Text
+                  style={[
+                    styles.currencyPrefix,
+                    {
+                      color: price ? semantic.colors.text.primary : semantic.colors.text.tertiary,
+                      ...semantic.typography.bodyBold,
+                    },
+                  ]}
+                >
+                  R${" "}
+                </Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -363,11 +432,11 @@ export default function RegisterProduct() {
                       ...semantic.typography.input,
                     },
                   ]}
-                  placeholder={t("products.pricePlaceholder")}
+                  placeholder="0,00"
                   placeholderTextColor={semantic.colors.text.tertiary}
                   keyboardType="numeric"
                   value={price}
-                  onChangeText={setPrice}
+                  onChangeText={handlePriceChange}
                   editable={!isSubmitting}
                 />
               </View>
@@ -469,24 +538,57 @@ export default function RegisterProduct() {
 
             {/* Market Selection */}
             <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
-              <Text
-                style={[
-                  styles.inputLabel,
-                  {
-                    color: semantic.colors.text.secondary,
-                    ...semantic.typography.bodyMedium,
-                  },
-                ]}
-              >
-                {t("products.selectMarket")} *
-              </Text>
+              <View style={styles.marketLabelRow}>
+                <Text
+                  style={[
+                    styles.inputLabel,
+                    {
+                      color: semantic.colors.text.secondary,
+                      ...semantic.typography.bodyMedium,
+                      flex: 1,
+                      marginBottom: 0,
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t("products.selectMarket")} *
+                </Text>
+                {hasLocation && markets.length > 0 && (
+                  <View
+                    style={[
+                      styles.locationBadgePill,
+                      {
+                        backgroundColor: `${accent}15`,
+                        borderColor: accent,
+                        borderRadius: semantic.radius.badge,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="location" size={11} color={accent} style={{ marginRight: 3 }} />
+                    <Text
+                      style={[
+                        styles.locationBadgeText,
+                        {
+                          color: accent,
+                          ...semantic.typography.micro,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {t("products.closestMarket")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.marketsScroll}
               >
-                {markets.map((m) => {
+                {markets.map((m, index) => {
                   const isSelected = selectedMarketId === m.id;
+                  const isNearest = index === 0 && hasLocation;
                   return (
                     <TouchableOpacity
                       key={m.id}
@@ -497,31 +599,56 @@ export default function RegisterProduct() {
                           ? { backgroundColor: accent, borderColor: accent }
                           : {
                               backgroundColor: semantic.colors.surface.card,
-                              borderColor: semantic.colors.border.default,
+                              borderColor: isNearest ? accent : semantic.colors.border.default,
                             },
                       ]}
                       onPress={() => setSelectedMarketId(m.id)}
                       activeOpacity={0.7}
                     >
                       <Ionicons
-                        name="storefront-outline"
-                        size={14}
-                        color={isSelected ? semantic.colors.text.inverse : semantic.colors.text.primary}
+                        name={isNearest ? "navigate-circle" : "storefront-outline"}
+                        size={15}
+                        color={
+                          isSelected
+                            ? semantic.colors.text.inverse
+                            : isNearest
+                            ? accent
+                            : semantic.colors.text.primary
+                        }
                         style={{ marginRight: 6 }}
                       />
-                      <Text
-                        style={[
-                          styles.marketChipText,
-                          {
-                            color: isSelected
-                              ? semantic.colors.text.inverse
-                              : semantic.colors.text.primary,
-                            fontWeight: isSelected ? "700" : "600",
-                          },
-                        ]}
-                      >
-                        {m.name}
-                      </Text>
+                      <View style={styles.marketChipContent}>
+                        <Text
+                          style={[
+                            styles.marketChipText,
+                            {
+                              color: isSelected
+                                ? semantic.colors.text.inverse
+                                : semantic.colors.text.primary,
+                              fontWeight: isSelected ? "700" : "600",
+                            },
+                          ]}
+                        >
+                          {m.name}
+                        </Text>
+                        {(m.formattedDistance || isNearest) && (
+                          <Text
+                            style={[
+                              styles.marketDistanceSubtext,
+                              {
+                                color: isSelected
+                                  ? `${semantic.colors.text.inverse}D9`
+                                  : isNearest
+                                  ? accent
+                                  : semantic.colors.text.secondary,
+                                ...semantic.typography.micro,
+                              },
+                            ]}
+                          >
+                            {m.formattedDistance || t("products.closestMarket")}
+                          </Text>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -753,10 +880,29 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 10,
   },
+  currencyPrefix: {
+    fontSize: 16,
+    marginRight: 4,
+  },
   input: {
     flex: 1,
     height: "100%",
   },
+  marketLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  locationBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+  },
+  locationBadgeText: {},
   marketsScroll: {
     gap: 8,
     paddingVertical: 4,
@@ -764,12 +910,20 @@ const styles = StyleSheet.create({
   marketChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
+  },
+  marketChipContent: {
+    flexDirection: "column",
   },
   marketChipText: {
     fontSize: 13,
+  },
+  marketDistanceSubtext: {
+    fontSize: 10,
+    marginTop: 1,
+    fontWeight: "500",
   },
   rewardNotice: {
     flexDirection: "row",

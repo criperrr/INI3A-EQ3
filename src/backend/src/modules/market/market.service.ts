@@ -3,14 +3,37 @@ import { NotFoundError } from "@/shared/errors/errors";
 
 class MarketServiceClass {
   async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined }) {
+    let markets: any[] = [];
     if (params?.latitude !== undefined && params?.longitude !== undefined) {
-      const radius = params.radius || 10000;
-      return MarketRepository.getMarketsByRadius(
-        { lat: params.latitude, lng: params.longitude },
-        radius
-      );
+      if (params.radius) {
+        markets = await MarketRepository.getMarketsByRadius(
+          { lat: params.latitude, lng: params.longitude },
+          params.radius
+        );
+      } else {
+        markets = await MarketRepository.getAllMarkets({ lat: params.latitude, lng: params.longitude });
+      }
+    } else {
+      markets = await MarketRepository.getAllMarkets();
     }
-    return MarketRepository.getAllMarkets();
+
+    return markets.map((m: any) => {
+      let formattedDistance: string | null = null;
+      if (m.distance !== undefined && m.distance !== null) {
+        const d = Number(m.distance);
+        if (d < 1000) {
+          formattedDistance = `${Math.round(d)} m`;
+        } else {
+          formattedDistance = `${(d / 1000).toFixed(1).replace(".", ",")} km`;
+        }
+      }
+
+      return {
+        ...m,
+        distance: m.distance !== undefined && m.distance !== null ? Number(m.distance) : undefined,
+        formattedDistance,
+      };
+    });
   }
 
   async getMarketById(id: number | string) {

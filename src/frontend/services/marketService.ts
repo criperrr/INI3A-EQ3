@@ -5,6 +5,8 @@ export interface MarketData {
   name: string;
   location?: string;
   createdAt?: string;
+  distance?: number;
+  formattedDistance?: string | null;
 }
 
 let memoryMarketsCache: { data: MarketData[]; timestamp: number } | null = null;

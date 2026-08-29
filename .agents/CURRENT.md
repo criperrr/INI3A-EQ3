@@ -168,6 +168,12 @@ Direct relative paths from project root.
 - [x] Native Map Progressive Loading & False Empty State Fix (eliminated loading race condition where empty banner flashed before fetch finished, added progressive Nominatim streaming callback, and separated `isLoadingMarkets` and `isProcessingLocation`).
 - [x] Native Map Duplicate Marker Keys Fix (guaranteed unique IDs and geo-hash deduplication across progressive Nominatim, Overpass, and Backend markets).
 - [x] Pre-established Product Categories & Types System across full-stack (15 standardized categories with emoji, icon, multilingual i18n support in 7 languages, backend /types and /categories/details routes, CategorySelector interactive component, category chips in search.tsx, and enriched badges in productDetails.tsx and productCard.tsx).
+- [x] Dynamic Theme Map Markers & UI Harmonization (map pin colors, filter controls, recenter button, loaders, and detail modal elements dynamically bind to the active theme accent color and Monet dynamic color system).
+- [x] Product Proximity & Promotional Ranking (PostGIS `ST_DWithin` with 15km radius, smart promo detection `is_promotion`, distance & lowest price ranking, `userLocation.ts` session cache, dynamic badges in `HomeScreen` and `SearchScreen`, and 7-language i18n support).
+- [x] Platform-Native Back Gestures & iPhone Sensitivity Calibration (restricted iOS interactive pop back gesture strictly to the left screen edge with `fullScreenGestureEnabled: false`, eliminating accidental triggers, and tuned `activeOffsetX: [-28, 28]`, `isDecisiveDistance: 60px` in `SwipeTabNavigator` for deliberate navigation).
+- [x] Redundant Top-Left Back Button Navigation (added dynamic back button with haptic feedback to `Header.tsx` on all non-home screens and sub-screens, and added dedicated top-left back button on `registerUser.tsx`).
+- [x] Nearest Market Auto-Selection & Progressive Currency Input Mask (integrated `getUserLocation()` on `registerProduct.tsx`, PostGIS `ST_Distance` proximity ordering in `MarketRepository`, auto-selection of closest market with distance badge pill, and progressive ATM-style centavos currency mask with digit-by-digit backspace).
+
 
 
 ---

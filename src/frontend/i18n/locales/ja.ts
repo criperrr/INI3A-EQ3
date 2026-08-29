@@ -297,6 +297,8 @@ export const ja: TranslationSchema = {
     promoBadge: "特売",
     bestPrice: "最安値",
     atDistance: "{distance} • {market}",
+    closestMarket: "最も近い店舗",
+    closestMarketAutoSelected: "最も近い店舗が自動選択されました",
   },
   profile: {
     title: "マイページ",

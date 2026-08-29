@@ -297,6 +297,8 @@ export const zh: TranslationSchema = {
     promoBadge: "特惠",
     bestPrice: "最低价",
     atDistance: "距您 {distance} • {market}",
+    closestMarket: "最近的超市",
+    closestMarketAutoSelected: "已自动选择最近的超市",
   },
   profile: {
     title: "个人中心",

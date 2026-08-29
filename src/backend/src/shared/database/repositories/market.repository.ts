@@ -48,7 +48,20 @@ class MarketRepositoryClass {
       .where(eq(Market.id, Number(id)));
   }
 
-  async getAllMarkets() {
+  async getAllMarkets(coord?: Point) {
+    if (coord && coord.lat !== undefined && coord.lng !== undefined) {
+      const wktPoint = `POINT(${coord.lng} ${coord.lat})`;
+      return db
+        .select({
+          id: Market.id,
+          name: Market.name,
+          location: sql`ST_AsGeoJson(${Market.location})`,
+          distance: sql<number>`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint}))`,
+        })
+        .from(Market)
+        .orderBy(sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC`);
+    }
+
     return db
       .select({
         id: Market.id,
@@ -61,19 +74,28 @@ class MarketRepositoryClass {
   async getMarketsByRadius(coord: Point, radius: number) {
     const wktPoint = `POINT(${coord.lng} ${coord.lat})`;
 
-    return db
+    const within = await db
       .select({
         id: Market.id,
         name: Market.name,
         location: sql`ST_AsGeoJson(${Market.location})`,
+        distance: sql<number>`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint}))`,
       })
-      .from(Market).where(sql`
-      ST_DWithin(
-      ${Market.location},
-      ST_GeographyFromText(${wktPoint}),
-      ${radius}
-      )
-      `);
+      .from(Market)
+      .where(sql`
+        ST_DWithin(
+          ${Market.location},
+          ST_GeographyFromText(${wktPoint}),
+          ${radius}
+        )
+      `)
+      .orderBy(sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC`);
+
+    if (within.length > 0) {
+      return within;
+    }
+
+    return this.getAllMarkets(coord);
   }
 }
 

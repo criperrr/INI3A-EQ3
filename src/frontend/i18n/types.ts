@@ -295,6 +295,8 @@ export interface TranslationSchema {
     promoBadge: string;
     bestPrice: string;
     atDistance: string;
+    closestMarket: string;
+    closestMarketAutoSelected: string;
   };
   profile: {
     title: string;

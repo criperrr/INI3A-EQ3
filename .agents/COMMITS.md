@@ -24,30 +24,30 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
-## [2026-08-28 08:10] - fix(redis): resilient redis connection, unified multi-path env loader and transparent in-memory fallback
+## [2026-08-29 11:40] - feat(products): auto-select nearest market & progressive currency input mask
 
-- **Description:** Fixed Redis connection, environment variable discovery, and stability across backend and scripts:
-  1. **Unified Environment Configuration Loader (`src/backend/src/shared/config/env.ts` & `.env`):** Created a resilient environment variable loader that automatically scans candidate paths (`process.cwd()/.env`, `src/backend/.env`, and relative module root paths). Synchronized root `.env` to eliminate `undefined` variables when running commands from workspace root.
-  2. **Resilient Redis Client & TLS Support (`src/backend/src/shared/redis/server.ts`):** Added URL trimming/cleaning, automatic TLS handling for `rediss://` with `rejectUnauthorized: false` for cloud Redis providers (Upstash, Redis Cloud, Aiven, etc.), capped exponential reconnection strategy (max 5 retries returning `false` instead of unhandled exceptions), and clean sanitized logging.
-  3. **Transparent In-Memory Fallback (`InMemoryStore` & `AuthRepository`):** Implemented an in-memory TTL store for refresh tokens, access token JTI blacklists, token rotations, and rate limits. If Redis is offline or fails to connect, the backend automatically transitions to in-memory fallback without crashing the server or throwing 500 errors.
-  4. **Rate Limiter & Health Endpoint Hardening (`rateLimiter.ts`, `app.ts`, `healthCheck.ts`):** Wrapped atomic Redis increments in try/catch to fall through to in-memory buckets on transient hiccups. Updated `/health` endpoint to report `redis: "connected"` or `redis: "in-memory-fallback"`.
-  5. **Non-Blocking Dev Launchers (`start_project.ps1`, `start_project.sh`):** Converted hard 30-second blocking timeouts on Redis port probes to non-blocking soft checks with fallback warnings.
-  6. **Automated Verification:** Verified with `test_redis_fallback.ts` and `npm run typecheck` (0 errors).
+- **Description:** Implemented nearest market auto-detection and progressive currency input mask in product price registration:
+  1. **PostGIS Proximity Market Queries (`market.repository.ts` & `market.service.ts`):** Enhanced `getAllMarkets` and `getMarketsByRadius` with `ST_Distance(location, ST_GeographyFromText(point))` calculation, ordering markets by geographical proximity `ASC` and formatting distance in meters (`250 m`) or kilometers (`1,2 km`).
+  2. **Auto-Select Closest Market (`registerProduct.tsx`):** Integrated `getUserLocation()` on mount to fetch coordinates and request `/markets` sorted by proximity. Automatically sets `selectedMarketId` to the nearest market (`list[0].id`), renders a "Mais Próximo" pill badge and formatted distance subtext on market chips.
+  3. **Progressive Centavos Currency Input Mask (`registerProduct.tsx`):** Implemented fluid ATM-style numeric mask: typing `10` formats to `0,10`, typing another `0` becomes `1,00`, typing `1050` becomes `10,50`. Supports single-digit backspaces smoothly down to `0,01` and empty placeholder `0,00`. Accurately parses centavos into floating point number on form submission.
+  4. **Internationalization (`i18n`):** Added `closestMarket` and `closestMarketAutoSelected` across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`).
+  5. **Verification:** Executed backend TypeScript compilation (`npm run build`), frontend TypeScript check (`npx tsc --noEmit`), and dedicated price mask test script with 100% pass rate.
 - **Files Modified:**
-  - `src/backend/src/shared/config/env.ts`
-  - `src/backend/src/shared/redis/server.ts`
-  - `src/backend/src/shared/database/repositories/auth.repository.ts`
-  - `src/backend/src/shared/database/database.ts`
-  - `src/backend/src/shared/util/jwt.ts`
-  - `src/backend/src/shared/database/healthCheck.ts`
-  - `src/backend/src/shared/middlewares/rateLimiter.ts`
-  - `src/backend/src/app.ts`
-  - `start_project.ps1`
-  - `start_project.sh`
-  - `.env`
+  - `src/backend/src/shared/database/repositories/market.repository.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/frontend/services/marketService.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/app/registerProduct.tsx`
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
-- **Impact / Next Steps:** Ensures the backend runs seamlessly whether Redis is running locally, hosted remotely with TLS, or offline in local dev mode.
+- **Impact / Next Steps:** When users register or submit a price, their nearest market is immediately pre-selected, reducing manual taps, and price entry is intuitive and immune to punctuation errors.
 
 ## [2026-08-28 09:18] - feat(navigation): add redundant top-left back button across all screens and sub-views
 
