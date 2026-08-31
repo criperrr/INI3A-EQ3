@@ -24,6 +24,27 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-31 11:16] - feat(help): comprehensive visual and interactive help center overhaul with 18 categorized faqs, xp badges, quick actions, feedback & i18n
+
+- **Description:** Completely refactored the Help Center (`help.tsx`) into an intuitive, visually rich, and dynamic support hub:
+  1. **18 Categorized FAQ Items:** Expanded from 5 generic questions to 18 in-depth questions organized across 6 core domains (*Primeiros Passos*, *Scanner & Preços*, *XP & Loja*, *Auditoria*, *Mapa & Lojas*, *Conta & App*).
+  2. **Interactive Category Filter Carousel:** Horizontal chip navigation with icon, localized name, live question count badges, and tactile haptic feedback (`Haptics.selectionAsync()`).
+  3. **Visual Badges & XP Highlights:** Embedded theme-accented and color-coded badges (`+15 XP`, `+25 XP`, `+5 XP`, `XP Seguro`, `Melhor Preço`, `JWT & Redis`) to emphasize actionable user rewards and trust features.
+  4. **Interactive Response Feedback ("Was this helpful?"):** Built-in micro-interaction allowing users to rate answer utility (👍 Sim / 👎 Não) with instant success state and haptic feedback.
+  5. **Quick Action Shortcuts (2x2 Grid):** Added 1-tap visual navigation cards leading directly to Barcode Scanner, Search, Map, and Profile/Shop.
+  6. **Community Guidelines Card:** Dedicated guidelines banner highlighting the 3 core platform values (*Preços Reais*, *Auditoria Justa*, *Espírito Comunitário*).
+  7. **Real-time Live Search:** Instant search filter across questions and answers with result counter badge and 1-tap clear button.
+  8. **100% Multilingual Sincronization:** Updated and harmonized all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`) with full translations.
+  9. **Verification:** `npx tsc --noEmit` and `lint_runner.py` passed with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The Help menu is now a delightful, comprehensive, and interactive knowledge base that empowers users, clearly explains all gamification and moderation mechanics, and aligns with the design system.
+
 ## [2026-08-31 11:11] - style(scanner): enlarged product photo & responsive full-screen flex layout without scroll
 
 - **Description:** Enhanced `scannerConfirmation.tsx` to expand the product photo size dynamically while filling the available screen height with a responsive flexbox architecture:

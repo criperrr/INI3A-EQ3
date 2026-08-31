@@ -74,7 +74,7 @@ class MarketRepositoryClass {
   async getMarketsByRadius(coord: Point, radius: number) {
     const wktPoint = `POINT(${coord.lng} ${coord.lat})`;
 
-    const within = await db
+    return db
       .select({
         id: Market.id,
         name: Market.name,
@@ -90,12 +90,6 @@ class MarketRepositoryClass {
         )
       `)
       .orderBy(sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC`);
-
-    if (within.length > 0) {
-      return within;
-    }
-
-    return this.getAllMarkets(coord);
   }
 }
 

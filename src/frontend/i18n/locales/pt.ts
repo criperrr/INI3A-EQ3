@@ -301,6 +301,10 @@ export const pt: TranslationSchema = {
     atDistance: "a {distance} no {market}",
     closestMarket: "Mais Próximo",
     closestMarketAutoSelected: "Mercado mais próximo selecionado automaticamente",
+    noMarketsWithinRadius: "Nenhum mercado encontrado em um raio de 15 km da sua localização.",
+    searchingNearbyMarkets: "Buscando mercados próximos (raio de 15 km)...",
+    maxDistanceNotice: "Mercados a até 15 km",
+    locationRequiredForProximity: "Ative a localização para encontrar mercados em um raio de até 15 km.",
   },
   profile: {
     title: "Meu Perfil",

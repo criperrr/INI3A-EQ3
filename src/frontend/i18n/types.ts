@@ -299,6 +299,10 @@ export interface TranslationSchema {
     atDistance: string;
     closestMarket: string;
     closestMarketAutoSelected: string;
+    noMarketsWithinRadius: string;
+    searchingNearbyMarkets: string;
+    maxDistanceNotice: string;
+    locationRequiredForProximity: string;
   };
   profile: {
     title: string;

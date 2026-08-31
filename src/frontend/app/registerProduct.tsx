@@ -34,8 +34,9 @@ export default function RegisterProduct() {
   const [product, setProduct] = useState<ProductData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLocatingMarkets, setIsLocatingMarkets] = useState(true);
   const [markets, setMarkets] = useState<MarketData[]>([]);
-  const [selectedMarketId, setSelectedMarketId] = useState<number>(1);
+  const [selectedMarketId, setSelectedMarketId] = useState<number>(0);
   const [hasLocation, setHasLocation] = useState(false);
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -56,44 +57,59 @@ export default function RegisterProduct() {
   const targetEan = params.ean || params.barcode;
   const targetId = params.id ? Number(params.id) : null;
 
-  useEffect(() => {
-    let isMounted = true;
+  const loadMarketsAndLocation = async () => {
+    setIsLocatingMarkets(true);
+    try {
+      const coords = await getUserLocation();
 
-    async function loadMarketsAndLocation() {
-      try {
-        const coords = await getUserLocation();
-        if (!isMounted) return;
-
-        if (coords) {
-          setHasLocation(true);
-        }
-
-        const list = await fetchMarkets(
-          coords ? { latitude: coords.latitude, longitude: coords.longitude } : undefined
-        );
-
-        if (!isMounted) return;
+      if (coords) {
+        setHasLocation(true);
+        const list = await fetchMarkets({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          radius: 15000, // 15km
+        });
 
         if (list && list.length > 0) {
           setMarkets(list);
           setSelectedMarketId(list[0]!.id);
+        } else {
+          setMarkets([]);
+          setSelectedMarketId(0);
         }
-      } catch (err) {
-        console.warn("[registerProduct] Erro ao carregar mercados:", err);
-        if (!isMounted) return;
+      } else {
+        setHasLocation(false);
         const fallbackList = await fetchMarkets();
         if (fallbackList && fallbackList.length > 0) {
           setMarkets(fallbackList);
           setSelectedMarketId(fallbackList[0]!.id);
+        } else {
+          setMarkets([]);
+          setSelectedMarketId(0);
         }
       }
+    } catch (err) {
+      console.warn("[registerProduct] Erro ao carregar mercados:", err);
+      try {
+        const fallbackList = await fetchMarkets();
+        if (fallbackList && fallbackList.length > 0) {
+          setMarkets(fallbackList);
+          setSelectedMarketId(fallbackList[0]!.id);
+        } else {
+          setMarkets([]);
+          setSelectedMarketId(0);
+        }
+      } catch {
+        setMarkets([]);
+        setSelectedMarketId(0);
+      }
+    } finally {
+      setIsLocatingMarkets(false);
     }
+  };
 
+  useEffect(() => {
     loadMarketsAndLocation();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   useEffect(() => {
@@ -162,6 +178,16 @@ export default function RegisterProduct() {
       } catch {
         // Continue
       }
+    }
+
+    if (!selectedMarketId || selectedMarketId <= 0 || markets.length === 0) {
+      Alert.alert(
+        t("common.warning"),
+        markets.length === 0
+          ? t("products.noMarketsWithinRadius")
+          : t("products.selectMarketRequired")
+      );
+      return;
     }
 
     if (!effectiveProductId) {
@@ -534,9 +560,7 @@ export default function RegisterProduct() {
                   </Text>
                 </View>
               </View>
-            </View>
-
-            {/* Market Selection */}
+            </View>            {/* Market Selection */}
             <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
               <View style={styles.marketLabelRow}>
                 <Text
@@ -564,7 +588,7 @@ export default function RegisterProduct() {
                       },
                     ]}
                   >
-                    <Ionicons name="location" size={11} color={accent} style={{ marginRight: 3 }} />
+                    <Ionicons name="navigate" size={11} color={accent} style={{ marginRight: 3 }} />
                     <Text
                       style={[
                         styles.locationBadgeText,
@@ -575,85 +599,165 @@ export default function RegisterProduct() {
                       ]}
                       numberOfLines={1}
                     >
-                      {t("products.closestMarket")}
+                      {t("products.maxDistanceNotice")}
                     </Text>
                   </View>
                 )}
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.marketsScroll}
-              >
-                {markets.map((m, index) => {
-                  const isSelected = selectedMarketId === m.id;
-                  const isNearest = index === 0 && hasLocation;
-                  return (
-                    <TouchableOpacity
-                      key={m.id}
+              {isLocatingMarkets ? (
+                <View
+                  style={[
+                    styles.marketLoadingCard,
+                    {
+                      backgroundColor: semantic.colors.surface.card,
+                      borderColor: semantic.colors.border.default,
+                      borderRadius: semantic.radius.chip,
+                    },
+                  ]}
+                >
+                  <ActivityIndicator size="small" color={accent} />
+                  <Text
+                    style={[
+                      styles.marketLoadingText,
+                      {
+                        color: semantic.colors.text.secondary,
+                        ...semantic.typography.caption,
+                      },
+                    ]}
+                  >
+                    {t("products.searchingNearbyMarkets")}
+                  </Text>
+                </View>
+              ) : markets.length === 0 ? (
+                <View
+                  style={[
+                    styles.marketEmptyCard,
+                    {
+                      backgroundColor: semantic.colors.surface.card,
+                      borderColor: semantic.colors.border.default,
+                      borderRadius: semantic.radius.modal,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="navigate-outline"
+                    size={28}
+                    color={semantic.colors.text.secondary}
+                  />
+                  <Text
+                    style={[
+                      styles.marketEmptyText,
+                      {
+                        color: semantic.colors.text.secondary,
+                        ...semantic.typography.caption,
+                      },
+                    ]}
+                  >
+                    {t("products.noMarketsWithinRadius")}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.marketRetryButton,
+                      {
+                        backgroundColor: `${accent}18`,
+                        borderColor: accent,
+                        borderRadius: semantic.radius.chip,
+                      },
+                    ]}
+                    onPress={loadMarketsAndLocation}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="refresh-outline" size={14} color={accent} />
+                    <Text
                       style={[
-                        styles.marketChip,
-                        { borderRadius: semantic.radius.chip },
-                        isSelected
-                          ? { backgroundColor: accent, borderColor: accent }
-                          : {
-                              backgroundColor: semantic.colors.surface.card,
-                              borderColor: isNearest ? accent : semantic.colors.border.default,
-                            },
+                        styles.marketRetryText,
+                        {
+                          color: accent,
+                          ...semantic.typography.micro,
+                          fontWeight: "700",
+                        },
                       ]}
-                      onPress={() => setSelectedMarketId(m.id)}
-                      activeOpacity={0.7}
                     >
-                      <Ionicons
-                        name={isNearest ? "navigate-circle" : "storefront-outline"}
-                        size={15}
-                        color={
+                      {t("common.retry")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.marketsScroll}
+                >
+                  {markets.map((m, index) => {
+                    const isSelected = selectedMarketId === m.id;
+                    const isNearest = index === 0 && hasLocation;
+                    return (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={[
+                          styles.marketChip,
+                          { borderRadius: semantic.radius.chip },
                           isSelected
-                            ? semantic.colors.text.inverse
-                            : isNearest
-                            ? accent
-                            : semantic.colors.text.primary
-                        }
-                        style={{ marginRight: 6 }}
-                      />
-                      <View style={styles.marketChipContent}>
-                        <Text
-                          style={[
-                            styles.marketChipText,
-                            {
-                              color: isSelected
-                                ? semantic.colors.text.inverse
-                                : semantic.colors.text.primary,
-                              fontWeight: isSelected ? "700" : "600",
-                            },
-                          ]}
-                        >
-                          {m.name}
-                        </Text>
-                        {(m.formattedDistance || isNearest) && (
+                            ? { backgroundColor: accent, borderColor: accent }
+                            : {
+                                backgroundColor: semantic.colors.surface.card,
+                                borderColor: isNearest ? accent : semantic.colors.border.default,
+                              },
+                        ]}
+                        onPress={() => setSelectedMarketId(m.id)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons
+                          name={isNearest ? "navigate-circle" : "storefront-outline"}
+                          size={15}
+                          color={
+                            isSelected
+                              ? semantic.colors.text.inverse
+                              : isNearest
+                              ? accent
+                              : semantic.colors.text.primary
+                          }
+                          style={{ marginRight: 6 }}
+                        />
+                        <View style={styles.marketChipContent}>
                           <Text
                             style={[
-                              styles.marketDistanceSubtext,
+                              styles.marketChipText,
                               {
                                 color: isSelected
-                                  ? `${semantic.colors.text.inverse}D9`
-                                  : isNearest
-                                  ? accent
-                                  : semantic.colors.text.secondary,
-                                ...semantic.typography.micro,
+                                  ? semantic.colors.text.inverse
+                                  : semantic.colors.text.primary,
+                                fontWeight: isSelected ? "700" : "600",
                               },
                             ]}
                           >
-                            {m.formattedDistance || t("products.closestMarket")}
+                            {m.name}
                           </Text>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
+                          {(m.formattedDistance || isNearest) && (
+                            <Text
+                              style={[
+                                styles.marketDistanceSubtext,
+                                {
+                                  color: isSelected
+                                    ? `${semantic.colors.text.inverse}D9`
+                                    : isNearest
+                                    ? accent
+                                    : semantic.colors.text.secondary,
+                                  ...semantic.typography.micro,
+                                },
+                              ]}
+                            >
+                              {m.formattedDistance || t("products.closestMarket")}
+                            </Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+            </View>w>
 
             {/* Gamification Hint */}
             <View
@@ -903,6 +1007,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   locationBadgeText: {},
+  marketLoadingCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+    borderWidth: 1,
+    gap: 10,
+    marginVertical: 4,
+  },
+  marketLoadingText: {},
+  marketEmptyCard: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    borderWidth: 1,
+    gap: 8,
+    marginVertical: 4,
+  },
+  marketEmptyText: {
+    textAlign: "center",
+    maxWidth: 280,
+  },
+  marketRetryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    gap: 6,
+    marginTop: 4,
+  },
+  marketRetryText: {},
   marketsScroll: {
     gap: 8,
     paddingVertical: 4,
