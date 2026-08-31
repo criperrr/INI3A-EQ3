@@ -431,8 +431,9 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Seed Default Markets (8 Real Supermarket Chains with PostGIS Coordinates)
+  // 4. Seed Default Markets (Real Supermarket Chains with PostGIS Coordinates)
   const defaultMarkets = [
+    // São Paulo (Capital)
     { name: "Mercado Global Padrão", location: { lat: -23.55052, lng: -46.633308 } },
     { name: "Supermercado Extra", location: { lat: -23.55152, lng: -46.634308 } },
     { name: "Carrefour Express", location: { lat: -23.55252, lng: -46.632308 } },
@@ -441,6 +442,16 @@ export async function seedDatabase() {
     { name: "Assaí Atacadista", location: { lat: -23.55400, lng: -46.630000 } },
     { name: "Dia Supermercado", location: { lat: -23.54700, lng: -46.636000 } },
     { name: "St. Marche Gourmet", location: { lat: -23.55320, lng: -46.637500 } },
+
+    // Bauru & Interior SP
+    { name: "Confiança Supermercados - Max", location: { lat: -22.32980, lng: -49.07250 } },
+    { name: "Tauste Supermercados - Duque", location: { lat: -22.33850, lng: -49.05580 } },
+    { name: "Pão de Açúcar - Bauru", location: { lat: -22.34210, lng: -49.06120 } },
+    { name: "Carrefour Hipermercado - Bauru", location: { lat: -22.35560, lng: -49.04320 } },
+    { name: "Assaí Atacadista - Bauru", location: { lat: -22.32100, lng: -49.03450 } },
+    { name: "Atacadão - Bauru", location: { lat: -22.31500, lng: -49.02800 } },
+    { name: "Supermercados Paulistão - Bauru", location: { lat: -22.33500, lng: -49.04100 } },
+    { name: "Supermercado Barracão - Bauru", location: { lat: -22.34120, lng: -49.05100 } },
   ];
 
   for (const m of defaultMarkets) {

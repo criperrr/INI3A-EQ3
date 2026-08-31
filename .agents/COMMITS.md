@@ -24,6 +24,59 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-31 11:29] - fix(frontend): isolate JSX comments and clean app.json asset references
+
+- **Description:** Fixed JSX whitespace evaluation error and missing asset warning:
+  1. **Isolated JSX Comments (`registerProduct.tsx`):** Isolated `{/* Market Selection */}` onto its own line after `</View>` closing tag, eliminating inter-tag whitespace text node generation inside parent `formSection` View component.
+  2. **Template Literals in Text Elements:** Wrapped all static label decorations (`*`, `(+15 XP)`, etc.) in single template literals (e.g. `` {`${t("products.enterPrice")} *`} ``) to prevent fragmented child text nodes.
+  3. **Expo Asset Path Cleanup (`app.json`):** Removed references to non-existent icon and splash asset image paths, resolving the `Unable to resolve asset "./assets/images/icon.png"` bundle warning.
+  4. **Verification:** Executed `npx tsc --noEmit` and `npm run typecheck` passing with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Completely eliminated the runtime redbox error in Expo Go and suppressed asset warnings on app startup.
+
+## [2026-08-31 11:27] - fix(market): fix text strings rendering crash in registerProduct and seed regional markets with postgis
+
+- **Description:** Diagnosed and fixed the "Text strings must be rendered within a <Text> component" error and resolved local market discovery:
+  1. **React Native JSX Safe Rendering (`registerProduct.tsx`):** Replaced loose logical AND (`&&`) expressions inside `<View>` components with explicit boolean ternary expressions (`Boolean(...) ? ... : null`), preventing falsy or truthy strings/numbers from being passed as raw text children to `<View>`.
+  2. **Regional PostGIS Markets Seeding (`seed.ts`):** Added 8 real supermarket chains with accurate PostGIS geographic coordinates for Bauru & Interior SP (*Confiança Max*, *Tauste Duque*, *Pão de Açúcar*, *Carrefour*, *Assaí*, *Atacadão*, *Paulistão*, *Barracão*), ensuring users in local dev/testing environments find markets within 1.7 km to 5 km of `-22.34, -49.02`.
+  3. **Universal Fallback Option:** Added an action button ("Ver Todos" / `common.seeAll`) in the empty state card to allow users outside covered zones to instantly load all database markets without restriction if desired.
+  4. **Verification:** Executed `npm run db:seed` (verified 8 markets discovered in radius 15km), frontend typecheck (`npx tsc --noEmit`), and backend typecheck (`npm run typecheck`) passing with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/backend/src/shared/database/seed.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Fixed the rendering crash, and users in Bauru / Interior SP now immediately see 8 local supermarkets sorted by distance (1.7 km to 4.9 km) with the closest pre-selected.
+
+## [2026-08-31 11:21] - feat(market): proximity market search and distance sorting within strict 15km radius for product registration
+
+- **Description:** Implemented 15km radius proximity market search and dynamic distance ordering for price registration:
+  1. **Strict PostGIS Radius Query (`MarketRepository.getMarketsByRadius`):** Adjusted the PostGIS query to strictly filter with `ST_DWithin` using the requested radius (15.000 meters) and order results by `ST_Distance ASC`. Removed accidental global market fallback when radius queries returned empty.
+  2. **Proximity Search in Price Registration (`registerProduct.tsx`):** Integrated GPS coordinates lookup with `getUserLocation()`, passing `radius: 15000` to `fetchMarkets`.
+  3. **Automatic Nearest Pre-Selection & Distance Badges:** Automatically pre-selects the nearest market (index 0) and displays distance badges on each market chip (e.g. `450 m`, `1,2 km`).
+  4. **Loading & Empty State Feedback:** Added loading indicator while querying location/markets and a styled empty state card (`marketEmptyCard`) with retry action when no markets exist within 15km.
+  5. **Validation:** Ensured price submission requires a valid selected market and prevents submitting when no markets are within 15km.
+  6. **Multilingual i18n Synchronization:** Added new localization keys across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`).
+  7. **Verification:** Backend typecheck (`npm run typecheck`), build (`npm run build`), frontend typecheck (`npx tsc --noEmit`), and lint runner passed with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/market.repository.ts`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** When registering a product price, users only see and select markets located within 15km of their real-time location, sorted from nearest to furthest.
+
 ## [2026-08-31 11:16] - feat(help): comprehensive visual and interactive help center overhaul with 18 categorized faqs, xp badges, quick actions, feedback & i18n
 
 - **Description:** Completely refactored the Help Center (`help.tsx`) into an intuitive, visually rich, and dynamic support hub:

@@ -20,7 +20,7 @@ import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
 import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence } from "../services/ocurrencyService";
-import { getUserLocation, UserCoordinates } from "../utils/userLocation";
+import { getUserLocation } from "../utils/userLocation";
 
 const FALLBACK_PRODUCT = {
   category: "Produto",
@@ -376,7 +376,7 @@ export default function RegisterProduct() {
                       },
                     ]}
                   >
-                    {t("productDetails.lastPrice")}:{" "}
+                    {`${t("productDetails.lastPrice")}: `}
                   </Text>
                   <Text
                     style={[
@@ -420,7 +420,7 @@ export default function RegisterProduct() {
                   },
                 ]}
               >
-                {t("products.enterPrice")} *
+                {`${t("products.enterPrice")} *`}
               </Text>
               <View
                 style={[
@@ -448,7 +448,7 @@ export default function RegisterProduct() {
                     },
                   ]}
                 >
-                  R${" "}
+                  {"R$ "}
                 </Text>
                 <TextInput
                   style={[
@@ -560,7 +560,9 @@ export default function RegisterProduct() {
                   </Text>
                 </View>
               </View>
-            </View>            {/* Market Selection */}
+            </View>
+
+            {/* Market Selection */}
             <View style={[styles.inputGroup, { marginBottom: semantic.spacing.itemGap }]}>
               <View style={styles.marketLabelRow}>
                 <Text
@@ -575,9 +577,9 @@ export default function RegisterProduct() {
                   ]}
                   numberOfLines={1}
                 >
-                  {t("products.selectMarket")} *
+                  {`${t("products.selectMarket")} *`}
                 </Text>
-                {hasLocation && markets.length > 0 && (
+                {Boolean(hasLocation && markets.length > 0) ? (
                   <View
                     style={[
                       styles.locationBadgePill,
@@ -602,7 +604,7 @@ export default function RegisterProduct() {
                       {t("products.maxDistanceNotice")}
                     </Text>
                   </View>
-                )}
+                ) : null}
               </View>
 
               {isLocatingMarkets ? (
@@ -656,32 +658,72 @@ export default function RegisterProduct() {
                   >
                     {t("products.noMarketsWithinRadius")}
                   </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.marketRetryButton,
-                      {
-                        backgroundColor: `${accent}18`,
-                        borderColor: accent,
-                        borderRadius: semantic.radius.chip,
-                      },
-                    ]}
-                    onPress={loadMarketsAndLocation}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="refresh-outline" size={14} color={accent} />
-                    <Text
+                  <View style={styles.marketEmptyActionsRow}>
+                    <TouchableOpacity
                       style={[
-                        styles.marketRetryText,
+                        styles.marketRetryButton,
                         {
-                          color: accent,
-                          ...semantic.typography.micro,
-                          fontWeight: "700",
+                          backgroundColor: `${accent}18`,
+                          borderColor: accent,
+                          borderRadius: semantic.radius.chip,
                         },
                       ]}
+                      onPress={loadMarketsAndLocation}
+                      activeOpacity={0.7}
                     >
-                      {t("common.retry")}
-                    </Text>
-                  </TouchableOpacity>
+                      <Ionicons name="refresh-outline" size={14} color={accent} />
+                      <Text
+                        style={[
+                          styles.marketRetryText,
+                          {
+                            color: accent,
+                            ...semantic.typography.micro,
+                            fontWeight: "700",
+                          },
+                        ]}
+                      >
+                        {t("common.retry")}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.marketRetryButton,
+                        {
+                          backgroundColor: semantic.colors.surface.input,
+                          borderColor: semantic.colors.border.default,
+                          borderRadius: semantic.radius.chip,
+                        },
+                      ]}
+                      onPress={async () => {
+                        setIsLocatingMarkets(true);
+                        try {
+                          const all = await fetchMarkets();
+                          if (all && all.length > 0) {
+                            setMarkets(all);
+                            setSelectedMarketId(all[0]!.id);
+                          }
+                        } finally {
+                          setIsLocatingMarkets(false);
+                        }
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="list-outline" size={14} color={semantic.colors.text.primary} />
+                      <Text
+                        style={[
+                          styles.marketRetryText,
+                          {
+                            color: semantic.colors.text.primary,
+                            ...semantic.typography.micro,
+                            fontWeight: "600",
+                          },
+                        ]}
+                      >
+                        {t("common.seeAll")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 <ScrollView
@@ -692,6 +734,7 @@ export default function RegisterProduct() {
                   {markets.map((m, index) => {
                     const isSelected = selectedMarketId === m.id;
                     const isNearest = index === 0 && hasLocation;
+                    const distanceLabel = m.formattedDistance || (isNearest ? t("products.closestMarket") : null);
                     return (
                       <TouchableOpacity
                         key={m.id}
@@ -734,7 +777,7 @@ export default function RegisterProduct() {
                           >
                             {m.name}
                           </Text>
-                          {(m.formattedDistance || isNearest) && (
+                          {distanceLabel ? (
                             <Text
                               style={[
                                 styles.marketDistanceSubtext,
@@ -748,16 +791,16 @@ export default function RegisterProduct() {
                                 },
                               ]}
                             >
-                              {m.formattedDistance || t("products.closestMarket")}
+                              {distanceLabel}
                             </Text>
-                          )}
+                          ) : null}
                         </View>
                       </TouchableOpacity>
                     );
                   })}
                 </ScrollView>
               )}
-            </View>w>
+            </View>
 
             {/* Gamification Hint */}
             <View
@@ -823,7 +866,7 @@ export default function RegisterProduct() {
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {t("products.submitPrice")} (+15 XP)
+                    {`${t("products.submitPrice")} (+15 XP)`}
                   </Text>
                 </>
               )}
@@ -1029,6 +1072,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     maxWidth: 280,
   },
+  marketEmptyActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
   marketRetryButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -1036,7 +1085,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderWidth: 1,
     gap: 6,
-    marginTop: 4,
   },
   marketRetryText: {},
   marketsScroll: {
