@@ -21,6 +21,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:migrate": "tsx ./src/shared/database/migrate.ts",
+    "db:seed": "tsx ./src/shared/database/seed.ts",
     "db:check": "tsx ./src/shared/database/healthCheck.ts",
     "db:reload": "bash ../../reload_services.sh"
   },

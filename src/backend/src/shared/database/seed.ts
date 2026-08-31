@@ -431,26 +431,24 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Seed Default Markets
+  // 4. Seed Default Markets (8 Real Supermarket Chains with PostGIS Coordinates)
   const defaultMarkets = [
     { name: "Mercado Global Padrão", location: { lat: -23.55052, lng: -46.633308 } },
     { name: "Supermercado Extra", location: { lat: -23.55152, lng: -46.634308 } },
     { name: "Carrefour Express", location: { lat: -23.55252, lng: -46.632308 } },
     { name: "Pão de Açúcar", location: { lat: -23.54952, lng: -46.635308 } },
     { name: "Atacadão Central", location: { lat: -23.54852, lng: -46.631308 } },
+    { name: "Assaí Atacadista", location: { lat: -23.55400, lng: -46.630000 } },
+    { name: "Dia Supermercado", location: { lat: -23.54700, lng: -46.636000 } },
+    { name: "St. Marche Gourmet", location: { lat: -23.55320, lng: -46.637500 } },
   ];
 
-  const existingMarkets = await db.select().from(market);
-  if (existingMarkets.length === 0) {
-    for (const m of defaultMarkets) {
+  for (const m of defaultMarkets) {
+    const existing = await db.query.market.findFirst({
+      where: (table, { eq }) => eq(table.name, m.name),
+    });
+    if (!existing) {
       await db.insert(market).values(m as any);
-    }
-  } else {
-    for (const m of defaultMarkets) {
-      const found = existingMarkets.find((em) => em.name === m.name);
-      if (!found) {
-        await db.insert(market).values(m as any);
-      }
     }
   }
 
@@ -461,6 +459,8 @@ export async function seedDatabase() {
   });
 
   const adminPassHash = await hash("admin", 10);
+
+  let adminUserId = existingAdmin?.id || 1;
 
   if (!existingAdmin) {
     const [newAdmin] = await db
@@ -477,8 +477,8 @@ export async function seedDatabase() {
       })
       .returning();
 
-    // Award badges and initial items for admin
     if (newAdmin) {
+      adminUserId = newAdmin.id;
       for (const b of defaultBadges) {
         await db.insert(userBadge).values({ userId: newAdmin.id, badgeId: b.id }).onConflictDoNothing();
       }
@@ -488,7 +488,7 @@ export async function seedDatabase() {
     }
     console.log("✅ [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
   } else {
-    // Ensure roleId, points, and customizations are synchronized without resetting custom password
+    adminUserId = existingAdmin.id;
     await db
       .update(user)
       .set({
@@ -537,129 +537,720 @@ export async function seedDatabase() {
         }
       }
 
-      // Give default free items
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 1 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 10 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
     }
     console.log("✅ [Seed] Created regular test user: usuario@presco.com / user123");
   } else {
-    // Ensure badges corresponding to points are synchronized
     for (const b of defaultBadges) {
       if (existingUser.points >= b.minPoints) {
         await db.insert(userBadge).values({ userId: existingUser.id, badgeId: b.id }).onConflictDoNothing();
       }
     }
 
-    // Ensure default customizations are unlocked
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 1 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 10 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 20 }).onConflictDoNothing();
   }
 
-  // 7. Seed Sample Products & Occurrences across Markets for Real Proximity & Promotion Testing
-  const existingProducts = await db.select().from(product);
-  if (existingProducts.length === 0) {
-    const adminUserRecord = await db.query.user.findFirst({ where: (t, { eq }) => eq(t.email, adminEmail) });
-    const uId = adminUserRecord?.id || 1;
+  // 7. Seed Rich Catalog of Products & Multi-Market Occurrences (Idempotent)
+  const allCurrentMarkets = await db.select().from(market);
+  const marketMap = new Map<string, number>();
+  for (const m of allCurrentMarkets) {
+    marketMap.set(m.name, m.id);
+  }
 
-    const allMarkets = await db.select().from(market);
-    const m1 = allMarkets[0]?.id || 1;
-    const m2 = allMarkets[1]?.id || 2;
-    const m3 = allMarkets[2]?.id || 3;
-    const m4 = allMarkets[3]?.id || 4;
+  // Fallback market IDs
+  const mGlobal = marketMap.get("Mercado Global Padrão") || allCurrentMarkets[0]?.id || 1;
+  const mExtra = marketMap.get("Supermercado Extra") || allCurrentMarkets[1]?.id || 2;
+  const mCarrefour = marketMap.get("Carrefour Express") || allCurrentMarkets[2]?.id || 3;
+  const mPaoDeAcucar = marketMap.get("Pão de Açúcar") || allCurrentMarkets[3]?.id || 4;
+  const mAtacadao = marketMap.get("Atacadão Central") || allCurrentMarkets[4]?.id || 5;
+  const mAssai = marketMap.get("Assaí Atacadista") || mAtacadao;
+  const mDia = marketMap.get("Dia Supermercado") || mExtra;
+  const mStMarche = marketMap.get("St. Marche Gourmet") || mPaoDeAcucar;
 
-    const sampleProducts = [
-      {
-        ean: "7891000100101",
-        name: "Café Especial Torrado 500g",
-        description: "Bebidas",
-        icon: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100102",
-        name: "Azeite de Oliva Extra Virgem 500ml",
-        description: "Alimentos",
-        icon: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100103",
-        name: "Leite Integral Orgânico 1L",
-        description: "Laticínios",
-        icon: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100104",
-        name: "Arroz Nobre Tipo 1 5kg",
-        description: "Alimentos",
-        icon: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100105",
-        name: "Pão de Forma Artesanal 500g",
-        description: "Padaria",
-        icon: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100106",
-        name: "Chocolate Meio Amargo 70% 90g",
-        description: "Doces & Snacks",
-        icon: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100107",
-        name: "Detergente Líquido Concentrado 500ml",
-        description: "Limpeza",
-        icon: "https://images.unsplash.com/photo-1585670270608-b4b4f1da0d01?w=400&h=400&fit=crop",
-      },
-      {
-        ean: "7891000100108",
-        name: "Maçã Fuji Selecionada 1kg",
-        description: "Hortifrúti",
-        icon: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=400&fit=crop",
-      },
-    ];
+  interface SeedProductDef {
+    ean: string;
+    name: string;
+    description: string;
+    icon: string;
+    prices: Array<{
+      marketId: number;
+      value: string;
+      trustFlag?: boolean;
+      upvotes?: number;
+      downvotes?: number;
+    }>;
+  }
 
-    for (const p of sampleProducts) {
-      const [createdP] = await db.insert(product).values(p).returning();
-      if (createdP) {
-        // Create occurrences across markets (some with big promotional discounts!)
-        if (createdP.ean === "7891000100101") {
-          // Café: Normal R$ 24,90, Promoção no Extra R$ 14,90 (-40%)
-          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "14.90", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "24.90", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "23.50", trustFlag: true });
-        } else if (createdP.ean === "7891000100102") {
-          // Azeite: Normal R$ 39,90, Promoção R$ 26,90 (-32%)
-          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "26.90", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "39.90", trustFlag: true });
-        } else if (createdP.ean === "7891000100103") {
-          // Leite: Normal R$ 6,50, Promoção R$ 4,29 (-34%)
-          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "4.29", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m4, productId: createdP.id, value: "6.50", trustFlag: true });
-        } else if (createdP.ean === "7891000100104") {
-          // Arroz: R$ 22,90
-          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "22.90", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "24.50", trustFlag: true });
-        } else if (createdP.ean === "7891000100105") {
-          // Pão: R$ 7,90
-          await db.insert(ocurrency).values({ userId: uId, marketId: m3, productId: createdP.id, value: "7.90", trustFlag: true });
-        } else if (createdP.ean === "7891000100106") {
-          // Chocolate: Promoção R$ 5,99 vs R$ 8,90
-          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "5.99", trustFlag: true });
-          await db.insert(ocurrency).values({ userId: uId, marketId: m4, productId: createdP.id, value: "8.90", trustFlag: true });
-        } else if (createdP.ean === "7891000100107") {
-          // Detergente: R$ 2,89
-          await db.insert(ocurrency).values({ userId: uId, marketId: m2, productId: createdP.id, value: "2.89", trustFlag: true });
-        } else if (createdP.ean === "7891000100108") {
-          // Maçã: R$ 8,50
-          await db.insert(ocurrency).values({ userId: uId, marketId: m1, productId: createdP.id, value: "8.50", trustFlag: true });
+  const catalogProducts: SeedProductDef[] = [
+    // 1. ALIMENTOS
+    {
+      ean: "7891000100101",
+      name: "Café Especial Torrado e Moído 500g",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "14.90", trustFlag: true, upvotes: 12, downvotes: 0 }, // Promoção!
+        { marketId: mCarrefour, value: "24.90", trustFlag: true, upvotes: 5, downvotes: 1 },
+        { marketId: mPaoDeAcucar, value: "26.50", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mAtacadao, value: "18.90", trustFlag: true, upvotes: 8, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100102",
+      name: "Azeite de Oliva Extra Virgem 500ml",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mCarrefour, value: "26.90", trustFlag: true, upvotes: 14, downvotes: 1 }, // Promoção!
+        { marketId: mPaoDeAcucar, value: "39.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+        { marketId: mAssai, value: "29.90", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mStMarche, value: "42.00", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100104",
+      name: "Arroz Nobre Tipo 1 5kg",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "21.90", trustFlag: true, upvotes: 15, downvotes: 0 },
+        { marketId: mAssai, value: "22.50", trustFlag: true, upvotes: 9, downvotes: 1 },
+        { marketId: mExtra, value: "26.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mCarrefour, value: "27.50", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100110",
+      name: "Feijão Carioca Selecionado 1kg",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1551462147-ff29053bfc14?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "6.79", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mDia, value: "7.29", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mExtra, value: "8.49", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "9.20", trustFlag: true, upvotes: 2, downvotes: 1 },
+      ],
+    },
+    {
+      ean: "7891000100111",
+      name: "Macarrão Espaguete Grano Duro 500g",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1621996346565-e3d5d6281691?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "5.49", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mCarrefour, value: "7.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mStMarche, value: "9.50", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100112",
+      name: "Açúcar Refinado Especial 1kg",
+      description: "Alimentos",
+      icon: "https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "3.89", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mDia, value: "4.19", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mExtra, value: "4.89", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+
+    // 2. HORTIFRÚTI
+    {
+      ean: "7891000100108",
+      name: "Maçã Fuji Selecionada 1kg",
+      description: "Hortifrúti",
+      icon: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "7.99", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mCarrefour, value: "9.90", trustFlag: true, upvotes: 4, downvotes: 1 },
+        { marketId: mStMarche, value: "12.50", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100120",
+      name: "Banana Prata Climatizada 1kg",
+      description: "Hortifrúti",
+      icon: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "4.99", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mAssai, value: "5.49", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "7.89", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100121",
+      name: "Tomate Italiano Especial 1kg",
+      description: "Hortifrúti",
+      icon: "https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "5.89", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mCarrefour, value: "7.49", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "8.90", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100122",
+      name: "Batata Inglesa Lavada 1kg",
+      description: "Hortifrúti",
+      icon: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "3.99", trustFlag: true, upvotes: 14, downvotes: 0 },
+        { marketId: mAssai, value: "4.29", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mExtra, value: "5.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100123",
+      name: "Alface Crespa Hidropônica Un",
+      description: "Hortifrúti",
+      icon: "https://images.unsplash.com/photo-1622206151226-18ca2c9ab4a1?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "2.49", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mCarrefour, value: "3.29", trustFlag: true, upvotes: 3, downvotes: 0 },
+        { marketId: mStMarche, value: "4.50", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 3. CARNES
+    {
+      ean: "7891000100130",
+      name: "Picanha Bovina Resfriada Peça 1kg",
+      description: "Carnes",
+      icon: "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "59.90", trustFlag: true, upvotes: 25, downvotes: 1 }, // Super Promoção!
+        { marketId: mAtacadao, value: "64.90", trustFlag: true, upvotes: 14, downvotes: 0 },
+        { marketId: mExtra, value: "79.90", trustFlag: true, upvotes: 8, downvotes: 1 },
+        { marketId: mStMarche, value: "119.00", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100131",
+      name: "Peito de Frango Desossado e Congelado 1kg",
+      description: "Carnes",
+      icon: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "14.90", trustFlag: true, upvotes: 18, downvotes: 0 },
+        { marketId: mAssai, value: "15.49", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mCarrefour, value: "18.90", trustFlag: true, upvotes: 5, downvotes: 1 },
+        { marketId: mPaoDeAcucar, value: "22.50", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100132",
+      name: "Linguiça Toscana para Churrasco 1kg",
+      description: "Carnes",
+      icon: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "16.90", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mAssai, value: "17.49", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mCarrefour, value: "21.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100133",
+      name: "Filé de Tilápia Congelado 800g",
+      description: "Carnes",
+      icon: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "32.90", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "44.90", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mStMarche, value: "49.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+
+    // 4. LATICÍNIOS
+    {
+      ean: "7891000100103",
+      name: "Leite Integral Orgânico 1L",
+      description: "Laticínios",
+      icon: "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "4.29", trustFlag: true, upvotes: 16, downvotes: 0 }, // Promoção!
+        { marketId: mDia, value: "4.69", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "6.50", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mStMarche, value: "7.20", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100140",
+      name: "Queijo Mussarela Fatiado 500g",
+      description: "Laticínios",
+      icon: "https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "19.90", trustFlag: true, upvotes: 15, downvotes: 0 },
+        { marketId: mAssai, value: "20.50", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mCarrefour, value: "25.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "28.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100141",
+      name: "Iogurte Natural Integral 170g",
+      description: "Laticínios",
+      icon: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "2.79", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mExtra, value: "3.29", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "4.10", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100142",
+      name: "Manteiga Extra com Sal 200g",
+      description: "Laticínios",
+      icon: "https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "9.49", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mCarrefour, value: "11.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mStMarche, value: "14.50", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100143",
+      name: "Requeijão Cremoso Tradicional 200g",
+      description: "Laticínios",
+      icon: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "6.99", trustFlag: true, upvotes: 13, downvotes: 0 },
+        { marketId: mDia, value: "7.49", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "9.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+
+    // 5. PADARIA
+    {
+      ean: "7891000100105",
+      name: "Pão de Forma Artesanal 500g",
+      description: "Padaria",
+      icon: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "5.99", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mExtra, value: "6.89", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mCarrefour, value: "7.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mStMarche, value: "9.50", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100150",
+      name: "Pão Francês Tradicional 1kg",
+      description: "Padaria",
+      icon: "https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "11.90", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mExtra, value: "13.90", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "17.90", trustFlag: true, upvotes: 5, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100151",
+      name: "Torrada Tradicional Crocante 140g",
+      description: "Padaria",
+      icon: "https://images.unsplash.com/photo-1584776296944-ab6fb57b0bdd?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "3.49", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mCarrefour, value: "4.29", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100152",
+      name: "Bolo de Cenoura com Calda de Chocolate 400g",
+      description: "Padaria",
+      icon: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "12.90", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "16.50", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+
+    // 6. BEBIDAS
+    {
+      ean: "7891000100160",
+      name: "Suco de Laranja 100% Integral 1L",
+      description: "Bebidas",
+      icon: "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "7.99", trustFlag: true, upvotes: 14, downvotes: 0 }, // Promoção!
+        { marketId: mCarrefour, value: "10.90", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "12.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100161",
+      name: "Refrigerante Guaraná Antarctica 2L",
+      description: "Bebidas",
+      icon: "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "6.49", trustFlag: true, upvotes: 18, downvotes: 0 },
+        { marketId: mExtra, value: "7.89", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mCarrefour, value: "8.49", trustFlag: true, upvotes: 5, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100162",
+      name: "Cerveja Puro Malte Lata 350ml",
+      description: "Bebidas",
+      icon: "https://images.unsplash.com/photo-1608270110375-d14467a54483?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "3.49", trustFlag: true, upvotes: 21, downvotes: 0 },
+        { marketId: mDia, value: "3.79", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "4.79", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100163",
+      name: "Água Mineral Natural Sem Gás 510ml",
+      description: "Bebidas",
+      icon: "https://images.unsplash.com/photo-1559839914-17aae19cec71?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "1.29", trustFlag: true, upvotes: 16, downvotes: 0 },
+        { marketId: mCarrefour, value: "1.99", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mStMarche, value: "2.80", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 7. CONGELADOS
+    {
+      ean: "7891000100170",
+      name: "Pizza Congelada Calabresa Especial 460g",
+      description: "Congelados",
+      icon: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "11.90", trustFlag: true, upvotes: 14, downvotes: 0 }, // Promoção!
+        { marketId: mDia, value: "13.50", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mCarrefour, value: "16.90", trustFlag: true, upvotes: 5, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100171",
+      name: "Hambúrguer Bovino Tradicional 672g",
+      description: "Congelados",
+      icon: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "17.90", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mAssai, value: "18.50", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "24.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100172",
+      name: "Sorvete Especial de Chocolate Belga 1L",
+      description: "Congelados",
+      icon: "https://images.unsplash.com/photo-1570197788417-0e82375c9371?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "19.90", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "27.90", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mStMarche, value: "32.00", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 8. DOCES & SNACKS
+    {
+      ean: "7891000100106",
+      name: "Chocolate Meio Amargo 70% 90g",
+      description: "Doces & Snacks",
+      icon: "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "5.99", trustFlag: true, upvotes: 17, downvotes: 0 }, // Promoção!
+        { marketId: mDia, value: "6.79", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mCarrefour, value: "8.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100180",
+      name: "Batata Chips Clássica Crocante 100g",
+      description: "Doces & Snacks",
+      icon: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "6.29", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mExtra, value: "7.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mStMarche, value: "9.90", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100181",
+      name: "Biscoito Recheado Chocolate Duplo 130g",
+      description: "Doces & Snacks",
+      icon: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "2.49", trustFlag: true, upvotes: 15, downvotes: 0 },
+        { marketId: mDia, value: "2.89", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mCarrefour, value: "3.79", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+
+    // 9. LIMPEZA
+    {
+      ean: "7891000100107",
+      name: "Detergente Líquido Concentrado Neutro 500ml",
+      description: "Limpeza",
+      icon: "https://images.unsplash.com/photo-1585670270608-b4b4f1da0d01?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "1.99", trustFlag: true, upvotes: 19, downvotes: 0 },
+        { marketId: mAssai, value: "2.19", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mCarrefour, value: "2.89", trustFlag: true, upvotes: 5, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100190",
+      name: "Sabão em Pó Concentrado Ação Total 1.6kg",
+      description: "Limpeza",
+      icon: "https://images.unsplash.com/photo-1610557892470-55d9e80c0bce?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "16.90", trustFlag: true, upvotes: 14, downvotes: 0 }, // Promoção!
+        { marketId: mAtacadao, value: "17.80", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mExtra, value: "22.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "25.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100191",
+      name: "Desinfetante Antibacteriano Lavanda 1L",
+      description: "Limpeza",
+      icon: "https://images.unsplash.com/photo-1584813470613-5b1c1cad3d69?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "4.99", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mExtra, value: "6.49", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mCarrefour, value: "7.20", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100192",
+      name: "Amaciante de Roupas Concentrado 1.5L",
+      description: "Limpeza",
+      icon: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "14.90", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mCarrefour, value: "18.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "21.90", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 10. HIGIENE
+    {
+      ean: "7891000100200",
+      name: "Sabonete Líquido Hidratante Erva Doce 250ml",
+      description: "Higiene",
+      icon: "https://images.unsplash.com/photo-1608248597359-009139a03977?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "4.99", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mExtra, value: "6.50", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mStMarche, value: "8.90", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100201",
+      name: "Shampoo Revitalizante Nutrição 400ml",
+      description: "Higiene",
+      icon: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "13.90", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mCarrefour, value: "17.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "20.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100202",
+      name: "Creme Dental Proteção Total 90g",
+      description: "Higiene",
+      icon: "https://images.unsplash.com/photo-1559567123-956247c45831?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "3.29", trustFlag: true, upvotes: 16, downvotes: 0 },
+        { marketId: mDia, value: "3.79", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mExtra, value: "4.99", trustFlag: true, upvotes: 5, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100203",
+      name: "Desodorante Antitranspirante Aerosol 150ml",
+      description: "Higiene",
+      icon: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "10.90", trustFlag: true, upvotes: 14, downvotes: 0 }, // Promoção!
+        { marketId: mCarrefour, value: "14.90", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "16.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+
+    // 11. BEBÊS
+    {
+      ean: "7891000100210",
+      name: "Fralda Descartável Infantil Tamanho G 32 un",
+      description: "Bebês",
+      icon: "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "38.90", trustFlag: true, upvotes: 20, downvotes: 0 },
+        { marketId: mAssai, value: "39.90", trustFlag: true, upvotes: 13, downvotes: 0 },
+        { marketId: mExtra, value: "49.90", trustFlag: true, upvotes: 6, downvotes: 1 },
+        { marketId: mPaoDeAcucar, value: "54.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100211",
+      name: "Lenços Umedecidos Toque Suave 48 un",
+      description: "Bebês",
+      icon: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mDia, value: "6.99", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mCarrefour, value: "8.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mStMarche, value: "11.50", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 12. PETS
+    {
+      ean: "7891000100220",
+      name: "Ração Seca Premium para Cães Adultos 3kg",
+      description: "Pets",
+      icon: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "42.90", trustFlag: true, upvotes: 15, downvotes: 0 },
+        { marketId: mAtacadao, value: "44.50", trustFlag: true, upvotes: 9, downvotes: 0 },
+        { marketId: mCarrefour, value: "54.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "59.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100221",
+      name: "Ração Úmida Sachê para Gatos Salmão 85g",
+      description: "Pets",
+      icon: "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "2.79", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mDia, value: "3.19", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mExtra, value: "3.99", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+
+    // 13. FARMÁCIA
+    {
+      ean: "7891000100230",
+      name: "Vitamina C Efervescente 1g 10 Comprimidos",
+      description: "Farmácia",
+      icon: "https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mExtra, value: "11.90", trustFlag: true, upvotes: 10, downvotes: 0 },
+        { marketId: mCarrefour, value: "13.90", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "16.50", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100231",
+      name: "Álcool em Gel 70% Antisséptico 500ml",
+      description: "Farmácia",
+      icon: "https://images.unsplash.com/photo-1584483766114-2cea6facdf57?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "6.49", trustFlag: true, upvotes: 13, downvotes: 0 },
+        { marketId: mDia, value: "7.20", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mExtra, value: "8.90", trustFlag: true, upvotes: 4, downvotes: 0 },
+      ],
+    },
+
+    // 14. UTILIDADES
+    {
+      ean: "7891000100240",
+      name: "Papel Toalha Folha Dupla 2 Rolos",
+      description: "Utilidades",
+      icon: "https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAssai, value: "4.49", trustFlag: true, upvotes: 11, downvotes: 0 },
+        { marketId: mDia, value: "4.99", trustFlag: true, upvotes: 7, downvotes: 0 },
+        { marketId: mCarrefour, value: "6.20", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+    {
+      ean: "7891000100241",
+      name: "Sacos de Lixo Reforçados 50L 30 un",
+      description: "Utilidades",
+      icon: "https://images.unsplash.com/photo-1530587191325-3db32d826c18?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "11.90", trustFlag: true, upvotes: 14, downvotes: 0 },
+        { marketId: mExtra, value: "14.50", trustFlag: true, upvotes: 6, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "17.90", trustFlag: true, upvotes: 2, downvotes: 0 },
+      ],
+    },
+
+    // 15. OUTROS
+    {
+      ean: "7891000100250",
+      name: "Pilhas Alcalinas AA Pacote com 4 un",
+      description: "Outros",
+      icon: "https://images.unsplash.com/photo-1619725002198-6a689b72f41d?w=400&h=400&fit=crop",
+      prices: [
+        { marketId: mAtacadao, value: "14.90", trustFlag: true, upvotes: 12, downvotes: 0 },
+        { marketId: mCarrefour, value: "18.90", trustFlag: true, upvotes: 5, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "22.90", trustFlag: true, upvotes: 3, downvotes: 0 },
+      ],
+    },
+  ];
+
+  let insertedProductCount = 0;
+  let insertedOccurrencesCount = 0;
+
+  for (const item of catalogProducts) {
+    let targetProduct = await db.query.product.findFirst({
+      where: (table, { eq }) => eq(table.ean, item.ean),
+    });
+
+    if (!targetProduct) {
+      const [newProduct] = await db
+        .insert(product)
+        .values({
+          ean: item.ean,
+          name: item.name,
+          description: item.description,
+          icon: item.icon,
+        })
+        .returning();
+      targetProduct = newProduct;
+      insertedProductCount++;
+    } else {
+      // Ensure description/category and icon are synchronized
+      await db
+        .update(product)
+        .set({
+          name: item.name,
+          description: item.description,
+          icon: item.icon,
+        })
+        .where(eq(product.id, targetProduct.id));
+    }
+
+    if (targetProduct) {
+      // Seed occurrences across markets
+      for (const pr of item.prices) {
+        const existingOcc = await db.query.ocurrency.findFirst({
+          where: (table, { and, eq }) =>
+            and(
+              eq(table.productId, targetProduct.id),
+              eq(table.marketId, pr.marketId),
+              eq(table.userId, adminUserId)
+            ),
+        });
+
+        if (!existingOcc) {
+          await db.insert(ocurrency).values({
+            userId: adminUserId,
+            marketId: pr.marketId,
+            productId: targetProduct.id,
+            value: pr.value,
+            trustFlag: pr.trustFlag ?? true,
+            upvoteCount: pr.upvotes ?? 0,
+            downvoteCount: pr.downvotes ?? 0,
+          });
+          insertedOccurrencesCount++;
         }
       }
     }
-    console.log("✅ [Seed] Seeded initial sample products & occurrences with promotions and multi-market prices.");
   }
 
+  console.log(
+    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} new market price occurrences).`
+  );
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }
 

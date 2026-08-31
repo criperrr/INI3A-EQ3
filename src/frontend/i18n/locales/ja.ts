@@ -255,6 +255,8 @@ export const ja: TranslationSchema = {
     rescan: "もう一度スキャン",
     confirmProduct: "商品の確認",
     confirmProductSubtitle: "表示されている情報が商品と一致しているか確認してください",
+    isThisScannedProduct: "これはスキャンした商品ですか？",
+    confirmPromptSubtitle: "確認して価格登録に進みます",
     productName: "商品名",
     barcode: "バーコード (EAN)",
     category: "カテゴリー",

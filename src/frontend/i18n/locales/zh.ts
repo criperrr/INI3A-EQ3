@@ -255,6 +255,8 @@ export const zh: TranslationSchema = {
     rescan: "重新扫描",
     confirmProduct: "确认商品",
     confirmProductSubtitle: "请核对信息是否与实物一致",
+    isThisScannedProduct: "这是您扫描的商品吗？",
+    confirmPromptSubtitle: "确认后继续录入商品价格",
     productName: "商品名称",
     barcode: "条形码 (EAN)",
     category: "分类",

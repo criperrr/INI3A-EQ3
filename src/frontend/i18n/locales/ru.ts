@@ -255,6 +255,8 @@ export const ru: TranslationSchema = {
     rescan: "Сканировать снова",
     confirmProduct: "Подтверждение товара",
     confirmProductSubtitle: "Убедитесь, что данные соответствуют товару",
+    isThisScannedProduct: "Это отсканированный товар?",
+    confirmPromptSubtitle: "Подтвердите, чтобы продолжить внесение цены",
     productName: "Название товара",
     barcode: "Штрихкод (EAN)",
     category: "Категория",

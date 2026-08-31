@@ -13,6 +13,7 @@
     "db:restart": "bash ./reload_services.sh --restart",
     "db:status": "bash ./reload_services.sh --status",
     "db:check": "npm run --prefix src/backend db:check",
+    "db:seed": "npm run --prefix src/backend db:seed",
     "install:all": "npm install && npm install --prefix src/backend && npm install --prefix src/frontend",
     "install:clean": "npm run install:win:clean",
     "install:win": "cmd /c install_dependencies.bat",

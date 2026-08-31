@@ -24,6 +24,74 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-08-31 11:11] - style(scanner): enlarged product photo & responsive full-screen flex layout without scroll
+
+- **Description:** Enhanced `scannerConfirmation.tsx` to expand the product photo size dynamically while filling the available screen height with a responsive flexbox architecture:
+  1. **Dynamic Responsive Image (`flex: 1`, `minHeight: 140`, `maxHeight: 250`):** Allowed the product photo to dynamically expand and occupy up to 250px of vertical space while maintaining crisp `contentFit="contain"`.
+  2. **Full-Screen Space Utilization (`justifyContent: "space-between"`):** Configured the main card and top/bottom sections to stretch and fill the viewport height harmoniously between the top navigation bar and bottom tab bar.
+  3. **Zero Overflow Guarantee:** Replaced fixed outer heights with flex constraints to guarantee zero vertical overflow and eliminate scrollbars on any mobile screen dimensions.
+  4. **Verification:** `npx tsc --noEmit` and `npm run lint` passed with 0 errors and 0 warnings.
+- **Files Modified:**
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The product image is now large, crisp, and prominent, filling the entire mobile screen proportionally without requiring any scrolling.
+
+## [2026-08-31 11:09] - style(scanner): optimize scanner confirmation layout for zero-scroll single screen experience
+
+- **Description:** Redesigned the layout and proportions of `scannerConfirmation.tsx` to ensure all elements (header, product photo, title, category, EAN barcode, last price, confirmation question prompt, and Yes/No action buttons) fit harmoniously within a single mobile viewport without triggering unnecessary vertical scroll:
+  1. **Compact Contained Card:** Replaced oversized full-width aspect ratio with a calibrated 105px product image container, compact typography, and tightened padding.
+  2. **Horizontal Metadata Chips (`metaRow`):** Placed the EAN barcode chip and last registered price side-by-side in horizontal pill badges to preserve vertical viewport space.
+  3. **Streamlined Question Prompt & Action Buttons:** Compressed the question banner to a sleek, high-visibility 1-line title and micro-subtitle with prominent action buttons.
+  4. **Verification:** `npx tsc --noEmit` and `npm run lint` executed with 0 errors and 0 warnings.
+- **Files Modified:**
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** When a barcode is scanned, the entire confirmation dialog is immediately visible in full without requiring the user to swipe or scroll down to reach the action buttons.
+
+## [2026-08-31 11:06] - feat(scanner): ask confirmation question on scanner confirmation screen with multilingual i18n & tactile feedback
+
+- **Description:** Enhanced the scanned product confirmation screen (`scannerConfirmation.tsx`) to explicitly ask if the displayed item is the chosen/scanned product before proceeding to price registration:
+  1. **Confirmation Prompt Card (`scannerConfirmation.tsx`):** Added a dedicated visual prompt component (`QuestionPrompt`) with theme accent highlight, `help-circle-outline` icon badge, bold question title (*"Este é o produto escaneado?"* / `scanner.isThisScannedProduct`), and instructive subtitle (*"Confirme para prosseguir com o registro de preço"* / `scanner.confirmPromptSubtitle`).
+  2. **EAN Barcode Chip:** Displayed a structured EAN tag with `barcode-outline` icon when barcode data is present to make it easy for users to verify the exact product code.
+  3. **Header Guidance Badge:** Added a clean step indicator pill at the top of the scroll container with `scan-outline` icon and localized confirmation subtitle.
+  4. **Tactile Action Buttons:** Enhanced the "SIM" (confirm) and "NÃO" (cancel) action buttons with explicit checkmark/close icons and native haptic feedback (`Haptics.impactAsync(Medium)` on confirm, `Haptics.impactAsync(Light)` on cancel).
+  5. **Multilingual i18n (7 Languages):** Added `isThisScannedProduct` and `confirmPromptSubtitle` keys in `src/frontend/i18n/types.ts` and all 7 locale files (`pt`, `en`, `es`, `de`, `ru`, `zh`, `ja`).
+  6. **Design System & Type Safety:** Used strict semantic tokens from `DESIGN.md` (`useTheme().tokens.semantic`), verified frontend TypeScript compilation (`npx tsc --noEmit`), and verified zero linter errors.
+- **Files Modified:**
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** When a barcode is scanned, the user is presented with a clear, unambiguous confirmation card asking if the scanned item is indeed the intended product before opening the price registration form.
+
+## [2026-08-31 11:05] - feat(database): comprehensive database seeding of 36+ products across 15 categories, 8 markets & multi-market occurrences
+
+- **Description:** Implemented an idempotent, rich database seeder populating real grocery products, supermarket chains, and multi-market price reports:
+  1. **8 Supermarket Chains (`seed.ts`):** Seeded real supermarket chains across different market tiers (Hipermercado Extra, Carrefour Express, Pão de Açúcar, Atacadão Central, Assaí Atacadista, Dia Supermercado, St. Marche Gourmet, Mercado Global Padrão) with realistic PostGIS geographic coordinates.
+  2. **Comprehensive Product Catalog (36+ Items):** Populated realistic products covering all 15 canonical Presco categories (*Alimentos*, *Hortifrúti*, *Carnes*, *Laticínios*, *Padaria*, *Bebidas*, *Congelados*, *Doces & Snacks*, *Limpeza*, *Higiene*, *Bebês*, *Pets*, *Farmácia*, *Utilidades*, *Outros*) with valid EAN-13 barcodes, normalized descriptions, and high-definition Unsplash photography.
+  3. **Multi-Market Price Occurrences (170+ Prices):** Generated multi-market price points per product reflecting realistic market tier variations (wholesale discount at Atacadão/Assaí, competitive standard at Extra/Carrefour, premium at Pão de Açúcar/St. Marche), including distinct promotional discount occurrences (-20% to -45%) and community upvotes to fuel promo badges and proximity rankings.
+  4. **Idempotent & Safe Execution:** Designed seeder to insert missing products and occurrences without duplicating or overwriting existing user data.
+  5. **NPM Scripts & Verification:** Added `npm run db:seed` alias in backend and root `package.json`, verified PostgreSQL data integrity (`checkCounts.ts`), and passed backend TypeScript compilation (`npm run typecheck`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/checkCounts.ts`
+  - `src/backend/package.json`
+  - `package.json`
+  - `seed-products-markets-database.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Database now contains a rich, realistic catalog of 66 products and 176 prices across 8 supermarket chains, allowing complete testing of price comparison, proximity filtering, promotional deals, and category browsing in the mobile app.
+
+
 ## [2026-08-29 12:05] - fix(categories): eliminate duplicate rogue categories with comprehensive keyword aliases & full-stack normalization
 
 - **Description:** Resolved duplicate and fragmented category chips (e.g. "Líquido" vs "Limpeza" having separate products) through comprehensive full-stack normalization:
