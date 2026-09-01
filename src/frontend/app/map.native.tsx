@@ -259,9 +259,19 @@ const fetchAllMarketsData = async (
         let added = 0;
         for (const el of items) {
             const idKey = el.id !== undefined && el.id !== null ? String(el.id) : null;
-            const latCoord = (el.lat || el.center?.lat);
-            const lonCoord = (el.lon || el.center?.lon);
-            if (latCoord && lonCoord) {
+            const rawLat = el.lat ?? el.center?.lat;
+            const rawLon = el.lon ?? el.center?.lon;
+            const latCoord = typeof rawLat === "number" ? rawLat : parseFloat(String(rawLat));
+            const lonCoord = typeof rawLon === "number" ? rawLon : parseFloat(String(rawLon));
+
+            if (
+                !isNaN(latCoord) &&
+                !isNaN(lonCoord) &&
+                latCoord >= -90 &&
+                latCoord <= 90 &&
+                lonCoord >= -180 &&
+                lonCoord <= 180
+            ) {
                 const geoKey = `${latCoord.toFixed(4)}_${lonCoord.toFixed(4)}`;
                 const isIdSeen = idKey ? seenIds.has(idKey) : false;
                 const isGeoSeen = seenGeo.has(geoKey);
@@ -269,7 +279,11 @@ const fetchAllMarketsData = async (
                 if (!isIdSeen && !isGeoSeen) {
                     if (idKey) seenIds.add(idKey);
                     seenGeo.add(geoKey);
-                    accumulated.push(el);
+                    accumulated.push({
+                        ...el,
+                        lat: latCoord,
+                        lon: lonCoord,
+                    });
                     added++;
                 }
             }
@@ -412,29 +426,42 @@ export default function MapScreen() {
 
                 const mapped: MarketMarker[] = [];
                 for (const m of res) {
-                    if (m.location) {
-                        let lat = userLocation.latitude;
-                        let lon = userLocation.longitude;
+                    if (m && m.location) {
+                        let lat: number | null = null;
+                        let lon: number | null = null;
                         try {
                             const parsed = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
-                            if (parsed?.coordinates && Array.isArray(parsed.coordinates)) {
-                                lon = parsed.coordinates[0];
-                                lat = parsed.coordinates[1];
-                            } else if (parsed?.lat && parsed?.lng) {
-                                lat = parsed.lat;
-                                lon = parsed.lng;
+                            if (parsed?.coordinates && Array.isArray(parsed.coordinates) && parsed.coordinates.length >= 2) {
+                                lon = typeof parsed.coordinates[0] === 'number' ? parsed.coordinates[0] : parseFloat(String(parsed.coordinates[0]));
+                                lat = typeof parsed.coordinates[1] === 'number' ? parsed.coordinates[1] : parseFloat(String(parsed.coordinates[1]));
+                            } else if (parsed?.lat !== undefined && parsed?.lng !== undefined) {
+                                lat = typeof parsed.lat === 'number' ? parsed.lat : parseFloat(String(parsed.lat));
+                                lon = typeof parsed.lng === 'number' ? parsed.lng : parseFloat(String(parsed.lng));
                             }
                         } catch {}
-                        const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
-                        mapped.push({
-                            id: `backend_${m.id}`,
-                            title: m.name,
-                            coordinate: { latitude: lat, longitude: lon },
-                            straightDistance: straightDist,
-                            routeDistance: straightDist,
-                            isBackendMarket: true,
-                            shopType: "supermarket",
-                        });
+
+                        if (
+                            lat !== null &&
+                            lon !== null &&
+                            !isNaN(lat) &&
+                            !isNaN(lon) &&
+                            lat >= -90 &&
+                            lat <= 90 &&
+                            lon >= -180 &&
+                            lon <= 180
+                        ) {
+                            const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
+                            const safeDist = isNaN(straightDist) ? 0 : straightDist;
+                            mapped.push({
+                                id: `backend_${m.id}`,
+                                title: m.name || "Supermercado",
+                                coordinate: { latitude: lat, longitude: lon },
+                                straightDistance: safeDist,
+                                routeDistance: safeDist,
+                                isBackendMarket: true,
+                                shopType: "supermarket",
+                            });
+                        }
                     }
                 }
                 if (isMounted && mapped.length > 0) {
@@ -479,13 +506,16 @@ export default function MapScreen() {
 
     // Instant in-memory filtering (0ms) across shopType, maxDistance, and hoursOption
     const nearbyMarkets: MarketMarker[] = useMemo(() => {
-        const locKey = `${userLocation.latitude.toFixed(3)}_${userLocation.longitude.toFixed(3)}`;
+        const locKey = `${(userLocation.latitude || 0).toFixed(3)}_${(userLocation.longitude || 0).toFixed(3)}`;
         const overpassMarkers: MarketMarker[] = [];
 
         for (const el of rawOsmElements) {
-            const lat = el.lat || el.center?.lat;
-            const lon = el.lon || el.center?.lon;
-            if (!lat || !lon) continue;
+            const rawLat = el.lat ?? el.center?.lat;
+            const rawLon = el.lon ?? el.center?.lon;
+            const lat = typeof rawLat === "number" ? rawLat : parseFloat(String(rawLat));
+            const lon = typeof rawLon === "number" ? rawLon : parseFloat(String(rawLon));
+
+            if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) continue;
 
             const shop = el.tags?.shop || "supermarket";
             if (filters.shopType !== "all") {
@@ -503,7 +533,8 @@ export default function MapScreen() {
             }
 
             const straightDistance = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
-            if (straightDistance * 1000 > filters.maxDistance) {
+            const safeDist = isNaN(straightDistance) ? 0 : straightDistance;
+            if (safeDist * 1000 > filters.maxDistance) {
                 continue;
             }
 
@@ -512,10 +543,10 @@ export default function MapScreen() {
 
             overpassMarkers.push({
                 id: `osm_${el.id}`,
-                title: name,
+                title: String(name),
                 coordinate: { latitude: lat, longitude: lon },
-                straightDistance,
-                routeDistance: cachedRoute ?? straightDistance,
+                straightDistance: safeDist,
+                routeDistance: cachedRoute ?? safeDist,
                 openingHours: el.tags?.opening_hours,
                 shopType: shop,
             });
@@ -523,7 +554,8 @@ export default function MapScreen() {
 
         const filteredBackend = backendMarketsList.filter(m => {
             if (filters.shopType !== "all" && m.shopType && m.shopType !== filters.shopType) return false;
-            if (m.straightDistance * 1000 > filters.maxDistance) return false;
+            const dist = typeof m.straightDistance === "number" ? m.straightDistance : 0;
+            if (dist * 1000 > filters.maxDistance) return false;
             if (filters.hoursOption === "with_hours" && !m.openingHours) return false;
             return true;
         });
@@ -533,13 +565,13 @@ export default function MapScreen() {
         const seenMarketIds = new Set<string>();
 
         for (const marker of combined) {
-            if (!seenMarketIds.has(marker.id)) {
+            if (marker.id && !seenMarketIds.has(marker.id)) {
                 seenMarketIds.add(marker.id);
                 unique.push(marker);
             }
         }
 
-        return unique.sort((a, b) => a.routeDistance - b.routeDistance);
+        return unique.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
     }, [userLocation, rawOsmElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
@@ -549,7 +581,7 @@ export default function MapScreen() {
 
         if (nearbyMarkets.length === 0) return;
 
-        const locKey = `${userLocation.latitude.toFixed(3)}_${userLocation.longitude.toFixed(3)}`;
+        const locKey = `${(userLocation.latitude || 0).toFixed(3)}_${(userLocation.longitude || 0).toFixed(3)}`;
         const needsRouteCalc = nearbyMarkets.slice(0, 15).some(
             m => !OSRM_DISTANCE_CACHE.has(`${locKey}_${m.id}`)
         );
@@ -560,7 +592,7 @@ export default function MapScreen() {
                     const updatedMap = new Map(refined.map(m => [m.id, m.routeDistance]));
                     setVisibleMarkers(prev =>
                         prev.map(m => updatedMap.has(m.id) ? { ...m, routeDistance: updatedMap.get(m.id)! } : m)
-                            .sort((a, b) => a.routeDistance - b.routeDistance)
+                            .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
                     );
                 }
             });
@@ -601,20 +633,36 @@ export default function MapScreen() {
                     showsUserLocation={true}
                     showsMyLocationButton={false}
                     initialRegion={{
-                        latitude: userLocation.latitude,
-                        longitude: userLocation.longitude,
+                        latitude: userLocation.latitude || DEFAULT_COORDINATE.latitude,
+                        longitude: userLocation.longitude || DEFAULT_COORDINATE.longitude,
                         latitudeDelta: 0.04,
                         longitudeDelta: 0.04,
                     }}
                 >
-                    {visibleMarkers.map((marker) => (
-                        <Marker
-                            key={marker.id}
-                            coordinate={marker.coordinate}
-                            pinColor={themeAccentColor}
-                            onPress={() => setSelectedMarket(marker)}
-                        />
-                    ))}
+                    {visibleMarkers
+                        .filter(marker =>
+                            marker &&
+                            marker.coordinate &&
+                            typeof marker.coordinate.latitude === 'number' &&
+                            typeof marker.coordinate.longitude === 'number' &&
+                            !isNaN(marker.coordinate.latitude) &&
+                            !isNaN(marker.coordinate.longitude) &&
+                            marker.coordinate.latitude >= -90 &&
+                            marker.coordinate.latitude <= 90 &&
+                            marker.coordinate.longitude >= -180 &&
+                            marker.coordinate.longitude <= 180
+                        )
+                        .map((marker) => (
+                            <Marker
+                                key={marker.id}
+                                coordinate={{
+                                    latitude: Number(marker.coordinate.latitude),
+                                    longitude: Number(marker.coordinate.longitude),
+                                }}
+                                pinColor={themeAccentColor || "#1565C0"}
+                                onPress={() => setSelectedMarket(marker)}
+                            />
+                        ))}
                 </MapView>
 
                 <View style={styles.filtersWrapper}>
@@ -796,7 +844,12 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, a
                     <View style={styles.marketInfoRow}>
                         <Ionicons name="navigate-outline" size={22} color={accentColor} />
                         <Text style={[styles.marketInfoText, themeStyles.text]}>
-                            {market.routeDistance.toFixed(2)} km {t("map.distanceRadius")}
+                            {((typeof market.routeDistance === "number" && !isNaN(market.routeDistance))
+                                ? market.routeDistance
+                                : ((typeof market.straightDistance === "number" && !isNaN(market.straightDistance))
+                                    ? market.straightDistance
+                                    : 0)
+                            ).toFixed(2)} km {t("map.distanceRadius")}
                         </Text>
                     </View>
                     <View style={styles.marketInfoRow}>
