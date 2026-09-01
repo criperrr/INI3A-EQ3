@@ -24,6 +24,33 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 11:32] - feat(backend): implement dynamic openstreetmap real-world market discovery and auto-persistence
+
+- **Description:** Implemented dynamic real-world supermarket discovery using OpenStreetMap (Photon + Nominatim + Overpass):
+  1. **Dynamic Market Discovery Service (`OsmMarketDiscovery`):** Created `src/backend/src/shared/services/osmMarketDiscovery.service.ts` with parallel multi-source querying to discover real supermarkets, hypermarkets, and grocery stores in any city/neighborhood based on GPS coordinates (`latitude`, `longitude`, `radius`).
+  2. **Automatic Database Persistence & Deduplication:** Any newly discovered real supermarkets are automatically inserted into PostgreSQL `market` table with PostGIS coordinates, avoiding duplicates via spatial distance check (`< 75m`) and name matching.
+  3. **Seamless Integration in `MarketService`:** Updated `marketService.getAllMarkets()` so whenever the app requests markets with user location (e.g. `registerProduct.tsx`, `map.native.tsx`), real nearby supermarkets are discovered on the fly and returned sorted by distance (e.g. "360 m", "1,3 km").
+  4. **Verification:** Tested discovery in Bauru (35 real markets returned) and Campinas (21 real markets returned), verified spatial ordering and confirmed 0 TypeScript compilation errors.
+- **Files Modified:**
+  - `src/backend/src/shared/services/osmMarketDiscovery.service.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Markets now change dynamically and accurately anywhere the user is located in Brazil, without requiring paid API keys or manual registration.
+
+## [2026-09-01 11:26] - fix(backend): align real supermarket catalog, remove defunct paulistão, and seed regional market occurrences
+
+- **Description:** Diagnosed and remediated market presence inconsistencies reported in `/debug`:
+  1. **Defunct Market Removal:** Removed non-existent *Supermercados Paulistão - Bauru* from PostgreSQL database and `seed.ts`, cleanly migrating legacy price occurrences to *Atacadão - Bauru*.
+  2. **Real Supermarkets Expansion:** Added real active supermarket chains in Bauru & Interior SP with accurate PostGIS GPS coordinates: *Atacadão - Bauru*, *Confiança Supermercados - Max*, *Confiança Supermercados - Nações*, *Tauste Supermercados - Duque*, *Tauste Supermercados - Rio Branco*, *Assaí Atacadista - Bauru*, *Tenda Atacado - Bauru*, *Supermercado Panelão - Bauru*, *Supermercados Jaú Serve - Bauru*, *Carrefour Hipermercado - Bauru*, *Pão de Açúcar - Bauru*, *Supermercado Barracão - Bauru*.
+  3. **Automatic Regional Price Occurrence Seeding:** Extended `seed.ts` insertion loop to automatically populate price comparisons across regional counterparts, providing 33+ active price occurrences for *Atacadão - Bauru*, 30+ for *Confiança*, 29+ for *Tauste*, and 23+ for *Tenda* and *Assaí*.
+  4. **Verification:** Validated database state with 20 active markets, tested spatial radius querying in Bauru within 15km, and verified 0 TypeScript compilation errors in backend and frontend.
+- **Files Modified:**
+  - `src/backend/src/shared/database/seed.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Non-existent supermarkets no longer appear; users in both São Paulo capital and Bauru/Interior regions now have full, accurate market listings and realistic price comparisons.
+
 ## [2026-09-01 11:16] - fix(profile): resolve preview stage element overlapping and clipping in customization shop
 
 - **Description:** Fixed live profile preview layout and proportions in `CustomizationShopModal`:

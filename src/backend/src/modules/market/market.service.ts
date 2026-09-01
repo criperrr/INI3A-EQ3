@@ -1,10 +1,16 @@
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
+import { OsmMarketDiscovery } from "@/shared/services/osmMarketDiscovery.service";
 import { NotFoundError } from "@/shared/errors/errors";
 
 class MarketServiceClass {
   async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined }) {
     let markets: any[] = [];
     if (params?.latitude !== undefined && params?.longitude !== undefined) {
+      const radius = params.radius || 15000;
+
+      // Dynamically discover and sync local real-world supermarkets from OpenStreetMap
+      await OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius);
+
       if (params.radius) {
         markets = await MarketRepository.getMarketsByRadius(
           { lat: params.latitude, lng: params.longitude },

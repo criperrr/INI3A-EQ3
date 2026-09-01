@@ -690,14 +690,18 @@ export async function seedDatabase() {
     { name: "Dia Supermercado", location: { lat: -23.54700, lng: -46.636000 } },
     { name: "St. Marche Gourmet", location: { lat: -23.55320, lng: -46.637500 } },
 
-    // Bauru & Interior SP
+    // Bauru & Interior SP (Real Existing Supermarket Chains)
     { name: "Confiança Supermercados - Max", location: { lat: -22.32980, lng: -49.07250 } },
+    { name: "Confiança Supermercados - Nações", location: { lat: -22.33800, lng: -49.06200 } },
     { name: "Tauste Supermercados - Duque", location: { lat: -22.33850, lng: -49.05580 } },
+    { name: "Tauste Supermercados - Rio Branco", location: { lat: -22.32200, lng: -49.07800 } },
+    { name: "Atacadão - Bauru", location: { lat: -22.30870, lng: -49.03480 } },
+    { name: "Assaí Atacadista - Bauru", location: { lat: -22.32100, lng: -49.03450 } },
+    { name: "Tenda Atacado - Bauru", location: { lat: -22.31200, lng: -49.04100 } },
+    { name: "Supermercado Panelão - Bauru", location: { lat: -22.33200, lng: -49.06500 } },
+    { name: "Supermercados Jaú Serve - Bauru", location: { lat: -22.34500, lng: -49.05800 } },
     { name: "Pão de Açúcar - Bauru", location: { lat: -22.34210, lng: -49.06120 } },
     { name: "Carrefour Hipermercado - Bauru", location: { lat: -22.35560, lng: -49.04320 } },
-    { name: "Assaí Atacadista - Bauru", location: { lat: -22.32100, lng: -49.03450 } },
-    { name: "Atacadão - Bauru", location: { lat: -22.31500, lng: -49.02800 } },
-    { name: "Supermercados Paulistão - Bauru", location: { lat: -22.33500, lng: -49.04100 } },
     { name: "Supermercado Barracão - Bauru", location: { lat: -22.34120, lng: -49.05100 } },
   ];
 
@@ -707,7 +711,35 @@ export async function seedDatabase() {
     });
     if (!existing) {
       await db.insert(market).values(m as any);
+    } else {
+      await db
+        .update(market)
+        .set({ location: m.location as any })
+        .where(eq(market.id, existing.id));
     }
+  }
+
+  // Cleanup defunct/non-existent markets (e.g. Paulistão in Bauru)
+  const atacadaoBauruTarget = await db.query.market.findFirst({
+    where: (table, { eq }) => eq(table.name, "Atacadão - Bauru"),
+  });
+  const defunctMarkets = await db.query.market.findMany({
+    where: (table, { or, ilike, eq }) =>
+      or(
+        ilike(table.name, "%paulistão%"),
+        ilike(table.name, "%paulistao%"),
+        eq(table.name, "Supermercados Paulistão - Bauru")
+      ),
+  });
+  for (const defunct of defunctMarkets) {
+    if (atacadaoBauruTarget) {
+      await db
+        .update(ocurrency)
+        .set({ marketId: atacadaoBauruTarget.id })
+        .where(eq(ocurrency.marketId, defunct.id));
+    }
+    await db.delete(market).where(eq(market.id, defunct.id));
+    console.log(`🧹 [Seed] Removed non-existent market "${defunct.name}" (ID ${defunct.id}) and migrated occurrences.`);
   }
 
   // 5. Seed Admin Test User: admin@admin.org / admin
@@ -824,7 +856,7 @@ export async function seedDatabase() {
     marketMap.set(m.name, m.id);
   }
 
-  // Fallback market IDs
+  // Fallback market IDs - São Paulo Capital
   const mGlobal = marketMap.get("Mercado Global Padrão") || allCurrentMarkets[0]?.id || 1;
   const mExtra = marketMap.get("Supermercado Extra") || allCurrentMarkets[1]?.id || 2;
   const mCarrefour = marketMap.get("Carrefour Express") || allCurrentMarkets[2]?.id || 3;
@@ -833,6 +865,20 @@ export async function seedDatabase() {
   const mAssai = marketMap.get("Assaí Atacadista") || mAtacadao;
   const mDia = marketMap.get("Dia Supermercado") || mExtra;
   const mStMarche = marketMap.get("St. Marche Gourmet") || mPaoDeAcucar;
+
+  // Regional market IDs - Bauru & Interior SP
+  const mConfiancaMax = marketMap.get("Confiança Supermercados - Max") || mExtra;
+  const mConfiancaNacoes = marketMap.get("Confiança Supermercados - Nações") || mConfiancaMax;
+  const mTausteDuque = marketMap.get("Tauste Supermercados - Duque") || mCarrefour;
+  const mTausteRioBranco = marketMap.get("Tauste Supermercados - Rio Branco") || mTausteDuque;
+  const mAtacadaoBauru = marketMap.get("Atacadão - Bauru") || mAtacadao;
+  const mAssaiBauru = marketMap.get("Assaí Atacadista - Bauru") || mAssai;
+  const mTendaBauru = marketMap.get("Tenda Atacado - Bauru") || mAtacadaoBauru;
+  const mPanalaoBauru = marketMap.get("Supermercado Panelão - Bauru") || mConfiancaMax;
+  const mJauServeBauru = marketMap.get("Supermercados Jaú Serve - Bauru") || mConfiancaNacoes;
+  const mPaoDeAcucarBauru = marketMap.get("Pão de Açúcar - Bauru") || mPaoDeAcucar;
+  const mCarrefourBauru = marketMap.get("Carrefour Hipermercado - Bauru") || mCarrefour;
+  const mBarracaoBauru = marketMap.get("Supermercado Barracão - Bauru") || mConfiancaMax;
 
   interface SeedProductDef {
     ean: string;
@@ -1484,8 +1530,49 @@ export async function seedDatabase() {
     }
 
     if (targetProduct) {
-      // Seed occurrences across markets
+      const allPricesToSeed = [...item.prices];
+
+      // Automatically populate regional counterparts for rich Bauru / Interior price comparisons
       for (const pr of item.prices) {
+        const numVal = parseFloat(pr.value);
+        if (isNaN(numVal) || numVal <= 0) continue;
+
+        if (pr.marketId === mAtacadao) {
+          allPricesToSeed.push(
+            { marketId: mAtacadaoBauru, value: (numVal * 0.99).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 },
+            { marketId: mTendaBauru, value: (numVal * 1.01).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 2), downvotes: 0 }
+          );
+        } else if (pr.marketId === mAssai) {
+          allPricesToSeed.push(
+            { marketId: mAssaiBauru, value: (numVal * 0.98).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 },
+            { marketId: mPanalaoBauru, value: (numVal * 1.02).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 }
+          );
+        } else if (pr.marketId === mCarrefour) {
+          allPricesToSeed.push(
+            { marketId: mTausteDuque, value: (numVal * 0.96).toFixed(2), trustFlag: true, upvotes: Math.max(4, (pr.upvotes ?? 6) - 1), downvotes: 0 },
+            { marketId: mTausteRioBranco, value: (numVal * 0.97).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 2), downvotes: 0 },
+            { marketId: mCarrefourBauru, value: (numVal * 1.00).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 }
+          );
+        } else if (pr.marketId === mExtra) {
+          allPricesToSeed.push(
+            { marketId: mConfiancaMax, value: (numVal * 0.97).toFixed(2), trustFlag: true, upvotes: Math.max(5, (pr.upvotes ?? 7) - 1), downvotes: 0 },
+            { marketId: mConfiancaNacoes, value: (numVal * 0.98).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 2), downvotes: 0 }
+          );
+        } else if (pr.marketId === mPaoDeAcucar) {
+          allPricesToSeed.push(
+            { marketId: mPaoDeAcucarBauru, value: (numVal * 1.00).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 },
+            { marketId: mBarracaoBauru, value: (numVal * 0.95).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 }
+          );
+        } else if (pr.marketId === mDia) {
+          allPricesToSeed.push(
+            { marketId: mJauServeBauru, value: (numVal * 0.99).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 }
+          );
+        }
+      }
+
+      // Seed occurrences across markets
+      for (const pr of allPricesToSeed) {
+        if (!pr.marketId) continue;
         const existingOcc = await db.query.ocurrency.findFirst({
           where: (table, { and, eq }) =>
             and(
