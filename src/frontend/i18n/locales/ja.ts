@@ -152,6 +152,7 @@ export const ja: TranslationSchema = {
     voteUnreliable: "誤った価格",
     votedSuccess: "投票を受け付けました！(+5 XP)",
     voteUpdated: "投票を更新しました！",
+    voteRemoved: "投票を取り消しました！",
     cannotVoteOwnPrice: "自分が投稿した価格には投票できません。",
     alreadyVoted: "この価格にはすでに投票済みです。",
     deleteOccurrenceConfirm: "この価格データを削除しますか？",

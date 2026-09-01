@@ -71,6 +71,11 @@ class OcurrencyServiceClass {
       const updatedUser = await UserRepository.incrementPoints(userId, 5);
       pointsEarned = 5;
       currentPoints = updatedUser?.points ?? 0;
+    } else if (result.removed) {
+      // Deduct 5 XP when vote is undone
+      const updatedUser = await UserRepository.incrementPoints(userId, -5);
+      pointsEarned = -5;
+      currentPoints = updatedUser?.points ?? 0;
     } else {
       const user = await UserRepository.getUserById(userId);
       currentPoints = user?.points ?? 0;

@@ -19,16 +19,31 @@
 # 0. Parse Command Line Arguments
 # ------------------------------------------------------------------------------
 LOCAL_NAT_MODE=false
+NGROK_MODE=false
 SHOW_CHECK_ONLY=false
+CUSTOM_URL="https://premises-body-pogo.ngrok-free.dev"
 
 for arg in "$@"; do
   case "$arg" in
     --local-nat|--local|--nat|-l)
       LOCAL_NAT_MODE=true
+      NGROK_MODE=false
+      shift
+      ;;
+    --ngrok|-n)
+      NGROK_MODE=true
+      LOCAL_NAT_MODE=false
+      shift
+      ;;
+    --url=*)
+      CUSTOM_URL="${arg#*=}"
+      NGROK_MODE=true
+      LOCAL_NAT_MODE=false
       shift
       ;;
     --tunnel|-t)
       LOCAL_NAT_MODE=false
+      NGROK_MODE=false
       shift
       ;;
     --check|--verify|-c)
@@ -43,13 +58,16 @@ for arg in "$@"; do
       echo ""
       echo "Options:"
       echo "  --local-nat, --local, --nat, -l   Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
-      echo "  --tunnel, -t                      Run in Tunneling mode (for school / mobile data networks)"
+      echo "  --ngrok, -n                       Run with dedicated Ngrok tunnel (using $CUSTOM_URL)"
+      echo "  --url=https://...                 Specify custom Ngrok URL"
+      echo "  --tunnel, -t                      Run in dynamic Cloud Tunnel mode"
       echo "  --check, --verify, -c             Run Network & Services Diagnostic Agent only"
       echo "  --help, -h                        Show this help message"
       echo ""
       echo "NPM Shortcuts:"
-      echo "  npm run dev          -> Default tunneling mode with verified tunnels"
-      echo "  npm run dev:local    -> 100% Local NAT mode (Direct Wi-Fi)"
+      echo "  npm run dev          -> Default dynamic tunneling mode"
+      echo "  npm run dev:ngrok    -> Dedicated Ngrok tunnel mode with custom domain"
+      echo "  npm run dev:local    -> 100% Local NAT mode (Direct Wi-Fi / Hotspot)"
       echo "  npm run dev:check    -> Run diagnostic verification agent"
       exit 0
       ;;
@@ -160,21 +178,38 @@ fi
 detect_lan_ip() {
   node -e '
     const os = require("os");
+    if (process.env.LAN_IP) {
+      console.log(process.env.LAN_IP);
+      process.exit(0);
+    }
     const ifaces = os.networkInterfaces();
-    let found = "";
+    const candidates = [];
     for (const [name, addrs] of Object.entries(ifaces)) {
       for (const a of addrs || []) {
         if (a.family === "IPv4" && !a.internal && !a.address.startsWith("127.") && !a.address.startsWith("169.254.")) {
+          const ip = a.address;
+          let priority = 5;
           const lower = name.toLowerCase();
-          if (lower.includes("en0") || lower.includes("wlan") || lower.includes("wifi")) {
-            console.log(a.address);
-            process.exit(0);
+          if (ip.startsWith("100.")) {
+            priority = 16; // Highest priority for Tailscale Mesh VPN
+          } else if (ip.startsWith("172.20.10.") || ip.startsWith("192.168.43.") || ip.startsWith("192.168.3.") || ip.startsWith("192.168.2.")) {
+            priority = 15;
+          } else if (ip.startsWith("192.168.")) {
+            priority = 12;
+          } else if (ip.startsWith("172.")) {
+            priority = 8;
+          } else if (ip.startsWith("10.")) {
+            priority = 4;
           }
-          if (!found) found = a.address;
+          if ((lower.includes("docker") || lower.includes("veth") || lower.includes("br-")) && !ip.startsWith("100.")) {
+            priority = 0;
+          }
+          candidates.push({ address: ip, priority });
         }
       }
     }
-    console.log(found || "127.0.0.1");
+    candidates.sort((a, b) => b.priority - a.priority);
+    console.log(candidates.length > 0 ? candidates[0].address : "127.0.0.1");
   ' 2>/dev/null || echo "127.0.0.1"
 }
 
@@ -210,6 +245,22 @@ if [ "$LOCAL_NAT_MODE" = true ]; then
 
   # Start Expo with LAN host and custom packager hostname
   tmux send-keys -t dev:dashboard.1 "cd ./src/frontend && EXPO_PUBLIC_API_URL=$BACKEND_URL REACT_NATIVE_PACKAGER_HOSTNAME=$LAN_IP npm run start -- --lan --clear" C-m
+
+elif [ "$NGROK_MODE" = true ]; then
+  # ----------------------------------------------------------------------------
+  # NGROK DEDICATED MODE: Custom Static/Dynamic Ngrok URL for Backend API
+  # ----------------------------------------------------------------------------
+  BACKEND_URL="$CUSTOM_URL"
+  echo "🚀 Starting Ngrok tunnel for Backend API on Port $SERVER_PORT ($BACKEND_URL)..."
+  tmux new-window -t dev -n "ngrok"
+  tmux send-keys -t dev:ngrok "ngrok http $SERVER_PORT --url $BACKEND_URL" C-m
+  sleep 2
+
+  echo "✅ Active Backend Ngrok URL: $BACKEND_URL"
+  npx tsx "$SCRIPT_DIR/scripts/verify_connection.ts" --tunnel --url="$BACKEND_URL"
+
+  # Start Expo with native --tunnel flag and public API URL
+  tmux send-keys -t dev:dashboard.1 "cd ./src/frontend && EXPO_PUBLIC_API_URL=$BACKEND_URL npm run start -- --tunnel --clear" C-m
 
 else
   # ----------------------------------------------------------------------------

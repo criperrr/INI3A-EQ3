@@ -60,7 +60,7 @@ class UserRepositoryClass {
     const userObj = await this.getUserById(id);
     if (!userObj) return null;
 
-    const newPoints = (userObj.points || 0) + amount;
+    const newPoints = Math.max(0, (userObj.points || 0) + amount);
     const [updated] = await this.db
       .update(User)
       .set({ points: newPoints })

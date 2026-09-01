@@ -216,16 +216,16 @@ export default function ProductDetails() {
       return;
     }
 
-    // Prevent duplicate vote / notification if user already voted the same
-    if (occ && occ.userVote === verdict) {
-      return;
-    }
-
     try {
       const result = await voteOccurrence(occId, verdict);
 
-      // Only display success notification on new vote or changed vote
-      if (result.isNewVote) {
+      // Display appropriate feedback based on vote action
+      if (result.removed) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.voteRemoved"),
+        );
+      } else if (result.isNewVote) {
         Alert.alert(
           t("common.success"),
           t("productDetails.votedSuccess"),

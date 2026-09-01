@@ -152,6 +152,7 @@ export const ru: TranslationSchema = {
     voteUnreliable: "Неверная цена",
     votedSuccess: "Голос успешно учтен! (+5 XP)",
     voteUpdated: "Голос успешно обновлен!",
+    voteRemoved: "Голос успешно удален!",
     cannotVoteOwnPrice: "Вы не можете голосовать за собственную цену.",
     alreadyVoted: "Вы уже проголосовали за эту цену.",
     deleteOccurrenceConfirm: "Удалить эту запись о цене?",

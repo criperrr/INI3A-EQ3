@@ -150,6 +150,7 @@ export interface TranslationSchema {
     voteUnreliable: string;
     votedSuccess: string;
     voteUpdated: string;
+    voteRemoved: string;
     cannotVoteOwnPrice: string;
     alreadyVoted: string;
     deleteOccurrenceConfirm: string;

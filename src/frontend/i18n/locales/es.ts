@@ -152,6 +152,7 @@ export const es: TranslationSchema = {
     voteUnreliable: "Precio Incorrecto",
     votedSuccess: "¡Voto registrado con éxito! (+5 XP)",
     voteUpdated: "¡Voto actualizado con éxito!",
+    voteRemoved: "¡Voto eliminado con éxito!",
     cannotVoteOwnPrice: "No puedes votar por tu propio precio informado.",
     alreadyVoted: "Ya has votado por este precio.",
     deleteOccurrenceConfirm: "¿Desea eliminar este registro de precio?",

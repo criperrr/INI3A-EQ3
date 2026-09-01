@@ -178,10 +178,30 @@ class OcurrencyRepositoryClass {
 
     if (existingVote) {
       if (existingVote.verdict === verdict) {
-        // Vote already same, do nothing
-        return { changed: false, isNewVote: false, verdict };
+        // Vote already same -> Remove / toggle off vote
+        await db
+          .delete(Cured)
+          .where(and(eq(Cured.userId, userId), eq(Cured.ocurrencyId, ocurrencyId)));
+
+        if (verdict) {
+          await db
+            .update(Ocurrency)
+            .set({
+              upvoteCount: sql`GREATEST(${Ocurrency.upvoteCount} - 1, 0)`,
+            })
+            .where(eq(Ocurrency.id, ocurrencyId));
+        } else {
+          await db
+            .update(Ocurrency)
+            .set({
+              downvoteCount: sql`GREATEST(${Ocurrency.downvoteCount} - 1, 0)`,
+            })
+            .where(eq(Ocurrency.id, ocurrencyId));
+        }
+        return { changed: true, isNewVote: false, removed: true, verdict: null };
       }
-      // Update vote
+
+      // Update vote (flip verdict)
       await db
         .update(Cured)
         .set({ verdict, date: new Date().toISOString() })
@@ -204,7 +224,7 @@ class OcurrencyRepositoryClass {
           })
           .where(eq(Ocurrency.id, ocurrencyId));
       }
-      return { changed: true, isNewVote: false, verdict };
+      return { changed: true, isNewVote: false, removed: false, verdict };
     }
 
     // Insert new vote

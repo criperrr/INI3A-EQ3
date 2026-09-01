@@ -152,6 +152,7 @@ export const zh: TranslationSchema = {
     voteUnreliable: "价格有误",
     votedSuccess: "投票成功！(+5 XP)",
     voteUpdated: "投票已更新！",
+    voteRemoved: "投票已成功取消！",
     cannotVoteOwnPrice: "您不能为自己上报的价格投票。",
     alreadyVoted: "您已经对此价格投过票了。",
     deleteOccurrenceConfirm: "确定要删除此价格记录吗？",

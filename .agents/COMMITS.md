@@ -24,6 +24,81 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 09:18] - feat(ocurrency): allow vote toggle and un-voting on repeated click
+
+- **Description:** Implemented un-voting / vote toggle functionality across backend and frontend:
+  1. **Un-voting Backend Logic (`ocurrency.repository.ts`):** When `existingVote.verdict === verdict` (clicking the active vote), the repository deletes the user's vote from table `cured`, decrements `upvoteCount` or `downvoteCount` safely with `GREATEST(count - 1, 0)`, and returns `{ changed: true, isNewVote: false, removed: true, verdict: null }`.
+  2. **Anti-Exploit XP Deduction (`ocurrency.service.ts`, `user.repository.ts`):** When `result.removed` is true, 5 XP points are deducted (`UserRepository.incrementPoints(userId, -5)`) and clamped to `Math.max(0, points)` to prevent infinite vote-and-delete XP farming loops while preserving PostgreSQL check constraints.
+  3. **Frontend Vote Toggle & Feedback (`productDetails.tsx`):** Handled `result.removed` to display "Voto removido com sucesso!" (`voteRemoved`), instantly reset active button highlight, and refreshed occurrences and profile.
+  4. **Multilingual i18n Translations (`types.ts`, `locales/*.ts`):** Added `voteRemoved` key across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+  5. **Verification:** Validated backend typecheck (`npm run --prefix src/backend typecheck`) and frontend typecheck (`npx tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/shared/database/repositories/user.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users can now seamlessly retract or toggle off their votes with a single tap.
+
+
+## [2026-09-01 09:20] - refactor(frontend): replace quick action shortcuts with dedicated Action Tabs in help center
+
+- **Description:** Redesigned the Help Center screen (`help.tsx`) to eliminate user confusion caused by navigation-jumping quick action shortcuts:
+  1. **Removed Quick Action Grid:** Completely removed `quickSection` and the 4 external navigation cards (`/scannerProduct`, `/search`, `/map`, `/profile`) that were disorienting users who sought answers within the Help screen.
+  2. **Dedicated Action Tabs Bar:** Elevated categorized tabs to prominent, tactile action pills directly below the search bar with active dynamic accent state, icons, and real-time question counter badges.
+  3. **New 'Buscar & Comparar' Category:** Added a dedicated action category (`search`) with questions explaining live search, category chips filtering, and how to analyze price comparison charts/statistics (`faq19`, `faq20`).
+  4. **Full 7-Language i18n Synchronization:** Updated `types.ts` and all 7 locale dictionary files (`pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts`) with 100% translation coverage.
+- **Files Modified:**
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/COMMITS.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Users can now intuitively explore and filter all questions related to each core action without leaving the Help Center screen.
+
+## [2026-09-01 09:10] - fix(dev): auto-detect Tailscale 100.x.y.z IP and prevent invalid URL crash
+
+- **Description:** Fixed `TypeError: Invalid URL` caused by typing typo `100.82149.20` and enabled seamless Tailscale mesh network auto-discovery:
+  1. **Tailscale Mesh VPN Auto-Discovery (`start_project.sh`, `verify_connection.ts`):** Added first-class recognition of the CGNAT `100.x.y.z` range assigned to `utun` interfaces on macOS, prioritizing `100.82.149.20` with top priority (priority 16).
+  2. **Zero-Configuration Execution:** The user no longer needs to manually prepend `LAN_IP=...` — running `npm run dev:local` automatically binds the backend API and Expo Metro packager to the verified Tailscale IP `http://100.82.149.20:3333`.
+  3. **Verified Health Check:** Diagnostic agent confirmed `http://100.82.149.20:3333/health` is online with 6ms latency.
+- **Files Modified:**
+  - `start_project.sh`
+  - `scripts/verify_connection.ts`
+  - `.agents/COMMITS.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Tailscale users can simply run `npm run dev:local` to connect their phone and Mac across any isolated Wi-Fi network.
+
+## [2026-09-01 08:58] - feat(dev): smart tethering/hotspot IP priority resolution and dedicated dev:ngrok runner
+
+- **Description:** Vasculhou e corrigiu os motivos de falha de conexão no modo local quando conectado a redes corporativas ou via cabo/hotspot:
+  1. **Diagnóstico Profundo do Ambiente:** Identificado que a interface Wi-Fi `en0` (`10.153.0.145`) opera em rede institucional com Client/AP Isolation ativado no roteador, impedindo conexões diretas entre celulares e o Mac.
+  2. **Resolução Inteligente de IP (`start_project.sh`, `verify_connection.ts`):** Atualizada a prioridade de detecção de IP para preferir sub-redes diretas de Tethering USB do iPhone (`172.20.10.x`, `192.168.3.x`) e Hotspots Android (`192.168.43.x`) sobre redes isoladas `10.x.x.x`.
+  3. **Modo Dedicado Ngrok (`npm run dev:ngrok`):** Adicionado suporte nativo no `start_project.sh` e `package.json` para rodar o backend diretamente no domínio estático Ngrok do usuário (`https://premises-body-pogo.ngrok-free.dev`) na porta 3333, com injeção automática no Expo Frontend.
+- **Files Modified:**
+  - `start_project.sh`
+  - `scripts/verify_connection.ts`
+  - `package.json`
+  - `.agents/COMMITS.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** O usuário pode rodar `npm run dev:ngrok` em qualquer rede (mesmo com isolamento AP) ou conectar via Hotspot/Tethering sem bloqueios de IP.
+
 ## [2026-09-01 08:25] - fix(tunnel): robust error handling for tunnel remote disconnection and direct LAN guidance
 
 - **Description:** Investigated and resolved tunnel startup failure (`remote gone away`) when running `npm run dev:tunnel`:

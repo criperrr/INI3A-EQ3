@@ -6,6 +6,7 @@
     "dev:local": "bash ./start_project.sh --local-nat",
     "dev:nat": "bash ./start_project.sh --local-nat",
     "dev:tunnel": "bash ./start_project.sh --tunnel",
+    "dev:ngrok": "bash ./start_project.sh --ngrok",
     "dev:check": "npx tsx ./scripts/verify_connection.ts",
     "dev:win": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1",
     "dev:win:local": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat",

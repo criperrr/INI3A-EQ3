@@ -38,6 +38,10 @@ export interface DiagnosticResult {
  * Robust cross-platform LAN IP resolver
  */
 export function getLocalLanIp(): string {
+  if (process.env.LAN_IP || process.env.REACT_NATIVE_PACKAGER_HOSTNAME) {
+    return process.env.LAN_IP || process.env.REACT_NATIVE_PACKAGER_HOSTNAME || "127.0.0.1";
+  }
+
   const interfaces = os.networkInterfaces();
   const candidates: Array<{ address: string; priority: number; iface: string }> = [];
 
@@ -50,15 +54,23 @@ export function getLocalLanIp(): string {
       // Skip loopback / link-local / docker / virtual adapters
       if (ip.startsWith("127.") || ip.startsWith("169.254.")) continue;
 
-      let priority = 1;
+      let priority = 5;
       const lowerName = name.toLowerCase();
 
-      // Prioritize Wi-Fi and primary Ethernet interfaces
-      if (lowerName.includes("en0") || lowerName.includes("wlan") || lowerName.includes("wi-fi") || lowerName.includes("wifi")) {
-        priority = 10;
-      } else if (lowerName.includes("en1") || lowerName.includes("eth") || lowerName.includes("ethernet")) {
+      // Tailscale mesh VPN (100.x.y.z)
+      if (ip.startsWith("100.")) {
+        priority = 16; // Highest priority for Tailscale Mesh VPN
+      } else if (ip.startsWith("172.20.10.") || ip.startsWith("192.168.43.") || ip.startsWith("192.168.3.") || ip.startsWith("192.168.2.")) {
+        priority = 15; // Direct tethering / hotspot
+      } else if (ip.startsWith("192.168.")) {
+        priority = 12; // Standard home Wi-Fi / NAT router
+      } else if (ip.startsWith("172.")) {
         priority = 8;
-      } else if (lowerName.includes("tailscale") || lowerName.includes("tun") || lowerName.includes("docker") || lowerName.includes("veth") || lowerName.includes("br-")) {
+      } else if (ip.startsWith("10.")) {
+        priority = 4; // Lower priority because 10.x.x.x often has AP isolation
+      }
+
+      if ((lowerName.includes("docker") || lowerName.includes("veth") || lowerName.includes("br-")) && !ip.startsWith("100.")) {
         priority = 0;
       }
 

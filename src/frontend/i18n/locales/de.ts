@@ -152,6 +152,7 @@ export const de: TranslationSchema = {
     voteUnreliable: "Falscher Preis",
     votedSuccess: "Bewertung erfolgreich gespeichert! (+5 XP)",
     voteUpdated: "Bewertung erfolgreich aktualisiert!",
+    voteRemoved: "Bewertung erfolgreich entfernt!",
     cannotVoteOwnPrice: "Sie können nicht für Ihren eigenen gemeldeten Preis abstimmen.",
     alreadyVoted: "Sie haben bereits für diesen Preis abgestimmt.",
     deleteOccurrenceConfirm: "Möchten Sie diesen Preiseintrag löschen?",

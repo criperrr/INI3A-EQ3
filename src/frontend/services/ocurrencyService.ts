@@ -26,7 +26,8 @@ export interface SubmitOccurrenceResult {
 export interface VoteResult {
   changed: boolean;
   isNewVote?: boolean;
-  verdict: boolean;
+  removed?: boolean;
+  verdict: boolean | null;
   pointsEarned: number;
   currentPoints: number;
 }
