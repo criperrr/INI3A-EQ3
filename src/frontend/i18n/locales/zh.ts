@@ -241,6 +241,8 @@ export const zh: TranslationSchema = {
     importInvalidCode: "配置代码无效或已损坏。",
     systemSync: "与系统同步 (Android)",
     systemSyncSubtitle: "使用设备壁纸的颜色",
+    systemSyncUnavailableTitle: "Android 专属功能",
+    systemSyncUnavailableMsg: "动态系统颜色同步 (Material You) 仅支持 Android 12+ 设备。在 iOS 上，请选择下方的任意调色板来自定义应用。",
     chooseSeedColor: "选择基础颜色：",
     privateProfile: "私密资料",
     privateProfileSubtitle: "在公开排行榜上隐藏贡献信息",

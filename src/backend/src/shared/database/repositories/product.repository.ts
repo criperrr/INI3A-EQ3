@@ -260,19 +260,19 @@ class ProductRepositoryClass {
     // Determine ordering clause
     let orderSql = sql`
       ps.is_promotion DESC,
-      ((COALESCE(ps.min_distance_meters, 5000) / 1000.0) * 0.25 + ps.min_price * 0.75) ASC,
+      (ps.min_distance_meters IS NULL) ASC,
       ps.min_distance_meters ASC,
       p.id DESC
     `;
 
     if (sortBy === "distance") {
       orderSql = sortOrder === "asc"
-        ? sql`ps.min_distance_meters ASC, ps.min_price ASC`
-        : sql`ps.min_distance_meters DESC, ps.min_price ASC`;
+        ? sql`(ps.min_distance_meters IS NULL) ASC, ps.min_distance_meters ASC, ps.min_price ASC`
+        : sql`(ps.min_distance_meters IS NULL) ASC, ps.min_distance_meters DESC, ps.min_price ASC`;
     } else if (sortBy === "price") {
       orderSql = sortOrder === "asc"
-        ? sql`ps.min_price ASC, ps.min_distance_meters ASC`
-        : sql`ps.min_price DESC, ps.min_distance_meters ASC`;
+        ? sql`(ps.min_price IS NULL) ASC, ps.min_price ASC, ps.min_distance_meters ASC`
+        : sql`(ps.min_price IS NULL) ASC, ps.min_price DESC, ps.min_distance_meters ASC`;
     } else if (sortBy === "discount") {
       orderSql = sql`ps.discount_percentage DESC, ps.min_price ASC`;
     } else if (sortBy === "name") {
@@ -285,11 +285,11 @@ class ProductRepositoryClass {
       WITH product_stats AS (
         SELECT 
           p.id AS product_id,
-          MIN(o.value::numeric) AS min_price,
-          MAX(o.value::numeric) AS max_price,
-          AVG(o.value::numeric) AS avg_price,
-          COUNT(o.id)::int AS occurrences_count,
-          MIN(ST_Distance(m.location, ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
+          MIN(loc_occ.value::numeric) AS min_price,
+          MAX(loc_occ.value::numeric) AS max_price,
+          AVG(loc_occ.value::numeric) AS avg_price,
+          COUNT(loc_occ.id)::int AS occurrences_count,
+          MIN(ST_Distance(loc_occ.location, ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
           (
             SELECT m2.name 
             FROM ocurrency o2
@@ -311,17 +311,21 @@ class ProductRepositoryClass {
             LIMIT 1
           ) AS best_market_name,
           CASE 
-            WHEN AVG(o.value::numeric) > MIN(o.value::numeric) * 1.04 THEN ROUND(((AVG(o.value::numeric) - MIN(o.value::numeric)) / AVG(o.value::numeric)) * 100)::int
+            WHEN AVG(loc_occ.value::numeric) > MIN(loc_occ.value::numeric) * 1.04 THEN ROUND(((AVG(loc_occ.value::numeric) - MIN(loc_occ.value::numeric)) / AVG(loc_occ.value::numeric)) * 100)::int
             ELSE 0 
           END AS discount_percentage,
           CASE 
-            WHEN (AVG(o.value::numeric) >= MIN(o.value::numeric) * 1.05 AND COUNT(o.id) >= 1) THEN TRUE
+            WHEN (AVG(loc_occ.value::numeric) >= MIN(loc_occ.value::numeric) * 1.05 AND COUNT(loc_occ.id) >= 1) THEN TRUE
             ELSE FALSE
           END AS is_promotion
         FROM product p
-        JOIN ocurrency o ON o.product_id = p.id AND o.is_suspended = false
-        JOIN market m ON o.market_id = m.id
-        WHERE ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+        LEFT JOIN (
+          SELECT o.id, o.product_id, o.value, m.location
+          FROM ocurrency o
+          JOIN market m ON o.market_id = m.id
+          WHERE o.is_suspended = false
+            AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+        ) loc_occ ON loc_occ.product_id = p.id
         GROUP BY p.id
       )
       SELECT 
@@ -340,8 +344,8 @@ class ProductRepositoryClass {
         COALESCE(ps.best_market_name, ps.nearest_market_name) AS "nearestMarketName",
         ps.discount_percentage AS "discountPercentage",
         ps.is_promotion AS "isPromotion"
-      FROM product_stats ps
-      JOIN product p ON p.id = ps.product_id
+      FROM product p
+      LEFT JOIN product_stats ps ON ps.product_id = p.id
       WHERE ${sql.join(filterClauses, sql` AND `)}
       ORDER BY ${orderSql}
       LIMIT ${limit} OFFSET ${offset}
@@ -416,22 +420,26 @@ class ProductRepositoryClass {
         WITH product_stats AS (
           SELECT 
             p.id AS product_id,
-            MIN(o.value::numeric) AS min_price,
-            AVG(o.value::numeric) AS avg_price,
-            COUNT(o.id)::int AS occurrences_count,
+            MIN(loc_occ.value::numeric) AS min_price,
+            AVG(loc_occ.value::numeric) AS avg_price,
+            COUNT(loc_occ.id)::int AS occurrences_count,
             CASE 
-              WHEN (AVG(o.value::numeric) >= MIN(o.value::numeric) * 1.05 AND COUNT(o.id) >= 1) THEN TRUE
+              WHEN (AVG(loc_occ.value::numeric) >= MIN(loc_occ.value::numeric) * 1.05 AND COUNT(loc_occ.id) >= 1) THEN TRUE
               ELSE FALSE
             END AS is_promotion
           FROM product p
-          JOIN ocurrency o ON o.product_id = p.id AND o.is_suspended = false
-          JOIN market m ON o.market_id = m.id
-          WHERE ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+          LEFT JOIN (
+            SELECT o.id, o.product_id, o.value, m.location
+            FROM ocurrency o
+            JOIN market m ON o.market_id = m.id
+            WHERE o.is_suspended = false
+              AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+          ) loc_occ ON loc_occ.product_id = p.id
           GROUP BY p.id
         )
         SELECT COUNT(DISTINCT p.id)::int AS count
-        FROM product_stats ps
-        JOIN product p ON p.id = ps.product_id
+        FROM product p
+        LEFT JOIN product_stats ps ON ps.product_id = p.id
         WHERE ${sql.join(filterClauses, sql` AND `)}
       `;
 

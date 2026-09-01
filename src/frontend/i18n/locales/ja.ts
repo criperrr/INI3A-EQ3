@@ -241,6 +241,8 @@ export const ja: TranslationSchema = {
     importInvalidCode: "設定コードが無効または破損しています。",
     systemSync: "システムと同期 (Android)",
     systemSyncSubtitle: "端末の壁紙の色を使用",
+    systemSyncUnavailableTitle: "Android限定機能",
+    systemSyncUnavailableMsg: "システム壁紙色との動的同期（Material You）はAndroid 12以降の端末のみ対応しています。iOSでは下のカラーパレットからお選びください。",
     chooseSeedColor: "シードカラーを選択：",
     privateProfile: "非公開プロフィール",
     privateProfileSubtitle: "公開ランキングで貢献情報を非表示にする",

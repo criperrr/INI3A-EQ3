@@ -627,11 +627,26 @@ const SettingsScreen: React.FC = () => {
           {monetEnabled && (
             <View style={styles.monetColorsContainer}>
               {/* Android System Sync Toggle */}
-              <View
+              <TouchableOpacity
                 style={[
                   styles.row,
                   { borderBottomWidth: 0, paddingVertical: 8 },
                 ]}
+                activeOpacity={Platform.OS !== "android" ? 0.7 : 1}
+                onPress={() => {
+                  if (Platform.OS !== "android") {
+                    if (settings.hapticsEnabled && Platform.OS !== "web") {
+                      Haptics.notificationAsync(
+                        Haptics.NotificationFeedbackType.Warning
+                      ).catch(() => {});
+                    }
+                    Alert.alert(
+                      t("settings.systemSyncUnavailableTitle"),
+                      t("settings.systemSyncUnavailableMsg"),
+                      [{ text: t("common.ok") }]
+                    );
+                  }
+                }}
               >
                 <View style={{ flex: 1, paddingRight: 10 }}>
                   <View
@@ -651,18 +666,32 @@ const SettingsScreen: React.FC = () => {
                   </Text>
                 </View>
                 <Switch
-                  value={syncWithSystemAndroid}
+                  value={Platform.OS === "android" ? syncWithSystemAndroid : false}
                   trackColor={{ false: "#D4DCC8", true: accent }}
                   onValueChange={(val) => {
+                    if (Platform.OS !== "android" && val) {
+                      if (settings.hapticsEnabled && Platform.OS !== "web") {
+                        Haptics.notificationAsync(
+                          Haptics.NotificationFeedbackType.Warning
+                        ).catch(() => {});
+                      }
+                      Alert.alert(
+                        t("settings.systemSyncUnavailableTitle"),
+                        t("settings.systemSyncUnavailableMsg"),
+                        [{ text: t("common.ok") }]
+                      );
+                      setSyncWithSystemAndroid(false);
+                      return;
+                    }
                     triggerHaptic();
                     setSyncWithSystemAndroid(val);
                     showSavedIndicator();
                   }}
                 />
-              </View>
+              </TouchableOpacity>
 
               {/* Seed Color Palette Picker */}
-              {!syncWithSystemAndroid && (
+              {(!syncWithSystemAndroid || Platform.OS !== "android") && (
                 <View style={{ marginTop: 10 }}>
                   <Text
                     style={[

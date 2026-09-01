@@ -241,6 +241,8 @@ export const es: TranslationSchema = {
     importInvalidCode: "Código de configuración inválido o corrupto.",
     systemSync: "Sincronizar con el Sistema (Android)",
     systemSyncSubtitle: "Usa los colores del fondo de pantalla del dispositivo",
+    systemSyncUnavailableTitle: "Función Exclusiva de Android",
+    systemSyncUnavailableMsg: "La sincronización dinámica con los colores del sistema (Material You) solo es compatible con dispositivos Android 12+. En iOS, elija una de las paletas de colores a continuación para personalizar la app.",
     chooseSeedColor: "Elija el color semilla:",
     privateProfile: "Perfil Privado",
     privateProfileSubtitle: "Ocultar estadísticas en la clasificación pública",

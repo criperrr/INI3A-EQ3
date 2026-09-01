@@ -241,6 +241,8 @@ export const en: TranslationSchema = {
     importInvalidCode: "Invalid or corrupted configuration code.",
     systemSync: "Sync with System (Android)",
     systemSyncSubtitle: "Uses colors from device wallpaper",
+    systemSyncUnavailableTitle: "Android-Exclusive Feature",
+    systemSyncUnavailableMsg: "System wallpaper color synchronization (Material You) is only supported on Android 12+ devices. On iOS, please choose one of the color palettes below to customize the app.",
     chooseSeedColor: "Choose seed color:",
     privateProfile: "Private Profile",
     privateProfileSubtitle: "Hide contribution stats on public leaderboard",

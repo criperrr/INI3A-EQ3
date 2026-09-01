@@ -241,6 +241,8 @@ export const de: TranslationSchema = {
     importInvalidCode: "Ungültiger oder beschädigter Konfigurationscode.",
     systemSync: "Mit System synchronisieren (Android)",
     systemSyncSubtitle: "Verwendet die Farben des Hintergrundbilds",
+    systemSyncUnavailableTitle: "Exklusive Android-Funktion",
+    systemSyncUnavailableMsg: "Die dynamische Farb-Synchronisation mit dem System (Material You) wird nur auf Android 12+ Geräten unterstützt. Unter iOS wählen Sie bitte eine der untenstehenden Farbpaletten.",
     chooseSeedColor: "Wählen Sie die Basisfarbe:",
     privateProfile: "Privates Profil",
     privateProfileSubtitle: "Beitragsstatistiken in der öffentlichen Rangliste verbergen",

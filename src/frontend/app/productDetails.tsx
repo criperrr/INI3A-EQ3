@@ -424,26 +424,26 @@ export default function ProductDetails() {
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />
             )}
-            {product.category && (
+            {Boolean(product.category) ? (
               <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
                 <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
                 <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
                   {getLocalizedCategoryName(product.category, t).toUpperCase()}
                 </Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           <Text style={[styles.productName, themeStyles.text]}>{product.name}</Text>
 
-          {product.barcode && (
+          {Boolean(product.barcode) ? (
             <View style={[styles.barcodeChip, themeStyles.inputBg, themeStyles.border]}>
-              <Ionicons name="barcode-outline" size={16} color={themeStyles.subText.color} />
+              <Ionicons name="barcode-outline" size={16} color={semantic.colors.text.secondary} />
               <Text style={[styles.barcodeText, themeStyles.subText]}>{product.barcode}</Text>
             </View>
-          )}
+          ) : null}
 
-          <View style={[styles.divider, { backgroundColor: themeStyles.border.borderColor }]} />
+          <View style={[styles.divider, { backgroundColor: semantic.colors.border.divider || semantic.colors.border.default }]} />
 
           {/* Last Price Highlight */}
           <View style={styles.priceHighlightBox}>
@@ -454,28 +454,28 @@ export default function ProductDetails() {
           </View>
 
           {/* Price Statistics Grid */}
-          {(product.minPrice || product.maxPrice || product.avgPrice) && (
+          {Boolean(product.minPrice || product.maxPrice || product.avgPrice) ? (
             <View style={styles.statsRow}>
-              {product.minPrice && (
+              {Boolean(product.minPrice) ? (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
                   <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.lowestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.minPrice}</Text>
                 </View>
-              )}
-              {product.avgPrice && (
+              ) : null}
+              {Boolean(product.avgPrice) ? (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
                   <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.averagePrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.avgPrice}</Text>
                 </View>
-              )}
-              {product.maxPrice && (
+              ) : null}
+              {Boolean(product.maxPrice) ? (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
                   <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.highestPrice")}</Text>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.maxPrice}</Text>
                 </View>
-              )}
+              ) : null}
             </View>
-          )}
+          ) : null}
 
           {/* Price History Chart */}
           <PriceHistorySection
@@ -624,20 +624,20 @@ export default function ProductDetails() {
 
             {isAdmin ? (
               <View style={styles.secondaryActionsRow}>
-                {product.id && (
+                {Boolean(product.id) ? (
                   <TouchableOpacity
                     style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
                     activeOpacity={0.8}
                     onPress={handleOpenEdit}
                   >
-                    <Ionicons name="create-outline" size={18} color={themeStyles.text.color} style={styles.btnIcon} />
+                    <Ionicons name="create-outline" size={18} color={semantic.colors.text.primary} style={styles.btnIcon} />
                     <Text style={[styles.secondaryActionText, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
                       {t("productDetails.editProduct")}
                     </Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
 
-                {product.id && (
+                {Boolean(product.id) ? (
                   <TouchableOpacity
                     style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
                     activeOpacity={0.8}
@@ -648,7 +648,7 @@ export default function ProductDetails() {
                       {t("productDetails.deleteProduct")}
                     </Text>
                   </TouchableOpacity>
-                )}
+                ) : null}
               </View>
             ) : (
               <View style={[styles.contributorInfoBox, themeStyles.inputBg, themeStyles.border]}>
@@ -669,7 +669,7 @@ export default function ProductDetails() {
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.editProductModalTitle")}</Text>
               <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                <Ionicons name="close" size={24} color={themeStyles.text.color} />
+                <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
               </TouchableOpacity>
             </View>
 

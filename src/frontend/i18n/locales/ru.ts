@@ -241,6 +241,8 @@ export const ru: TranslationSchema = {
     importInvalidCode: "Неверный или поврежденный код конфигурации.",
     systemSync: "Синхронизация с системой (Android)",
     systemSyncSubtitle: "Использует цвета обоев устройства",
+    systemSyncUnavailableTitle: "Функция только для Android",
+    systemSyncUnavailableMsg: "Динамическая синхронизация цветов с системой (Material You) поддерживается только на устройствах с Android 12+. На iOS выберите одну из цветовых палитр ниже для настройки приложения.",
     chooseSeedColor: "Выберите базовый цвет:",
     privateProfile: "Приватный профиль",
     privateProfileSubtitle: "Скрыть статистику в общем рейтинге",

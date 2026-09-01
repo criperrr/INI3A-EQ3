@@ -150,7 +150,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     // Legacy StyleSheet compatibility mapped directly to semantic tokens
-    const legacyStyles: LegacyThemeStyles = StyleSheet.create({
+    const legacyStyles: LegacyThemeStyles = {
       bg: { backgroundColor: semantic.colors.surface.background },
       headerBg: {
         backgroundColor: semantic.colors.surface.header,
@@ -165,7 +165,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         backgroundColor: semantic.colors.surface.input,
         borderColor: semantic.colors.border.input,
       },
-    });
+    };
 
     return {
       tokens: dsTokens,

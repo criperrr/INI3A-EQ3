@@ -239,6 +239,8 @@ export interface TranslationSchema {
     importInvalidCode: string;
     systemSync: string;
     systemSyncSubtitle: string;
+    systemSyncUnavailableTitle: string;
+    systemSyncUnavailableMsg: string;
     chooseSeedColor: string;
     privateProfile: string;
     privateProfileSubtitle: string;

@@ -24,6 +24,110 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 10:36] - fix(frontend): eliminate Yoga flex layout card collapse by enforcing 48.2% grid width
+
+- **Description:** Fixed visual glitch where product cards collapsed into narrow vertical capsule bars in `search.tsx`:
+  1. **Fixed Grid Column Width (`search.tsx`):** Replaced `flex: 1, maxWidth: "48.5%"` on `styles.productCard` with a strict `width: "48.2%"`, and removed conflicting `gap: 12` from `columnWrapper`. This prevents React Native's Yoga flex engine from collapsing percentage-based child image containers into 30px width vertical capsules.
+  2. **Uniform Card Proportions:** Guaranteed that every product card in every row has consistent width (48.2%), image aspect ratio (1.2), price slot height (24px), and distance slot height (22px).
+  3. **Verification:** Validated TypeScript checks on frontend and backend (`npx tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** All product cards render with full 48.2% grid width and proper aspect ratios, without lateral collapse or squashed layouts.
+
+## [2026-09-01 10:29] - fix(catalog): scope nearby promotions strictly to local markets and normalize product catalog metadata
+
+- **Description:** Resolved visual bugs on "Leite Integral" and "Caneta Laranja" cards:
+  1. **Local Promotion Scope Fix (`product.repository.ts`):** Fixed spatial CTE in `searchProductsNearby` and `countProducts` so price stats (`min_price`, `avg_price`, `is_promotion`, `discount_percentage`) are calculated strictly against occurrences in markets within the user's radius (`ST_DWithin`). This eliminates false promotion badges on products (like "Leite Integral") whose price occurrences exist only in far-away cities outside the user's local area.
+  2. **Product 68 Data Normalization (Database):** Updated ID 68 name from `"caneta laranha"` to `"Caneta Esferográfica Laranja"`, assigned category `"Utilidades"`, and added a high-resolution stationery image.
+  3. **Foreign Category Normalization (Database):** Translated raw OpenFoodFacts French category `"Eaux minérales naturelles"` on ID 2 to standard `"Bebidas"`.
+  4. **Verification:** Tested API queries and validated frontend & backend typechecks with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** "Leite Integral" and "Caneta Laranja" cards render with clean, aligned layouts, accurate local market distance, and zero visual glitches.
+
+## [2026-09-01 10:25] - fix(catalog): return all catalog products in proximity search and add infinite scroll pagination
+
+- **Description:** Resolved missing products and card visual anomalies in the "Todos" search tab:
+  1. **Spatial Proximity LEFT JOIN (`product.repository.ts`):** Upgraded `searchProductsNearby` and `countProducts` from restrictive `INNER JOIN` to `LEFT JOIN` on `ocurrency` and `market`. Products within the 15km user radius are enriched with live distance (`formattedDistance`), market name, and promotion flags; catalog products without local occurrences are preserved rather than filtered out, allowing users to browse the entire 68+ item catalog.
+  2. **Intelligent Distance-Aware Ordering (`product.repository.ts`):** Reordered catalog results so that active promotions appear first, followed by nearby available products (sorted by distance / price), and finally the remaining catalog items.
+  3. **Infinite Scroll Pagination (`search.tsx`):** Implemented cursor/page-based infinite scroll with `onEndReached`, `loadingMore` indicator, and page incrementing, enabling smooth lazy-loading of the complete product catalog.
+  4. **Category-Aware Image Placeholders & Unquoted Price Slot Alignment (`search.tsx`):** Handled products without images using category-specific icons (`getCategoryIcon`) in a themed placeholder box, and fixed price slot heights so unquoted items ("Preço não informado") display the compact `noPricePill` without stretching the 2-column grid.
+  5. **Verification:** Validated backend and frontend typechecks (`npx tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/frontend/app/search.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** All 68 products appear seamlessly in the "Todos" tab with smooth infinite scrolling and uniform card heights.
+
+## [2026-09-01 09:33] - fix(frontend): fix TypeError on semantic.colors.feedback.error and enforce DesignSystemTokens type safety
+
+- **Description:** Fixed runtime TypeError crash in `search.tsx`:
+  1. **Feedback Color Path Fix (`search.tsx`):** Corrected `semantic.feedback.error` to `semantic.colors.feedback.error` in `ProductCardItem` promo badge styling, resolving `TypeError: Cannot read property 'error' of undefined`.
+  2. **Strict TypeScript Typing:** Replaced generic `tokens: any` props with strongly-typed `tokens: DesignSystemTokens` across all internal memoized subcomponents (`SearchBar`, `CategoryFilterChips`, `ProductCardItem`, `EmptyResults`), guaranteeing compile-time detection of any token structure discrepancies.
+  3. **Verification:** Validated frontend compilation (`npx tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Product search screen renders promotional badges and product items with zero runtime errors.
+
+## [2026-09-01 09:30] - fix(frontend): eliminate JSX loose text evaluations and parameter serialization errors
+
+- **Description:** Fixed React Native runtime crashes across `search.tsx`, `productDetails.tsx`, and `themeContext.tsx`:
+  1. **Naked Text Evaluation Guard:** Replaced loose conditional logical ANDs (`&&`) on string expressions (such as `product.category && ...`, `product.barcode && ...`, `product.formattedDistance && ...`) with explicit boolean ternaries (`Boolean(...) ? (...) : null`), preventing uncontained empty strings from being evaluated outside of `<Text>` components (which triggers `Invariant Violation: Text strings must be rendered within a <Text> component`).
+  2. **Plain Object Legacy Theme Styles (`themeContext.tsx`):** Converted `legacyStyles` into direct plain object literals instead of `StyleSheet.create`, guaranteeing runtime inspectability of properties like `.color`, `.backgroundColor`, and `.borderColor` on native platforms.
+  3. **Expo Router Param Serialization (`search.tsx`):** Sanitized navigation parameters passed to `/productDetails` by eliminating `undefined` keys.
+  4. **Product Details Resilience (`productDetails.tsx`):** Fixed undefined icon colors and divider backgrounds with semantic design tokens.
+  5. **Verification:** Validated frontend (`npx tsc --noEmit`) and backend typechecks with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/theme/themeContext.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Navigation to product search and product details works seamlessly without runtime crashes or Invariant Violation exceptions.
+
+## [2026-09-01 09:27] - feat(frontend): add iOS warning alert and fallback for system color synchronization
+
+- **Description:** Enhanced settings screen with platform-aware validation, warning feedback, and informative alert messaging for dynamic system color synchronization:
+  1. **iOS Platform Guard (`settings.tsx`):** Added platform check on the system wallpaper color sync toggle (`syncWithSystemAndroid`). When an iOS user taps the row or attempts to enable the switch, a warning haptic feedback is triggered and a native `Alert.alert` dialog informs them that dynamic wallpaper palette extraction (Material You / Monet) is exclusively available on Android 12+ devices.
+  2. **Palette Picker Fallback:** Ensured the Switch stays in the disabled state (`false`) on iOS and that the manual seed color palette picker remains permanently accessible and visible to iOS users without layout anomalies.
+  3. **Multilingual i18n Localization (`types.ts`, `locales/*.ts`):** Added `systemSyncUnavailableTitle` and `systemSyncUnavailableMsg` keys fully translated across all 7 supported languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+  4. **Verification:** Validated frontend (`npx tsc --noEmit`) and backend typecheck with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** iOS users receive a clear and immediate explanation when attempting to enable system wallpaper color sync, while Android users continue to have full access to native dynamic colors.
+
+## [2026-09-01 09:25] - fix(frontend): resolve product search screen layout bugs and token architecture
+
+- **Description:** Fixed broken layout, undefined styles, and design system non-compliance on `search.tsx`:
+  1. **Runtime Undefined Styles Elimination:** Fixed access to non-existent properties on `StyleSheet.create` objects (`themeStyles.card.backgroundColor`, `themeStyles.border.borderColor`, `themeStyles.text.color`), converting all styling to 100% strict semantic design tokens via `useTheme()` (`semantic.colors.*`, `semantic.radius.*`, `semantic.typography.*`, `semantic.spacing.*`).
+  2. **Card Height & Typography Overflow Prevention:** Fixed unquoted product card height distortion where full 31-character sentence "Nenhum preço registrado ainda." previously forced 3 lines of bold text and misaligned the 2-column grid; replaced with compact, contained `noPricePill`.
+  3. **Responsive 2-Column Grid:** Balanced `columnWrapperStyle` and card sizing (`flex: 1, maxWidth: "48.5%"`) with 12px gap for smooth alignment across odd and even result sets.
+  4. **Integrated Barcode Scanner Shortcut:** Added quick camera scan action button with tactile haptic feedback inside the search input bar.
+  5. **Dynamic Reactive Header:** Replaced static home subtitle with live search results counter (`t("search.resultsCount", { count: products.length })`) and prevented custom product button title truncation across all 7 supported languages.
+  6. **Verification:** Validated frontend (`npx tsc --noEmit`) and backend typecheck with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Search screen renders reliably across Light, Dark, AMOLED and Monet themes without layout shifts or styling errors.
+
 ## [2026-09-01 09:18] - feat(ocurrency): allow vote toggle and un-voting on repeated click
 
 - **Description:** Implemented un-voting / vote toggle functionality across backend and frontend:
