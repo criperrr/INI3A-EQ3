@@ -24,6 +24,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 11:16] - fix(profile): resolve preview stage element overlapping and clipping in customization shop
+
+- **Description:** Fixed live profile preview layout and proportions in `CustomizationShopModal`:
+  1. **Height & Aspect Ratio Alignment (`ProfileBanner` & `profile.tsx`):** Added `height` prop to `ProfileBanner` (defaulting to 150 on profile, set to 96 inside preview mini-stage) and increased `previewMiniStage` to `minHeight: 200`.
+  2. **Level Badge & Avatar Layout Preservation:** Positioned `LevelCustomBadge` with `position: "absolute", bottom: -8` inside `previewAvatarWrapper` (`marginTop: 46`), ensuring the avatar circle (100px) sits directly on the banner edge and the level badge anchors properly without clipping.
+  3. **Dedicated User Info & Title Pill Section:** Created `previewUserInfoCol` beneath the avatar with `previewUserName` (16px bold) and `previewTitlePill` with icon and dynamic accent color.
+  4. **Verification:** Validated frontend compilation (`./src/backend/node_modules/.bin/tsc --noEmit`) and backend typecheck (`npm run typecheck`) with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/profile.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Elements inside the live preview are fully visible, aligned, and proportioned without clipping or distortion.
+
 ## [2026-09-01 11:12] - feat(profile): implement title customization category, sticky live preview, and organized category tabs
 
 - **Description:** Enhanced the profile customization system and shop modal with titles/roles support and a sticky preview header:

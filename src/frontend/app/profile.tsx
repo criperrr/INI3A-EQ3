@@ -289,17 +289,19 @@ export default function ProfileScreen() {
 const ProfileBanner = memo(function ProfileBanner({
   banner,
   isAdmin,
+  height = 150,
   t,
 }: {
   banner?: CustomizationItem | null;
   isAdmin: boolean;
+  height?: number;
   t: (key: any) => string;
 }) {
   const preview = banner?.previewValue || "jungle";
   const imageSource = BANNER_IMAGES[preview] || BANNER_IMAGES.jungle;
 
   return (
-    <View style={styles.bannerContainer}>
+    <View style={[styles.bannerContainer, { height }]}>
       <Image
         source={imageSource}
         style={styles.bannerImage}
@@ -1349,9 +1351,9 @@ function CustomizationShopModal({
                 )}
               </View>
 
-              {/* Mini-Stage with Banner + Avatar + Title Badge + Level Badge */}
-              <View style={styles.previewMiniStage}>
-                <ProfileBanner banner={previewCustomizations?.banner} isAdmin={isAdmin} t={t} />
+              {/* Mini-Stage with Banner + Avatar + Level Badge + Name & Title */}
+              <View style={[styles.previewMiniStage, themeStyles.card, themeStyles.border]}>
+                <ProfileBanner banner={previewCustomizations?.banner} isAdmin={isAdmin} height={96} t={t} />
                 <View style={styles.previewAvatarWrapper}>
                   <AvatarWithFrame
                     initials={initials}
@@ -1359,48 +1361,52 @@ function CustomizationShopModal({
                     accent={accent}
                     frame={previewCustomizations?.avatarFrame}
                   />
-                  <View style={styles.previewBadgeRow}>
-                    <LevelCustomBadge
-                      level={catalog?.userLevel ?? userLevel}
-                      isAdmin={isAdmin}
-                      levelFrame={previewCustomizations?.levelFrame}
-                      t={t}
+                  <LevelCustomBadge
+                    level={catalog?.userLevel ?? userLevel}
+                    isAdmin={isAdmin}
+                    levelFrame={previewCustomizations?.levelFrame}
+                    t={t}
+                  />
+                </View>
+
+                <View style={styles.previewUserInfoCol}>
+                  <Text style={[styles.previewUserName, themeStyles.text]} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  <View
+                    style={[
+                      styles.previewTitlePill,
+                      {
+                        backgroundColor:
+                          (previewCustomizations?.title?.config as any)?.badgeColor
+                            ? (previewCustomizations?.title?.config as any).badgeColor + "20"
+                            : accent + "20",
+                        borderColor:
+                          (previewCustomizations?.title?.config as any)?.badgeColor || accent,
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={
+                        ((previewCustomizations?.title?.config as any)?.icon || "medal") as any
+                      }
+                      size={12}
+                      color={
+                        (previewCustomizations?.title?.config as any)?.badgeColor || accent
+                      }
                     />
-                    <View
+                    <Text
                       style={[
-                        styles.previewTitlePill,
+                        styles.previewTitlePillText,
                         {
-                          backgroundColor:
-                            (previewCustomizations?.title?.config as any)?.badgeColor
-                              ? (previewCustomizations?.title?.config as any).badgeColor + "25"
-                              : accent + "25",
-                          borderColor:
+                          color:
                             (previewCustomizations?.title?.config as any)?.badgeColor || accent,
                         },
                       ]}
+                      numberOfLines={1}
                     >
-                      <Ionicons
-                        name={
-                          ((previewCustomizations?.title?.config as any)?.icon || "medal") as any
-                        }
-                        size={11}
-                        color={
-                          (previewCustomizations?.title?.config as any)?.badgeColor || accent
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.previewTitlePillText,
-                          {
-                            color:
-                              (previewCustomizations?.title?.config as any)?.badgeColor || accent,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {previewCustomizations?.title?.name || "Iniciante"}
-                      </Text>
-                    </View>
+                      {previewCustomizations?.title?.name || "Iniciante"}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -2485,40 +2491,47 @@ const styles = StyleSheet.create({
   },
   previewMiniStage: {
     width: "100%",
-    height: 124,
-    borderRadius: 14,
+    minHeight: 200,
+    borderRadius: 16,
     overflow: "hidden",
     alignItems: "center",
-    justifyContent: "center",
     position: "relative",
     marginBottom: 8,
+    borderWidth: 1,
+    paddingBottom: 10,
   },
   previewAvatarWrapper: {
+    marginTop: 46,
+    position: "relative",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
   },
-  previewBadgeRow: {
-    flexDirection: "row",
+  previewUserInfoCol: {
     alignItems: "center",
-    gap: 6,
-    marginTop: 4,
+    marginTop: 12,
+    zIndex: 10,
+    paddingHorizontal: 12,
+  },
+  previewUserName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
   },
   previewTitlePill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 10,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 12,
     borderWidth: 1,
-    maxWidth: 150,
+    maxWidth: 200,
   },
   previewTitlePillText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "700",
   },
-  previewDescText: { fontSize: 11, textAlign: "center", lineHeight: 16 },
   categoryTabsScroll: { gap: 8, paddingVertical: 2 },
   categoryTabChip: {
     flexDirection: "row",
