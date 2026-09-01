@@ -14,6 +14,7 @@ export interface PriceOccurrence {
   upvoteCount: number;
   downvoteCount: number;
   createdAt: string;
+  userVote?: boolean | null;
 }
 
 export interface SubmitOccurrenceResult {
@@ -24,6 +25,7 @@ export interface SubmitOccurrenceResult {
 
 export interface VoteResult {
   changed: boolean;
+  isNewVote?: boolean;
   verdict: boolean;
   pointsEarned: number;
   currentPoints: number;

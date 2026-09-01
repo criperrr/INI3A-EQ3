@@ -20,9 +20,10 @@ type FaqCategory =
   | "all"
   | "general"
   | "scanner"
+  | "search"
+  | "map"
   | "gamification"
   | "curation"
-  | "map"
   | "account";
 
 interface FaqItem {
@@ -39,9 +40,10 @@ const CATEGORIES: { id: FaqCategory; labelKey: TranslationKey; icon: keyof typeo
   { id: "all", labelKey: "help.categoryAll", icon: "list-outline" },
   { id: "general", labelKey: "help.categoryGeneral", icon: "rocket-outline" },
   { id: "scanner", labelKey: "help.categoryScanner", icon: "barcode-outline" },
+  { id: "search", labelKey: "help.categorySearch", icon: "search-outline" },
+  { id: "map", labelKey: "help.categoryMap", icon: "map-outline" },
   { id: "gamification", labelKey: "help.categoryGamification", icon: "trophy-outline" },
   { id: "curation", labelKey: "help.categoryCuration", icon: "shield-checkmark-outline" },
-  { id: "map", labelKey: "help.categoryMap", icon: "map-outline" },
   { id: "account", labelKey: "help.categoryAccount", icon: "person-circle-outline" },
 ];
 
@@ -110,6 +112,26 @@ const FAQ_LIST: FaqItem[] = [
     icon: "calculator-outline",
     questionKey: "help.faq8Question",
     answerKey: "help.faq8Answer",
+  },
+
+  // 3. Busca & Comparação
+  {
+    id: "19",
+    category: "search",
+    icon: "search-outline",
+    badge: "Busca & Filtros",
+    badgeColor: "#3B82F6",
+    questionKey: "help.faq19Question",
+    answerKey: "help.faq19Answer",
+  },
+  {
+    id: "20",
+    category: "search",
+    icon: "analytics-outline",
+    badge: "Comparador",
+    badgeColor: "#10B981",
+    questionKey: "help.faq20Question",
+    answerKey: "help.faq20Answer",
   },
 
   // 3. XP & Loja
@@ -356,95 +378,7 @@ export default function HelpScreen() {
           )}
         </View>
 
-        {/* Quick Actions Grid */}
-        <View style={styles.quickSection}>
-          <Text style={[styles.subSectionTitle, themeStyles.subText]}>
-            {t("help.quickActionsTitle") || "Ações Rápidas"}
-          </Text>
-          <View style={styles.quickGrid}>
-            {/* 1. Scanner */}
-            <TouchableOpacity
-              style={[styles.quickCard, themeStyles.card, themeStyles.border]}
-              activeOpacity={0.75}
-              onPress={() => {
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/scannerProduct");
-              }}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: accent + "20" }]}>
-                <Ionicons name="barcode-outline" size={22} color={accent} />
-              </View>
-              <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
-                {t("help.quickScanner") || t("navigation.scanner")}
-              </Text>
-              <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
-                {t("help.quickScannerSub") || t("products.registerPrice")}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 2. Search */}
-            <TouchableOpacity
-              style={[styles.quickCard, themeStyles.card, themeStyles.border]}
-              activeOpacity={0.75}
-              onPress={() => {
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/search");
-              }}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: "#3B82F620" }]}>
-                <Ionicons name="search-outline" size={22} color="#3B82F6" />
-              </View>
-              <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
-                {t("help.quickSearch") || t("navigation.search")}
-              </Text>
-              <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
-                {t("help.quickSearchSub") || t("home.startPriceCheck")}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 3. Map */}
-            <TouchableOpacity
-              style={[styles.quickCard, themeStyles.card, themeStyles.border]}
-              activeOpacity={0.75}
-              onPress={() => {
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/map");
-              }}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: "#10B98120" }]}>
-                <Ionicons name="map-outline" size={22} color="#10B981" />
-              </View>
-              <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
-                {t("help.quickMap") || t("navigation.map")}
-              </Text>
-              <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
-                {t("help.quickMapSub") || "Ver lojas no mapa"}
-              </Text>
-            </TouchableOpacity>
-
-            {/* 4. Profile & Badges */}
-            <TouchableOpacity
-              style={[styles.quickCard, themeStyles.card, themeStyles.border]}
-              activeOpacity={0.75}
-              onPress={() => {
-                if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/profile");
-              }}
-            >
-              <View style={[styles.quickIconBox, { backgroundColor: "#8B5CF620" }]}>
-                <Ionicons name="trophy-outline" size={22} color="#8B5CF6" />
-              </View>
-              <Text style={[styles.quickCardTitle, themeStyles.text]} numberOfLines={1}>
-                {t("help.quickProfile") || t("navigation.profile")}
-              </Text>
-              <Text style={[styles.quickCardSub, themeStyles.subText]} numberOfLines={2}>
-                {t("help.quickProfileSub") || "Ver XP e insígnias"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Categories Carousel */}
+        {/* Action Tabs Bar */}
         <View style={styles.categoriesSection}>
           <ScrollView
             horizontal
@@ -908,54 +842,9 @@ const styles = StyleSheet.create({
   clearSearchBtn: {
     padding: 4,
   },
-  subSectionTitle: {
-    fontSize: 12,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 8,
-    marginLeft: 2,
-  },
-  quickSection: {
-    marginTop: 2,
-  },
-  quickGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  quickCard: {
-    width: "48.3%",
-    padding: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  quickIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  quickCardTitle: {
-    fontSize: 13,
-    fontWeight: "bold",
-  },
-  quickCardSub: {
-    fontSize: 11,
-    marginTop: 2,
-    lineHeight: 15,
-  },
   categoriesSection: {
     marginHorizontal: -16,
-    marginTop: 4,
+    marginTop: 0,
   },
   categoriesContainer: {
     paddingHorizontal: 16,

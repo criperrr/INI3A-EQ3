@@ -47,14 +47,18 @@ class OcurrencyServiceClass {
     };
   }
 
-  async getByProduct(productId: number) {
-    return OcurrencyRepository.findByProduct(productId);
+  async getByProduct(productId: number, currentUserId?: number) {
+    return OcurrencyRepository.findByProduct(productId, currentUserId);
   }
 
   async vote(userId: number, ocurrencyId: number, verdict: boolean) {
     const occurrence = await OcurrencyRepository.findById(ocurrencyId);
     if (!occurrence) {
       throw new NotFoundError("Ocorrência de preço não encontrada.");
+    }
+
+    if (occurrence.userId === userId) {
+      throw new ForbiddenError("Você não pode votar no seu próprio preço informado.");
     }
 
     const result = await OcurrencyRepository.vote(userId, ocurrencyId, verdict);

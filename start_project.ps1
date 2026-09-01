@@ -2,14 +2,14 @@
 # start_project.ps1 - Presco Dev Environment Launcher for Windows
 #
 # Modes:
-#   1. Tunneling Mode (Default):
-#      Uses localtunnel for school or restricted networks.
-#      Usage: .\start_project.ps1
-#
-#   2. 100% Local NAT Mode (-LocalNat):
+#   1. 100% Local NAT Mode (-LocalNat / npm run dev:win:local):
 #      Direct local network connection. Zero latency, instant QR code scanning
 #      via Expo Go on the same Wi-Fi.
 #      Usage: .\start_project.ps1 -LocalNat
+#
+#   2. Tunneling Mode (Default / npm run dev:win):
+#      Uses cloud tunnel for API and native Expo tunnel for mobile devices.
+#      Usage: .\start_project.ps1
 # ==============================================================================
 
 [CmdletBinding()]
@@ -19,6 +19,9 @@ param(
 
     [Alias("t")]
     [switch]$Tunnel,
+
+    [Alias("c", "verify")]
+    [switch]$Check,
 
     [Alias("no-wt", "windows", "separate", "w")]
     [switch]$SeparateWindows,
@@ -43,13 +46,21 @@ if ($Help) {
     Write-Host ""
     Write-Host "Options:"
     Write-Host "  -LocalNat, -l         Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
-    Write-Host "  -Tunnel, -t           Run in Tunneling mode via localtunnel (default)"
+    Write-Host "  -Tunnel, -t           Run in Tunneling mode (for school / mobile data networks)"
+    Write-Host "  -Check, -c            Run Connection Diagnostic Agent only"
     Write-Host "  -SeparateWindows, -w  Open separate PowerShell windows instead of Windows Terminal tabs"
     Write-Host "  -Help, -h             Show this help message"
     Write-Host ""
     Write-Host "NPM Shortcuts:"
     Write-Host "  npm run dev:win         -> Default tunneling mode"
     Write-Host "  npm run dev:win:local   -> 100% Local NAT mode"
+    Write-Host "  npm run dev:check       -> Run connection diagnostic agent"
+    exit 0
+}
+
+# Run diagnostic agent only if requested
+if ($Check) {
+    npx tsx (Join-Path $ScriptDir "scripts\verify_connection.ts")
     exit 0
 }
 
@@ -62,7 +73,7 @@ Write-Host "========================================================" -Foregroun
 if ($IsLocalNat) {
     Write-Host " [+] MODE: 100% LOCAL NETWORK (NAT) - Direct Home LAN" -ForegroundColor Green
 } else {
-    Write-Host " [*] MODE: TUNNELING (Localtunnel) - Restricted/School Network" -ForegroundColor Yellow
+    Write-Host " [*] MODE: TUNNELING - Cloud API Tunnel + Native Expo Tunnel" -ForegroundColor Yellow
 }
 Write-Host "========================================================" -ForegroundColor Cyan
 
@@ -175,18 +186,18 @@ function Get-LanIp {
         $udp.Connect("8.8.8.8", 53)
         $localAddr = $udp.Client.LocalEndPoint.Address.ToString()
         $udp.Close()
-        if ($localAddr) { return $localAddr }
+        if ($localAddr -and $localAddr -notmatch "^127\.|^169\.254\.") { return $localAddr }
     } catch {}
 
     try {
         $netIp = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object {
-            $_.InterfaceAlias -notmatch "Loopback|vEthernet|WSL" -and
+            $_.InterfaceAlias -notmatch "Loopback|vEthernet|WSL|Docker" -and
             $_.IPAddress -notmatch "^127\.|^169\.254\."
         } | Select-Object -First 1).IPAddress
         if ($netIp) { return $netIp }
     } catch {}
 
-    return "localhost"
+    return "127.0.0.1"
 }
 
 $LanIp = Get-LanIp
@@ -206,6 +217,9 @@ if ($IsLocalNat) {
     Write-Host "[+] Direct Backend API URL: $BackendUrl" -ForegroundColor Green
     Write-Host "[+] Expo Bundler will serve over LAN (exp://${LanIp}:8081)" -ForegroundColor Green
     Write-Host "[i] Open Expo Go on your mobile (same Wi-Fi) and scan the QR code!" -ForegroundColor Yellow
+
+    # Run diagnostic agent
+    npx tsx (Join-Path $ScriptDir "scripts\verify_connection.ts") --local
 
     $launched = $false
     if ($hasWt) {
@@ -227,15 +241,46 @@ if ($IsLocalNat) {
 
 } else {
     # Tunneling mode
-    Write-Host "[*] Starting localtunnel and services..." -ForegroundColor Yellow
-    $BackendUrl = "https://ini3a-eq3-api.loca.lt"
-    $FrontendUrl = "https://ini3a-eq3-app.loca.lt"
+    Write-Host "[*] Starting API cloud tunnel agent and services..." -ForegroundColor Yellow
+    $tunnelFile = Join-Path $ScriptDir ".tunnel_url"
+    if (Test-Path $tunnelFile) { Remove-Item -Force $tunnelFile }
+
+    # Launch tunnel agent first in background
+    Start-Process cmd.exe -ArgumentList "/k `"$tunnelsBat`""
+
+    Write-Host -NoNewline "[...] Waiting for API Cloud Tunnel URL..."
+    $BackendUrl = ""
+    $attempt = 1
+    while ($attempt -le 20) {
+        if (Test-Path $tunnelFile) {
+            $content = (Get-Content $tunnelFile -Raw).Trim()
+            if ($content -and $content.StartsWith("http")) {
+                $BackendUrl = $content
+                Write-Host " [OK]" -ForegroundColor Green
+                break
+            }
+        }
+        Start-Sleep -Seconds 1
+        Write-Host -NoNewline "."
+        $attempt++
+    }
+
+    if (-not $BackendUrl) {
+        Write-Host " Timeout!" -ForegroundColor Yellow
+        $BackendUrl = "http://${LanIp}:${ServerPort}"
+        Write-Host "[!] Falling back to LAN API URL: $BackendUrl" -ForegroundColor Yellow
+    } else {
+        Write-Host "[+] Verified API Tunnel URL: $BackendUrl" -ForegroundColor Green
+    }
+
+    # Run diagnostic agent for tunnel mode
+    npx tsx (Join-Path $ScriptDir "scripts\verify_connection.ts") --tunnel --url="$BackendUrl"
 
     $launched = $false
     if ($hasWt) {
         try {
             Write-Host "[i] Launching with Windows Terminal tabs..." -ForegroundColor Cyan
-            $wtArgs = "-w 0 new-tab cmd.exe /k `"$backendBat`" `; split-pane -V cmd.exe /k `"$frontendBat`" `"$BackendUrl`" `"`" `"$FrontendUrl`" `"true`" `"--tunnel`" `; new-tab cmd.exe /k `"$tunnelsBat`""
+            $wtArgs = "-w 0 new-tab cmd.exe /k `"$backendBat`" `; split-pane -V cmd.exe /k `"$frontendBat`" `"$BackendUrl`" `"`" `"`" `"true`" `"--tunnel`""
             Start-Process wt.exe -ArgumentList $wtArgs -ErrorAction Stop
             $launched = $true
         } catch {
@@ -246,8 +291,7 @@ if ($IsLocalNat) {
     if (-not $launched) {
         Write-Host "[i] Launching separate terminal windows..." -ForegroundColor Cyan
         Start-Process cmd.exe -ArgumentList "/k `"$backendBat`""
-        Start-Process cmd.exe -ArgumentList "/k `"$frontendBat`" `"$BackendUrl`" `"`" `"$FrontendUrl`" `"true`" `"--tunnel`""
-        Start-Process cmd.exe -ArgumentList "/k `"$tunnelsBat`""
+        Start-Process cmd.exe -ArgumentList "/k `"$frontendBat`" `"$BackendUrl`" `"`" `"`" `"true`" `"--tunnel`""
     }
 }
 

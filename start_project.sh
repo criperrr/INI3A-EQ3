@@ -4,20 +4,22 @@
 # start_project.sh - Presco Dev Environment Launcher
 #
 # Modes:
-#   1. Tunneling Mode (Default):
-#      Uses localtunnel for school or networks with client isolation.
-#      Usage: ./start_project.sh
-#
-#   2. 100% Local NAT Mode (--local-nat):
+#   1. 100% Local NAT Mode (--local-nat / npm run dev:local):
 #      Direct local network connection. Zero tunnel latency, maximum stability
 #      and instant QR code scanning via Expo Go on the same Wi-Fi.
 #      Usage: ./start_project.sh --local-nat
+#
+#   2. Tunneling Mode (--tunnel / npm run dev:tunnel):
+#      Uses cloud tunnel for API and native Expo tunnel for mobile devices
+#      across restricted/school/mobile data networks.
+#      Usage: ./start_project.sh --tunnel
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
 # 0. Parse Command Line Arguments
 # ------------------------------------------------------------------------------
 LOCAL_NAT_MODE=false
+SHOW_CHECK_ONLY=false
 
 for arg in "$@"; do
   case "$arg" in
@@ -29,6 +31,10 @@ for arg in "$@"; do
       LOCAL_NAT_MODE=false
       shift
       ;;
+    --check|--verify|-c)
+      SHOW_CHECK_ONLY=true
+      shift
+      ;;
     --help|-h)
       echo "Presco Dev Launcher"
       echo ""
@@ -37,26 +43,36 @@ for arg in "$@"; do
       echo ""
       echo "Options:"
       echo "  --local-nat, --local, --nat, -l   Run in 100% Local Network (NAT) mode (fastest for home/LAN)"
-      echo "  --tunnel, -t                      Run in Tunneling mode via localtunnel (default, for school networks)"
+      echo "  --tunnel, -t                      Run in Tunneling mode (for school / mobile data networks)"
+      echo "  --check, --verify, -c             Run Network & Services Diagnostic Agent only"
       echo "  --help, -h                        Show this help message"
       echo ""
       echo "NPM Shortcuts:"
-      echo "  npm run dev          -> Default tunneling mode"
-      echo "  npm run dev:local    -> 100% Local NAT mode"
+      echo "  npm run dev          -> Default tunneling mode with verified tunnels"
+      echo "  npm run dev:local    -> 100% Local NAT mode (Direct Wi-Fi)"
+      echo "  npm run dev:check    -> Run diagnostic verification agent"
       exit 0
       ;;
   esac
 done
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Run diagnostic agent only if requested
+if [ "$SHOW_CHECK_ONLY" = true ]; then
+  npx tsx "$SCRIPT_DIR/scripts/verify_connection.ts"
+  exit $?
+fi
+
 echo "========================================================"
 if [ "$LOCAL_NAT_MODE" = true ]; then
   echo "⚡ MODE: 100% LOCAL NETWORK (NAT) - Direct Home LAN"
 else
-  echo "🌐 MODE: TUNNELING (Localtunnel) - School / Restricted"
+  echo "🌐 MODE: TUNNELING - Cloud API Tunnel + Native Expo Tunnel"
 fi
 echo "========================================================"
 
-echo "🔍 Verifying connections..."
+echo "🔍 Verifying database and cache services..."
 
 # Parse backend config from src/backend/.env if available
 read -r DB_HOST DB_PORT REDIS_HOST REDIS_PORT SERVER_PORT <<< $(node -e '
@@ -90,16 +106,16 @@ const parseUrl = (u, defaultHost, defaultPort) => {
   }
 };
 
-const redis = parseUrl(env.REDIS_URL, "localhost", 6379);
-const db = parseUrl(env.DATABASE_URL, "localhost", 5432);
+const redis = parseUrl(env.REDIS_URL, "127.0.0.1", 6379);
+const db = parseUrl(env.DATABASE_URL, "127.0.0.1", 5432);
 const serverPort = env.SERVER_PORT || "3333";
 
 console.log(`${db.host} ${db.port} ${redis.host} ${redis.port} ${serverPort}`);
 ' 2>/dev/null)
 
-DB_HOST=${DB_HOST:-localhost}
+DB_HOST=${DB_HOST:-127.0.0.1}
 DB_PORT=${DB_PORT:-5432}
-REDIS_HOST=${REDIS_HOST:-localhost}
+REDIS_HOST=${REDIS_HOST:-127.0.0.1}
 REDIS_PORT=${REDIS_PORT:-6379}
 SERVER_PORT=${SERVER_PORT:-3333}
 
@@ -116,24 +132,56 @@ check_port() {
     if [ $attempt -ge $max_attempts ]; then
       echo " Timeout!"
       echo "❌ $name is not running on $host:$port."
-      exit 1
+      return 1
     fi
     sleep 1
     ((attempt++))
     echo -n "."
   done
   echo " OK!"
+  return 0
 }
 
 # 1. Verify Database (PostgreSQL) and Redis
-check_port "$DB_HOST" "$DB_PORT" "PostgreSQL"
+if ! check_port "$DB_HOST" "$DB_PORT" "PostgreSQL"; then
+  echo "⚠️ PostgreSQL is offline. Attempting to start service..."
+  if [ -f "$SCRIPT_DIR/reload_services.sh" ]; then
+    bash "$SCRIPT_DIR/reload_services.sh" auto
+  fi
+fi
+
 if nc -z "$REDIS_HOST" "$REDIS_PORT" 2>/dev/null; then
   echo "✅ Redis on $REDIS_HOST:$REDIS_PORT: OK!"
 else
-  echo "⚠️ Redis is offline on $REDIS_HOST:$REDIS_PORT. Backend will run in In-Memory fallback mode."
+  echo "ℹ️ Redis is offline on $REDIS_HOST:$REDIS_PORT. Backend will run in In-Memory fallback mode."
 fi
 
-# 2. Setup tmux session for background services
+# 2. Cross-platform LAN IP Resolver
+detect_lan_ip() {
+  node -e '
+    const os = require("os");
+    const ifaces = os.networkInterfaces();
+    let found = "";
+    for (const [name, addrs] of Object.entries(ifaces)) {
+      for (const a of addrs || []) {
+        if (a.family === "IPv4" && !a.internal && !a.address.startsWith("127.") && !a.address.startsWith("169.254.")) {
+          const lower = name.toLowerCase();
+          if (lower.includes("en0") || lower.includes("wlan") || lower.includes("wifi")) {
+            console.log(a.address);
+            process.exit(0);
+          }
+          if (!found) found = a.address;
+        }
+      }
+    }
+    console.log(found || "127.0.0.1");
+  ' 2>/dev/null || echo "127.0.0.1"
+}
+
+LAN_IP=$(detect_lan_ip)
+echo "📍 Detected Local LAN IP: $LAN_IP"
+
+# 3. Setup tmux session for background services
 echo "Setting up tmux dashboard..."
 tmux kill-session -t dev 2>/dev/null
 tmux new-session -d -s dev -n "dashboard"
@@ -141,36 +189,15 @@ tmux new-session -d -s dev -n "dashboard"
 # Pane 0 (Left): Backend Server with maximum logs
 tmux send-keys -t dev:dashboard.0 "cd ./src/backend && DEBUG=* NODE_ENV=development npm run dev" C-m
 
-# 3. Wait for backend to be ready
-check_port "localhost" "$SERVER_PORT" "Backend Server"
-
-# 4. Detect Local LAN IP (cross-platform: Linux, macOS, POSIX)
-detect_lan_ip() {
-  local ip=""
-  if command -v ip >/dev/null 2>&1; then
-    ip=$(ip route get 1.1.1.1 2>/dev/null | awk '{print $7}')
-  fi
-  if [ -z "$ip" ] && command -v hostname >/dev/null 2>&1; then
-    ip=$(hostname -I 2>/dev/null | awk '{print $1}')
-  fi
-  if [ -z "$ip" ] && command -v ipconfig >/dev/null 2>&1; then
-    ip=$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || ipconfig getifaddr wlan0 2>/dev/null)
-  fi
-  if [ -z "$ip" ] && command -v ifconfig >/dev/null 2>&1; then
-    ip=$(ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep -v '127.0.0.1' | head -n1)
-  fi
-  echo "${ip:-localhost}"
-}
-
-LAN_IP=$(detect_lan_ip)
-echo "📍 Detected LAN IP: $LAN_IP"
+# 4. Wait for backend to be ready on local port
+check_port "127.0.0.1" "$SERVER_PORT" "Backend Server"
 
 # 5. Configure Network Routing & Start Frontend
 tmux split-window -h -p 50 -t dev:dashboard.0
 
 if [ "$LOCAL_NAT_MODE" = true ]; then
   # ----------------------------------------------------------------------------
-  # LOCAL NAT MODE: Direct LAN IP, no localtunnel
+  # LOCAL NAT MODE: Direct LAN IP, no tunnels
   # ----------------------------------------------------------------------------
   BACKEND_URL="http://${LAN_IP}:${SERVER_PORT}"
   
@@ -178,26 +205,32 @@ if [ "$LOCAL_NAT_MODE" = true ]; then
   echo "📱 Expo Bundler will serve over LAN directly (exp://$LAN_IP:8081)"
   echo "📲 Open Expo Go on your mobile device (connected to the same Wi-Fi) and scan the QR code!"
 
+  # Run diagnostic agent for local mode
+  npx tsx "$SCRIPT_DIR/scripts/verify_connection.ts" --local
+
   # Start Expo with LAN host and custom packager hostname
   tmux send-keys -t dev:dashboard.1 "cd ./src/frontend && EXPO_PUBLIC_API_URL=$BACKEND_URL REACT_NATIVE_PACKAGER_HOSTNAME=$LAN_IP npm run start -- --lan --clear" C-m
 
 else
   # ----------------------------------------------------------------------------
-  # TUNNELING MODE: Start localtunnel for backend & frontend
+  # TUNNELING MODE: Dedicated Cloud Tunnel Agent + Native Expo Tunnel
   # ----------------------------------------------------------------------------
-  echo "Starting tunnels for backend and frontend..."
-  rm -f /tmp/backend_tunnel.log /tmp/frontend_tunnel.log
+  echo "Starting cloud tunnel agent for Backend API (Port $SERVER_PORT)..."
+  rm -f "$SCRIPT_DIR/.tunnel_url"
   tmux new-window -t dev -n "tunnel"
-  tmux send-keys -t dev:tunnel "npx --yes localtunnel --port $SERVER_PORT --subdomain ini3a-eq3-api > /tmp/backend_tunnel.log & npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app > /tmp/frontend_tunnel.log & wait" C-m
+  
+  tmux send-keys -t dev:tunnel "cd '$SCRIPT_DIR' && npx tsx ./scripts/start_api_tunnel.ts" C-m
 
-  # Wait for tunnel URLs
-  echo -n "Waiting for tunnel URLs..."
+  echo -n "Waiting for backend tunnel URL..."
   attempt=1
-  while ! grep -q "your url is:" /tmp/backend_tunnel.log 2>/dev/null || ! grep -q "your url is:" /tmp/frontend_tunnel.log 2>/dev/null; do
-    if [ $attempt -ge 15 ]; then
-      echo " Timeout!"
-      echo "⚠️ Tunnel took too long. Falling back to local LAN IP: http://$LAN_IP:$SERVER_PORT"
-      break
+  BACKEND_URL=""
+  while [ $attempt -le 20 ]; do
+    if [ -s "$SCRIPT_DIR/.tunnel_url" ]; then
+      BACKEND_URL=$(cat "$SCRIPT_DIR/.tunnel_url")
+      if [ -n "$BACKEND_URL" ]; then
+        echo " OK ($BACKEND_URL)"
+        break
+      fi
     fi
     sleep 1
     ((attempt++))
@@ -205,19 +238,22 @@ else
   done
   echo ""
 
-  BACKEND_URL=$(grep -o "https://[a-zA-Z0-9.-]*\.loca\.lt" /tmp/backend_tunnel.log | head -n 1)
   if [ -z "$BACKEND_URL" ]; then
+    echo "⚠️ Tunnel agent took too long. Falling back to Local LAN: http://$LAN_IP:$SERVER_PORT"
     BACKEND_URL="http://$LAN_IP:$SERVER_PORT"
-  fi
-  FRONTEND_URL=$(grep -o "https://[a-zA-Z0-9.-]*\.loca\.lt" /tmp/frontend_tunnel.log | head -n 1)
-
-  echo "✅ Backend API URL: $BACKEND_URL"
-  if [ -n "$FRONTEND_URL" ]; then
-    echo "✅ Frontend Tunnel URL: $FRONTEND_URL"
+    TUNNEL_FLAG="--lan"
+  else
+    echo "✅ Verified Backend Tunnel URL: $BACKEND_URL"
+    TUNNEL_FLAG="--tunnel"
   fi
 
-  # Start Expo configured for tunnel proxy
-  tmux send-keys -t dev:dashboard.1 "cd ./src/frontend && EXPO_PUBLIC_API_URL=$BACKEND_URL EXPO_PACKAGER_PROXY_URL=$FRONTEND_URL EXPO_DEBUG=true npm run start -- --clear" C-m
+  # Run diagnostic agent for tunnel mode
+  npx tsx "$SCRIPT_DIR/scripts/verify_connection.ts" --tunnel --url="$BACKEND_URL"
+
+  echo "💡 Tip: If Expo tunnel fails with 'remote gone away', run 'npm run dev:local' for 100% stable LAN Wi-Fi connection."
+
+  # Start Expo with native --tunnel flag (powered by @expo/ngrok)
+  tmux send-keys -t dev:dashboard.1 "cd ./src/frontend && EXPO_PUBLIC_API_URL=$BACKEND_URL npm run start -- $TUNNEL_FLAG --clear" C-m
 fi
 
 # Select the frontend pane so the user can immediately see the QR code and interact with Expo
@@ -230,5 +266,5 @@ sleep 1
 tmux attach-session -t dev
 
 # When tmux session ends
-echo "Desligando servidores..."
+echo "Shutting down servers..."
 tmux kill-session -t dev 2>/dev/null

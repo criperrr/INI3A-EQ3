@@ -224,15 +224,15 @@ const SettingsScreen: React.FC = () => {
     const checkApiHealth = async () => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch(`${BASE_URL}/products/barcode/ping`, {
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const res = await fetch(`${BASE_URL}/health`, {
           signal: controller.signal,
           headers: { "Bypass-Tunnel-Reminder": "true" },
         }).catch(() => null);
         clearTimeout(timeoutId);
 
         if (isMounted) {
-          setApiStatus(res ? "online" : "offline");
+          setApiStatus(res && res.ok ? "online" : "offline");
         }
       } catch {
         if (isMounted) setApiStatus("offline");

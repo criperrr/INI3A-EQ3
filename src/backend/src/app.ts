@@ -41,7 +41,7 @@ app.use(
 app.use(e.json({ limit: "1mb" }));
 app.use(e.urlencoded({ extended: true, limit: "1mb" }));
 
-app.get("/health", async (_, res) => {
+app.get(["/health", "/ping", "/products/barcode/ping"], async (_, res) => {
   const isDbHealthy = await checkDatabaseHealth();
   const isRedisHealthy = redisClient.isOpen && (await redisClient.ping().then(() => true).catch(() => false));
   const redisMode = isRedisHealthy ? "connected" : "in-memory-fallback";

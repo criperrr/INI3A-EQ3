@@ -36,7 +36,7 @@ class OcurrencyControllerClass {
     }
   }
 
-  async getByProduct(req: Request, res: Response, next: NextFunction) {
+  async getByProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
       const { productId } = req.params;
       const numProductId = Number(productId);
@@ -45,7 +45,7 @@ class OcurrencyControllerClass {
         throw new ValidationError([{ field: "productId", message: "ID do produto inválido." }]);
       }
 
-      const occurrences = await ocurrencyService.getByProduct(numProductId);
+      const occurrences = await ocurrencyService.getByProduct(numProductId, req.user?.id);
       return res.status(200).json(success(occurrences));
     } catch (e) {
       next(e);

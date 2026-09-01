@@ -24,3 +24,5 @@ src/frontend/ios/
 .notes/
 src/backend/.notes
 src/frontend/.notes
+.tunnel_url
+

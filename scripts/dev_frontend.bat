@@ -11,8 +11,8 @@ if not "%~3"=="" set EXPO_PACKAGER_PROXY_URL=%~3
 if not "%~4"=="" set EXPO_DEBUG=%~4
 
 if "%~5"=="--tunnel" (
-    echo [i] Running in Tunnel mode...
-    npm run start -- --clear
+    echo [i] Running in Tunnel mode via @expo/ngrok...
+    npm run start -- --tunnel --clear
 ) else (
     echo [i] Running in Local NAT LAN mode...
     npm run start -- --lan --clear

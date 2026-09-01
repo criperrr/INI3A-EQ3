@@ -70,7 +70,33 @@ class OcurrencyRepositoryClass {
     return result[0] || null;
   }
 
-  async findByProduct(productId: number) {
+  async findByProduct(productId: number, currentUserId?: number) {
+    if (currentUserId) {
+      return db
+        .select({
+          id: Ocurrency.id,
+          userId: Ocurrency.userId,
+          userName: User.name,
+          marketId: Ocurrency.marketId,
+          marketName: Market.name,
+          productId: Ocurrency.productId,
+          value: Ocurrency.value,
+          trustFlag: Ocurrency.trustFlag,
+          isSuspended: Ocurrency.isSuspended,
+          isResolved: Ocurrency.isResolved,
+          upvoteCount: Ocurrency.upvoteCount,
+          downvoteCount: Ocurrency.downvoteCount,
+          createdAt: Ocurrency.createdAt,
+          userVote: Cured.verdict,
+        })
+        .from(Ocurrency)
+        .leftJoin(User, eq(Ocurrency.userId, User.id))
+        .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
+        .leftJoin(Cured, and(eq(Cured.ocurrencyId, Ocurrency.id), eq(Cured.userId, currentUserId)))
+        .where(and(eq(Ocurrency.productId, productId), eq(Ocurrency.isSuspended, false)))
+        .orderBy(desc(Ocurrency.createdAt));
+    }
+
     return db
       .select({
         id: Ocurrency.id,
@@ -86,6 +112,7 @@ class OcurrencyRepositoryClass {
         upvoteCount: Ocurrency.upvoteCount,
         downvoteCount: Ocurrency.downvoteCount,
         createdAt: Ocurrency.createdAt,
+        userVote: sql<boolean | null>`NULL`,
       })
       .from(Ocurrency)
       .leftJoin(User, eq(Ocurrency.userId, User.id))

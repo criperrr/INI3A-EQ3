@@ -1,8 +1,7 @@
 @echo off
-title Presco Tunnels
+title Presco Backend Tunnel Agent
 cd /d "%~dp0.."
 echo ========================================================
-echo  PRESCO LOCALTUNNELS (API: 3333, Expo: 8081)
+echo  PRESCO API CLOUD TUNNEL AGENT (Port 3333)
 echo ========================================================
-start /b npx --yes localtunnel --port 3333 --subdomain ini3a-eq3-api
-npx --yes localtunnel --port 8081 --subdomain ini3a-eq3-app
+npx tsx ./scripts/start_api_tunnel.ts

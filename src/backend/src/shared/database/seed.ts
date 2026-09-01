@@ -34,6 +34,10 @@ export async function seedDatabase() {
       purchased_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, item_id)
     );
+
+    ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
+    ALTER TABLE "user" ALTER COLUMN points SET DEFAULT 0;
+    ALTER TABLE "user" ALTER COLUMN danger_flag SET DEFAULT FALSE;
   `);
 
   // 1. Seed Roles

@@ -6,9 +6,14 @@
     "dev:local": "bash ./start_project.sh --local-nat",
     "dev:nat": "bash ./start_project.sh --local-nat",
     "dev:tunnel": "bash ./start_project.sh --tunnel",
+    "dev:check": "npx tsx ./scripts/verify_connection.ts",
     "dev:win": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1",
     "dev:win:local": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat",
     "dev:win:separate": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat -SeparateWindows",
+    "dev:win:check": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -Check",
+    "verify:connection": "npx tsx ./scripts/verify_connection.ts",
+    "verify:local": "npx tsx ./scripts/verify_connection.ts --local",
+    "verify:tunnel": "npx tsx ./scripts/verify_connection.ts --tunnel",
     "db:reload": "bash ./reload_services.sh",
     "db:restart": "bash ./reload_services.sh --restart",
     "db:status": "bash ./reload_services.sh --status",
@@ -23,6 +28,7 @@
     "ngrok": "^5.0.0-beta.2"
   },
   "devDependencies": {
+    "localtunnel": "^2.0.2",
     "tsx": "^4.23.12"
   }
 }

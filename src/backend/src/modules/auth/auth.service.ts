@@ -29,10 +29,23 @@ class AuthServiceClass {
       name: data.name,
       email: data.email,
       passHash,
+      roleId: 1,
+      points: 0,
+      equippedBannerId: 1,
+      equippedAvatarFrameId: 10,
+      equippedLevelFrameId: 20,
     });
 
     if (!result) {
       throw new Error("Falha ao criar o usuário.");
+    }
+
+    // Award default starter milestone badge #1 (Pioneiro)
+    await UserRepository.awardBadge(result.id, 1).catch(() => {});
+
+    // Grant default starting customization items in user inventory (Presco Selva, Clássico, Distintivo Âmbar)
+    for (const itemId of [1, 10, 20]) {
+      await CustomizationRepository.addCustomizationToUser(result.id, itemId).catch(() => {});
     }
 
     const accessToken = signAccessToken({

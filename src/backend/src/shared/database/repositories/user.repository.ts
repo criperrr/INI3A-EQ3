@@ -11,13 +11,23 @@ class UserRepositoryClass {
   constructor(private db: NodePgDatabase<typeof schema>) {}
 
   async createUser(user: Repository.CreateUser) {
-    return this.db.insert(User).values(user).returning({
-      id: User.id,
-      name: User.name,
-      email: User.email,
-      roleId: User.roleId,
-      createdAt: User.createdAt,
-    });
+    return this.db
+      .insert(User)
+      .values({
+        ...user,
+        roleId: user.roleId ?? 1,
+        points: user.points ?? 0,
+        equippedBannerId: user.equippedBannerId ?? 1,
+        equippedAvatarFrameId: user.equippedAvatarFrameId ?? 10,
+        equippedLevelFrameId: user.equippedLevelFrameId ?? 20,
+      })
+      .returning({
+        id: User.id,
+        name: User.name,
+        email: User.email,
+        roleId: User.roleId,
+        createdAt: User.createdAt,
+      });
   }
 
   async getUserById(id: string | number) {

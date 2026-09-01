@@ -7,7 +7,7 @@ config.resolver.sourceExts.push('mjs');
 
 config.transformer.getTransformOptions = async () => ({
   transform: {
-    experimentalImportSupport: true,
+    experimentalImportSupport: false,
     inlineRequires: true,
   },
 });

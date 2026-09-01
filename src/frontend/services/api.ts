@@ -40,7 +40,7 @@ function getDefaultErrorDetails(status: number): { code: string; message: string
     case 400:
       return { code: "BAD_REQUEST", message: "Requisição inválida." };
     case 401:
-      return { code: "UNAUTHORIZED", message: "Sessão expirada ou não autorizada." };
+      return { code: "UNAUTHORIZED", message: "Você precisa estar conectado para realizar esta ação." };
     case 403:
       return { code: "FORBIDDEN", message: "Acesso negado. Permissões insuficientes." };
     case 404:

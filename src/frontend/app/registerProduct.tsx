@@ -48,9 +48,9 @@ export default function RegisterProduct() {
     imageUri?: string;
     lastPrice?: string;
   }>();
-  const { tokens, accent } = useTheme();
+  const { tokens, accent, isDark } = useTheme();
   const { semantic } = tokens;
-  const { refreshProfile } = useAuth();
+  const { refreshProfile, user, isAuthenticated, loginAsTestUser } = useAuth();
   const { t, language } = useI18n();
   const [recordDate] = useState<Date>(new Date());
 
@@ -156,6 +156,88 @@ export default function RegisterProduct() {
     setPrice(`${formattedInteger},${decimalPart}`);
   };
 
+  const promptLogin = (onSuccessAction?: () => Promise<void>) => {
+    Alert.alert(
+      t("auth.loginRequired"),
+      t("auth.loginToSubmitPrice"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("auth.quickConnect"),
+          onPress: async () => {
+            setIsSubmitting(true);
+            try {
+              await loginAsTestUser("user");
+              if (onSuccessAction) {
+                await onSuccessAction();
+              }
+            } catch (err: any) {
+              setIsSubmitting(false);
+              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+            }
+          },
+        },
+        {
+          text: t("navigation.login"),
+          onPress: () => router.push("/login"),
+        },
+      ]
+    );
+  };
+
+  const executeSubmission = async (effectiveProductId: number, numPrice: number) => {
+    setIsSubmitting(true);
+    try {
+      await submitPriceOccurrence(
+        effectiveProductId,
+        selectedMarketId,
+        numPrice,
+        undefined,
+        recordDate.toISOString(),
+      );
+
+      await refreshProfile();
+
+      Alert.alert(
+        t("common.success"),
+        t("products.priceSubmittedSuccess"),
+        [
+          {
+            text: t("common.details"),
+            onPress: () => {
+              router.replace({
+                pathname: "/productDetails",
+                params: {
+                  id: String(effectiveProductId),
+                  barcode: targetEan || product?.barcode,
+                  name: displayProduct.name,
+                  category: displayProduct.category,
+                  imageUri: displayProduct.imageUri || undefined,
+                  lastPrice: `${numPrice.toFixed(2)}`,
+                },
+              });
+            },
+          },
+        ],
+      );
+    } catch (err: any) {
+      const isAuthError =
+        err?.status === 401 ||
+        err?.code === "UNAUTHORIZED" ||
+        String(err?.message).toLowerCase().includes("token") ||
+        String(err?.message).toLowerCase().includes("autentica");
+
+      if (isAuthError) {
+        promptLogin(() => executeSubmission(effectiveProductId, numPrice));
+        return;
+      }
+
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleRegister = async () => {
     const cleanDigits = price.replace(/\D/g, "");
     const numPrice = cleanDigits ? parseInt(cleanDigits, 10) / 100 : 0;
@@ -196,45 +278,12 @@ export default function RegisterProduct() {
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      await submitPriceOccurrence(
-        effectiveProductId,
-        selectedMarketId,
-        numPrice,
-        undefined,
-        recordDate.toISOString(),
-      );
-
-      await refreshProfile();
-
-      Alert.alert(
-        t("common.success"),
-        t("products.priceSubmittedSuccess"),
-        [
-          {
-            text: t("common.details"),
-            onPress: () => {
-              router.replace({
-                pathname: "/productDetails",
-                params: {
-                  id: String(effectiveProductId),
-                  barcode: targetEan || product?.barcode,
-                  name: displayProduct.name,
-                  category: displayProduct.category,
-                  imageUri: displayProduct.imageUri || undefined,
-                  lastPrice: `${numPrice.toFixed(2)}`,
-                },
-              });
-            },
-          },
-        ],
-      );
-    } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
-    } finally {
-      setIsSubmitting(false);
+    if (!isAuthenticated && !user) {
+      promptLogin(() => executeSubmission(effectiveProductId, numPrice));
+      return;
     }
+
+    await executeSubmission(effectiveProductId, numPrice);
   };
 
   const scannedProduct = params.name
@@ -266,6 +315,37 @@ export default function RegisterProduct() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {!isAuthenticated && !user && (
+            <View
+              style={[
+                styles.authBanner,
+                {
+                  backgroundColor: isDark ? "rgba(255, 193, 7, 0.12)" : "rgba(255, 193, 7, 0.18)",
+                  borderColor: "#FFC107",
+                  borderRadius: semantic.radius.card,
+                  marginBottom: semantic.spacing.sectionGap,
+                },
+              ]}
+            >
+              <Ionicons name="sparkles" size={22} color="#FFC107" style={{ marginRight: 10 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.authBannerTitle, { color: isDark ? "#FFE082" : "#B78103" }]}>
+                  {t("auth.loginBannerTitle")} (+15 XP)
+                </Text>
+                <Text style={[styles.authBannerSubtitle, { color: semantic.colors.text.secondary }]}>
+                  {t("auth.loginBannerSubtitle")}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.authBannerBtn, { backgroundColor: accent }]}
+                onPress={() => router.push("/login")}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.authBannerBtnText}>{t("navigation.login")}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Product Hero Section */}
           {isLoading ? (
             <View
@@ -1130,4 +1210,31 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   registerButtonText: {},
+  authBanner: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderWidth: 1,
+  },
+  authBannerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  authBannerSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  authBannerBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  authBannerBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

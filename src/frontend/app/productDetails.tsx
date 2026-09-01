@@ -49,7 +49,7 @@ export default function ProductDetails() {
   const router = useRouter();
   const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
-  const { isAdmin, user, refreshProfile } = useAuth();
+  const { isAdmin, user, isAuthenticated, loginAsTestUser, refreshProfile } = useAuth();
   const { t, language } = useI18n();
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
@@ -179,15 +179,99 @@ export default function ProductDetails() {
   };
 
   const handleVote = async (occId: number, verdict: boolean) => {
-    try {
-      await voteOccurrence(occId, verdict);
+    if (!isAuthenticated && !user) {
       Alert.alert(
-        t("common.success"),
-        t("productDetails.votedSuccess"),
+        t("auth.loginRequired"),
+        t("auth.loginToVote"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("auth.quickConnect"),
+            onPress: async () => {
+              try {
+                await loginAsTestUser("user");
+                await handleVote(occId, verdict);
+              } catch (err: any) {
+                Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              }
+            },
+          },
+          {
+            text: t("navigation.login"),
+            onPress: () => router.push("/login"),
+          },
+        ]
       );
+      return;
+    }
+
+    const occ = occurrences.find((o) => o.id === occId);
+
+    // Prevent voting on user's own price occurrence
+    if (occ && user?.id && occ.userId === user.id) {
+      Alert.alert(
+        t("common.warning"),
+        t("productDetails.cannotVoteOwnPrice"),
+      );
+      return;
+    }
+
+    // Prevent duplicate vote / notification if user already voted the same
+    if (occ && occ.userVote === verdict) {
+      return;
+    }
+
+    try {
+      const result = await voteOccurrence(occId, verdict);
+
+      // Only display success notification on new vote or changed vote
+      if (result.isNewVote) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.votedSuccess"),
+        );
+      } else if (result.changed) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.voteUpdated"),
+        );
+      }
+
       if (product?.id) loadOccurrences(product.id);
       refreshProfile();
     } catch (err: any) {
+      const isAuthError =
+        err?.status === 401 ||
+        err?.code === "UNAUTHORIZED" ||
+        String(err?.message).toLowerCase().includes("token") ||
+        String(err?.message).toLowerCase().includes("autentica");
+
+      if (isAuthError) {
+        Alert.alert(
+          t("auth.loginRequired"),
+          t("auth.loginToVote"),
+          [
+            { text: t("common.cancel"), style: "cancel" },
+            {
+              text: t("auth.quickConnect"),
+              onPress: async () => {
+                try {
+                  await loginAsTestUser("user");
+                  await handleVote(occId, verdict);
+                } catch (e: any) {
+                  Alert.alert(t("common.error"), e?.message || t("errors.genericError"));
+                }
+              },
+            },
+            {
+              text: t("navigation.login"),
+              onPress: () => router.push("/login"),
+            },
+          ]
+        );
+        return;
+      }
+
       Alert.alert(t("common.error"), err.message || t("errors.genericError"));
     }
   };
@@ -429,52 +513,101 @@ export default function ProductDetails() {
                 </Text>
               </View>
             ) : (
-              occurrences.map((occ) => (
-                <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
-                  <View style={styles.occurrenceMainCol}>
-                    <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
-                      {occ.marketName || t("products.selectMarket")}
-                    </Text>
-                    <Text style={[styles.occurrenceValue, { color: accent }]}>
-                      R$ {occ.value}
-                    </Text>
-                    <Text style={[styles.occurrenceMeta, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
-                      {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {new Date(occ.createdAt).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}
-                    </Text>
-                  </View>
+              occurrences.map((occ) => {
+                const isOwnOccurrence = Boolean(user?.id && occ.userId === user.id);
+                const isUpvoted = occ.userVote === true;
+                const isDownvoted = occ.userVote === false;
 
-                  <View style={styles.occurrenceActionsCol}>
-                    <View style={styles.voteRow}>
-                      <TouchableOpacity
-                        style={[styles.voteBtn, themeStyles.card, themeStyles.border]}
-                        onPress={() => handleVote(occ.id, true)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="thumbs-up" size={12} color={semantic.colors.feedback.success} />
-                        <Text style={[styles.voteCount, { color: semantic.colors.feedback.success }]}>{occ.upvoteCount}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.voteBtn, themeStyles.card, themeStyles.border]}
-                        onPress={() => handleVote(occ.id, false)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="thumbs-down" size={12} color={semantic.colors.feedback.error} />
-                        <Text style={[styles.voteCount, { color: semantic.colors.feedback.error }]}>{occ.downvoteCount}</Text>
-                      </TouchableOpacity>
+                return (
+                  <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
+                    <View style={styles.occurrenceMainCol}>
+                      <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                        {occ.marketName || t("products.selectMarket")}
+                      </Text>
+                      <Text style={[styles.occurrenceValue, { color: accent }]}>
+                        R$ {occ.value}
+                      </Text>
+                      <Text style={[styles.occurrenceMeta, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
+                        {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {new Date(occ.createdAt).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}
+                      </Text>
                     </View>
 
-                    {(isAdmin || user?.id === occ.userId) && (
-                      <TouchableOpacity
-                        style={styles.deleteOccBtn}
-                        onPress={() => handleDeleteOccurrence(occ.id)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={semantic.colors.feedback.error} />
-                      </TouchableOpacity>
-                    )}
+                    <View style={styles.occurrenceActionsCol}>
+                      <View style={styles.voteRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.voteBtn,
+                            themeStyles.card,
+                            themeStyles.border,
+                            isUpvoted && { backgroundColor: `${semantic.colors.feedback.success}22`, borderColor: semantic.colors.feedback.success },
+                            isOwnOccurrence && { opacity: 0.45 },
+                          ]}
+                          onPress={() => handleVote(occ.id, true)}
+                          disabled={isOwnOccurrence}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={isUpvoted ? "thumbs-up" : "thumbs-up-outline"}
+                            size={12}
+                            color={semantic.colors.feedback.success}
+                          />
+                          <Text
+                            style={[
+                              styles.voteCount,
+                              {
+                                color: semantic.colors.feedback.success,
+                                fontWeight: isUpvoted ? "700" : "500",
+                              },
+                            ]}
+                          >
+                            {occ.upvoteCount}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.voteBtn,
+                            themeStyles.card,
+                            themeStyles.border,
+                            isDownvoted && { backgroundColor: `${semantic.colors.feedback.error}22`, borderColor: semantic.colors.feedback.error },
+                            isOwnOccurrence && { opacity: 0.45 },
+                          ]}
+                          onPress={() => handleVote(occ.id, false)}
+                          disabled={isOwnOccurrence}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={isDownvoted ? "thumbs-down" : "thumbs-down-outline"}
+                            size={12}
+                            color={semantic.colors.feedback.error}
+                          />
+                          <Text
+                            style={[
+                              styles.voteCount,
+                              {
+                                color: semantic.colors.feedback.error,
+                                fontWeight: isDownvoted ? "700" : "500",
+                              },
+                            ]}
+                          >
+                            {occ.downvoteCount}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {(isAdmin || user?.id === occ.userId) && (
+                        <TouchableOpacity
+                          style={styles.deleteOccBtn}
+                          onPress={() => handleDeleteOccurrence(occ.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={semantic.colors.feedback.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))
+                );
+              })
             )}
           </View>
 

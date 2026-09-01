@@ -98,11 +98,14 @@ Direct relative paths from project root.
 
 | File | Key exports / purpose |
 |---|---|
-| `start_project.ps1` | Windows PowerShell launcher with port auto-detection, LAN IP resolution, and multi-process runner |
+| `scripts/verify_connection.ts` | Autonomous Network & Connection Diagnostic Agent verifying Local NAT and Tunnel connectivity, health checks, LAN IP, and Expo |
+| `scripts/start_api_tunnel.ts` | Autonomous Backend API Cloud Tunnel Agent with preferred/dynamic fallback, health test, and `.tunnel_url` synchronization |
+| `start_project.sh` | macOS/Linux dev launcher with integrated connection diagnostics, robust LAN IP resolution, dynamic tunnel capture, and Expo `--tunnel` |
+| `start_project.ps1` | Windows PowerShell launcher with port auto-detection, LAN IP resolution, diagnostic agent runner, and multi-process runner |
 | `start_project.bat` / `start.bat` | Batch aliases bypassing PowerShell ExecutionPolicy |
 | `scripts/dev_backend.bat` | Dedicated backend runner script (port 3333, `DEBUG=*`, `NODE_ENV=development`) |
-| `scripts/dev_frontend.bat` | Dedicated frontend Expo runner script (port 8081, LAN/Tunnel modes) |
-| `scripts/dev_tunnels.bat` | Dedicated Localtunnel launcher script for API and Expo |
+| `scripts/dev_frontend.bat` | Dedicated frontend Expo runner script (port 8081, LAN/Tunnel modes with `@expo/ngrok`) |
+| `scripts/dev_tunnels.bat` | Dedicated backend tunnel launcher script invoking `start_api_tunnel.ts` |
 | `install_dependencies.bat` / `install.bat` | Windows automated dependency installation with `--clean` and fallback |
 
 ### Frontend
@@ -180,6 +183,12 @@ Direct relative paths from project root.
 - [x] Interactive & Visual Help Center Overhaul (`help.tsx` fully refactored with 18 comprehensive questions, 7 category filter chips with live counter badges, XP reward indicators, 4 quick action shortcuts, interactive feedback buttons with haptics, community guidelines card, real-time search with match counter, and 100% synchronized multilingual i18n support across all 7 languages).
 - [x] Proximity Market Search & Proximity Ordering in Product Registration (strict 15km radius filtering with PostGIS `ST_DWithin` and `ST_Distance ASC` in `MarketRepository`, automated closest market pre-selection, distance badge chips, empty state card with retry mechanism and fallback to view all markets, and 7-language i18n localization).
 - [x] React Native JSX Text Crash Remediation & Regional Markets Seeding (eliminated uncontained text string evaluation in `registerProduct.tsx` by replacing loose conditional logical ANDs with safe boolean ternary expressions, and seeded real supermarket chains in Bauru/Interior SP with PostGIS coordinates for accurate local proximity testing).
+- [x] User Registration Query Failure & Role/Customization Initialization Fix (resolved PostgreSQL 23502 NOT NULL constraint failure on `user.role_id` during registration by setting explicit fallback defaults in `user.repository.ts` and `auth.service.ts`, enforcing schema-level `DEFAULT 1` in `seed.ts`, and automatically awarding starter milestone badge #1 *Pioneiro* and default inventory customizations).
+- [x] Self-Voting Prevention & Duplicate Vote Notification Suppression (blocked authors from voting on their own price reports on backend with `ForbiddenError` and frontend disabled state, implemented `optionalAuth` for `GET /ocurrency/product/:productId` to return `userVote` state, suppressed redundant notifications on duplicate votes, and added multilingual translations across all 7 languages).
+- [x] Autonomous Connection Diagnostic Agent & Startup Scripts Hardening (`scripts/verify_connection.ts` diagnostic verifier for PostgreSQL, Redis, Backend Local, Wi-Fi LAN IP and Tunnel, resolved Expo SDK 54 native `@expo/ngrok` `--tunnel` integration, dynamic backend tunnel discovery and fallback, and added `npm run dev:check`, `verify:local`, `verify:tunnel`).
+- [x] Dedicated Backend Cloud Tunnel Provider & Settings Status Fix (`scripts/start_api_tunnel.ts` programmatic tunnel manager with health verification and `.tunnel_url` synchronization, fixed `settings.tsx` false offline status by redirecting health ping to `/health`, added `/ping` and `/products/barcode/ping` aliases in `app.ts`, and updated `start_project.sh` and `start_project.ps1`).
+- [x] Unauthenticated 401 Missing Token Guard & 1-Tap Quick Connect (eliminated raw 401 "Token não fornecido" crashes when unauthenticated users register products or prices, added proactive `useAuth` verification in `customRegisterProduct.tsx`, `registerProduct.tsx`, and `productDetails.tsx`, added friendly login prompts with 1-tap dev quick connect, added inline XP reward banners, humanized backend/frontend 401 messages, and synchronized i18n across 7 languages).
+- [x] Cloud Tunnel Remote Disconnection Diagnosis & Direct Wi-Fi LAN Mode Guidance (diagnosed and resolved `remote gone away` on `npm run dev:tunnel` caused by unauthenticated `@expo/ngrok` tunnel drop in Expo SDK 54, strengthened error handling in `scripts/start_api_tunnel.ts`, updated `start_project.sh`, verified local health with `scripts/verify_connection.ts`, and documented direct zero-latency Wi-Fi mode `npm run dev:local`).
 
 ---
 

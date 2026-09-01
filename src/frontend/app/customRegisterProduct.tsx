@@ -15,6 +15,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { createCustomProduct } from "../services/productService";
 import CategorySelector from "../components/CategorySelector";
 
@@ -27,13 +28,38 @@ export default function CustomRegisterProduct() {
   const router = useRouter();
   const { themeStyles, accent, isDark } = useTheme();
   const { t } = useI18n();
+  const { isAuthenticated, user, loginAsTestUser } = useAuth();
 
-  const handleRegister = async () => {
-    if (!name.trim()) {
-      Alert.alert(t("common.warning"), t("auth.nameRequired"));
-      return;
-    }
+  const promptLogin = (onSuccessAction?: () => Promise<void>) => {
+    Alert.alert(
+      t("auth.loginRequired"),
+      t("auth.loginToRegisterProduct"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("auth.quickConnect"),
+          onPress: async () => {
+            setLoading(true);
+            try {
+              await loginAsTestUser("user");
+              if (onSuccessAction) {
+                await onSuccessAction();
+              }
+            } catch (err: any) {
+              setLoading(false);
+              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+            }
+          },
+        },
+        {
+          text: t("navigation.login"),
+          onPress: () => router.push("/login"),
+        },
+      ]
+    );
+  };
 
+  const executeRegistration = async () => {
     setLoading(true);
     try {
       const created = await createCustomProduct({
@@ -62,11 +88,35 @@ export default function CustomRegisterProduct() {
           },
         },
       ]);
-
     } catch (error: any) {
       setLoading(false);
+      const isAuthError =
+        error?.status === 401 ||
+        error?.code === "UNAUTHORIZED" ||
+        String(error?.message).toLowerCase().includes("token") ||
+        String(error?.message).toLowerCase().includes("autentica");
+
+      if (isAuthError) {
+        promptLogin(executeRegistration);
+        return;
+      }
+
       Alert.alert(t("common.error"), error.message || t("errors.genericError"));
     }
+  };
+
+  const handleRegister = async () => {
+    if (!name.trim()) {
+      Alert.alert(t("common.warning"), t("auth.nameRequired"));
+      return;
+    }
+
+    if (!isAuthenticated && !user) {
+      promptLogin(executeRegistration);
+      return;
+    }
+
+    await executeRegistration();
   };
 
   return (
@@ -81,6 +131,27 @@ export default function CustomRegisterProduct() {
         <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
           {t("products.customProductSubtitle")}
         </Text>
+
+        {!isAuthenticated && !user && (
+          <View style={[styles.authBanner, { backgroundColor: isDark ? "rgba(255, 193, 7, 0.12)" : "rgba(255, 193, 7, 0.18)", borderColor: "#FFC107" }]}>
+            <Ionicons name="sparkles" size={22} color="#FFC107" style={{ marginRight: 10 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.authBannerTitle, { color: isDark ? "#FFE082" : "#B78103" }]}>
+                {t("auth.loginBannerTitle")} (+25 XP)
+              </Text>
+              <Text style={[styles.authBannerSubtitle, themeStyles.subText]}>
+                {t("auth.loginBannerSubtitle")}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.authBannerBtn, { backgroundColor: accent }]}
+              onPress={() => router.push("/login")}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.authBannerBtnText}>{t("navigation.login")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.ean")} ({t("common.optional")})</Text>
@@ -117,7 +188,6 @@ export default function CustomRegisterProduct() {
             showCustomOption={true}
           />
         </View>
-
 
         <TouchableOpacity
           style={[styles.button, { backgroundColor: accent }]}
@@ -156,7 +226,36 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: "center",
-    marginBottom: 32,
+    marginBottom: 24,
+  },
+  authBanner: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  authBannerTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  authBannerSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  authBannerBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  authBannerBtnText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
   inputGroup: {
     width: "100%",

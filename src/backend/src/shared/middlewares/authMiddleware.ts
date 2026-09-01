@@ -12,19 +12,19 @@ export async function requireAuth(
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      throw new UnauthorizedError("Token não fornecido.");
+      throw new UnauthorizedError("Você precisa estar autenticado para realizar esta ação.");
     }
 
     const token = authHeader.split(" ")[1];
 
     if (!token) {
-      throw new UnauthorizedError("Token não fornecido.");
+      throw new UnauthorizedError("Você precisa estar autenticado para realizar esta ação.");
     }
 
     const decoded = verifyAccessToken(token);
 
     if (!decoded.jti) {
-      throw new UnauthorizedError("Token inválido.");
+      throw new UnauthorizedError("Token de acesso inválido.");
     }
 
     const isBlacklisted = await AuthRepository.isAccessTokenBlacklisted(
@@ -32,7 +32,7 @@ export async function requireAuth(
     );
 
     if (isBlacklisted) {
-      throw new UnauthorizedError("Token revogado.");
+      throw new UnauthorizedError("Sessão revogada. Faça login novamente.");
     }
 
     req.user = {
@@ -50,8 +50,46 @@ export async function requireAuth(
       next(error);
       return;
     }
-    next(new UnauthorizedError("Token inválido ou expirado."));
+    next(new UnauthorizedError("Sessão expirada ou token inválido. Faça login novamente."));
   }
+}
+
+export async function optionalAuth(
+  req: Api.Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+
+      if (token) {
+        const decoded = verifyAccessToken(token);
+
+        if (decoded?.jti) {
+          const isBlacklisted = await AuthRepository.isAccessTokenBlacklisted(
+            decoded.jti,
+          );
+
+          if (!isBlacklisted) {
+            req.user = {
+              id: decoded.id,
+              email: decoded.email,
+              name: decoded.name,
+              roleId: decoded.roleId,
+              jti: decoded.jti,
+              exp: decoded.exp!,
+            };
+          }
+        }
+      }
+    }
+  } catch {
+    // Proceed without req.user if token is invalid, expired, or missing
+  }
+  next();
 }
 
 export async function requireAdmin(
@@ -93,4 +131,5 @@ export function requireMinAuthority(minAuthority: number) {
     });
   };
 }
+
 

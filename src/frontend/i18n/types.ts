@@ -89,6 +89,14 @@ export interface TranslationSchema {
     changeAvatar: string;
     showPassword: string;
     hidePassword: string;
+    loginRequired: string;
+    loginToRegisterProduct: string;
+    loginToSubmitPrice: string;
+    loginToVote: string;
+    quickConnect: string;
+    sessionExpired: string;
+    loginBannerTitle: string;
+    loginBannerSubtitle: string;
   };
   home: {
     greeting: string;
@@ -141,6 +149,9 @@ export interface TranslationSchema {
     voteHelpful: string;
     voteUnreliable: string;
     votedSuccess: string;
+    voteUpdated: string;
+    cannotVoteOwnPrice: string;
+    alreadyVoted: string;
     deleteOccurrenceConfirm: string;
     editProduct: string;
     deleteProduct: string;
@@ -409,6 +420,7 @@ export interface TranslationSchema {
     categoryAll?: string;
     categoryGeneral?: string;
     categoryScanner?: string;
+    categorySearch?: string;
     categoryGamification?: string;
     categoryCuration?: string;
     categoryMap?: string;
@@ -462,6 +474,10 @@ export interface TranslationSchema {
     faq17Answer?: string;
     faq18Question?: string;
     faq18Answer?: string;
+    faq19Question?: string;
+    faq19Answer?: string;
+    faq20Question?: string;
+    faq20Answer?: string;
     wasHelpful?: string;
     helpfulYes?: string;
     helpfulNo?: string;
