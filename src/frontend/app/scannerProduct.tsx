@@ -33,40 +33,51 @@ export default function ScannerProduct() {
     setScanned(true);
     setLoading(true);
 
+    const showNotFoundAlert = () => {
+      Alert.alert(
+        t("scanner.productNotFoundTitle"),
+        t("scanner.productNotFoundMessage"),
+        [
+          {
+            text: t("scanner.actionRescan"),
+            onPress: () => {
+              setTimeout(() => {
+                setScanned(false);
+                isProcessing.current = false;
+              }, 1000);
+            },
+            style: "cancel",
+          },
+          {
+            text: t("scanner.actionTypeBarcode"),
+            onPress: () => {
+              isProcessing.current = false;
+              router.push("/manualEanSearch");
+            },
+          },
+          {
+            text: t("scanner.actionRegisterProduct"),
+            onPress: () => {
+              isProcessing.current = false;
+              router.push({
+                pathname: "/customRegisterProduct",
+                params: {
+                  ean: data,
+                },
+              });
+            },
+          },
+        ],
+      );
+    };
+
     try {
       const product = await fetchProductByEan(data);
 
       setLoading(false);
 
       if (!product) {
-        Alert.alert(
-          t("scanner.productNotFound"),
-          t("products.customProductSubtitle"),
-          [
-            {
-              text: t("scanner.rescan"),
-              onPress: () => {
-                setTimeout(() => {
-                  setScanned(false);
-                  isProcessing.current = false;
-                }, 1500);
-              },
-              style: "cancel",
-            },
-            {
-              text: t("scanner.manualEntry"),
-              onPress: () => {
-                isProcessing.current = false;
-                router.push({
-                  pathname: "/customRegisterProduct",
-                  params: {
-                    ean: data,
-                  },
-                });
-              },
-            },
-          ],
-        );
+        showNotFoundAlert();
         return;
       }
 
@@ -84,6 +95,17 @@ export default function ScannerProduct() {
       });
     } catch (error: any) {
       setLoading(false);
+
+      const isNotFound =
+        error?.status === 404 ||
+        error?.code === "PRODUCT_NOT_FOUND" ||
+        error?.code === "NOT_FOUND" ||
+        String(error?.message).toLowerCase().includes("não encontrado");
+
+      if (isNotFound) {
+        showNotFoundAlert();
+        return;
+      }
 
       const isTimeout = error?.code === "TIMEOUT" || error?.message?.includes("demorou muito");
       const isTunnelError = error?.status === 503 || error?.status === 504 || error?.status === 502;

@@ -31,27 +31,38 @@ export default function ManualEanSearch() {
     }
 
     setLoading(true);
+
+    const showNotFoundAlert = () => {
+      Alert.alert(
+        t("scanner.productNotFoundTitle"),
+        t("scanner.productNotFoundManualMessage"),
+        [
+          { text: t("scanner.actionTypeBarcode"), style: "cancel" },
+          {
+            text: t("scanner.actionScanCamera"),
+            onPress: () => {
+              router.push("/scannerProduct");
+            },
+          },
+          {
+            text: t("scanner.actionRegisterProduct"),
+            onPress: () => {
+              router.push({
+                pathname: "/customRegisterProduct",
+                params: { ean: trimmedEan },
+              });
+            },
+          },
+        ]
+      );
+    };
+
     try {
       const product = await fetchProductByEan(trimmedEan);
       setLoading(false);
 
       if (!product) {
-        Alert.alert(
-          t("scanner.productNotFound"),
-          t("products.customProductSubtitle"),
-          [
-            { text: t("common.cancel"), style: "cancel" },
-            {
-              text: t("navigation.register"),
-              onPress: () => {
-                router.push({
-                  pathname: "/customRegisterProduct",
-                  params: { ean: trimmedEan },
-                });
-              },
-            },
-          ]
-        );
+        showNotFoundAlert();
         return;
       }
 
@@ -60,7 +71,7 @@ export default function ManualEanSearch() {
         params: {
           id: product.id ? String(product.id) : undefined,
           category: product?.category || t("common.uncategorized"),
-          name: product?.name || t("scanner.productNotFound"),
+          name: product?.name || t("scanner.productNotFoundTitle"),
           imageUri: product?.imageUri || product?.icon || undefined,
           lastPrice: product?.lastPrice || t("productDetails.noOccurrences"),
           barcode: product?.barcode || trimmedEan,
@@ -69,6 +80,18 @@ export default function ManualEanSearch() {
       });
     } catch (error: any) {
       setLoading(false);
+
+      const isNotFound =
+        error?.status === 404 ||
+        error?.code === "PRODUCT_NOT_FOUND" ||
+        error?.code === "NOT_FOUND" ||
+        String(error?.message).toLowerCase().includes("não encontrado");
+
+      if (isNotFound) {
+        showNotFoundAlert();
+        return;
+      }
+
       Alert.alert(t("common.error"), error.message || t("errors.networkError"));
     }
   };

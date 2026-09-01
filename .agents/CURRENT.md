@@ -200,6 +200,7 @@ Direct relative paths from project root.
 - [x] Spatial Proximity LEFT JOIN & Search Infinite Scroll Pagination (`product.repository.ts` upgraded spatial query to `LEFT JOIN` on `ocurrency` and `market` so all 68+ catalog products are returned with distance/price when available, and `search.tsx` implemented `onEndReached` infinite scroll pagination with category-aware icon placeholders and fixed price slots).
 - [x] Strict Local Market Scope for Promotions & Catalog Metadata Normalization (`product.repository.ts` scoped price stats strictly to markets within user's radius preventing phantom promotion badges, normalized ID 68 to "Caneta Esferográfica Laranja" with HD image, and updated foreign categories).
 - [x] Fixed 2-Column Grid Sizing & Elimination of Yoga Layout Collapse (`search.tsx` replaced flex: 1 / maxWidth with explicit `width: "48.2%"` and removed conflicting gap from `columnWrapper`, guaranteeing full-width cards and preventing capsule-like lateral shrinkage).
+- [x] Explanatory Product Not Found Alert & 3-Way Action Routing (`scannerProduct.tsx` and `manualEanSearch.tsx` refactored to replace generic error messages with an informative, user-friendly alert when a product is missing from the database, offering 3 distinct actionable routes: "Cadastrar Produto" (+25 XP), "Digitar Código / Digitar Novamente", and "Escanear Novamente / Escanear pela Câmera", synchronized across all 7 supported languages).
 
 ---
 

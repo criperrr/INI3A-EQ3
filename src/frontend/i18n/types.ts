@@ -179,6 +179,18 @@ export interface TranslationSchema {
     confidence: string;
     reportedBy: string;
     date: string;
+    reportProduct: string;
+    reportModalTitle: string;
+    reportReasonLabel: string;
+    reportReasonPrice: string;
+    reportReasonInfo: string;
+    reportReasonDuplicate: string;
+    reportReasonInappropriate: string;
+    reportReasonOther: string;
+    reportDescriptionPlaceholder: string;
+    reportSubmit: string;
+    reportSuccess: string;
+    reportSubmitting: string;
   };
   settings: {
     title: string;
@@ -263,6 +275,13 @@ export interface TranslationSchema {
     searchingProduct: string;
     productFound: string;
     productNotFound: string;
+    productNotFoundTitle: string;
+    productNotFoundMessage: string;
+    productNotFoundManualMessage: string;
+    actionRegisterProduct: string;
+    actionTypeBarcode: string;
+    actionRescan: string;
+    actionScanCamera: string;
     manualEntry: string;
     rescan: string;
     confirmProduct: string;
@@ -317,6 +336,8 @@ export interface TranslationSchema {
     searchingNearbyMarkets: string;
     maxDistanceNotice: string;
     locationRequiredForProximity: string;
+    cooldownNotice: string;
+    cooldownError: string;
   };
   profile: {
     title: string;

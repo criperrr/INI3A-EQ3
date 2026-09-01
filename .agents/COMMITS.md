@@ -24,6 +24,31 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 10:52] - feat(scanner): implement explanatory product not found alert with 3-action routing
+
+- **Description:** Replaced generic error messages when a product is not found with an informative, user-friendly alert providing clear next steps:
+  1. **Interactive Multi-Choice Alert (`scannerProduct.tsx`):** When a scanned barcode is not found in the database or OpenFoodFacts, displays a detailed alert with title "Produto Não Encontrado" and message explaining that the product is not yet registered. Offers 3 explicit actions:
+     - **"Escanear Novamente"** (`actionRescan`): Closes alert and resumes camera scanner immediately.
+     - **"Digitar Código"** (`actionTypeBarcode`): Navigates to `/manualEanSearch` to let user verify or manually type the barcode numbers.
+     - **"Cadastrar Produto"** (`actionRegisterProduct`): Navigates to `/customRegisterProduct` with the scanned barcode pre-filled, allowing the user to create the product and earn +25 XP.
+  2. **Manual EAN Search Alignment (`manualEanSearch.tsx`):** Updated manual search not-found handler to present the same explanatory message with actions: "Digitar Novamente", "Escanear com Câmera" (`/scannerProduct`), and "Cadastrar Produto" (`/customRegisterProduct`).
+  3. **Multilingual i18n Synchronization:** Added type-safe localization keys (`productNotFoundTitle`, `productNotFoundMessage`, `productNotFoundManualMessage`, `actionRegisterProduct`, `actionTypeBarcode`, `actionRescan`, `actionScanCamera`) across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`) and `types.ts`.
+  4. **Verification:** Validated full typecheck across frontend and backend (`npx tsc --noEmit` & `npm run build`) with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users who scan or search unregistered barcodes receive clear guidance with 1-tap options to rescan, type manually, or register the item for XP rewards.
+
 ## [2026-09-01 10:36] - fix(frontend): eliminate Yoga flex layout card collapse by enforcing 48.2% grid width
 
 - **Description:** Fixed visual glitch where product cards collapsed into narrow vertical capsule bars in `search.tsx`:
