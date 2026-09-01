@@ -220,4 +220,20 @@ export const deleteProduct = async (id: number | string): Promise<boolean> => {
   return res?.deleted ?? true;
 };
 
+export interface ReportProductParams {
+  reason: string;
+  description?: string;
+}
+
+export const reportProduct = async (
+  id: number | string,
+  data: ReportProductParams,
+): Promise<{ reported: boolean; message: string }> => {
+  return apiRequest<{ reported: boolean; message: string }>(`/products/${id}/report`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+};
+
+
 

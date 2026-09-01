@@ -342,7 +342,41 @@ class ProductServiceClass {
     const safeLimit = Math.min(Math.max(1, limit || 15), 15);
     return ProductRepository.getPriceHistory(productId, safeLimit, since);
   }
+
+  async reportProduct(
+    userId: number,
+    productId: number,
+    reason: string,
+    description?: string,
+  ) {
+    if (!productId || isNaN(productId) || productId <= 0) {
+      throw new ValidationError([{ field: "productId", message: "ID do produto inválido." }]);
+    }
+
+    if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+      throw new ValidationError([{ field: "reason", message: "O motivo da denúncia é obrigatório." }]);
+    }
+
+    const product = await ProductRepository.getProductById(productId);
+    if (!product) {
+      throw new NotFoundError("Produto não encontrado.");
+    }
+
+    const report = await ProductRepository.createReport(
+      userId,
+      productId,
+      reason.trim(),
+      description?.trim(),
+    );
+
+    return {
+      reported: true,
+      reportId: report?.id,
+      message: "Denúncia registrada com sucesso. Nossa equipe irá analisar.",
+    };
+  }
 }
 
 export const productService = new ProductServiceClass();
+
 

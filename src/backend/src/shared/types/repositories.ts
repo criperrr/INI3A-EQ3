@@ -12,6 +12,7 @@ export type CreateUser = Pick<User, "passHash" | "name" | "email"> &
       | "equippedBannerId"
       | "equippedAvatarFrameId"
       | "equippedLevelFrameId"
+      | "equippedTitleId"
     >
   >;
 export type UpdateUser = AtLeastOne<

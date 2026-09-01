@@ -380,6 +380,10 @@ export interface TranslationSchema {
     tabBanners: string;
     tabAvatarFrames: string;
     tabLevelFrames: string;
+    tabTitles: string;
+    customTitle: string;
+    unlockedTitles: string;
+    previewingItem: string;
     buy: string;
     equip: string;
     equipped: string;

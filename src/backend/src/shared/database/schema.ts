@@ -111,6 +111,7 @@ export const user = pgTable(
     equippedBannerId: integer("equipped_banner_id"),
     equippedAvatarFrameId: integer("equipped_avatar_frame_id"),
     equippedLevelFrameId: integer("equipped_level_frame_id"),
+    equippedTitleId: integer("equipped_title_id"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -146,6 +147,11 @@ export const user = pgTable(
       columns: [table.equippedLevelFrameId],
       foreignColumns: [customizationItem.id],
       name: "user_equipped_level_frame_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedTitleId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_title_id_fkey",
     }).onDelete("set null"),
     unique("user_email_key").on(table.email),
     check("user_points_check", sql`points >= 0`),
@@ -429,3 +435,30 @@ export const cured = pgTable(
     }),
   ],
 );
+
+export const productReport = pgTable(
+  "product_report",
+  {
+    id: serial().primaryKey().notNull(),
+    userId: integer("user_id").notNull(),
+    productId: integer("product_id").notNull(),
+    reason: varchar({ length: 100 }).notNull(),
+    description: text(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "product_report_user_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [product.id],
+      name: "product_report_product_id_fkey",
+    }).onDelete("cascade"),
+  ],
+);
+

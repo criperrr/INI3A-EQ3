@@ -70,6 +70,7 @@ class CustomizationRepositoryClass {
       equippedBannerId?: number | null;
       equippedAvatarFrameId?: number | null;
       equippedLevelFrameId?: number | null;
+      equippedTitleId?: number | null;
     }
   ) {
     return this.db
@@ -81,6 +82,7 @@ class CustomizationRepositoryClass {
         equippedBannerId: User.equippedBannerId,
         equippedAvatarFrameId: User.equippedAvatarFrameId,
         equippedLevelFrameId: User.equippedLevelFrameId,
+        equippedTitleId: User.equippedTitleId,
       });
   }
 
@@ -90,6 +92,7 @@ class CustomizationRepositoryClass {
         equippedBannerId: User.equippedBannerId,
         equippedAvatarFrameId: User.equippedAvatarFrameId,
         equippedLevelFrameId: User.equippedLevelFrameId,
+        equippedTitleId: User.equippedTitleId,
       })
       .from(User)
       .where(eq(User.id, userId));
@@ -100,6 +103,7 @@ class CustomizationRepositoryClass {
     let banner = null;
     let avatarFrame = null;
     let levelFrame = null;
+    let title = null;
 
     if (u.equippedBannerId) {
       banner = await this.getItemById(u.equippedBannerId);
@@ -131,10 +135,21 @@ class CustomizationRepositoryClass {
       levelFrame = defaults[0] || null;
     }
 
+    if (u.equippedTitleId) {
+      title = await this.getItemById(u.equippedTitleId);
+    } else {
+      const defaults = await this.db
+        .select()
+        .from(CustomizationItem)
+        .where(and(eq(CustomizationItem.category, "title"), eq(CustomizationItem.isDefault, true)));
+      title = defaults[0] || null;
+    }
+
     return {
       banner,
       avatarFrame,
       levelFrame,
+      title,
     };
   }
 }

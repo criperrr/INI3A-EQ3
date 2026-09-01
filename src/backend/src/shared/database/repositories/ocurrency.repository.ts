@@ -278,6 +278,29 @@ class OcurrencyRepositoryClass {
 
     return grid;
   }
+
+  async findRecentByUserAndProduct(userId: number, productId: number, windowMs = 5 * 60 * 1000) {
+    const threshold = new Date(Date.now() - windowMs).toISOString();
+
+    const [recent] = await db
+      .select({
+        id: Ocurrency.id,
+        createdAt: Ocurrency.createdAt,
+      })
+      .from(Ocurrency)
+      .where(
+        and(
+          eq(Ocurrency.userId, userId),
+          eq(Ocurrency.productId, productId),
+          gte(Ocurrency.createdAt, threshold),
+        ),
+      )
+      .orderBy(desc(Ocurrency.createdAt))
+      .limit(1);
+
+    return recent || null;
+  }
 }
 
 export const OcurrencyRepository = new OcurrencyRepositoryClass();
+

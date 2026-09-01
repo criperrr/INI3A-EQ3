@@ -1,7 +1,7 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
-import { market, ocurrency, product } from "../schema";
+import { market, ocurrency, product, productReport } from "../schema";
 import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 
 class ProductRepositoryClass {
@@ -700,7 +700,22 @@ class ProductRepositoryClass {
       };
     });
   }
+
+  async createReport(userId: number, productId: number, reason: string, description?: string) {
+    const [created] = await db
+      .insert(productReport)
+      .values({
+        userId,
+        productId,
+        reason,
+        description: description || null,
+      })
+      .returning();
+
+    return created;
+  }
 }
 
 export const ProductRepository = new ProductRepositoryClass();
+
 

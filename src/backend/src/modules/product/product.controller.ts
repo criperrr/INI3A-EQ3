@@ -213,7 +213,38 @@ class ProductControllerClass {
       next(e);
     }
   }
+
+  async reportProduct(req: any, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const { reason, description } = req.body;
+      const numId = Number(id);
+
+      const errors: Array<{ field: string; message: string }> = [];
+      if (!id || isNaN(numId) || numId <= 0) {
+        errors.push({ field: "id", message: "ID do produto inválido." });
+      }
+
+      if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
+        errors.push({ field: "reason", message: "O motivo da denúncia é obrigatório." });
+      }
+
+      if (errors.length > 0) throw new ValidationError(errors);
+
+      const result = await productService.reportProduct(
+        req.user.id,
+        numId,
+        reason,
+        typeof description === "string" ? description : undefined,
+      );
+
+      return res.status(201).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const productController = new ProductControllerClass();
+
 

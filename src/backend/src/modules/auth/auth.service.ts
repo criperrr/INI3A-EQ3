@@ -34,6 +34,7 @@ class AuthServiceClass {
       equippedBannerId: 1,
       equippedAvatarFrameId: 10,
       equippedLevelFrameId: 20,
+      equippedTitleId: 30,
     });
 
     if (!result) {
@@ -43,8 +44,8 @@ class AuthServiceClass {
     // Award default starter milestone badge #1 (Pioneiro)
     await UserRepository.awardBadge(result.id, 1).catch(() => {});
 
-    // Grant default starting customization items in user inventory (Presco Selva, Clássico, Distintivo Âmbar)
-    for (const itemId of [1, 10, 20]) {
+    // Grant default starting customization items in user inventory (Presco Selva, Clássico, Distintivo Âmbar, Iniciante)
+    for (const itemId of [1, 10, 20, 30]) {
       await CustomizationRepository.addCustomizationToUser(result.id, itemId).catch(() => {});
     }
 
@@ -285,6 +286,7 @@ class AuthServiceClass {
     });
 
     const equippedCustomizations = await CustomizationRepository.getUserEquippedCustomizations(Number(userId));
+    const activeLevelTitle = equippedCustomizations?.title?.name || levelTitle;
 
     return {
       id: user.id,
@@ -298,7 +300,7 @@ class AuthServiceClass {
       level,
       currentXp,
       maxXp,
-      levelTitle,
+      levelTitle: activeLevelTitle,
       equippedCustomizations,
       stats: {
         rank: rankPosition,

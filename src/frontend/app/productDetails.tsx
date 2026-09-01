@@ -13,6 +13,7 @@ import {
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
@@ -22,6 +23,7 @@ import {
   fetchPriceHistory,
   updateProduct,
   deleteProduct,
+  reportProduct,
   ProductDetailData,
   PriceHistoryItem,
 } from "../services/productService";
@@ -61,6 +63,12 @@ export default function ProductDetails() {
   const [editCategory, setEditCategory] = useState("");
   const [editEan, setEditEan] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [selectedReportReason, setSelectedReportReason] = useState<string>("price");
+  const [reportDescription, setReportDescription] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
@@ -163,7 +171,71 @@ export default function ProductDetails() {
     loadProductData();
   }, [loadProductData]);
 
+  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    if (dateInput instanceof Date) return dateInput.getTime();
+    let str = String(dateInput).trim();
+    if (str.includes(" ")) {
+      str = str.replace(" ", "T");
+    }
+    str = str.replace(/([+-]\d{2})$/, "$1:00");
+    const parsed = new Date(str).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    const fallback = new Date(dateInput).getTime();
+    return isNaN(fallback) ? 0 : fallback;
+  };
+
+  useEffect(() => {
+    if (!user?.id || occurrences.length === 0) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    const checkCooldown = () => {
+      const currentUserId = Number(user.id);
+      const userRecentOcc = occurrences.find((occ) => {
+        if (Number(occ.userId) !== currentUserId) return false;
+        const createdMs = parseDateSafe(occ.createdAt);
+        if (!createdMs) return false;
+        const diff = Date.now() - createdMs;
+        return diff >= 0 && diff < 5 * 60 * 1000;
+      });
+
+      if (userRecentOcc) {
+        const createdMs = parseDateSafe(userRecentOcc.createdAt);
+        const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
+        setCooldownRemainingSeconds(remaining);
+      } else {
+        setCooldownRemainingSeconds(0);
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [user?.id, occurrences]);
+
+  const isCooldownActive = cooldownRemainingSeconds > 0;
+
+  const formatCooldownTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
   const handleRegisterPrice = () => {
+    if (isCooldownActive) {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } catch {}
+      Alert.alert(
+        t("common.warning"),
+        t("products.cooldownError") || "Você já enviou um preço para este produto recentemente. Aguarde 5 minutos antes de enviar novamente.",
+      );
+      return;
+    }
+
     router.push({
       pathname: "/registerProduct",
       params: {
@@ -371,6 +443,95 @@ export default function ProductDetails() {
     );
   };
 
+  const reportReasons = [
+    { key: "price", label: t("productDetails.reportReasonPrice") },
+    { key: "info", label: t("productDetails.reportReasonInfo") },
+    { key: "duplicate", label: t("productDetails.reportReasonDuplicate") },
+    { key: "inappropriate", label: t("productDetails.reportReasonInappropriate") },
+    { key: "other", label: t("productDetails.reportReasonOther") },
+  ];
+
+  const handleOpenReport = () => {
+    if (!product?.id) {
+      Alert.alert(t("common.warning"), t("errors.notFound"));
+      return;
+    }
+    setSelectedReportReason("price");
+    setReportDescription("");
+    setIsReportModalVisible(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  };
+
+  const handleSelectReason = (key: string) => {
+    setSelectedReportReason(key);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  };
+
+  const submitReportExecution = async () => {
+    if (!product?.id) return;
+    setSubmittingReport(true);
+    try {
+      const selectedReasonObj = reportReasons.find((r) => r.key === selectedReportReason);
+      const reasonLabel = selectedReasonObj ? selectedReasonObj.label : selectedReportReason;
+
+      await reportProduct(product.id, {
+        reason: reasonLabel,
+        description: reportDescription.trim() || undefined,
+      });
+
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+
+      setIsReportModalVisible(false);
+      Alert.alert(t("common.success"), t("productDetails.reportSuccess"));
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
+  const handleSendReport = async () => {
+    if (!product?.id) return;
+
+    if (!isAuthenticated) {
+      Alert.alert(
+        t("auth.loginRequired"),
+        t("auth.loginToVote") || "Você precisa estar conectado para realizar esta ação.",
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("auth.quickConnect") || "Entrar como Teste",
+            onPress: async () => {
+              setSubmittingReport(true);
+              try {
+                await loginAsTestUser("user");
+                await submitReportExecution();
+              } catch (err: any) {
+                Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+              } finally {
+                setSubmittingReport(false);
+              }
+            },
+          },
+          {
+            text: t("navigation.login"),
+            onPress: () => router.push("/login"),
+          },
+        ],
+      );
+      return;
+    }
+
+    await submitReportExecution();
+  };
+
+
   if (loading && !product) {
     return (
       <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
@@ -403,14 +564,31 @@ export default function ProductDetails() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
-          {isAdmin && (
-            <View style={styles.adminTagBadge}>
-              <Ionicons name="shield-checkmark" size={14} color={semantic.colors.text.inverse} />
-              <Text style={styles.adminTagText} numberOfLines={1} ellipsizeMode="tail">
-                {t("productDetails.adminActions").toUpperCase()}
-              </Text>
-            </View>
-          )}
+          <View style={styles.topHeaderControlsRow}>
+            {isAdmin ? (
+              <View style={styles.adminTagBadge}>
+                <Ionicons name="shield-checkmark" size={14} color={semantic.colors.text.inverse} />
+                <Text style={styles.adminTagText} numberOfLines={1} ellipsizeMode="tail">
+                  {t("productDetails.adminActions").toUpperCase()}
+                </Text>
+              </View>
+            ) : (
+              <View />
+            )}
+
+            {Boolean(product.id) && (
+              <TouchableOpacity
+                style={[styles.reportHeaderBtn, themeStyles.inputBg, themeStyles.border]}
+                activeOpacity={0.75}
+                onPress={handleOpenReport}
+              >
+                <Ionicons name="flag-outline" size={13} color={semantic.colors.feedback.error} />
+                <Text style={[styles.reportHeaderBtnText, { color: semantic.colors.feedback.error }]}>
+                  {t("productDetails.reportProduct") || "Reportar"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View style={[styles.imageWrapper, themeStyles.inputBg]}>
             {imageUri ? (
@@ -614,13 +792,45 @@ export default function ProductDetails() {
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.primaryActionBtn, { backgroundColor: accent }]}
-              activeOpacity={0.85}
+              style={[
+                styles.primaryActionBtn,
+                isCooldownActive
+                  ? [styles.disabledActionBtn, themeStyles.inputBg, themeStyles.border]
+                  : { backgroundColor: accent },
+              ]}
+              activeOpacity={isCooldownActive ? 1 : 0.85}
               onPress={handleRegisterPrice}
+              disabled={isCooldownActive}
             >
-              <Ionicons name="pricetag-outline" size={20} color={semantic.colors.text.inverse} style={styles.btnIcon} />
-              <Text style={styles.primaryActionText} numberOfLines={1}>{t("productDetails.addPrice")}</Text>
+              <Ionicons
+                name={isCooldownActive ? "time-outline" : "pricetag-outline"}
+                size={20}
+                color={isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse}
+                style={styles.btnIcon}
+              />
+              <Text
+                style={[
+                  styles.primaryActionText,
+                  isCooldownActive
+                    ? { color: semantic.colors.text.tertiary }
+                    : { color: semantic.colors.text.inverse },
+                ]}
+                numberOfLines={1}
+              >
+                {isCooldownActive
+                  ? `${t("productDetails.addPrice")} (${formatCooldownTime(cooldownRemainingSeconds)})`
+                  : t("productDetails.addPrice")}
+              </Text>
             </TouchableOpacity>
+
+            {isCooldownActive && (
+              <View style={[styles.cooldownNoticeBox, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="hourglass-outline" size={15} color="#E6A100" />
+                <Text style={[styles.cooldownNoticeText, themeStyles.subText]}>
+                  {t("products.cooldownNotice")} ({formatCooldownTime(cooldownRemainingSeconds)})
+                </Text>
+              </View>
+            )}
 
             {isAdmin ? (
               <View style={styles.secondaryActionsRow}>
@@ -718,6 +928,103 @@ export default function ProductDetails() {
                   <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
                 ) : (
                   <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>{t("common.save")}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Report Product Modal */}
+      <Modal visible={isReportModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
+            <View style={styles.modalHeader}>
+              <View style={styles.reportModalHeaderLeft}>
+                <Ionicons name="flag" size={18} color={semantic.colors.feedback.error} />
+                <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.reportModalTitle")}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsReportModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.inputLabel, themeStyles.subText]}>
+              {t("productDetails.reportReasonLabel")}
+            </Text>
+
+            <View style={styles.reportReasonsList}>
+              {reportReasons.map((item) => {
+                const isSelected = selectedReportReason === item.key;
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[
+                      styles.reportReasonOption,
+                      themeStyles.inputBg,
+                      themeStyles.border,
+                      isSelected && { borderColor: accent, backgroundColor: `${accent}15` },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => handleSelectReason(item.key)}
+                  >
+                    <Ionicons
+                      name={isSelected ? "radio-button-on" : "radio-button-off"}
+                      size={18}
+                      color={isSelected ? accent : semantic.colors.text.tertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.reportReasonText,
+                        isSelected ? { color: accent, fontWeight: "bold" } : themeStyles.text,
+                      ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.inputLabel, themeStyles.subText, { marginTop: 8 }]}>
+              {t("products.description")} ({t("common.optional")})
+            </Text>
+            <TextInput
+              style={[styles.reportTextInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+              value={reportDescription}
+              onChangeText={setReportDescription}
+              placeholder={t("productDetails.reportDescriptionPlaceholder")}
+              placeholderTextColor={semantic.colors.text.tertiary}
+              multiline
+              maxLength={300}
+              numberOfLines={3}
+            />
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, themeStyles.border]}
+                onPress={() => setIsReportModalVisible(false)}
+                disabled={submittingReport}
+              >
+                <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalSaveBtn, { backgroundColor: semantic.colors.feedback.error }]}
+                onPress={handleSendReport}
+                disabled={submittingReport}
+              >
+                {submittingReport ? (
+                  <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
+                ) : (
+                  <View style={styles.sendReportBtnContent}>
+                    <Ionicons name="send" size={15} color={semantic.colors.text.inverse} style={{ marginRight: 6 }} />
+                    <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>
+                      {t("productDetails.reportSubmit")}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
@@ -1415,9 +1722,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   adminTagBadge: {
-    position: "absolute",
-    top: 14,
-    right: 14,
     maxWidth: "60%",
     flexDirection: "row",
     alignItems: "center",
@@ -1426,13 +1730,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 12,
     gap: 4,
-    zIndex: 10,
   },
   adminTagText: {
     color: "#FFF",
     fontSize: 10,
     fontWeight: "bold",
     letterSpacing: 0.5,
+  },
+  topHeaderControlsRow: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  reportHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  reportHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   occurrencesSection: {
     width: "100%",
@@ -1529,6 +1852,61 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 16,
   },
+  reportModalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  reportReasonsList: {
+    gap: 8,
+    marginVertical: 8,
+  },
+  reportReasonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  reportReasonText: {
+    fontSize: 13,
+    flex: 1,
+  },
+  reportTextInput: {
+    minHeight: 70,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    textAlignVertical: "top",
+  },
+  sendReportBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  disabledActionBtn: {
+    opacity: 0.65,
+  },
+  cooldownNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    gap: 8,
+  },
+  cooldownNoticeText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16,
+  },
 });
+
 
 

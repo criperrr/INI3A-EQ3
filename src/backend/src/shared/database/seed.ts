@@ -27,12 +27,22 @@ export async function seedDatabase() {
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_banner_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_avatar_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_level_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
+    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_title_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
 
     CREATE TABLE IF NOT EXISTS user_customization (
       user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
       item_id INTEGER NOT NULL REFERENCES customization_item(id) ON DELETE CASCADE,
       purchased_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
       PRIMARY KEY (user_id, item_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS product_report (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+      reason VARCHAR(100) NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
 
     ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
@@ -410,6 +420,239 @@ export async function seedDatabase() {
       config: JSON.stringify({ bg: "#E6A100", textColor: "#FFFFFF", icon: "trophy" }),
       isDefault: false,
     },
+
+    // Titles / Cargos & Títulos
+    {
+      id: 30,
+      name: "Iniciante",
+      category: "title",
+      description: "Membro inicial na comunidade Presco.",
+      price: 0,
+      minLevel: 1,
+      previewValue: "iniciante",
+      config: JSON.stringify({ icon: "flag", badgeColor: "#4CAF50", textColor: "#FFFFFF" }),
+      isDefault: true,
+    },
+    {
+      id: 31,
+      name: "Pioneiro",
+      category: "title",
+      description: "Primeiro passo na comunidade Presco.",
+      price: 0,
+      minLevel: 1,
+      previewValue: "pioneiro",
+      config: JSON.stringify({ icon: "leaf", badgeColor: "#00E676", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 32,
+      name: "Primeiro Olhar",
+      category: "title",
+      description: "Primeiro produto ou preço consultado no app.",
+      price: 25,
+      minLevel: 1,
+      previewValue: "primeiro_olhar",
+      config: JSON.stringify({ icon: "eye", badgeColor: "#00B0FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 33,
+      name: "Caçador de Preços",
+      category: "title",
+      description: "Iniciou o monitoramento ativo de ofertas locais.",
+      price: 50,
+      minLevel: 1,
+      previewValue: "cacador_precos",
+      config: JSON.stringify({ icon: "search", badgeColor: "#FF9100", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 34,
+      name: "Contribuidor",
+      category: "title",
+      description: "Colaborador regular da comunidade.",
+      price: 100,
+      minLevel: 2,
+      previewValue: "contribuidor",
+      config: JSON.stringify({ icon: "people", badgeColor: "#2979FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 35,
+      name: "Sentinela do Bairro",
+      category: "title",
+      description: "Colaborador frequente mapeando comércios da vizinhança.",
+      price: 100,
+      minLevel: 2,
+      previewValue: "sentinela",
+      config: JSON.stringify({ icon: "business", badgeColor: "#3D5AFE", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 36,
+      name: "Economista Ativo",
+      category: "title",
+      description: "Ajudando a comunidade a economizar em compras diárias.",
+      price: 175,
+      minLevel: 2,
+      previewValue: "economista",
+      config: JSON.stringify({ icon: "cash", badgeColor: "#00E676", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 37,
+      name: "Verificador Ativo",
+      category: "title",
+      description: "Verificador confiável com histórico de precisão.",
+      price: 250,
+      minLevel: 3,
+      previewValue: "verificador",
+      config: JSON.stringify({ icon: "checkmark-done-circle", badgeColor: "#00E5FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 38,
+      name: "Auditor Comunitário",
+      category: "title",
+      description: "Verificando e confirmando a exatidão dos registros de preço.",
+      price: 250,
+      minLevel: 3,
+      previewValue: "auditor",
+      config: JSON.stringify({ icon: "shield-checkmark", badgeColor: "#651FFF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 39,
+      name: "Detetive de Ofertas",
+      category: "title",
+      description: "Especialista em identificar grandes descontos e pechinchas.",
+      price: 350,
+      minLevel: 3,
+      previewValue: "detetive",
+      config: JSON.stringify({ icon: "compass", badgeColor: "#FF3D00", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 40,
+      name: "Curador Sênior",
+      category: "title",
+      description: "Curador experiente de preços e ofertas.",
+      price: 500,
+      minLevel: 4,
+      previewValue: "curador",
+      config: JSON.stringify({ icon: "ribbon", badgeColor: "#D500F9", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 41,
+      name: "Guardião da Economia",
+      category: "title",
+      description: "Defensor do bolso coletivo e da transparência de mercado.",
+      price: 500,
+      minLevel: 4,
+      previewValue: "guardiao_economia",
+      config: JSON.stringify({ icon: "shield", badgeColor: "#00B0FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 42,
+      name: "Mestre das Ofertas",
+      category: "title",
+      description: "Contribuidor de alto impacto com ampla cobertura de preços.",
+      price: 750,
+      minLevel: 4,
+      previewValue: "mestre",
+      config: JSON.stringify({ icon: "trophy", badgeColor: "#FFD700", textColor: "#273462" }),
+      isDefault: false,
+    },
+    {
+      id: 43,
+      name: "Guardião de Preços",
+      category: "title",
+      description: "Guardião da integridade de preços e ofertas.",
+      price: 1000,
+      minLevel: 5,
+      previewValue: "guardiao_precos",
+      config: JSON.stringify({ icon: "sparkles", badgeColor: "#FF9100", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 44,
+      name: "Radar de Preços",
+      category: "title",
+      description: "Monitoramento constante e atualizações ágeis no catálogo.",
+      price: 1000,
+      minLevel: 5,
+      previewValue: "radar",
+      config: JSON.stringify({ icon: "radio", badgeColor: "#00E5FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 45,
+      name: "Lendário",
+      category: "title",
+      description: "Reconhecimento lendário por dedicação contínua à comunidade.",
+      price: 1500,
+      minLevel: 6,
+      previewValue: "lendario",
+      config: JSON.stringify({ icon: "flame", badgeColor: "#FF1744", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 46,
+      name: "Patrono do Consumo",
+      category: "title",
+      description: "Patrono essencial que transforma a experiência de consumo.",
+      price: 2000,
+      minLevel: 6,
+      previewValue: "patrono",
+      config: JSON.stringify({ icon: "diamond", badgeColor: "#00E5FF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 47,
+      name: "Oráculo dos Mercados",
+      category: "title",
+      description: "Conhecimento profundo das tendências de preço e supermercados.",
+      price: 3000,
+      minLevel: 6,
+      previewValue: "oraculo",
+      config: JSON.stringify({ icon: "planet", badgeColor: "#7C4DFF", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 48,
+      name: "Soberano Imperial",
+      category: "title",
+      description: "Autoridade e prestígio máximo em colaboração de preços.",
+      price: 5000,
+      minLevel: 6,
+      previewValue: "soberano",
+      config: JSON.stringify({ icon: "ribbon", badgeColor: "#FFD700", textColor: "#273462" }),
+      isDefault: false,
+    },
+    {
+      id: 49,
+      name: "Mito Presco",
+      category: "title",
+      description: "Lenda viva eterna com contribuições históricas na plataforma.",
+      price: 10000,
+      minLevel: 6,
+      previewValue: "mito",
+      config: JSON.stringify({ icon: "infinite", badgeColor: "#FF007F", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
+    {
+      id: 50,
+      name: "Administrador Master",
+      category: "title",
+      description: "Acesso e autoridade administrativa completa no sistema Presco.",
+      price: 0,
+      minLevel: 99,
+      previewValue: "admin_master",
+      config: JSON.stringify({ icon: "shield-half", badgeColor: "#E6A100", textColor: "#FFFFFF" }),
+      isDefault: false,
+    },
   ];
 
   for (const item of defaultCustomizationItems) {
@@ -489,6 +732,7 @@ export async function seedDatabase() {
         equippedBannerId: 6, // Ouro Imperial
         equippedAvatarFrameId: 16, // Coroa Mítica
         equippedLevelFrameId: 25, // Soberano Supremo
+        equippedTitleId: 50, // Administrador Master
       })
       .returning();
 
@@ -497,7 +741,7 @@ export async function seedDatabase() {
       for (const b of defaultBadges) {
         await db.insert(userBadge).values({ userId: newAdmin.id, badgeId: b.id }).onConflictDoNothing();
       }
-      for (const itemId of [1, 10, 20, 6, 16, 25]) {
+      for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
         await db.insert(userCustomization).values({ userId: newAdmin.id, itemId }).onConflictDoNothing();
       }
     }
@@ -512,13 +756,14 @@ export async function seedDatabase() {
         equippedBannerId: existingAdmin.equippedBannerId || 6,
         equippedAvatarFrameId: existingAdmin.equippedAvatarFrameId || 16,
         equippedLevelFrameId: existingAdmin.equippedLevelFrameId || 25,
+        equippedTitleId: existingAdmin.equippedTitleId || 50,
       })
       .where(eq(user.id, existingAdmin.id));
 
     for (const b of defaultBadges) {
       await db.insert(userBadge).values({ userId: existingAdmin.id, badgeId: b.id }).onConflictDoNothing();
     }
-    for (const itemId of [1, 10, 20, 6, 16, 25]) {
+    for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
       await db.insert(userCustomization).values({ userId: existingAdmin.id, itemId }).onConflictDoNothing();
     }
   }
@@ -542,6 +787,7 @@ export async function seedDatabase() {
         equippedBannerId: 1, // Presco Selva
         equippedAvatarFrameId: 10, // Clássico
         equippedLevelFrameId: 20, // Distintivo Âmbar
+        equippedTitleId: 30, // Iniciante
       })
       .returning();
 
@@ -555,6 +801,7 @@ export async function seedDatabase() {
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 1 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 10 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
+      await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 30 }).onConflictDoNothing();
     }
     console.log("✅ [Seed] Created regular test user: usuario@presco.com / user123");
   } else {
@@ -567,6 +814,7 @@ export async function seedDatabase() {
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 1 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 10 }).onConflictDoNothing();
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 20 }).onConflictDoNothing();
+    await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 30 }).onConflictDoNothing();
   }
 
   // 7. Seed Rich Catalog of Products & Multi-Market Occurrences (Idempotent)

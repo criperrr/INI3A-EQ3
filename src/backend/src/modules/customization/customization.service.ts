@@ -29,8 +29,12 @@ class CustomizationServiceClass {
     const equipped = await CustomizationRepository.getUserEquippedCustomizations(Number(userId));
 
     const itemsWithStatus = allItems.map((item) => {
-      const isDefault = item.isDefault || item.price === 0;
-      const isOwned = isDefault || ownedItemIds.has(item.id);
+      const isDefault = item.isDefault || (item.price === 0 && item.minLevel === 1);
+      // Titles are unlocked automatically when level/points thresholds are met or owned in inventory
+      const isTitleUnlocked =
+        item.category === "title" &&
+        (isDefault || isSuperAdmin || (level >= item.minLevel && points >= item.price));
+      const isOwned = isDefault || isTitleUnlocked || ownedItemIds.has(item.id);
       
       let isEquipped = false;
       if (item.category === "banner") {
@@ -39,6 +43,8 @@ class CustomizationServiceClass {
         isEquipped = equipped?.avatarFrame?.id === item.id;
       } else if (item.category === "level_frame") {
         isEquipped = equipped?.levelFrame?.id === item.id;
+      } else if (item.category === "title") {
+        isEquipped = equipped?.title?.id === item.id;
       }
 
       let parsedConfig = {};
@@ -100,8 +106,11 @@ class CustomizationServiceClass {
       ]);
     }
 
-    const isDefault = item.isDefault || item.price === 0;
-    const isOwned = isDefault || (await CustomizationRepository.isItemOwnedByUser(Number(userId), itemId));
+    const isDefault = item.isDefault || (item.price === 0 && item.minLevel === 1);
+    const isTitleUnlocked =
+      item.category === "title" &&
+      (isDefault || isSuperAdmin || (level >= item.minLevel && points >= item.price));
+    const isOwned = isDefault || isTitleUnlocked || (await CustomizationRepository.isItemOwnedByUser(Number(userId), itemId));
     if (isOwned && !isDefault) {
       throw new ValidationError([
         {
@@ -130,6 +139,8 @@ class CustomizationServiceClass {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedAvatarFrameId: item.id });
     } else if (item.category === "level_frame") {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedLevelFrameId: item.id });
+    } else if (item.category === "title") {
+      await CustomizationRepository.updateUserEquipped(Number(userId), { equippedTitleId: item.id });
     }
 
     const updatedCatalog = await this.getShopCatalog(userId);
@@ -151,14 +162,21 @@ class CustomizationServiceClass {
       throw new NotFoundError("Item de personalização não encontrado.");
     }
 
-    const isDefault = item.isDefault || item.price === 0;
-    const isOwned = isDefault || (await CustomizationRepository.isItemOwnedByUser(Number(userId), itemId));
+    const points = user.points || 0;
+    const isSuperAdmin = user.roleId === 5 || (user.authority !== null && user.authority >= 10);
+    const level = this.calculateUserLevel(points, isSuperAdmin);
+
+    const isDefault = item.isDefault || (item.price === 0 && item.minLevel === 1);
+    const isTitleUnlocked =
+      item.category === "title" &&
+      (isDefault || isSuperAdmin || (level >= item.minLevel && points >= item.price));
+    const isOwned = isDefault || isTitleUnlocked || (await CustomizationRepository.isItemOwnedByUser(Number(userId), itemId));
 
     if (!isOwned) {
       throw new ValidationError([
         {
           field: "itemId",
-          message: "Você ainda não possui este item. Compre-o na loja para poder equipar.",
+          message: "Você ainda não desbloqueou este item. Alcance os requisitos necessários para poder equipar.",
         },
       ]);
     }
@@ -169,6 +187,8 @@ class CustomizationServiceClass {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedAvatarFrameId: item.id });
     } else if (item.category === "level_frame") {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedLevelFrameId: item.id });
+    } else if (item.category === "title") {
+      await CustomizationRepository.updateUserEquipped(Number(userId), { equippedTitleId: item.id });
     } else {
       throw new ValidationError([
         {
@@ -198,11 +218,13 @@ class CustomizationServiceClass {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedAvatarFrameId: null });
     } else if (category === "level_frame") {
       await CustomizationRepository.updateUserEquipped(Number(userId), { equippedLevelFrameId: null });
+    } else if (category === "title") {
+      await CustomizationRepository.updateUserEquipped(Number(userId), { equippedTitleId: null });
     } else {
       throw new ValidationError([
         {
           field: "category",
-          message: "Categoria inválida. Use 'banner', 'avatar_frame' ou 'level_frame'.",
+          message: "Categoria inválida. Use 'banner', 'avatar_frame', 'level_frame' ou 'title'.",
         },
       ]);
     }

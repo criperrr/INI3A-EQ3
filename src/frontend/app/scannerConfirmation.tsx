@@ -1,17 +1,20 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
   Platform,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme";
+import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
+import { fetchProductOccurrences } from "../services/ocurrencyService";
 import {
   getCategoryEmoji,
   getLocalizedCategoryName,
@@ -30,7 +33,10 @@ export default function ScannerConfirmation() {
   }>();
   const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
+  const { user } = useAuth();
   const { t } = useI18n();
+
+  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
 
   const product = {
     id: params.id,
@@ -42,7 +48,81 @@ export default function ScannerConfirmation() {
     ean: params.ean || params.barcode || "",
   };
 
+  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    if (dateInput instanceof Date) return dateInput.getTime();
+    let str = String(dateInput).trim();
+    if (str.includes(" ")) {
+      str = str.replace(" ", "T");
+    }
+    str = str.replace(/([+-]\d{2})$/, "$1:00");
+    const parsed = new Date(str).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    const fallback = new Date(dateInput).getTime();
+    return isNaN(fallback) ? 0 : fallback;
+  };
+
+  useEffect(() => {
+    if (!user?.id || !product.id) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchAndCheckCooldown = async () => {
+      try {
+        const occList = await fetchProductOccurrences(Number(product.id));
+        if (!isMounted) return;
+        const currentUserId = Number(user.id);
+        const userOcc = occList.find((occ) => {
+          if (Number(occ.userId) !== currentUserId) return false;
+          const createdMs = parseDateSafe(occ.createdAt);
+          if (!createdMs) return false;
+          const diff = Date.now() - createdMs;
+          return diff >= 0 && diff < 5 * 60 * 1000;
+        });
+
+        if (userOcc) {
+          const createdMs = parseDateSafe(userOcc.createdAt);
+          const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
+          setCooldownRemainingSeconds(remaining);
+        } else {
+          setCooldownRemainingSeconds(0);
+        }
+      } catch {}
+    };
+
+    fetchAndCheckCooldown();
+    const interval = setInterval(fetchAndCheckCooldown, 1000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user?.id, product.id]);
+
+  const isCooldownActive = cooldownRemainingSeconds > 0;
+
+  const formatCooldownTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
   const handleConfirm = () => {
+    if (isCooldownActive) {
+      if (Platform.OS !== "web") {
+        try {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        } catch {}
+      }
+      Alert.alert(
+        t("common.warning"),
+        t("products.cooldownError"),
+      );
+      return;
+    }
+
     if (Platform.OS !== "web") {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -324,19 +404,36 @@ export default function ScannerConfirmation() {
               style={[
                 styles.button,
                 styles.buttonConfirm,
-                { backgroundColor: accent, borderRadius: semantic.radius.pill },
+                isCooldownActive
+                  ? {
+                      backgroundColor: semantic.colors.surface.input,
+                      borderColor: semantic.colors.border.default,
+                      borderWidth: 1,
+                      opacity: 0.7,
+                    }
+                  : { backgroundColor: accent },
+                { borderRadius: semantic.radius.pill },
               ]}
-              activeOpacity={0.8}
+              activeOpacity={isCooldownActive ? 1 : 0.8}
               onPress={handleConfirm}
+              disabled={isCooldownActive}
             >
               <Ionicons
-                name="checkmark-sharp"
+                name={isCooldownActive ? "time-outline" : "checkmark-sharp"}
                 size={17}
-                color="#FFFFFF"
+                color={isCooldownActive ? semantic.colors.text.tertiary : "#FFFFFF"}
                 style={styles.buttonIcon}
               />
-              <Text style={styles.buttonConfirmText} numberOfLines={1}>
-                {t("common.yes")}
+              <Text
+                style={[
+                  styles.buttonConfirmText,
+                  isCooldownActive ? { color: semantic.colors.text.tertiary } : { color: "#FFFFFF" },
+                ]}
+                numberOfLines={1}
+              >
+                {isCooldownActive
+                  ? `${t("common.yes")} (${formatCooldownTime(cooldownRemainingSeconds)})`
+                  : t("common.yes")}
               </Text>
             </TouchableOpacity>
 

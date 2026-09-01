@@ -51,6 +51,8 @@ function getDefaultErrorDetails(status: number): { code: string; message: string
       return { code: "CONFLICT", message: "O recurso já existe ou conflita com dados atuais." };
     case 422:
       return { code: "VALIDATION_ERROR", message: "Dados fornecidos são inválidos." };
+    case 429:
+      return { code: "TOO_MANY_REQUESTS", message: "Muitas requisições. Aguarde alguns instantes antes de tentar novamente." };
     case 502:
     case 503:
     case 504:

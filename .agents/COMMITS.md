@@ -24,6 +24,115 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-01 11:12] - feat(profile): implement title customization category, sticky live preview, and organized category tabs
+
+- **Description:** Enhanced the profile customization system and shop modal with titles/roles support and a sticky preview header:
+  1. **Title Customization Category (`schema.ts`, `seed.ts`, `customization.service.ts`, `customizationService.ts`):** Added `equippedTitleId` foreign key to `user` table, seeded 21 initial titles/ranks across levels 1–6, and integrated title category handling across shop catalog, purchase, equip, and unequip workflows.
+  2. **Sticky Live Preview Header (`profile.tsx`):** Pinned the avatar live preview card, active preview indicator, and category switcher tabs in a fixed sticky top header (`stickyPreviewContainer`) so it remains permanently visible as users scroll through the item catalog.
+  3. **Title Pill & Live Preview Feedback (`profile.tsx`):** Added title badge pill directly in the live preview with dynamic icon and color accents. When previewing an unequipped item (banner, avatar frame, level badge, or title), a preview indicator badge is shown with a 1-tap reset button to restore equipped items.
+  4. **Organized Category Tabs & Cards (`profile.tsx`):** Added horizontal category selector chips with icons and categorized sections for *Títulos & Cargos*, *Fundos*, *Molduras*, and *Distintivos*.
+  5. **Multilingual i18n Localization:** Added translations for `tabTitles`, `customTitle`, `unlockedTitles`, and `previewingItem` across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`) and `types.ts`.
+  6. **Verification:** Verified database seeding (`npm run db:seed`), backend typecheck (`npm run typecheck`), and frontend compilation (`./src/backend/node_modules/.bin/tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/repositories/customization.repository.ts`
+  - `src/backend/src/shared/database/repositories/user.repository.ts`
+  - `src/backend/src/modules/customization/customization.service.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/frontend/services/customizationService.ts`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users can customize and preview their titles/ranks with a modern, organized shop modal and permanent sticky preview.
+
+## [2026-09-01 11:09] - feat(core): synchronize title customizations in seed/database and strengthen cooldown detection
+
+- **Description:** Synchronized profile titles and strengthened client-side cooldown guards:
+  1. **Profile Title Customizations (`schema.ts` & `seed.ts`):** Added `equipped_title_id` / `equippedTitleId` foreign key to `user` table. Seeded 21 titles/ranks (items 30–50) with unique identifiers and configured default title item #30 *Iniciante*. Updated `auth.service.ts` to grant default title on registration.
+  2. **Customization Services & Profile Un-equip (`customization.service.ts` & `profile.tsx`):** Updated `handleUnequip` and service category handlers to include `"title"`.
+  3. **Hermes-Safe Date Parsing & Loose Numeric ID Checks (`productDetails.tsx`, `registerProduct.tsx`, `scannerConfirmation.tsx`):** Implemented `parseDateSafe()` to guarantee proper parsing of timestamp strings across iOS/Android Hermes engines, ensuring cooldown calculation never evaluates to `NaN` and action buttons are reliably disabled.
+  4. **Verification:** Validated database seeding (`npm run db:seed`), database health checks (`npm run db:check`), and TypeScript compilation across frontend (`npx tsc --noEmit`) and backend (`npm run typecheck`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/backend/src/modules/customization/customization.service.ts`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Ensures seamless title customizations and guaranteed cooldown locking across all mobile platforms.
+
+## [2026-09-01 11:03] - feat(frontend): disable price addition button during cooldown with live countdown timer
+
+- **Description:** Disabled action buttons across screens to prevent users from attempting to enter the price submission flow during active cooldown:
+  1. **Product Details Screen (`productDetails.tsx`):**
+     - Computes active cooldown for the logged-in user against loaded product occurrences.
+     - Runs a 1-second live interval updater calculating `remainingCooldownSeconds`.
+     - Completely disables `primaryActionBtn` (`disabled={isCooldownActive}`) with muted surface background, tertiary text/icon colors, and dynamic remaining time countdown label: `Adicionar Preço (mm:ss)`.
+     - Displays an informative warning card (`cooldownNoticeBox`) below the button informing when the next submission will be allowed.
+     - Intercepts `handleRegisterPrice` to trigger warning haptics and alert if triggered programmatically.
+  2. **Register Product Screen (`registerProduct.tsx`):**
+     - Queries occurrences on mount and sets up real-time cooldown listener.
+     - Disables submit button with opacity, border styling, and countdown label `Enviar Preço (mm:ss)`.
+     - Adds guard in `handleRegister` and displays cooldown notice banner.
+  3. **Scanner Confirmation Screen (`scannerConfirmation.tsx`):**
+     - Verifies user's recent occurrences for the scanned product ID.
+     - Disables confirmation button with countdown `Sim (mm:ss)` and blocks navigation if in cooldown.
+  4. **Verification:** Validated TypeScript checks on frontend (`npx tsc --noEmit`) and backend (`npm run typecheck`) with 0 errors.
+- **Files Modified:**
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users are blocked on the UI layer before entering the form, providing clear feedback with real-time countdowns.
+
+## [2026-09-01 10:58] - feat(core): implement 5-minute price submission cooldown and product report system
+
+- **Description:** Implemented price spam prevention and user moderation reporting across the full stack:
+  1. **5-Minute Price Cooldown (`ocurrency.service.ts` & `ocurrency.repository.ts`):** Enforced a 5-minute (300 seconds) anti-spam cooldown per `(userId, productId)`. When an authenticated user submits a price report (`POST /ocurrency`), the backend checks if the user has already submitted a price for the same product in the last 5 minutes. If so, `TooManyRequestsError` (HTTP 429) is thrown with remaining minutes/seconds calculated dynamically.
+  2. **Product Report System (`product.routes.ts`, `product.controller.ts`, `product.service.ts`, `product.repository.ts`):** Added a new `POST /products/:id/report` endpoint protected with `requireAuth` and backed by the `product_report` Drizzle table (`id`, `userId`, `productId`, `reason`, `description`, `createdAt`). Updated `seedDatabase()` with idempotent DDL `CREATE TABLE IF NOT EXISTS product_report`.
+  3. **Interactive Product Report Modal (`productDetails.tsx`):** Added a discrete "Reportar" header button and interactive bottom sheet modal with 5 structured reasons (*Preço incorreto ou desatualizado*, *Informações do produto erradas*, *Produto duplicado ou inexistente*, *Conteúdo ofensivo/falso*, *Outro motivo*), optional text input for details, haptic touch feedback with `expo-haptics`, auth verification with 1-tap dev quick connect, and alert confirmations.
+  4. **Frontend Error Handling (`api.ts` & `registerProduct.tsx`):** Mapped status 429 in `api.ts` and enhanced `registerProduct.tsx` to handle 429 cooldown errors cleanly with warning dialogs.
+  5. **Multilingual i18n Synchronization:** Added comprehensive localization strings across all 7 supported languages (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`) and `types.ts`.
+  6. **Automated Verification:** Verified both cooldown blocking and report persistence with an automated script and validated frontend/backend TypeScript compilation (`tsc --noEmit`) with 0 errors.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Prevents spam and duplicate price submissions while empowering community members to report data errors and problematic listings.
+
 ## [2026-09-01 10:52] - feat(scanner): implement explanatory product not found alert with 3-action routing
 
 - **Description:** Replaced generic error messages when a product is not found with an informative, user-friendly alert providing clear next steps:

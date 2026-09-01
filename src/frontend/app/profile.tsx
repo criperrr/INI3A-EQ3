@@ -1112,7 +1112,7 @@ function CustomizationShopModal({
   t,
 }: CustomizationShopModalProps) {
   const { themeStyles } = useTheme();
-  const [selectedCategory, setSelectedCategory] = useState<"all" | "banner" | "avatar_frame" | "level_frame">("all");
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "banner" | "avatar_frame" | "level_frame" | "title">("all");
   const [previewCustomizations, setPreviewCustomizations] = useState<EquippedCustomizations | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
 
@@ -1131,17 +1131,52 @@ function CustomizationShopModal({
     return displayName.slice(0, 2).toUpperCase();
   }, [displayName]);
 
+  const isPreviewDifferent = useMemo(() => {
+    if (!catalog?.equipped || !previewCustomizations) return false;
+    return (
+      previewCustomizations.banner?.id !== catalog.equipped.banner?.id ||
+      previewCustomizations.avatarFrame?.id !== catalog.equipped.avatarFrame?.id ||
+      previewCustomizations.levelFrame?.id !== catalog.equipped.levelFrame?.id ||
+      previewCustomizations.title?.id !== catalog.equipped.title?.id
+    );
+  }, [catalog, previewCustomizations]);
+
+  const previewingItemName = useMemo(() => {
+    if (!isPreviewDifferent || !catalog?.equipped || !previewCustomizations) return null;
+    if (previewCustomizations.title?.id !== catalog.equipped.title?.id) {
+      return previewCustomizations.title?.name;
+    }
+    if (previewCustomizations.avatarFrame?.id !== catalog.equipped.avatarFrame?.id) {
+      return previewCustomizations.avatarFrame?.name;
+    }
+    if (previewCustomizations.levelFrame?.id !== catalog.equipped.levelFrame?.id) {
+      return previewCustomizations.levelFrame?.name;
+    }
+    if (previewCustomizations.banner?.id !== catalog.equipped.banner?.id) {
+      return previewCustomizations.banner?.name;
+    }
+    return null;
+  }, [isPreviewDifferent, catalog, previewCustomizations]);
+
   const categorizedSections = useMemo(() => {
     if (!catalog?.items) return [];
 
     const categories: {
-      key: "banner" | "avatar_frame" | "level_frame";
+      key: "banner" | "avatar_frame" | "level_frame" | "title";
       title: string;
       subtitle: string;
       icon: keyof typeof Ionicons.glyphMap;
       color: string;
       items: CustomizationItem[];
     }[] = [
+      {
+        key: "title",
+        title: t("profile.tabTitles"),
+        subtitle: t("profile.customTitle"),
+        icon: "medal",
+        color: "#FF9900",
+        items: catalog.items.filter((i) => i.category === "title"),
+      },
       {
         key: "banner",
         title: t("profile.tabBanners"),
@@ -1189,6 +1224,9 @@ function CustomizationShopModal({
       if (item.category === "level_frame") {
         return { ...prev, levelFrame: item };
       }
+      if (item.category === "title") {
+        return { ...prev, title: item };
+      }
       return prev;
     });
   };
@@ -1225,7 +1263,9 @@ function CustomizationShopModal({
     }
   };
 
-  const handleUnequip = async (category: "banner" | "avatar_frame" | "level_frame") => {
+  const handleUnequip = async (
+    category: "banner" | "avatar_frame" | "level_frame" | "title",
+  ) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       const res = await unequipCustomizationCategory(category);
@@ -1278,19 +1318,38 @@ function CustomizationShopModal({
             </Text>
           </View>
         ) : (
-          <ScrollView
-            contentContainerStyle={styles.shopScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Live Preview Mini-Stage */}
-            <View style={[styles.previewStageCard, themeStyles.card, themeStyles.border]}>
+          <View style={styles.shopBodyContainer}>
+            {/* Live Preview Sticky Top Section */}
+            <View style={[styles.stickyPreviewContainer, themeStyles.card, themeStyles.border]}>
               <View style={styles.previewStageHeader}>
-                <Ionicons name="eye" size={16} color={accent} />
-                <Text style={[styles.previewStageTitle, { color: accent }]}>
-                  {t("profile.livePreviewTitle")}
-                </Text>
+                <View style={styles.previewStageHeaderLeft}>
+                  <Ionicons name="eye" size={15} color={accent} />
+                  <Text style={[styles.previewStageTitle, { color: accent }]}>
+                    {t("profile.livePreviewTitle")}
+                  </Text>
+                </View>
+
+                {isPreviewDifferent && (
+                  <TouchableOpacity
+                    style={[styles.previewResetBadge, { backgroundColor: accent + "18", borderColor: accent + "40" }]}
+                    onPress={() => {
+                      if (catalog?.equipped) {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                        setPreviewCustomizations(catalog.equipped);
+                      }
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="refresh" size={12} color={accent} />
+                    <Text style={[styles.previewResetText, { color: accent }]} numberOfLines={1}>
+                      {t("profile.previewingItem")}: {previewingItemName || ""}
+                    </Text>
+                    <Ionicons name="close-circle" size={14} color={accent} />
+                  </TouchableOpacity>
+                )}
               </View>
 
+              {/* Mini-Stage with Banner + Avatar + Title Badge + Level Badge */}
               <View style={styles.previewMiniStage}>
                 <ProfileBanner banner={previewCustomizations?.banner} isAdmin={isAdmin} t={t} />
                 <View style={styles.previewAvatarWrapper}>
@@ -1300,295 +1359,291 @@ function CustomizationShopModal({
                     accent={accent}
                     frame={previewCustomizations?.avatarFrame}
                   />
-                  <LevelCustomBadge
-                    level={catalog?.userLevel ?? userLevel}
-                    isAdmin={isAdmin}
-                    levelFrame={previewCustomizations?.levelFrame}
-                    t={t}
-                  />
-                </View>
-              </View>
-
-              <Text style={[styles.previewDescText, themeStyles.subText]}>
-                {t("profile.livePreviewDesc")}
-              </Text>
-            </View>
-
-            {/* Category Switcher Tabs */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryTabsScroll}
-            >
-              <TouchableOpacity
-                style={[
-                  styles.categoryTabChip,
-                  themeStyles.card,
-                  themeStyles.border,
-                  selectedCategory === "all" && { backgroundColor: accent, borderColor: accent },
-                ]}
-                onPress={() => setSelectedCategory("all")}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.categoryTabChipText,
-                    themeStyles.text,
-                    selectedCategory === "all" && { color: "#FFFFFF", fontWeight: "bold" },
-                  ]}
-                >
-                  {t("profile.tabAll")}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.categoryTabChip,
-                  themeStyles.card,
-                  themeStyles.border,
-                  selectedCategory === "banner" && { backgroundColor: accent, borderColor: accent },
-                ]}
-                onPress={() => setSelectedCategory("banner")}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.categoryTabChipText,
-                    themeStyles.text,
-                    selectedCategory === "banner" && { color: "#FFFFFF", fontWeight: "bold" },
-                  ]}
-                >
-                  {t("profile.tabBanners")}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.categoryTabChip,
-                  themeStyles.card,
-                  themeStyles.border,
-                  selectedCategory === "avatar_frame" && { backgroundColor: accent, borderColor: accent },
-                ]}
-                onPress={() => setSelectedCategory("avatar_frame")}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.categoryTabChipText,
-                    themeStyles.text,
-                    selectedCategory === "avatar_frame" && { color: "#FFFFFF", fontWeight: "bold" },
-                  ]}
-                >
-                  {t("profile.tabAvatarFrames")}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.categoryTabChip,
-                  themeStyles.card,
-                  themeStyles.border,
-                  selectedCategory === "level_frame" && { backgroundColor: accent, borderColor: accent },
-                ]}
-                onPress={() => setSelectedCategory("level_frame")}
-                activeOpacity={0.8}
-              >
-                <Text
-                  style={[
-                    styles.categoryTabChipText,
-                    themeStyles.text,
-                    selectedCategory === "level_frame" && { color: "#FFFFFF", fontWeight: "bold" },
-                  ]}
-                >
-                  {t("profile.tabLevelFrames")}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-
-            {/* Catalog Items Grouped by Category */}
-            <View style={styles.catalogItemsList}>
-              {categorizedSections.map((section) => (
-                <View key={section.key} style={styles.categorySectionContainer}>
-                  {/* Category Header Card */}
-                  <View style={styles.categorySectionHeader}>
-                    <View style={styles.categorySectionHeaderLeft}>
-                      <View style={[styles.categorySectionIconBadge, { backgroundColor: section.color + "20" }]}>
-                        <Ionicons name={section.icon as any} size={16} color={section.color} />
-                      </View>
-                      <View style={styles.categorySectionTitleCol}>
-                        <Text style={[styles.categorySectionTitle, themeStyles.text]} numberOfLines={1}>
-                          {section.title}
-                        </Text>
-                        <Text style={[styles.categorySectionSubtitle, themeStyles.subText]} numberOfLines={1}>
-                          {section.subtitle}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.categoryCountBadge}>
-                      <Text style={[styles.categoryCountText, themeStyles.subText]}>
-                        {section.items.length}
+                  <View style={styles.previewBadgeRow}>
+                    <LevelCustomBadge
+                      level={catalog?.userLevel ?? userLevel}
+                      isAdmin={isAdmin}
+                      levelFrame={previewCustomizations?.levelFrame}
+                      t={t}
+                    />
+                    <View
+                      style={[
+                        styles.previewTitlePill,
+                        {
+                          backgroundColor:
+                            (previewCustomizations?.title?.config as any)?.badgeColor
+                              ? (previewCustomizations?.title?.config as any).badgeColor + "25"
+                              : accent + "25",
+                          borderColor:
+                            (previewCustomizations?.title?.config as any)?.badgeColor || accent,
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          ((previewCustomizations?.title?.config as any)?.icon || "medal") as any
+                        }
+                        size={11}
+                        color={
+                          (previewCustomizations?.title?.config as any)?.badgeColor || accent
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.previewTitlePillText,
+                          {
+                            color:
+                              (previewCustomizations?.title?.config as any)?.badgeColor || accent,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {previewCustomizations?.title?.name || "Iniciante"}
                       </Text>
                     </View>
                   </View>
+                </View>
+              </View>
 
-                  {/* Category Items List */}
-                  <View style={styles.categoryItemsStack}>
-                    {section.items.map((item) => {
-                      const isCurrentlyPreviewed =
-                        (item.category === "banner" && previewCustomizations?.banner?.id === item.id) ||
-                        (item.category === "avatar_frame" && previewCustomizations?.avatarFrame?.id === item.id) ||
-                        (item.category === "level_frame" && previewCustomizations?.levelFrame?.id === item.id);
+              {/* Category Switcher Tabs */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryTabsScroll}
+              >
+                {[
+                  { key: "all", label: t("profile.tabAll"), icon: "apps" },
+                  { key: "title", label: t("profile.tabTitles"), icon: "medal" },
+                  { key: "banner", label: t("profile.tabBanners"), icon: "color-palette" },
+                  { key: "avatar_frame", label: t("profile.tabAvatarFrames"), icon: "scan-circle" },
+                  { key: "level_frame", label: t("profile.tabLevelFrames"), icon: "ribbon" },
+                ].map((tab) => {
+                  const isSelected = selectedCategory === tab.key;
+                  return (
+                    <TouchableOpacity
+                      key={tab.key}
+                      style={[
+                        styles.categoryTabChip,
+                        themeStyles.inputBg,
+                        themeStyles.border,
+                        isSelected && { backgroundColor: accent, borderColor: accent },
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync().catch(() => {});
+                        setSelectedCategory(tab.key as any);
+                      }}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={tab.icon as any}
+                        size={13}
+                        color={isSelected ? "#FFFFFF" : themeStyles.subText.color}
+                      />
+                      <Text
+                        style={[
+                          styles.categoryTabChipText,
+                          themeStyles.text,
+                          isSelected && { color: "#FFFFFF", fontWeight: "bold" },
+                        ]}
+                      >
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
 
-                      const isActionLoading = actionLoadingId === item.id;
+            {/* Scrollable Catalog Items List */}
+            <ScrollView
+              contentContainerStyle={styles.shopScrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.catalogItemsList}>
+                {categorizedSections.map((section) => (
+                  <View key={section.key} style={styles.categorySectionContainer}>
+                    {/* Category Header Card */}
+                    <View style={styles.categorySectionHeader}>
+                      <View style={styles.categorySectionHeaderLeft}>
+                        <View style={[styles.categorySectionIconBadge, { backgroundColor: section.color + "20" }]}>
+                          <Ionicons name={section.icon as any} size={16} color={section.color} />
+                        </View>
+                        <View style={styles.categorySectionTitleCol}>
+                          <Text style={[styles.categorySectionTitle, themeStyles.text]} numberOfLines={1}>
+                            {section.title}
+                          </Text>
+                          <Text style={[styles.categorySectionSubtitle, themeStyles.subText]} numberOfLines={1}>
+                            {section.subtitle}
+                          </Text>
+                        </View>
+                      </View>
 
-                      return (
-                        <TouchableOpacity
-                          key={item.id}
-                          style={[
-                            styles.itemCard,
-                            themeStyles.card,
-                            themeStyles.border,
-                            isCurrentlyPreviewed && { borderColor: accent, borderWidth: 2 },
-                          ]}
-                          activeOpacity={0.85}
-                          onPress={() => handlePreviewItem(item)}
-                        >
-                          {/* Item Card Header / Swatch */}
-                          <View style={styles.itemCardTopRow}>
-                            <View style={styles.itemSwatchCircle}>
-                              <ItemCategoryIcon item={item} accent={accent} />
-                            </View>
+                      <View style={styles.categoryCountBadge}>
+                        <Text style={[styles.categoryCountText, themeStyles.subText]}>
+                          {section.items.length}
+                        </Text>
+                      </View>
+                    </View>
 
-                            <View style={styles.itemInfoCol}>
-                              <View style={styles.itemNameRow}>
-                                <Text style={[styles.itemCardName, themeStyles.text]} numberOfLines={1}>
-                                  {item.name}
-                                </Text>
-                                {item.isEquipped && (
-                                  <View style={styles.equippedCheckPill}>
-                                    <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
-                                    <Text style={styles.equippedCheckText}>
-                                      {t("profile.equipped")}
-                                    </Text>
-                                  </View>
-                                )}
+                    {/* Category Items List */}
+                    <View style={styles.categoryItemsStack}>
+                      {section.items.map((item) => {
+                        const isCurrentlyPreviewed =
+                          (item.category === "banner" && previewCustomizations?.banner?.id === item.id) ||
+                          (item.category === "avatar_frame" && previewCustomizations?.avatarFrame?.id === item.id) ||
+                          (item.category === "level_frame" && previewCustomizations?.levelFrame?.id === item.id) ||
+                          (item.category === "title" && previewCustomizations?.title?.id === item.id);
+
+                        const isActionLoading = actionLoadingId === item.id;
+
+                        return (
+                          <TouchableOpacity
+                            key={item.id}
+                            style={[
+                              styles.itemCard,
+                              themeStyles.card,
+                              themeStyles.border,
+                              isCurrentlyPreviewed && { borderColor: accent, borderWidth: 2 },
+                            ]}
+                            activeOpacity={0.85}
+                            onPress={() => handlePreviewItem(item)}
+                          >
+                            {/* Item Card Header / Swatch */}
+                            <View style={styles.itemCardTopRow}>
+                              <View style={styles.itemSwatchCircle}>
+                                <ItemCategoryIcon item={item} accent={accent} />
                               </View>
 
-                              <Text style={[styles.itemCardDesc, themeStyles.subText]} numberOfLines={2}>
-                                {item.description}
-                              </Text>
-                            </View>
-                          </View>
+                              <View style={styles.itemInfoCol}>
+                                <View style={styles.itemNameRow}>
+                                  <Text style={[styles.itemCardName, themeStyles.text]} numberOfLines={1}>
+                                    {item.name}
+                                  </Text>
+                                  {item.isEquipped && (
+                                    <View style={styles.equippedCheckPill}>
+                                      <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
+                                      <Text style={styles.equippedCheckText}>
+                                        {t("profile.equipped")}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
 
-                          {/* Item Requirements & Action Bottom Row */}
-                          <View style={styles.itemCardBottomRow}>
-                            <View style={styles.itemMetaLeft}>
-                              <View
-                                style={[
-                                  styles.itemPriceTag,
-                                  {
-                                    backgroundColor: item.price === 0 ? "#4CAF5015" : COLORS.gold + "18",
-                                    borderColor: item.price === 0 ? "#4CAF5040" : COLORS.gold + "50",
-                                  },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.itemPriceTagText,
-                                    { color: item.price === 0 ? "#4CAF50" : COLORS.gold },
-                                  ]}
-                                >
-                                  {item.price === 0 ? t("profile.free") : t("profile.pointsCost", { points: item.price })}
+                                <Text style={[styles.itemCardDesc, themeStyles.subText]} numberOfLines={2}>
+                                  {item.description}
                                 </Text>
                               </View>
+                            </View>
 
-                              {item.minLevel > 1 && (
+                            {/* Item Requirements & Action Bottom Row */}
+                            <View style={styles.itemCardBottomRow}>
+                              <View style={styles.itemMetaLeft}>
                                 <View
                                   style={[
-                                    styles.itemLevelReqChip,
+                                    styles.itemPriceTag,
                                     {
-                                      backgroundColor: item.meetsLevel ? "#4CAF5010" : "#FF525215",
-                                      borderColor: item.meetsLevel ? "#4CAF5030" : "#FF525230",
+                                      backgroundColor: item.price === 0 ? "#4CAF5015" : COLORS.gold + "18",
+                                      borderColor: item.price === 0 ? "#4CAF5040" : COLORS.gold + "50",
                                     },
                                   ]}
                                 >
                                   <Text
                                     style={[
-                                      styles.itemLevelReqText,
-                                      { color: item.meetsLevel ? "#4CAF50" : "#FF5252" },
+                                      styles.itemPriceTagText,
+                                      { color: item.price === 0 ? "#4CAF50" : COLORS.gold },
                                     ]}
                                   >
-                                    {t("profile.levelRequired", { level: item.minLevel })}
+                                    {item.price === 0 ? t("profile.free") : t("profile.pointsCost", { points: item.price })}
                                   </Text>
                                 </View>
-                              )}
-                            </View>
 
-                            {/* Action Button */}
-                            <View style={styles.itemActionsRight}>
-                              {isActionLoading ? (
-                                <ActivityIndicator size="small" color={accent} style={{ paddingHorizontal: 16 }} />
-                              ) : item.isEquipped ? (
-                                !item.isDefault ? (
-                                  <TouchableOpacity
-                                    style={[styles.unequipBtn, themeStyles.inputBg]}
-                                    onPress={() => handleUnequip(item.category)}
-                                    activeOpacity={0.8}
+                                {item.minLevel > 1 && (
+                                  <View
+                                    style={[
+                                      styles.itemLevelReqChip,
+                                      {
+                                        backgroundColor: item.meetsLevel ? "#4CAF5010" : "#FF525215",
+                                        borderColor: item.meetsLevel ? "#4CAF5030" : "#FF525230",
+                                      },
+                                    ]}
                                   >
-                                    <Text style={[styles.unequipBtnText, themeStyles.subText]}>
-                                      {t("profile.unequip")}
-                                    </Text>
-                                  </TouchableOpacity>
-                                ) : (
-                                  <View style={[styles.actionBadgePill, { backgroundColor: "#4CAF5020" }]}>
-                                    <Text style={[styles.actionBadgeText, { color: "#4CAF50" }]}>
-                                      {t("profile.equipped")}
+                                    <Text
+                                      style={[
+                                        styles.itemLevelReqText,
+                                        { color: item.meetsLevel ? "#4CAF50" : "#FF5252" },
+                                      ]}
+                                    >
+                                      {t("profile.levelRequired", { level: item.minLevel })}
                                     </Text>
                                   </View>
-                                )
-                              ) : item.isOwned ? (
-                                <TouchableOpacity
-                                  style={[styles.equipBtn, { backgroundColor: accent }]}
-                                  onPress={() => handleEquip(item)}
-                                  activeOpacity={0.8}
-                                >
-                                  <Ionicons name="shirt-outline" size={14} color="#FFFFFF" />
-                                  <Text style={styles.equipBtnText}>{t("profile.equip")}</Text>
-                                </TouchableOpacity>
-                              ) : !item.meetsLevel ? (
-                                <View style={[styles.actionBadgePill, { backgroundColor: "#FF525215" }]}>
-                                  <Ionicons name="lock-closed" size={12} color="#FF5252" />
-                                  <Text style={[styles.actionBadgeText, { color: "#FF5252" }]}>
-                                    {t("profile.locked")}
-                                  </Text>
-                                </View>
-                              ) : !item.canAfford ? (
-                                <View style={[styles.actionBadgePill, { backgroundColor: "#88888820" }]}>
-                                  <Text style={[styles.actionBadgeText, themeStyles.subText]}>
-                                    {t("profile.insufficientPoints")}
-                                  </Text>
-                                </View>
-                              ) : (
-                                <TouchableOpacity
-                                  style={[styles.buyBtn, { backgroundColor: COLORS.gold }]}
-                                  onPress={() => handleBuy(item)}
-                                  activeOpacity={0.8}
-                                >
-                                  <Ionicons name="cart" size={14} color="#273462" />
-                                  <Text style={styles.buyBtnText}>{t("profile.buy")}</Text>
-                                </TouchableOpacity>
-                              )}
+                                )}
+                              </View>
+
+                              {/* Action Button */}
+                              <View style={styles.itemActionsRight}>
+                                {isActionLoading ? (
+                                  <ActivityIndicator size="small" color={accent} style={{ paddingHorizontal: 16 }} />
+                                ) : item.isEquipped ? (
+                                  !item.isDefault ? (
+                                    <TouchableOpacity
+                                      style={[styles.unequipBtn, themeStyles.inputBg]}
+                                      onPress={() => handleUnequip(item.category)}
+                                      activeOpacity={0.8}
+                                    >
+                                      <Text style={[styles.unequipBtnText, themeStyles.subText]}>
+                                        {t("profile.unequip")}
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ) : (
+                                    <View style={[styles.actionBadgePill, { backgroundColor: "#4CAF5020" }]}>
+                                      <Text style={[styles.actionBadgeText, { color: "#4CAF50" }]}>
+                                        {t("profile.equipped")}
+                                      </Text>
+                                    </View>
+                                  )
+                                ) : item.isOwned ? (
+                                  <TouchableOpacity
+                                    style={[styles.equipBtn, { backgroundColor: accent }]}
+                                    onPress={() => handleEquip(item)}
+                                    activeOpacity={0.8}
+                                  >
+                                    <Ionicons name="shirt-outline" size={14} color="#FFFFFF" />
+                                    <Text style={styles.equipBtnText}>{t("profile.equip")}</Text>
+                                  </TouchableOpacity>
+                                ) : !item.meetsLevel ? (
+                                  <View style={[styles.actionBadgePill, { backgroundColor: "#FF525215" }]}>
+                                    <Ionicons name="lock-closed" size={12} color="#FF5252" />
+                                    <Text style={[styles.actionBadgeText, { color: "#FF5252" }]}>
+                                      {t("profile.locked")}
+                                    </Text>
+                                  </View>
+                                ) : !item.canAfford ? (
+                                  <View style={[styles.actionBadgePill, { backgroundColor: "#88888820" }]}>
+                                    <Text style={[styles.actionBadgeText, themeStyles.subText]}>
+                                      {t("profile.insufficientPoints")}
+                                    </Text>
+                                  </View>
+                                ) : (
+                                  <TouchableOpacity
+                                    style={[styles.buyBtn, { backgroundColor: COLORS.gold }]}
+                                    onPress={() => handleBuy(item)}
+                                    activeOpacity={0.8}
+                                  >
+                                    <Ionicons name="cart" size={14} color="#273462" />
+                                    <Text style={styles.buyBtnText}>{t("profile.buy")}</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
                             </View>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
                   </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
         )}
       </View>
     </Modal>
@@ -1624,6 +1679,10 @@ const ItemCategoryIcon = memo(function ItemCategoryIcon({
   if (item.category === "level_frame") {
     const iconName = config.icon || "ribbon";
     return <Ionicons name={iconName as any} size={22} color={config.bg || accent} />;
+  }
+  if (item.category === "title") {
+    const iconName = config.icon || "medal";
+    return <Ionicons name={iconName as any} size={22} color={config.badgeColor || accent} />;
   }
   return <Ionicons name="sparkles" size={22} color={accent} />;
 });
@@ -2383,45 +2442,94 @@ const styles = StyleSheet.create({
   modalHeaderRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   closeBtn: { padding: 4 },
   shopScrollContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 },
-  previewStageCard: {
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    marginBottom: 16,
-    alignItems: "center",
+  shopBodyContainer: {
+    flex: 1,
+  },
+  stickyPreviewContainer: {
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 4,
+    zIndex: 100,
   },
   previewStageHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-    alignSelf: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 8,
   },
-  previewStageTitle: { fontSize: 12, fontWeight: "bold", letterSpacing: 0.5 },
+  previewStageHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  previewStageTitle: { fontSize: 11.5, fontWeight: "bold", letterSpacing: 0.5 },
+  previewResetBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2.5,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  previewResetText: {
+    fontSize: 10,
+    fontWeight: "600",
+    maxWidth: 160,
+  },
   previewMiniStage: {
     width: "100%",
-    height: 140,
+    height: 124,
     borderRadius: 14,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   previewAvatarWrapper: {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
   },
+  previewBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  previewTitlePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 10,
+    borderWidth: 1,
+    maxWidth: 150,
+  },
+  previewTitlePillText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
   previewDescText: { fontSize: 11, textAlign: "center", lineHeight: 16 },
-  categoryTabsScroll: { gap: 8, marginBottom: 16 },
+  categoryTabsScroll: { gap: 8, paddingVertical: 2 },
   categoryTabChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 18,
     borderWidth: 1,
   },
-  categoryTabChipText: { fontSize: 12, fontWeight: "600" },
+  categoryTabChipText: { fontSize: 11.5, fontWeight: "600" },
   catalogItemsList: { gap: 16 },
   categorySectionContainer: {
     marginBottom: 16,

@@ -13,6 +13,7 @@ router.get("/barcode/:ean", searchRateLimiter, productController.getProductByBar
 router.get("/barcode", searchRateLimiter, productController.getProductByBarcode);
 router.get("/:id", productController.getProductById);
 router.get("/:id/history", productController.getPriceHistory);
+router.post("/:id/report", requireAuth as any, productController.reportProduct as any);
 router.post("/custom", requireAuth as any, productController.createCustomProduct);
 router.post("/", requireAuth as any, productController.createCustomProduct);
 router.put("/:id", requireAdmin as any, productController.updateProduct);

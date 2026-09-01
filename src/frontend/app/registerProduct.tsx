@@ -19,7 +19,7 @@ import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan, fetchProductById, ProductData } from "../services/productService";
 import { fetchMarkets, MarketData } from "../services/marketService";
-import { submitPriceOccurrence } from "../services/ocurrencyService";
+import { submitPriceOccurrence, fetchProductOccurrences } from "../services/ocurrencyService";
 import { getUserLocation } from "../utils/userLocation";
 
 const FALLBACK_PRODUCT = {
@@ -38,6 +38,7 @@ export default function RegisterProduct() {
   const [markets, setMarkets] = useState<MarketData[]>([]);
   const [selectedMarketId, setSelectedMarketId] = useState<number>(0);
   const [hasLocation, setHasLocation] = useState(false);
+  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
   const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string;
@@ -131,6 +132,68 @@ export default function RegisterProduct() {
         .finally(() => setIsLoading(false));
     }
   }, [targetEan, targetId]);
+
+  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
+    if (!dateInput) return 0;
+    if (typeof dateInput === "number") return dateInput;
+    if (dateInput instanceof Date) return dateInput.getTime();
+    let str = String(dateInput).trim();
+    if (str.includes(" ")) {
+      str = str.replace(" ", "T");
+    }
+    str = str.replace(/([+-]\d{2})$/, "$1:00");
+    const parsed = new Date(str).getTime();
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    const fallback = new Date(dateInput).getTime();
+    return isNaN(fallback) ? 0 : fallback;
+  };
+
+  useEffect(() => {
+    const effectiveId = product?.id || targetId;
+    if (!user?.id || !effectiveId) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchAndCheckCooldown = async () => {
+      try {
+        const occList = await fetchProductOccurrences(effectiveId);
+        if (!isMounted) return;
+        const currentUserId = Number(user.id);
+        const userOcc = occList.find((occ) => {
+          if (Number(occ.userId) !== currentUserId) return false;
+          const createdMs = parseDateSafe(occ.createdAt);
+          if (!createdMs) return false;
+          const diff = Date.now() - createdMs;
+          return diff >= 0 && diff < 5 * 60 * 1000;
+        });
+
+        if (userOcc) {
+          const createdMs = parseDateSafe(userOcc.createdAt);
+          const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
+          setCooldownRemainingSeconds(remaining);
+        } else {
+          setCooldownRemainingSeconds(0);
+        }
+      } catch {}
+    };
+
+    fetchAndCheckCooldown();
+    const interval = setInterval(fetchAndCheckCooldown, 1000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user?.id, product?.id, targetId]);
+
+  const isCooldownActive = cooldownRemainingSeconds > 0;
+
+  const formatCooldownTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
 
   const handlePriceChange = (text: string) => {
     const cleanDigits = text.replace(/\D/g, "");
@@ -232,6 +295,11 @@ export default function RegisterProduct() {
         return;
       }
 
+      if (err?.status === 429 || err?.code === "TOO_MANY_REQUESTS") {
+        Alert.alert(t("common.warning"), err.message || t("products.cooldownError"));
+        return;
+      }
+
       Alert.alert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setIsSubmitting(false);
@@ -275,6 +343,14 @@ export default function RegisterProduct() {
     if (!effectiveProductId) {
       Alert.alert(t("common.warning"), t("errors.notFound"));
       setIsSubmitting(false);
+      return;
+    }
+
+    if (isCooldownActive) {
+      Alert.alert(
+        t("common.warning"),
+        t("products.cooldownError"),
+      );
       return;
     }
 
@@ -914,43 +990,75 @@ export default function RegisterProduct() {
               style={[
                 styles.registerButton,
                 {
-                  backgroundColor: accent,
+                  backgroundColor: isCooldownActive ? semantic.colors.surface.input : accent,
+                  borderColor: isCooldownActive ? semantic.colors.border.default : accent,
+                  borderWidth: isCooldownActive ? 1 : 0,
                   borderRadius: semantic.radius.button,
                   height: semantic.spacing.buttonHeight,
                   ...semantic.elevation.button,
                 },
-                isSubmitting && styles.registerButtonDisabled,
+                (isSubmitting || isCooldownActive) && styles.registerButtonDisabled,
               ]}
               activeOpacity={0.8}
               onPress={handleRegister}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isCooldownActive}
             >
               {isSubmitting ? (
                 <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
               ) : (
                 <>
                   <Ionicons
-                    name="checkmark-circle-outline"
+                    name={isCooldownActive ? "time-outline" : "checkmark-circle-outline"}
                     size={22}
-                    color={semantic.colors.text.inverse}
+                    color={isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse}
                     style={styles.buttonIcon}
                   />
                   <Text
                     style={[
                       styles.registerButtonText,
                       {
-                        color: semantic.colors.text.inverse,
+                        color: isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse,
                         ...semantic.typography.button,
                       },
                     ]}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
-                    {`${t("products.submitPrice")} (+15 XP)`}
+                    {isCooldownActive
+                      ? `${t("products.submitPrice")} (${formatCooldownTime(cooldownRemainingSeconds)})`
+                      : `${t("products.submitPrice")} (+15 XP)`}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
+
+            {isCooldownActive && (
+              <View
+                style={[
+                  styles.rewardNotice,
+                  {
+                    backgroundColor: semantic.colors.surface.input,
+                    borderColor: semantic.colors.border.default,
+                    borderRadius: semantic.radius.chip,
+                    padding: semantic.spacing.elementGap,
+                    marginTop: semantic.spacing.itemGap,
+                  },
+                ]}
+              >
+                <Ionicons name="hourglass-outline" size={18} color="#E6A100" />
+                <Text
+                  style={[
+                    styles.rewardText,
+                    {
+                      color: semantic.colors.text.secondary,
+                      ...semantic.typography.caption,
+                    },
+                  ]}
+                >
+                  {t("products.cooldownNotice")} ({formatCooldownTime(cooldownRemainingSeconds)})
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </View>

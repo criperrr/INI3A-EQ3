@@ -22,6 +22,7 @@ Routes:
 - `GET /products/barcode/:ean` — lookup product by EAN (local DB → OpenFoodFacts fallback with auto-cache)
 - `GET /products/:id` — get product details with latest price, min/max/avg statistics and occurrence history
 - `GET /products/:id/history` — get price history timeline for charts
+- `POST /products/:id/report` — report product/price issues with structured reason (requireAuth)
 - `POST /products/custom` / `POST /products` — create product (+25 XP for user, requireAuth)
 - `PUT /products/:id` / `PATCH /products/:id` — update product (requireAdmin)
 - `DELETE /products/:id` — delete product from database (requireAdmin)
@@ -201,6 +202,7 @@ Direct relative paths from project root.
 - [x] Strict Local Market Scope for Promotions & Catalog Metadata Normalization (`product.repository.ts` scoped price stats strictly to markets within user's radius preventing phantom promotion badges, normalized ID 68 to "Caneta Esferográfica Laranja" with HD image, and updated foreign categories).
 - [x] Fixed 2-Column Grid Sizing & Elimination of Yoga Layout Collapse (`search.tsx` replaced flex: 1 / maxWidth with explicit `width: "48.2%"` and removed conflicting gap from `columnWrapper`, guaranteeing full-width cards and preventing capsule-like lateral shrinkage).
 - [x] Explanatory Product Not Found Alert & 3-Way Action Routing (`scannerProduct.tsx` and `manualEanSearch.tsx` refactored to replace generic error messages with an informative, user-friendly alert when a product is missing from the database, offering 3 distinct actionable routes: "Cadastrar Produto" (+25 XP), "Digitar Código / Digitar Novamente", and "Escanear Novamente / Escanear pela Câmera", synchronized across all 7 supported languages).
+- [x] Profile Title Customization Category & Sticky Live Preview Modal (extended `user` schema with `equippedTitleId`, seeded 21 initial titles/ranks across levels 1–6, synchronized default title item #30 *Iniciante*, updated `CustomizationRepository`, `auth.service.ts`, `customization.service.ts`, `customizationService.ts`, all 7 locale files, and redesigned `CustomizationShopModal` in `profile.tsx` with a sticky preview header, title pill badge, category switcher, preview reset indicator, and category cards).
 
 ---
 

@@ -11,12 +11,13 @@ export interface CustomizationItemConfig {
   bg?: string;
   textColor?: string;
   icon?: string;
+  badgeColor?: string;
 }
 
 export interface CustomizationItem {
   id: number;
   name: string;
-  category: "banner" | "avatar_frame" | "level_frame";
+  category: "banner" | "avatar_frame" | "level_frame" | "title";
   description: string | null;
   price: number;
   minLevel: number;
@@ -33,6 +34,7 @@ export interface EquippedCustomizations {
   banner: CustomizationItem | null;
   avatarFrame: CustomizationItem | null;
   levelFrame: CustomizationItem | null;
+  title?: CustomizationItem | null;
 }
 
 export interface ShopCatalogData {
@@ -83,7 +85,7 @@ export async function equipCustomizationItem(
  * Unequips a customization category and returns to default.
  */
 export async function unequipCustomizationCategory(
-  category: "banner" | "avatar_frame" | "level_frame",
+  category: "banner" | "avatar_frame" | "level_frame" | "title",
 ): Promise<CustomizationActionResult> {
   return apiRequest<CustomizationActionResult>(`/customizations/unequip/${category}`, {
     method: "POST",

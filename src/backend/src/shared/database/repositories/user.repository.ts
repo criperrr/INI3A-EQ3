@@ -20,6 +20,7 @@ class UserRepositoryClass {
         equippedBannerId: user.equippedBannerId ?? 1,
         equippedAvatarFrameId: user.equippedAvatarFrameId ?? 10,
         equippedLevelFrameId: user.equippedLevelFrameId ?? 20,
+        equippedTitleId: user.equippedTitleId ?? 30,
       })
       .returning({
         id: User.id,
@@ -91,6 +92,7 @@ class UserRepositoryClass {
         equippedBannerId: User.equippedBannerId,
         equippedAvatarFrameId: User.equippedAvatarFrameId,
         equippedLevelFrameId: User.equippedLevelFrameId,
+        equippedTitleId: User.equippedTitleId,
         createdAt: User.createdAt,
         updatedAt: User.updatedAt,
         roleName: schema.role.name,

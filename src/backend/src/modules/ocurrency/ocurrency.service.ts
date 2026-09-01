@@ -2,7 +2,7 @@ import { OcurrencyRepository } from "@/shared/database/repositories/ocurrency.re
 import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
-import { NotFoundError, ForbiddenError, ValidationError } from "@/shared/errors/errors";
+import { NotFoundError, ForbiddenError, ValidationError, TooManyRequestsError } from "@/shared/errors/errors";
 
 class OcurrencyServiceClass {
   async create(data: {
@@ -26,6 +26,30 @@ class OcurrencyServiceClass {
     const market = await MarketRepository.getMarket(data.marketId);
     if (!market || market.length === 0) {
       throw new NotFoundError("Mercado não encontrado.");
+    }
+
+    // Cooldown check: prevent submitting 2 prices for the same product within 5 minutes (300 seconds)
+    const COOLDOWN_MS = 5 * 60 * 1000;
+    const recentOccurrence = await OcurrencyRepository.findRecentByUserAndProduct(
+      data.userId,
+      data.productId,
+      COOLDOWN_MS,
+    );
+
+    if (recentOccurrence) {
+      const recentTime = new Date(recentOccurrence.createdAt).getTime();
+      const elapsedMs = Date.now() - recentTime;
+      const remainingSeconds = Math.max(1, Math.ceil((COOLDOWN_MS - elapsedMs) / 1000));
+      const remainingMinutes = Math.ceil(remainingSeconds / 60);
+
+      const timeMsg =
+        remainingSeconds > 60
+          ? `${remainingMinutes} minuto${remainingMinutes > 1 ? "s" : ""}`
+          : `${remainingSeconds} segundo${remainingSeconds > 1 ? "s" : ""}`;
+
+      throw new TooManyRequestsError(
+        `Você já enviou um preço para este produto recentemente. Aguarde ${timeMsg} antes de enviar novamente.`,
+      );
     }
 
     const [created] = await OcurrencyRepository.create({
