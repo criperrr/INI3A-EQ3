@@ -8,8 +8,10 @@ class MarketServiceClass {
     if (params?.latitude !== undefined && params?.longitude !== undefined) {
       const radius = params.radius || 15000;
 
-      // Dynamically discover and sync local real-world supermarkets from OpenStreetMap
-      await OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius);
+      // Fire-and-forget: discover and sync local OSM markets in background.
+      // Does NOT block the response — DB markets return instantly while OSM
+      // populates new ones for subsequent requests.
+      OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius).catch(() => {});
 
       if (params.radius) {
         markets = await MarketRepository.getMarketsByRadius(
