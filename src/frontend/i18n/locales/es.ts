@@ -433,6 +433,8 @@ export const es: TranslationSchema = {
     viewOnMap: "Ver Rutas en el Mapa",
     unavailableOnWeb: "Mapa no disponible en la web",
     mobileOnlyNotice: "El mapa interactivo está disponible en la aplicación móvil.",
+    requiresDevBuild: "Mapa no disponible en Expo Go",
+    requiresDevBuildDesc: "El mapa utiliza funciones nativas que requieren un Development Build. Instala via EAS o ejecuta: npx expo run:android / npx expo run:ios.",
     typeAll: "Todos los Establecimientos",
     typeSupermarket: "Supermercados",
     typeConvenience: "Tiendas y Tiendas Locales",

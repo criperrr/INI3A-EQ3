@@ -431,6 +431,8 @@ export interface TranslationSchema {
     viewOnMap: string;
     unavailableOnWeb: string;
     mobileOnlyNotice: string;
+    requiresDevBuild: string;
+    requiresDevBuildDesc: string;
     typeAll: string;
     typeSupermarket: string;
     typeConvenience: string;

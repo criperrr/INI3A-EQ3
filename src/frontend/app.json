@@ -21,7 +21,15 @@
       "expo-router",
       "expo-font",
       "expo-web-browser",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "O Presco precisa da sua localização para encontrar mercados próximos a você.",
+          "locationWhenInUsePermission": "O Presco precisa da sua localização para encontrar mercados próximos a você.",
+          "locationAlwaysPermission": "O Presco precisa da sua localização para encontrar mercados próximos a você."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

@@ -433,6 +433,8 @@ export const ja: TranslationSchema = {
     viewOnMap: "地図でルートを表示",
     unavailableOnWeb: "Web版ではマップをご利用いただけません",
     mobileOnlyNotice: "インタラクティブマップはモバイルアプリでご利用いただけます。",
+    requiresDevBuild: "Expo Go ではマップをご利用いただけません",
+    requiresDevBuildDesc: "マップはDevelopment Buildが必要なネイティブ機能を使用しています。EAS経由でインストールするか実行: npx expo run:android / npx expo run:ios。",
     typeAll: "すべての店舗",
     typeSupermarket: "スーパーマーケット",
     typeConvenience: "コンビニ / 地域店舗",

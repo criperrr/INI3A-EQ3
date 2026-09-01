@@ -8,7 +8,8 @@ import {
     Modal,
     Pressable,
     ScrollView,
-    Linking
+    Linking,
+    NativeModules
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -326,7 +327,36 @@ const fetchAllMarketsData = async (
     }
 };
 
+// Guard: react-native-maps is not included in Expo Go.
+// Detect native module presence at runtime to avoid crash.
+const isMapNativeModuleAvailable = !!(
+    NativeModules.AIRMap ||
+    NativeModules.RNMaps ||
+    // react-native-maps 1.x registers under this key on Android new arch
+    NativeModules.RNMapView
+);
+
+function DevClientRequired() {
+    const { themeStyles, isDark, accent, tokens } = useTheme();
+    const { t } = useI18n();
+    const accentColor = typeof accent === "string" ? accent : (tokens?.semantic?.colors?.text?.accent || (isDark ? "#F5B731" : "#1565C0"));
+
+    return (
+        <View style={[styles.container, themeStyles.bg, { justifyContent: "center", alignItems: "center", padding: 32 }]}>
+            <Stack.Screen options={{ gestureEnabled: false }} />
+            <Ionicons name="construct-outline" size={64} color={accentColor} />
+            <Text style={[styles.loadingText, themeStyles.text, { textAlign: "center", marginTop: 20, fontSize: 18, fontWeight: "bold" }]}>
+                {t("map.requiresDevBuild")}
+            </Text>
+            <Text style={[themeStyles.text, { textAlign: "center", marginTop: 12, opacity: 0.65, lineHeight: 22 }]}>
+                {t("map.requiresDevBuildDesc")}
+            </Text>
+        </View>
+    );
+}
+
 export default function MapScreen() {
+    if (!isMapNativeModuleAvailable) return <DevClientRequired />;
     const { themeStyles, isDark, accent, tokens } = useTheme();
     const { t } = useI18n();
     const mapRef = useRef<MapView>(null);

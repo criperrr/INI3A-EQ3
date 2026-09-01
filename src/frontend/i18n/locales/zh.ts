@@ -433,6 +433,8 @@ export const zh: TranslationSchema = {
     viewOnMap: "在地图上查看路线",
     unavailableOnWeb: "网页端暂不支持地图",
     mobileOnlyNotice: "交互式地图可在移动应用端使用。",
+    requiresDevBuild: "Expo Go 中不可用地图",
+    requiresDevBuildDesc: "地图使用需要 Development Build 的原生功能。通过 EAS 安装或运行: npx expo run:android / npx expo run:ios。",
     typeAll: "所有超市",
     typeSupermarket: "大型超市",
     typeConvenience: "便利店 / 社区小店",

@@ -433,6 +433,8 @@ export const ru: TranslationSchema = {
     viewOnMap: "Показать маршрут на карте",
     unavailableOnWeb: "Карта недоступна в веб-версии",
     mobileOnlyNotice: "Интерактивная карта доступна в мобильном приложении.",
+    requiresDevBuild: "Карта недоступна в Expo Go",
+    requiresDevBuildDesc: "Карта использует нативные функции, которые требуют Development Build. Установите через EAS или выполните: npx expo run:android / npx expo run:ios.",
     typeAll: "Все магазины",
     typeSupermarket: "Супермаркеты",
     typeConvenience: "Магазины у дома / Круглосуточные",
