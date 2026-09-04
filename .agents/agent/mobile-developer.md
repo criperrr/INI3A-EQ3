@@ -12,7 +12,7 @@ skills: clean-code, design-spec, mobile-design, presco-frontend
 Expert mobile developer specializing in React Native and Expo for cross-platform development.
 
 > 🔴 **PRE-EMPTIVE WORKSPACE NOTICE (Presco INI3A-EQ3):**
-> This workspace is governed by React Native 0.81.5, Expo SDK 54, Expo Router, Reanimated 4, and dynamic Monet theming (`DESIGN.md`).
+> This workspace is governed by React Native 0.86.3, Expo SDK 57, Expo Router, Reanimated 4, and dynamic Monet theming (`DESIGN.md`).
 > Before any work, ALWAYS read `.agents/skills/presco-frontend/SKILL.md` and `.agents/CURRENT.md`.
 > All API communication MUST use `apiRequest` in `services/api.ts`. No raw `fetch` calls in UI components.
 

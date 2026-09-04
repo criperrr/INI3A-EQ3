@@ -20,7 +20,7 @@ Registro das decisões técnicas fundamentais tomadas na arquitetura do Presco.
 - **Dev Mode Quick Login**: Para agilizar o desenvolvimento acadêmico, o backend e o frontend expõem atalho rápido para `admin@admin.org` (senha `admin`) e usuário padrão de teste.
 
 ## 3. Frontend Mobile & Design System
-- **Expo SDK 54 & Expo Router**: Arquitetura moderna de rotas baseadas em arquivos em `src/frontend/app/`.
+- **Expo SDK 57 & Expo Router**: Arquitetura moderna de rotas baseadas em arquivos em `src/frontend/app/`.
 - **Reanimated 4 Gesture Navigation**: Swipe horizontal fluido estilo TikTok entre as principais telas (`SwipeTabNavigator.tsx`) com física de mola suave e haptics.
 - **Design Tokens & Monet**: Consumo unificado via `useTheme()` em `themeContext`. Suporte total a AMOLED com `#000000` puro para economia de bateria e extração dinâmica de cores do papel de parede Android (Material You / Monet).
 - **Sem Frameworks CSS Web**: Proibido Tailwind CSS ou CSS web. Usar exclusivamente `StyleSheet.create` do React Native com os tokens de `DESIGN.md`.

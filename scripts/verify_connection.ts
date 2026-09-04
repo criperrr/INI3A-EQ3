@@ -2,6 +2,8 @@ import http from "node:http";
 import https from "node:https";
 import os from "node:os";
 import net from "node:net";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const colors = {
   reset: "\x1b[0m",
@@ -152,6 +154,7 @@ export async function runDiagnostics() {
   console.log("");
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
   runDiagnostics();
 }

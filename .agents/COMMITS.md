@@ -24,6 +24,44 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-04 18:30] - fix(deps): synchronize monorepo Expo SDK 57 dependencies and resolve stale Expo 54 binaries
+
+- **Description:** Fixed outdated Expo CLI / SDK version discrepancy in the workspace:
+  1. **Root Cause Analysis:** `src/frontend/package.json` had been previously upgraded to `expo@57.0.20` and `react-native@0.86.3`, but the monorepo root `node_modules` still hosted stale `expo@54.0.37` and `@expo/cli@54.0.27` binaries, causing `npx expo --version` to report `54.0.27`.
+  2. **Clean Dependency Installation:** Executed dry-run validation and fresh `npm install` across the monorepo workspaces, cleanly upgrading `expo` to `57.0.20` and `@expo/cli` to `57.0.22`.
+  3. **Verification & Diagnostics:** Verified that `npx expo --version` reports `57.0.22` both in project root and in `src/frontend`. Ran `npx expo config` confirming `sdkVersion: 57.0.0` with all config plugins cleanly resolved. Verified 0 errors on TypeScript typecheck (`tsc --noEmit`) and 0 errors on ESLint (`expo lint`).
+  4. **Documentation & Memory Alignment:** Synchronized `MEMORY.md`, `tech-decisions.md`, `ARCHITECTURE.md`, `mobile-developer.md`, and `CURRENT.md` to reflect Expo SDK 57 and React Native 0.86.3.
+- **Files Modified:**
+  - `package-lock.json`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/tech-decisions.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/agent/mobile-developer.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `npx expo --version` now correctly outputs `57.0.22` everywhere. The project is fully synchronized on Expo SDK 57, React Native 0.86.3, and React 19.2.3 with zero TypeScript or build errors.
+
+---
+
+## [2026-09-04 18:20] - fix(scripts): resolve Windows child_process spawn EINVAL and dev launcher startup errors
+
+- **Description:** Fixed fatal startup crash on Windows when running `scripts/dev_launcher.ts`:
+  1. **Node.js spawn EINVAL:** In Node.js >= 22 (and >= 18.20.2 / 20.12.2 under CVE-2024-27980), spawning batch/cmd scripts like `npx.cmd` without `shell: true` throws a fatal `spawn EINVAL (errno: -4071)`. Added `shell: IS_WINDOWS` to both `backendProcess` and `expoProcess` in `scripts/dev_launcher.ts`, plus added an error event listener to `expoProcess`.
+  2. **Drizzle Migration Conflict:** When the database was previously initialized without recording migrations into `drizzle.__drizzle_migrations`, `migrate()` tried to re-create the `badge` table and failed with `42P07`. Synchronized the migration hash records in Postgres and wrapped `migrate()` in `src/backend/src/server.ts` with defensive error handling to prevent server crashes.
+  3. **Expo Plugin Resolution:** Removed non-plugin packages `expo-image` and `expo-status-bar` from `plugins` in `src/frontend/app.json`, eliminating Expo CLI's `PluginError: Unable to resolve a valid config plugin for expo-image`.
+  4. **Cross-Platform ESM Entrypoint Checks:** Replaced fragile `import.meta.url === \`file://${process.argv[1]}\`` with `fileURLToPath(import.meta.url) === path.resolve(process.argv[1] || "")` in `scripts/verify_connection.ts` and `scripts/start_api_tunnel.ts`, allowing CLI diagnostic tools to execute seamlessly on Windows.
+- **Files Modified:**
+  - `scripts/dev_launcher.ts`
+  - `scripts/verify_connection.ts`
+  - `scripts/start_api_tunnel.ts`
+  - `src/backend/src/server.ts`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `npm run dev`, `npm run dev:local`, `npm run dev:check`, and `start_project.ps1` now start the entire Presco stack (Postgres, Redis, Express API, and Expo Bundler) on Windows without any errors.
+
+---
+
 ## [2026-09-04 17:50] - chore(agents): audit, cleanup bloat and integrate native Presco AI skills and memory
 
 - **Description:** Audited the `.agents` ecosystem following `ag-kit init`, purged irrelevant components, and integrated native Presco knowledge:

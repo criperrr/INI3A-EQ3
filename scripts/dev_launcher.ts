@@ -254,6 +254,7 @@ async function main() {
         SERVER_HOST: "0.0.0.0",
       },
       detached: !IS_WINDOWS,
+      shell: IS_WINDOWS,
     }
   );
 
@@ -309,8 +310,13 @@ async function main() {
         REACT_NATIVE_PACKAGER_HOSTNAME: packagerHostname,
       },
       detached: !IS_WINDOWS,
+      shell: IS_WINDOWS,
     }
   );
+
+  expoProcess.on("error", (err) => {
+    console.error(`${colors.red}[Frontend] Falha ao iniciar processo do Expo:${colors.reset}`, err);
+  });
 
   expoProcess.on("exit", (code) => {
     cleanupAndExit(code ?? 0);

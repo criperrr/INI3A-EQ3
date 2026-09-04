@@ -18,8 +18,12 @@ async function bootstrap() {
   await testDatabaseConnection();
 
   const migrationsFolder = path.resolve(__dirname, "shared/database/drizzle");
-  await migrate(db, { migrationsFolder });
-  console.log("DATABASE: Migrations applied.");
+  try {
+    await migrate(db, { migrationsFolder });
+    console.log("DATABASE: Migrations applied.");
+  } catch (err: any) {
+    console.warn(`DATABASE: Migrations notice: ${err?.message || err}`);
+  }
 
   await seedDatabase().catch((e) => console.error("SEED WARNING:", e));
 

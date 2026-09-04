@@ -7,7 +7,7 @@
 - [project] PostGIS sobre PostgreSQL para calculos de proximidade espacial (ST_DWithin, ST_Distance) → tech-decisions.md
 - [project] Drizzle ORM encapsulado exclusivamente dentro dos repositories de banco → tech-decisions.md
 - [project] Autenticacao JWT e sessoes com refresh token e blacklist exclusivas no Redis → tech-decisions.md
-- [project] Frontend mobile em React Native 0.81.5 com Expo SDK 54 e Expo Router → tech-decisions.md
+- [project] Frontend mobile em React Native 0.86.3 com Expo SDK 57 e Expo Router → tech-decisions.md
 - [project] Navegacao por gestos 1:1 estilo TikTok via React Native Reanimated 4 → tech-decisions.md
 - [project] Sistema de Design com tokens semanticos, suporte AMOLED puro e cores Monet → tech-decisions.md
 - [project] Internacionalizacao completa com suporte sincronizado a 7 idiomas → tech-decisions.md

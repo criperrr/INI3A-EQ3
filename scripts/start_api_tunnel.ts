@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import https from "node:https";
 import http from "node:http";
-import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.SERVER_PORT || 3333);
 const TUNNEL_FILE = path.resolve(process.cwd(), ".tunnel_url");
@@ -127,7 +127,8 @@ export async function startApiTunnel(customUrl?: string): Promise<{ url: string;
 }
 
 // Standalone execution support: npx tsx scripts/start_api_tunnel.ts
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMainModule = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
   const custom = process.argv[2];
   startApiTunnel(custom).catch((err) => {
     console.error("Falha fatal no túnel:", err);

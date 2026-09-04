@@ -8,7 +8,7 @@ Documentação de arquitetura técnica e inventário de agentes/skills do projet
 
 Presco é uma aplicação full-stack de comparação de preços e leitura de código de barras EAN-13:
 - **Backend**: Express 5, TypeScript, Drizzle ORM, PostgreSQL com extensão PostGIS e Redis.
-- **Frontend**: React Native 0.81.5, Expo SDK 54, Expo Router, Reanimated 4 e Design System com tokens Monet.
+- **Frontend**: React Native 0.86.3, Expo SDK 57, Expo Router, Reanimated 4 e Design System com tokens Monet.
 - **Autoridade Máxima (P0)**:
   - [AGENTS.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/AGENTS.md)
   - [CURRENT.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/CURRENT.md)
