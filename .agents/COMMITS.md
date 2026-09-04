@@ -24,6 +24,37 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-04 17:50] - chore(agents): audit, cleanup bloat and integrate native Presco AI skills and memory
+
+- **Description:** Audited the `.agents` ecosystem following `ag-kit init`, purged irrelevant components, and integrated native Presco knowledge:
+  1. **Purged Bloat:** Removed irrelevant skills (`game-development`, `rust-pro`, `python-patterns`, `tailwind-patterns`, `nextjs-react-expert`, `seo-fundamentals`, `geo-fundamentals`, `red-team-tactics`), obsolete templates (flutter, nuxt, astro, electron, etc.), unneeded agents (`game-developer`, `seo-specialist`), and kit-internal changelog/readme bloat.
+  2. **Created Native Presco Skills:** Implemented `.agents/skills/presco-backend/SKILL.md` (Express 5, Drizzle ORM, PostGIS spatial queries, Redis session/blacklist) and `.agents/skills/presco-frontend/SKILL.md` (React Native 0.81.5, Expo SDK 54, Expo Router, Reanimated 4 swipe gestures, Monet design tokens, i18n in 7 languages).
+  3. **Synchronized Memory Index:** Refactored `memory/MEMORY.md`, `memory/tech-decisions.md` and `memory/project-conventions.md` to encode the real architectural decisions and commands of the Presco project, establishing the 5 core documents (`AGENTS.md`, `CURRENT.md`, `COMMITS.md`, `DESIGN.md`, `ISSUES.md`) as P0 authorities.
+  4. **Agent & Rules Alignment:** Updated `mobile-developer` and `backend-specialist` agents, code routing in `rules/code-rules.md`, and regenerated `manifest.json`, `manifest.lock.json`, and `DEPENDENCY_GRAPH.md`.
+  5. **Validation:** Executed `python .agents/scripts/validate_kit.py` reaching 0 errors and 0 warnings.
+- **Files Modified:**
+  - `.agents/skills/presco-backend/SKILL.md`
+  - `.agents/skills/presco-frontend/SKILL.md`
+  - `.agents/agent/mobile-developer.md`
+  - `.agents/agent/backend-specialist.md`
+  - `.agents/agent/frontend-specialist.md`
+  - `.agents/agent/security-auditor.md`
+  - `.agents/agent/penetration-tester.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/tech-decisions.md`
+  - `.agents/memory/project-conventions.md`
+  - `.agents/rules/code-rules.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/VERSION`
+  - `.agents/manifest.json`
+  - `.agents/manifest.lock.json`
+  - `.agents/DEPENDENCY_GRAPH.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Agents now navigate exclusively through relevant tools, skills and architecture for Presco, preventing context pollution and hallucinated guidelines.
+
+---
+
 ## [2026-09-04 09:17] - feat(scripts): enhance setup and startup scripts with multi-platform support and network mode selector
 
 - **Description:** Enhanced environment setup and application launcher scripts for seamless cross-platform execution on macOS (MacBook) and Windows:
