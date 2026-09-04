@@ -22,6 +22,7 @@ Deep architecture references are split into skills — load them only if the tas
 - **Frontend** (React Native, Expo Router, services, gestures, i18n): `.agents/skills/presco-frontend/SKILL.md`
   Covers: `apiRequest`, domain service patterns, screen map, component list, design token spec, Reanimated swipe navigation, localization in 7 languages.
 - **Design tokens** (colors, typography, spacing, Monet): `.agents/DESIGN.md` or root `DESIGN.md`.
+- **CRITICAL TOKEN RULE:** NEVER load `frontend-design` (23.5k tokens, web-only desktop CSS). For all Presco visual and UI tasks, use `presco-frontend`, `mobile-design`, and `DESIGN.md`.
 
 ---
 
@@ -199,7 +200,16 @@ Key screens:
 
 After any file modification or addition:
 1. Update `.agents/CURRENT.md`: refresh task status, executive summary, and add new files to the Navigation Index.
-2. Append entry to `.agents/COMMITS.md` using the standard commit template.
+2. Append entry to `.agents/COMMITS.md`.
+   > **CRITICAL TOKEN RULE:** NEVER read `COMMITS.md` before appending (it contains 52k+ tokens of historical logs). Append directly to the end using this exact template:
+   ```markdown
+   ## `YYYY-MM-DD HH:MM` - `type(scope)`: Short title
+
+   - **Description:** Summary of changes...
+   - **Files Modified:**
+     - `path/to/file`
+   - **Impact / Next Steps:** Outcome and next steps.
+   ```
 
 ---
 

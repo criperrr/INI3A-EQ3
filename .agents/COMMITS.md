@@ -2188,3 +2188,16 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `setup.sh` *(new)* — Linux/macOS setup script (bash, chmod +x)
   - `setup.ps1` *(new)* — Windows setup script (PowerShell)
 - **Impact / Next Steps:** Any developer can clone the repo and run a single command to get a fully working environment. No manual steps required.
+
+---
+
+## `2026-09-04 19:35` - `feat(agents)`: Token efficiency guardrails, tab limiter, and workflow optimization
+
+- **Description:** Added `.vscode/settings.json` with a 4-tab limit and preview mode to automatically close inactive tabs. Optimized `/enhance` workflow specifically for Presco (calling `mobile-developer` and `backend-specialist` instead of generic `code-archaeologist`). Barred the 23.5k-token web-only `frontend-design` skill in `AGENTS.md` in favor of `presco-frontend` and `DESIGN.md`. Embedded the standard commit template directly into `AGENTS.md` Section 6 with strict instruction never to read `COMMITS.md` historically before appending, saving up to 52k tokens per task. Created `scripts/measure_tokens.mjs` diagnostic utility.
+- **Files Modified:**
+  - `.vscode/settings.json` (new)
+  - `.agents/workflows/enhance.md`
+  - `.agents/AGENTS.md`
+  - `.agents/CURRENT.md`
+  - `scripts/measure_tokens.mjs` (new)
+- **Impact / Next Steps:** Developers and AI agents operate with maximum token efficiency, preventing tab accumulation and wasteful context reads.
