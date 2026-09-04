@@ -71,8 +71,12 @@ class OcurrencyServiceClass {
     };
   }
 
-  async getByProduct(productId: number, currentUserId?: number) {
-    return OcurrencyRepository.findByProduct(productId, currentUserId);
+  async getByProduct(
+    productId: number,
+    currentUserId?: number,
+    coords?: { lat: number; lng: number; radius?: number },
+  ) {
+    return OcurrencyRepository.findByProduct(productId, currentUserId, coords);
   }
 
   async vote(userId: number, ocurrencyId: number, verdict: boolean) {

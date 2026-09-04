@@ -33,6 +33,7 @@ import {
   deleteOccurrence,
   PriceOccurrence,
 } from "../services/ocurrencyService";
+import { getUserLocation } from "../utils/userLocation";
 import CategorySelector from "../components/CategorySelector";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
 
@@ -109,12 +110,15 @@ export default function ProductDetails() {
     try {
       let data: ProductDetailData | null = null;
 
+      const coords = await getUserLocation().catch(() => null);
+      const coordParams = coords ? { latitude: coords.latitude, longitude: coords.longitude } : undefined;
+
       if (targetId && !isNaN(targetId) && targetId > 0) {
         // Parallel fetch for product details and occurrences
         setLoadingOccurrences(true);
         const [productData, occurrencesList] = await Promise.all([
           fetchProductById(targetId),
-          fetchProductOccurrences(targetId).catch(() => []),
+          fetchProductOccurrences(targetId, coordParams).catch(() => []),
         ]);
         data = productData;
         setOccurrences(occurrencesList);
@@ -130,7 +134,7 @@ export default function ProductDetails() {
             setLoadingOccurrences(true);
             const [fullDetails, occurrencesList] = await Promise.all([
               fetchProductById(byBarcode.id).catch(() => byBarcode),
-              fetchProductOccurrences(byBarcode.id).catch(() => []),
+              fetchProductOccurrences(byBarcode.id, coordParams).catch(() => []),
             ]);
             if (fullDetails) data = fullDetails;
             setOccurrences(occurrencesList);

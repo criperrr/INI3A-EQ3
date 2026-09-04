@@ -52,8 +52,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     price: "R$ 14,90",
     isPromotion: true,
     discountPercentage: 40,
-    formattedDistance: "1.2 km",
-    nearestMarketName: "Mercado Central",
   },
   {
     id: 2,
@@ -63,8 +61,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     price: "R$ 26,90",
     isPromotion: true,
     discountPercentage: 32,
-    formattedDistance: "1.8 km",
-    nearestMarketName: "Supermercado Extra",
   },
   {
     id: 3,
@@ -74,8 +70,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     price: "R$ 4,29",
     isPromotion: true,
     discountPercentage: 34,
-    formattedDistance: "2.1 km",
-    nearestMarketName: "Carrefour Express",
   },
   {
     id: 4,
@@ -83,8 +77,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     image:
       "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
     price: "R$ 22,90",
-    formattedDistance: "1.2 km",
-    nearestMarketName: "Mercado Central",
   },
   {
     id: 5,
@@ -92,8 +84,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     image:
       "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
     price: "R$ 7,90",
-    formattedDistance: "3.4 km",
-    nearestMarketName: "Pão de Açúcar",
   },
   {
     id: 6,
@@ -103,35 +93,6 @@ const MOCK_PRODUCTS: GridItemType[] = [
     price: "R$ 5,99",
     isPromotion: true,
     discountPercentage: 33,
-    formattedDistance: "1.2 km",
-    nearestMarketName: "Mercado Central",
-  },
-];
-
-const MOCK_MARKETS: GridItemType[] = [
-  {
-    id: 1,
-    name: "Mercado Central",
-    image:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Quitanda da Esquina",
-    image:
-      "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Supermercado Viva",
-    image:
-      "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
-  },
-  {
-    id: 4,
-    name: "Armazém Orgânico",
-    image:
-      "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
   },
 ];
 
@@ -144,7 +105,7 @@ export default function HomeScreen() {
   const { view } = useLocalSearchParams<{ view?: string }>();
   const [activeView, setActiveView] = useState<string>("products");
   const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
-  const [realMarkets, setRealMarkets] = useState<GridItemType[]>(MOCK_MARKETS);
+  const [realMarkets, setRealMarkets] = useState<GridItemType[]>([]);
   const [hasLocation, setHasLocation] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -180,8 +141,9 @@ export default function HomeScreen() {
   ];
 
   const loadProductsAndMarkets = useCallback(async () => {
+    let loc = null;
     try {
-      const loc = await getUserLocation();
+      loc = await getUserLocation();
       if (loc) setHasLocation(true);
 
       const res = await fetchProducts({
@@ -213,7 +175,15 @@ export default function HomeScreen() {
     }
 
     try {
-      const markets = await fetchMarkets();
+      const markets = await fetchMarkets(
+        loc
+          ? {
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              radius: 15000,
+            }
+          : undefined
+      );
       if (markets && markets.length > 0) {
         const marketImages = [
           "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
@@ -227,8 +197,12 @@ export default function HomeScreen() {
           image: marketImages[idx % marketImages.length]!,
         }));
         setRealMarkets(mapped);
+      } else {
+        setRealMarkets([]);
       }
-    } catch {}
+    } catch {
+      setRealMarkets([]);
+    }
   }, []);
 
   useEffect(() => {

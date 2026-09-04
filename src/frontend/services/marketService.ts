@@ -9,13 +9,18 @@ export interface MarketData {
   formattedDistance?: string | null;
 }
 
-let memoryMarketsCache: { data: MarketData[]; timestamp: number } | null = null;
+const marketsLocationCache = new Map<string, { data: MarketData[]; timestamp: number }>();
+const CACHE_TTL_MS = 60000; // 1 minute
 
 export async function fetchMarkets(params?: { latitude?: number; longitude?: number; radius?: number }): Promise<MarketData[]> {
-  const isDefaultQuery = !params || (!params.latitude && !params.longitude);
+  const hasCoords = params?.latitude !== undefined && params?.longitude !== undefined;
+  const cacheKey = hasCoords
+    ? `${params.latitude!.toFixed(3)}_${params.longitude!.toFixed(3)}_${params.radius || 15000}`
+    : "none";
 
-  if (isDefaultQuery && memoryMarketsCache && Date.now() - memoryMarketsCache.timestamp < 120000) {
-    return memoryMarketsCache.data;
+  const cached = marketsLocationCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
   }
 
   const queryParts: string[] = [];
@@ -30,12 +35,12 @@ export async function fetchMarkets(params?: { latitude?: number; longitude?: num
       method: "GET",
     });
     const data = res || [];
-    if (isDefaultQuery && data.length > 0) {
-      memoryMarketsCache = { data, timestamp: Date.now() };
+    if (data.length > 0) {
+      marketsLocationCache.set(cacheKey, { data, timestamp: Date.now() });
     }
     return data;
   } catch (error) {
-    if (isDefaultQuery && memoryMarketsCache) return memoryMarketsCache.data;
+    if (cached) return cached.data;
     console.warn("[MarketService] Error fetching markets:", error);
     return [];
   }
@@ -46,7 +51,7 @@ export async function createMarket(
   latitude?: number,
   longitude?: number,
 ): Promise<MarketData> {
-  memoryMarketsCache = null;
+  marketsLocationCache.clear();
   return apiRequest<MarketData>("/markets", {
     method: "POST",
     body: JSON.stringify({ name, latitude, longitude }),

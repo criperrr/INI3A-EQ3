@@ -70,55 +70,95 @@ class OcurrencyRepositoryClass {
     return result[0] || null;
   }
 
-  async findByProduct(productId: number, currentUserId?: number) {
+  async findByProduct(
+    productId: number,
+    currentUserId?: number,
+    coords?: { lat: number; lng: number; radius?: number },
+  ) {
+    const hasCoords = coords?.lat !== undefined && coords?.lng !== undefined && !isNaN(coords.lat) && !isNaN(coords.lng);
+    const wktPoint = hasCoords ? `POINT(${coords.lng} ${coords.lat})` : "";
+    const radius = coords?.radius || 25000;
+
+    const whereConditions: any[] = [
+      eq(Ocurrency.productId, productId),
+      eq(Ocurrency.isSuspended, false),
+    ];
+
+    if (hasCoords) {
+      whereConditions.push(
+        sql`ST_DWithin(${Market.location}, ST_GeographyFromText(${wktPoint}), ${radius})`
+      );
+    }
+
+    const distanceExpr = hasCoords
+      ? sql<number | null>`ROUND(ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})))::int`
+      : sql<number | null>`NULL`;
+
+    const selectFields = {
+      id: Ocurrency.id,
+      userId: Ocurrency.userId,
+      userName: User.name,
+      marketId: Ocurrency.marketId,
+      marketName: Market.name,
+      productId: Ocurrency.productId,
+      value: Ocurrency.value,
+      trustFlag: Ocurrency.trustFlag,
+      isSuspended: Ocurrency.isSuspended,
+      isResolved: Ocurrency.isResolved,
+      upvoteCount: Ocurrency.upvoteCount,
+      downvoteCount: Ocurrency.downvoteCount,
+      createdAt: Ocurrency.createdAt,
+      distanceMeters: distanceExpr,
+    };
+
     if (currentUserId) {
-      return db
+      const rows = await db
         .select({
-          id: Ocurrency.id,
-          userId: Ocurrency.userId,
-          userName: User.name,
-          marketId: Ocurrency.marketId,
-          marketName: Market.name,
-          productId: Ocurrency.productId,
-          value: Ocurrency.value,
-          trustFlag: Ocurrency.trustFlag,
-          isSuspended: Ocurrency.isSuspended,
-          isResolved: Ocurrency.isResolved,
-          upvoteCount: Ocurrency.upvoteCount,
-          downvoteCount: Ocurrency.downvoteCount,
-          createdAt: Ocurrency.createdAt,
+          ...selectFields,
           userVote: Cured.verdict,
         })
         .from(Ocurrency)
         .leftJoin(User, eq(Ocurrency.userId, User.id))
         .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
         .leftJoin(Cured, and(eq(Cured.ocurrencyId, Ocurrency.id), eq(Cured.userId, currentUserId)))
-        .where(and(eq(Ocurrency.productId, productId), eq(Ocurrency.isSuspended, false)))
-        .orderBy(desc(Ocurrency.createdAt));
+        .where(and(...whereConditions))
+        .orderBy(
+          hasCoords
+            ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            : desc(Ocurrency.createdAt)
+        );
+
+      return rows.map((r) => {
+        let formattedDistance: string | null = null;
+        if (r.distanceMeters !== null && r.distanceMeters !== undefined) {
+          formattedDistance = r.distanceMeters < 1000 ? `${r.distanceMeters} m` : `${(r.distanceMeters / 1000).toFixed(1).replace(".", ",")} km`;
+        }
+        return { ...r, formattedDistance };
+      });
     }
 
-    return db
+    const rows = await db
       .select({
-        id: Ocurrency.id,
-        userId: Ocurrency.userId,
-        userName: User.name,
-        marketId: Ocurrency.marketId,
-        marketName: Market.name,
-        productId: Ocurrency.productId,
-        value: Ocurrency.value,
-        trustFlag: Ocurrency.trustFlag,
-        isSuspended: Ocurrency.isSuspended,
-        isResolved: Ocurrency.isResolved,
-        upvoteCount: Ocurrency.upvoteCount,
-        downvoteCount: Ocurrency.downvoteCount,
-        createdAt: Ocurrency.createdAt,
+        ...selectFields,
         userVote: sql<boolean | null>`NULL`,
       })
       .from(Ocurrency)
       .leftJoin(User, eq(Ocurrency.userId, User.id))
       .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
-      .where(and(eq(Ocurrency.productId, productId), eq(Ocurrency.isSuspended, false)))
-      .orderBy(desc(Ocurrency.createdAt));
+      .where(and(...whereConditions))
+      .orderBy(
+        hasCoords
+          ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+          : desc(Ocurrency.createdAt)
+      );
+
+    return rows.map((r) => {
+      let formattedDistance: string | null = null;
+      if (r.distanceMeters !== null && r.distanceMeters !== undefined) {
+        formattedDistance = r.distanceMeters < 1000 ? `${r.distanceMeters} m` : `${(r.distanceMeters / 1000).toFixed(1).replace(".", ",")} km`;
+      }
+      return { ...r, formattedDistance };
+    });
   }
 
   async findByUser(userId: number, limit = 20) {

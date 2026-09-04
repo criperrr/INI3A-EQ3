@@ -179,18 +179,28 @@ const fetchPhotonMarkets = async (latitude: number, longitude: number): Promise<
         clearTimeout(timeoutId);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.features || []).map((f: any) => ({
-            id: f.properties?.osm_id || Math.floor(Math.random() * 1000000),
-            lat: f.geometry?.coordinates?.[1],
-            lon: f.geometry?.coordinates?.[0],
-            tags: {
-                name: f.properties?.name || f.properties?.street || "Supermercado",
-                shop: f.properties?.osm_value || "supermarket",
-                street: f.properties?.street,
-                city: f.properties?.city,
-                opening_hours: f.properties?.opening_hours
-            }
-        })).filter((el: any) => el.lat && el.lon);
+        return (data.features || [])
+            .map((f: any) => {
+                const rawName = f.properties?.name?.trim();
+                if (!rawName) return null;
+                // Reject street names and house numbers
+                if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(rawName)) return null;
+                if (/^\d+/.test(rawName)) return null;
+
+                return {
+                    id: f.properties?.osm_id || Math.floor(Math.random() * 1000000),
+                    lat: f.geometry?.coordinates?.[1],
+                    lon: f.geometry?.coordinates?.[0],
+                    tags: {
+                        name: rawName,
+                        shop: f.properties?.osm_value || "supermarket",
+                        street: f.properties?.street,
+                        city: f.properties?.city,
+                        opening_hours: f.properties?.opening_hours
+                    }
+                };
+            })
+            .filter((el: any) => el && el.lat && el.lon);
     } catch {
         return [];
     }
@@ -209,15 +219,25 @@ const fetchNominatimMarkets = async (latitude: number, longitude: number): Promi
         clearTimeout(timeoutId);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || []).map((item: any) => ({
-            id: item.osm_id || Math.floor(Math.random() * 1000000),
-            lat: parseFloat(item.lat),
-            lon: parseFloat(item.lon),
-            tags: {
-                name: item.name || item.display_name?.split(",")?.[0] || "Supermercado",
-                shop: "supermarket"
-            }
-        })).filter((el: any) => el.lat && el.lon);
+        return (data || [])
+            .map((item: any) => {
+                const rawName = (item.name || "").trim();
+                if (!rawName) return null;
+                // Reject street names and house numbers
+                if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(rawName)) return null;
+                if (/^\d+/.test(rawName)) return null;
+
+                return {
+                    id: item.osm_id || Math.floor(Math.random() * 1000000),
+                    lat: parseFloat(item.lat),
+                    lon: parseFloat(item.lon),
+                    tags: {
+                        name: rawName,
+                        shop: "supermarket"
+                    }
+                };
+            })
+            .filter((el: any) => el && el.lat && el.lon);
     } catch {
         return [];
     }
@@ -358,6 +378,7 @@ export default function MapScreen() {
 
     // Initialize immediately with last known session location or fallback coordinate for instant 0ms mount
     const [userLocation, setUserLocation] = useState<Coordinate>(lastSessionLocation || DEFAULT_COORDINATE);
+    const [isLocationResolved, setIsLocationResolved] = useState<boolean>(!!lastSessionLocation);
     const [visibleMarkers, setVisibleMarkers] = useState<MarketMarker[]>([]);
     const [activeFilterModal, setActiveFilterModal] = useState<"type" | "distance" | "hours" | null>(null);
     const [selectedMarket, setSelectedMarket] = useState<MarketMarker | null>(null);
@@ -378,6 +399,7 @@ export default function MapScreen() {
                 const loc = { latitude: lastKnown.coords.latitude, longitude: lastKnown.coords.longitude };
                 lastSessionLocation = loc;
                 setUserLocation(loc);
+                setIsLocationResolved(true);
                 mapRef.current?.animateToRegion({
                     ...loc,
                     latitudeDelta: 0.04,
@@ -394,6 +416,7 @@ export default function MapScreen() {
                 const refined = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
                 lastSessionLocation = refined;
                 setUserLocation(refined);
+                setIsLocationResolved(true);
                 mapRef.current?.animateToRegion({
                     ...refined,
                     latitudeDelta: 0.03,
@@ -414,14 +437,11 @@ export default function MapScreen() {
     // Fetch backend markets with radius query and global fallback
     useEffect(() => {
         let isMounted = true;
-        if (!userLocation) return;
+        if (!isLocationResolved || !userLocation) return;
 
         const loadBackendMarkets = async () => {
             try {
-                let res = await fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: 25000 });
-                if (!res || res.length === 0) {
-                    res = await fetchMarkets();
-                }
+                const res = await fetchMarkets({ latitude: userLocation.latitude, longitude: userLocation.longitude, radius: 25000 });
                 if (!isMounted || !res || !Array.isArray(res)) return;
 
                 const mapped: MarketMarker[] = [];
@@ -452,19 +472,22 @@ export default function MapScreen() {
                         ) {
                             const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
                             const safeDist = isNaN(straightDist) ? 0 : straightDist;
-                            mapped.push({
-                                id: `backend_${m.id}`,
-                                title: m.name || "Supermercado",
-                                coordinate: { latitude: lat, longitude: lon },
-                                straightDistance: safeDist,
-                                routeDistance: safeDist,
-                                isBackendMarket: true,
-                                shopType: "supermarket",
-                            });
+                            // Enforce strict proximity bounds: only include backend markets within 25km of the user
+                            if (safeDist <= 25) {
+                                mapped.push({
+                                    id: `backend_${m.id}`,
+                                    title: m.name || "Supermercado",
+                                    coordinate: { latitude: lat, longitude: lon },
+                                    straightDistance: safeDist,
+                                    routeDistance: safeDist,
+                                    isBackendMarket: true,
+                                    shopType: "supermarket",
+                                });
+                            }
                         }
                     }
                 }
-                if (isMounted && mapped.length > 0) {
+                if (isMounted) {
                     lastSessionBackendMarkets = mapped;
                     setBackendMarketsList(mapped);
                 }
@@ -479,6 +502,7 @@ export default function MapScreen() {
     // Pre-fetch raw OSM elements progressively in background
     useEffect(() => {
         let isMounted = true;
+        if (!isLocationResolved || !userLocation) return;
         setAppState(prev => ({ ...prev, isLoadingMarkets: true }));
 
         fetchAllMarketsData(

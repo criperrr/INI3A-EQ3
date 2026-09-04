@@ -45,7 +45,22 @@ class OcurrencyControllerClass {
         throw new ValidationError([{ field: "productId", message: "ID do produto inválido." }]);
       }
 
-      const occurrences = await ocurrencyService.getByProduct(numProductId, req.user?.id);
+      const { latitude, longitude, radius } = req.query as {
+        latitude?: string;
+        longitude?: string;
+        radius?: string;
+      };
+      const lat = latitude ? parseFloat(latitude) : undefined;
+      const lng = longitude ? parseFloat(longitude) : undefined;
+      const rad = radius ? parseFloat(radius) : undefined;
+
+      const occurrences = await ocurrencyService.getByProduct(
+        numProductId,
+        req.user?.id,
+        lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng)
+          ? { lat, lng, radius: rad && !isNaN(rad) ? rad : 25000 }
+          : undefined
+      );
       return res.status(200).json(success(occurrences));
     } catch (e) {
       next(e);

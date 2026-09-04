@@ -97,7 +97,7 @@ class OsmMarketDiscoveryClass {
       const validTypes = new Set(["supermarket", "grocery", "convenience", "wholesale", "department_store"]);
 
       for (const f of data.features) {
-        const name = f.properties?.name;
+        const name = this.normalizeMarketName((f.properties?.name || "").trim());
         const coords = f.geometry?.coordinates;
         const osmValue = f.properties?.osm_value;
 
@@ -143,11 +143,12 @@ class OsmMarketDiscoveryClass {
 
       const list: DiscoveredMarket[] = [];
       for (const d of data) {
-        const name = d.name || (d.display_name ? d.display_name.split(",")[0] : null);
+        const rawName = (d.name || "").trim();
+        const normName = this.normalizeMarketName(rawName);
         const dLat = Number(d.lat);
         const dLng = Number(d.lon);
-        if (name && !isNaN(dLat) && !isNaN(dLng)) {
-          list.push({ name, lat: dLat, lng: dLng });
+        if (normName && !isNaN(dLat) && !isNaN(dLng)) {
+          list.push({ name: normName, lat: dLat, lng: dLng });
         }
       }
       return list;
@@ -158,50 +159,63 @@ class OsmMarketDiscoveryClass {
   }
 
   /**
-   * Queries Overpass OpenStreetMap API
+   * Queries Overpass OpenStreetMap API with parallel multi-mirror race
    */
   private async fetchFromOverpass(lat: number, lng: number, radiusMeters: number): Promise<DiscoveredMarket[]> {
-    const query = `[out:json][timeout:4];(nwr["shop"~"supermarket|convenience|grocery|wholesale"](around:${Math.min(radiusMeters, 15000)},${lat},${lng}););out center 25;`;
-    const url = `https://overpass.kumi.systems/api/interpreter?data=${encodeURIComponent(query)}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 3500);
+    const query = `[out:json][timeout:5];(nwr["shop"~"supermarket|convenience|grocery|wholesale"](around:${Math.min(radiusMeters, 15000)},${lat},${lng}););out center 35;`;
+    const endpoints = [
+      "https://overpass.openstreetmap.fr/api/interpreter",
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+    ];
+
+    const fetchEndpoint = async (endpoint: string): Promise<DiscoveredMarket[]> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3500);
+      try {
+        const res = await fetch(`${endpoint}?data=${encodeURIComponent(query)}`, {
+          headers: { "User-Agent": "PrescoApp/1.0 (contact@presco.app)" },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
+
+        if (!res.ok) throw new Error("Overpass endpoint error");
+        const data = (await res.json()) as any;
+        if (!data?.elements || !Array.isArray(data.elements)) throw new Error("Invalid elements");
+
+        const list: DiscoveredMarket[] = [];
+        for (const el of data.elements) {
+          const name = el.tags?.name || el.tags?.brand || el.tags?.operator;
+          const eLat = Number(el.lat || el.center?.lat);
+          const eLng = Number(el.lon || el.center?.lon);
+          if (name && !isNaN(eLat) && !isNaN(eLng)) {
+            list.push({ name, lat: eLat, lng: eLng });
+          }
+        }
+        return list;
+      } catch (e) {
+        clearTimeout(timer);
+        throw e;
+      }
+    };
 
     try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "PrescoApp/1.0 (contact@presco.app)" },
-        signal: controller.signal,
-      });
-      clearTimeout(timer);
-
-      if (!res.ok) return [];
-      const data = (await res.json()) as any;
-      if (!data?.elements || !Array.isArray(data.elements)) return [];
-
-      const list: DiscoveredMarket[] = [];
-      for (const el of data.elements) {
-        const name = el.tags?.name || el.tags?.brand;
-        const eLat = Number(el.lat || el.center?.lat);
-        const eLng = Number(el.lon || el.center?.lon);
-        if (name && !isNaN(eLat) && !isNaN(eLng)) {
-          list.push({ name, lat: eLat, lng: eLng });
-        }
-      }
-      return list;
+      return await Promise.any(endpoints.map((ep) => fetchEndpoint(ep)));
     } catch {
-      clearTimeout(timer);
       return [];
     }
   }
 
   /**
    * Synchronizes discovered OpenStreetMap markets with PostgreSQL PostGIS database without duplicating.
+   * Uses spatial proximity deduplication (< 100m or same name < 500m) rather than global name matching,
+   * allowing real supermarket chains (e.g. Carrefour, Dia, Pão de Açúcar) to exist in multiple neighborhoods/cities.
    */
   private async syncWithDatabase(discovered: DiscoveredMarket[]): Promise<void> {
     try {
       for (const item of discovered) {
         const wktPoint = `POINT(${item.lng} ${item.lat})`;
 
-        // Check if a market with close proximity (< 75m) or exact same name already exists
         const [existing] = await db
           .select({ id: market.id, name: market.name })
           .from(market)
@@ -210,9 +224,16 @@ class OsmMarketDiscoveryClass {
               ST_DWithin(
                 ${market.location},
                 ST_GeographyFromText(${wktPoint}),
-                75
+                100
               )
-              OR LOWER(TRIM(${market.name})) = LOWER(TRIM(${item.name}))
+              OR (
+                LOWER(TRIM(${market.name})) = LOWER(TRIM(${item.name}))
+                AND ST_DWithin(
+                  ${market.location},
+                  ST_GeographyFromText(${wktPoint}),
+                  500
+                )
+              )
             `
           )
           .limit(1);
@@ -234,10 +255,23 @@ class OsmMarketDiscoveryClass {
    */
   private normalizeMarketName(name: string): string {
     let clean = name.trim();
-    // Remove unwanted street numbers or postal codes attached directly
+    if (!clean) return "";
+
+    // Reject street names, avenues, roads, alleys, highways
+    if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(clean)) {
+      return "";
+    }
+
+    // Reject pure house numbers or postal codes
+    if (/^\d+/.test(clean)) {
+      return "";
+    }
+
+    // Standardize capitalization of initial category words
     clean = clean.replace(/^(supermercado|mercado|hipermercado)\s+/i, (match) => {
       return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
     });
+
     // If it's just "Supermercado" or "Mercado" without any identifier, reject
     if (/^(supermercado|mercado|loja|mercearia)$/i.test(clean)) {
       return "";

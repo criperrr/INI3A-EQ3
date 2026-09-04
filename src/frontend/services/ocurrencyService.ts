@@ -53,9 +53,14 @@ export async function submitPriceOccurrence(
 
 export async function fetchProductOccurrences(
   productId: number,
+  coords?: { latitude?: number; longitude?: number; radius?: number }
 ): Promise<PriceOccurrence[]> {
   try {
-    return await apiRequest<PriceOccurrence[]>(`/ocurrency/product/${productId}`, {
+    let endpoint = `/ocurrency/product/${productId}`;
+    if (coords?.latitude !== undefined && coords?.longitude !== undefined) {
+      endpoint += `?latitude=${coords.latitude}&longitude=${coords.longitude}&radius=${coords.radius || 25000}`;
+    }
+    return await apiRequest<PriceOccurrence[]>(endpoint, {
       method: "GET",
     });
   } catch (error) {

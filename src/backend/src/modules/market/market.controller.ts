@@ -6,7 +6,7 @@ import { ValidationError } from "@/shared/errors/errors";
 class MarketControllerClass {
   async getAllMarkets(req: Request, res: Response, next: NextFunction) {
     try {
-      const { latitude, longitude, radius } = req.query;
+      const { latitude, longitude, radius, includeAll } = req.query;
       const lat = latitude ? Number(latitude) : undefined;
       const lng = longitude ? Number(longitude) : undefined;
       const rad = radius ? Number(radius) : undefined;
@@ -28,6 +28,7 @@ class MarketControllerClass {
         latitude: lat,
         longitude: lng,
         radius: rad,
+        includeAll: includeAll === "true",
       });
       return res.status(200).json(success(markets));
     } catch (e) {

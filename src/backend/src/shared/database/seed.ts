@@ -678,69 +678,57 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Seed Default Markets (Real Supermarket Chains with PostGIS Coordinates)
-  const defaultMarkets = [
-    // São Paulo (Capital)
-    { name: "Mercado Global Padrão", location: { lat: -23.55052, lng: -46.633308 } },
-    { name: "Supermercado Extra", location: { lat: -23.55152, lng: -46.634308 } },
-    { name: "Carrefour Express", location: { lat: -23.55252, lng: -46.632308 } },
-    { name: "Pão de Açúcar", location: { lat: -23.54952, lng: -46.635308 } },
-    { name: "Atacadão Central", location: { lat: -23.54852, lng: -46.631308 } },
-    { name: "Assaí Atacadista", location: { lat: -23.55400, lng: -46.630000 } },
-    { name: "Dia Supermercado", location: { lat: -23.54700, lng: -46.636000 } },
-    { name: "St. Marche Gourmet", location: { lat: -23.55320, lng: -46.637500 } },
-
-    // Bauru & Interior SP (Real Existing Supermarket Chains)
-    { name: "Confiança Supermercados - Max", location: { lat: -22.32980, lng: -49.07250 } },
-    { name: "Confiança Supermercados - Nações", location: { lat: -22.33800, lng: -49.06200 } },
-    { name: "Tauste Supermercados - Duque", location: { lat: -22.33850, lng: -49.05580 } },
-    { name: "Tauste Supermercados - Rio Branco", location: { lat: -22.32200, lng: -49.07800 } },
-    { name: "Atacadão - Bauru", location: { lat: -22.30870, lng: -49.03480 } },
-    { name: "Assaí Atacadista - Bauru", location: { lat: -22.32100, lng: -49.03450 } },
-    { name: "Tenda Atacado - Bauru", location: { lat: -22.31200, lng: -49.04100 } },
-    { name: "Supermercado Panelão - Bauru", location: { lat: -22.33200, lng: -49.06500 } },
-    { name: "Supermercados Jaú Serve - Bauru", location: { lat: -22.34500, lng: -49.05800 } },
-    { name: "Pão de Açúcar - Bauru", location: { lat: -22.34210, lng: -49.06120 } },
-    { name: "Carrefour Hipermercado - Bauru", location: { lat: -22.35560, lng: -49.04320 } },
-    { name: "Supermercado Barracão - Bauru", location: { lat: -22.34120, lng: -49.05100 } },
-  ];
-
-  for (const m of defaultMarkets) {
-    const existing = await db.query.market.findFirst({
-      where: (table, { eq }) => eq(table.name, m.name),
-    });
-    if (!existing) {
-      await db.insert(market).values(m as any);
-    } else {
-      await db
-        .update(market)
-        .set({ location: m.location as any })
-        .where(eq(market.id, existing.id));
-    }
-  }
-
-  // Cleanup defunct/non-existent markets (e.g. Paulistão in Bauru)
-  const atacadaoBauruTarget = await db.query.market.findFirst({
-    where: (table, { eq }) => eq(table.name, "Atacadão - Bauru"),
-  });
-  const defunctMarkets = await db.query.market.findMany({
-    where: (table, { or, ilike, eq }) =>
-      or(
-        ilike(table.name, "%paulistão%"),
-        ilike(table.name, "%paulistao%"),
-        eq(table.name, "Supermercados Paulistão - Bauru")
-      ),
-  });
-  for (const defunct of defunctMarkets) {
-    if (atacadaoBauruTarget) {
-      await db
-        .update(ocurrency)
-        .set({ marketId: atacadaoBauruTarget.id })
-        .where(eq(ocurrency.marketId, defunct.id));
-    }
-    await db.delete(market).where(eq(market.id, defunct.id));
-    console.log(`🧹 [Seed] Removed non-existent market "${defunct.name}" (ID ${defunct.id}) and migrated occurrences.`);
-  }
+  // 4. Dynamic OpenStreetMap Market Discovery (Purge legacy phantom seed markets)
+  // Completely purge any hardcoded static regional markets and their occurrences
+  await db.execute(sql`
+    DELETE FROM ocurrency WHERE market_id IN (
+      SELECT id FROM market WHERE 
+        name ILIKE '%Bauru%' OR
+        name ILIKE '%Jaú Serve%' OR
+        name ILIKE '%Jau Serve%' OR
+        name ILIKE '%Confiança%' OR
+        name ILIKE '%Confianca%' OR
+        name ILIKE '%Tauste%' OR
+        name ILIKE '%Panelão%' OR
+        name ILIKE '%Panelao%' OR
+        name ILIKE '%Barracão%' OR
+        name ILIKE '%Barracao%' OR
+        name ILIKE '%Global Padrão%' OR
+        name ILIKE '%Global Padrao%' OR
+        name ILIKE '%St. Marche Gourmet%' OR
+        name ILIKE '%Atacadão Central%' OR
+        name ILIKE '%Supermercado Extra%' OR
+        name ILIKE '%Carrefour Express%' OR
+        name ILIKE 'Rua %' OR
+        name ILIKE 'Av. %' OR
+        name ILIKE 'Avenida %' OR
+        name ILIKE 'Estrada %' OR
+        name ILIKE 'Rodovia %'
+    );
+    DELETE FROM market WHERE 
+      name ILIKE '%Bauru%' OR
+      name ILIKE '%Jaú Serve%' OR
+      name ILIKE '%Jau Serve%' OR
+      name ILIKE '%Confiança%' OR
+      name ILIKE '%Confianca%' OR
+      name ILIKE '%Tauste%' OR
+      name ILIKE '%Panelão%' OR
+      name ILIKE '%Panelao%' OR
+      name ILIKE '%Barracão%' OR
+      name ILIKE '%Barracao%' OR
+      name ILIKE '%Global Padrão%' OR
+      name ILIKE '%Global Padrao%' OR
+      name ILIKE '%St. Marche Gourmet%' OR
+      name ILIKE '%Atacadão Central%' OR
+      name ILIKE '%Supermercado Extra%' OR
+      name ILIKE '%Carrefour Express%' OR
+      name ILIKE 'Rua %' OR
+      name ILIKE 'Av. %' OR
+      name ILIKE 'Avenida %' OR
+      name ILIKE 'Estrada %' OR
+      name ILIKE 'Rodovia %';
+  `);
+  console.log("🗺️ [Seed] Markets are managed dynamically via OpenStreetMap proximity discovery. Legacy phantom markets purged.");
 
   // 5. Seed Admin Test User: admin@admin.org / admin
   const adminEmail = "admin@admin.org";
@@ -849,50 +837,18 @@ export async function seedDatabase() {
     await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 30 }).onConflictDoNothing();
   }
 
-  // 7. Seed Rich Catalog of Products & Multi-Market Occurrences (Idempotent)
-  const allCurrentMarkets = await db.select().from(market);
-  const marketMap = new Map<string, number>();
-  for (const m of allCurrentMarkets) {
-    marketMap.set(m.name, m.id);
-  }
-
-  // Fallback market IDs - São Paulo Capital
-  const mGlobal = marketMap.get("Mercado Global Padrão") || allCurrentMarkets[0]?.id || 1;
-  const mExtra = marketMap.get("Supermercado Extra") || allCurrentMarkets[1]?.id || 2;
-  const mCarrefour = marketMap.get("Carrefour Express") || allCurrentMarkets[2]?.id || 3;
-  const mPaoDeAcucar = marketMap.get("Pão de Açúcar") || allCurrentMarkets[3]?.id || 4;
-  const mAtacadao = marketMap.get("Atacadão Central") || allCurrentMarkets[4]?.id || 5;
-  const mAssai = marketMap.get("Assaí Atacadista") || mAtacadao;
-  const mDia = marketMap.get("Dia Supermercado") || mExtra;
-  const mStMarche = marketMap.get("St. Marche Gourmet") || mPaoDeAcucar;
-
-  // Regional market IDs - Bauru & Interior SP
-  const mConfiancaMax = marketMap.get("Confiança Supermercados - Max") || mExtra;
-  const mConfiancaNacoes = marketMap.get("Confiança Supermercados - Nações") || mConfiancaMax;
-  const mTausteDuque = marketMap.get("Tauste Supermercados - Duque") || mCarrefour;
-  const mTausteRioBranco = marketMap.get("Tauste Supermercados - Rio Branco") || mTausteDuque;
-  const mAtacadaoBauru = marketMap.get("Atacadão - Bauru") || mAtacadao;
-  const mAssaiBauru = marketMap.get("Assaí Atacadista - Bauru") || mAssai;
-  const mTendaBauru = marketMap.get("Tenda Atacado - Bauru") || mAtacadaoBauru;
-  const mPanalaoBauru = marketMap.get("Supermercado Panelão - Bauru") || mConfiancaMax;
-  const mJauServeBauru = marketMap.get("Supermercados Jaú Serve - Bauru") || mConfiancaNacoes;
-  const mPaoDeAcucarBauru = marketMap.get("Pão de Açúcar - Bauru") || mPaoDeAcucar;
-  const mCarrefourBauru = marketMap.get("Carrefour Hipermercado - Bauru") || mCarrefour;
-  const mBarracaoBauru = marketMap.get("Supermercado Barracão - Bauru") || mConfiancaMax;
-
+  // 7. Seed Rich Catalog of Products (Zero phantom markets or occurrences)
+  // Products are seeded into the product table so barcodes and items exist in catalog,
+  // while real market price occurrences are submitted dynamically by real users.
   interface SeedProductDef {
     ean: string;
     name: string;
     description: string;
     icon: string;
-    prices: Array<{
-      marketId: number;
-      value: string;
-      trustFlag?: boolean;
-      upvotes?: number;
-      downvotes?: number;
-    }>;
+    prices?: any[];
   }
+
+  const mExtra = 0, mCarrefour = 0, mPaoDeAcucar = 0, mAtacadao = 0, mAssai = 0, mDia = 0, mStMarche = 0;
 
   const catalogProducts: SeedProductDef[] = [
     // 1. ALIMENTOS
@@ -1529,77 +1485,10 @@ export async function seedDatabase() {
         .where(eq(product.id, targetProduct.id));
     }
 
-    if (targetProduct) {
-      const allPricesToSeed = [...item.prices];
-
-      // Automatically populate regional counterparts for rich Bauru / Interior price comparisons
-      for (const pr of item.prices) {
-        const numVal = parseFloat(pr.value);
-        if (isNaN(numVal) || numVal <= 0) continue;
-
-        if (pr.marketId === mAtacadao) {
-          allPricesToSeed.push(
-            { marketId: mAtacadaoBauru, value: (numVal * 0.99).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 },
-            { marketId: mTendaBauru, value: (numVal * 1.01).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 2), downvotes: 0 }
-          );
-        } else if (pr.marketId === mAssai) {
-          allPricesToSeed.push(
-            { marketId: mAssaiBauru, value: (numVal * 0.98).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 },
-            { marketId: mPanalaoBauru, value: (numVal * 1.02).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 }
-          );
-        } else if (pr.marketId === mCarrefour) {
-          allPricesToSeed.push(
-            { marketId: mTausteDuque, value: (numVal * 0.96).toFixed(2), trustFlag: true, upvotes: Math.max(4, (pr.upvotes ?? 6) - 1), downvotes: 0 },
-            { marketId: mTausteRioBranco, value: (numVal * 0.97).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 2), downvotes: 0 },
-            { marketId: mCarrefourBauru, value: (numVal * 1.00).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 }
-          );
-        } else if (pr.marketId === mExtra) {
-          allPricesToSeed.push(
-            { marketId: mConfiancaMax, value: (numVal * 0.97).toFixed(2), trustFlag: true, upvotes: Math.max(5, (pr.upvotes ?? 7) - 1), downvotes: 0 },
-            { marketId: mConfiancaNacoes, value: (numVal * 0.98).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 2), downvotes: 0 }
-          );
-        } else if (pr.marketId === mPaoDeAcucar) {
-          allPricesToSeed.push(
-            { marketId: mPaoDeAcucarBauru, value: (numVal * 1.00).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 },
-            { marketId: mBarracaoBauru, value: (numVal * 0.95).toFixed(2), trustFlag: true, upvotes: Math.max(3, (pr.upvotes ?? 5) - 1), downvotes: 0 }
-          );
-        } else if (pr.marketId === mDia) {
-          allPricesToSeed.push(
-            { marketId: mJauServeBauru, value: (numVal * 0.99).toFixed(2), trustFlag: true, upvotes: Math.max(2, (pr.upvotes ?? 4) - 1), downvotes: 0 }
-          );
-        }
-      }
-
-      // Seed occurrences across markets
-      for (const pr of allPricesToSeed) {
-        if (!pr.marketId) continue;
-        const existingOcc = await db.query.ocurrency.findFirst({
-          where: (table, { and, eq }) =>
-            and(
-              eq(table.productId, targetProduct.id),
-              eq(table.marketId, pr.marketId),
-              eq(table.userId, adminUserId)
-            ),
-        });
-
-        if (!existingOcc) {
-          await db.insert(ocurrency).values({
-            userId: adminUserId,
-            marketId: pr.marketId,
-            productId: targetProduct.id,
-            value: pr.value,
-            trustFlag: pr.trustFlag ?? true,
-            upvoteCount: pr.upvotes ?? 0,
-            downvoteCount: pr.downvotes ?? 0,
-          });
-          insertedOccurrencesCount++;
-        }
-      }
-    }
   }
 
   console.log(
-    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} new market price occurrences).`
+    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products).`
   );
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }

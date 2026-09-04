@@ -3,26 +3,42 @@ import { OsmMarketDiscovery } from "@/shared/services/osmMarketDiscovery.service
 import { NotFoundError } from "@/shared/errors/errors";
 
 class MarketServiceClass {
-  async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined }) {
+  async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined; includeAll?: boolean | undefined }) {
     let markets: any[] = [];
     if (params?.latitude !== undefined && params?.longitude !== undefined) {
-      const radius = params.radius || 15000;
+      const radius = params.radius && params.radius > 0 ? params.radius : 15000;
 
-      // Fire-and-forget: discover and sync local OSM markets in background.
-      // Does NOT block the response — DB markets return instantly while OSM
-      // populates new ones for subsequent requests.
-      OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius).catch(() => {});
+      // 1. Query existing markets in database within user's radius
+      markets = await MarketRepository.getMarketsByRadius(
+        { lat: params.latitude, lng: params.longitude },
+        radius
+      );
 
-      if (params.radius) {
-        markets = await MarketRepository.getMarketsByRadius(
-          { lat: params.latitude, lng: params.longitude },
-          params.radius
-        );
+      // 2. If no markets found locally, dynamically discover via OpenStreetMap and save to DB
+      // with a safe 3.5s timeout race so the user immediately gets real supermarkets on their first request.
+      if (!markets || markets.length === 0) {
+        try {
+          const timeoutPromise = new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 3500));
+          await Promise.race([
+            OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius),
+            timeoutPromise,
+          ]);
+          markets = await MarketRepository.getMarketsByRadius(
+            { lat: params.latitude, lng: params.longitude },
+            radius
+          );
+        } catch (err) {
+          console.warn("[MarketService] Erro ao sincronizar mercados via OSM:", err);
+        }
       } else {
-        markets = await MarketRepository.getAllMarkets({ lat: params.latitude, lng: params.longitude });
+        // Continuous background discovery to keep adding newly mapped neighborhood stores
+        OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius).catch(() => {});
       }
-    } else {
+    } else if (params?.includeAll) {
       markets = await MarketRepository.getAllMarkets();
+    } else {
+      // Strictly prevent returning unlocalized markets across the country
+      markets = [];
     }
 
     return markets.map((m: any) => {

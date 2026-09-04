@@ -2210,3 +2210,36 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Files Modified:**
   - `.agents/rules/code-rules.md`
 - **Impact / Next Steps:** AI produces higher-accuracy code with automatic compilation self-correction at zero token cost.
+
+## 2026-09-04 19:59 - ix(market): Eliminate phantom markets and enforce OpenStreetMap location discovery
+
+- **Description:** Resolved ghost markets (such as Jaú Serve) appearing outside their physical location. Scoped backend GET /markets strictly to user GPS radius and return empty lists for unlocalized queries rather than dumping national database seeds. Implemented multi-mirror OpenStreetMap discovery (Overpass race across fr, de, kumi + Photon + Nominatim) with synchronous first-query fallback so users anywhere in Brazil get real local supermarkets. Corrected database deduplication from global chain name collision to spatial proximity (< 100m or same name < 500m). Removed global fallback queries across frontend map.native.tsx, registerProduct.tsx, and index.tsx, and replaced global cache with coordinate-keyed spatial caching in marketService.ts.
+- **Files Modified:**
+  - src/backend/src/shared/services/osmMarketDiscovery.service.ts
+  - src/backend/src/modules/market/market.service.ts
+  - src/backend/src/modules/market/market.controller.ts
+  - src/frontend/services/marketService.ts
+  - src/frontend/app/map.native.tsx
+  - src/frontend/app/registerProduct.tsx
+  - src/frontend/app/index.tsx
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** Completely eliminated ghost markets from appearing outside their region. Users now strictly see real supermarkets within their location radius pulled dynamically from OpenStreetMap and local PostGIS.
+## 2026-09-04 20:34 - fix(markets): Eradicate phantom markets and enforce strict location-based filtering
+
+- **Description:** Completely eliminated phantom markets (e.g., Jaú Serve, Confiança, Tauste, and static São Paulo chains) appearing in unassociated regions. Cleaned seed.ts by removing hardcoded market definitions and 470 artificial regional price occurrences. Purged legacy SP seed markets and occurrences from PostgreSQL PostGIS. Upgraded GET /ocurrency/product/:productId to support spatial proximity filtering so product details only show prices within the user's radius. Removed mock market placeholders from index.tsx. Guarded map.native.tsx from querying default São Paulo coordinates before GPS resolution, and filtered out street names/house numbers from Nominatim and Photon across frontend and backend.
+- **Files Modified:**
+  - src/backend/src/shared/database/seed.ts
+  - src/backend/src/shared/services/osmMarketDiscovery.service.ts
+  - src/backend/src/modules/market/market.service.ts
+  - src/backend/src/modules/market/market.controller.ts
+  - src/backend/src/modules/ocurrency/ocurrency.controller.ts
+  - src/backend/src/modules/ocurrency/ocurrency.service.ts
+  - src/backend/src/shared/database/repositories/ocurrency.repository.ts
+  - src/frontend/app/index.tsx
+  - src/frontend/app/map.native.tsx
+  - src/frontend/app/productDetails.tsx
+  - src/frontend/app/registerProduct.tsx
+  - src/frontend/services/marketService.ts
+  - src/frontend/services/ocurrencyService.ts
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** Database and API are 100% clean of phantom markets and fake occurrences. All markets dynamically correspond to real physical stores at the user's GPS coordinates via OpenStreetMap.

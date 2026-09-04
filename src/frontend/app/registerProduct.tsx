@@ -80,30 +80,13 @@ export default function RegisterProduct() {
         }
       } else {
         setHasLocation(false);
-        const fallbackList = await fetchMarkets();
-        if (fallbackList && fallbackList.length > 0) {
-          setMarkets(fallbackList);
-          setSelectedMarketId(fallbackList[0]!.id);
-        } else {
-          setMarkets([]);
-          setSelectedMarketId(0);
-        }
-      }
-    } catch (err) {
-      console.warn("[registerProduct] Erro ao carregar mercados:", err);
-      try {
-        const fallbackList = await fetchMarkets();
-        if (fallbackList && fallbackList.length > 0) {
-          setMarkets(fallbackList);
-          setSelectedMarketId(fallbackList[0]!.id);
-        } else {
-          setMarkets([]);
-          setSelectedMarketId(0);
-        }
-      } catch {
         setMarkets([]);
         setSelectedMarketId(0);
       }
+    } catch (err) {
+      console.warn("[registerProduct] Erro ao carregar mercados:", err);
+      setMarkets([]);
+      setSelectedMarketId(0);
     } finally {
       setIsLocatingMarkets(false);
     }
@@ -854,10 +837,17 @@ export default function RegisterProduct() {
                       onPress={async () => {
                         setIsLocatingMarkets(true);
                         try {
-                          const all = await fetchMarkets();
-                          if (all && all.length > 0) {
-                            setMarkets(all);
-                            setSelectedMarketId(all[0]!.id);
+                          const coords = await getUserLocation();
+                          if (coords) {
+                            const expanded = await fetchMarkets({
+                              latitude: coords.latitude,
+                              longitude: coords.longitude,
+                              radius: 35000,
+                            });
+                            if (expanded && expanded.length > 0) {
+                              setMarkets(expanded);
+                              setSelectedMarketId(expanded[0]!.id);
+                            }
                           }
                         } finally {
                           setIsLocatingMarkets(false);
