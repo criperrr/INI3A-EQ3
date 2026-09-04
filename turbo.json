@@ -1,0 +1,28 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "build": {
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": []
+    },
+    "lint": {
+      "dependsOn": []
+    },
+    "db:seed": {
+      "cache": false
+    },
+    "db:migrate": {
+      "cache": false
+    },
+    "db:check": {
+      "cache": false
+    }
+  }
+}

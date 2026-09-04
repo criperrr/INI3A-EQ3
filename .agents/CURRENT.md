@@ -95,19 +95,21 @@ Direct relative paths from project root.
 | `src/backend/src/shared/util/jwt.ts` | `signAccessToken`, `generateRefreshToken`, `verifyAccessToken`, `getTokenRemainingSeconds` |
 | `src/backend/src/shared/helpers/response.helper.ts` | `success(data, code?)` → `{ success: true, code: 200, data }` |
 
-### Dev Scripts & Launchers
+### Dev Tooling & Launchers
 
 | File | Key exports / purpose |
 |---|---|
-| `scripts/verify_connection.ts` | Autonomous Network & Connection Diagnostic Agent verifying Local NAT and Tunnel connectivity, health checks, LAN IP, and Expo |
-| `scripts/start_api_tunnel.ts` | Autonomous Backend API Cloud Tunnel Agent with preferred/dynamic fallback, health test, and `.tunnel_url` synchronization |
-| `start_project.sh` | macOS/Linux dev launcher with integrated connection diagnostics, robust LAN IP resolution, dynamic tunnel capture, and Expo `--tunnel` |
-| `start_project.ps1` | Windows PowerShell launcher with port auto-detection, LAN IP resolution, diagnostic agent runner, and multi-process runner |
-| `start_project.bat` / `start.bat` | Batch aliases bypassing PowerShell ExecutionPolicy |
-| `scripts/dev_backend.bat` | Dedicated backend runner script (port 3333, `DEBUG=*`, `NODE_ENV=development`) |
-| `scripts/dev_frontend.bat` | Dedicated frontend Expo runner script (port 8081, LAN/Tunnel modes with `@expo/ngrok`) |
-| `scripts/dev_tunnels.bat` | Dedicated backend tunnel launcher script invoking `start_api_tunnel.ts` |
-| `install_dependencies.bat` / `install.bat` | Windows automated dependency installation with `--clean` and fallback |
+| `turbo.json` | Turborepo pipeline: `dev` (persistent, concurrent), `build`, `typecheck`, `lint`, `db:seed`, `db:migrate`, `db:check` tasks |
+| `docker-compose.yml` | Docker Compose: `postgis/postgis:17-3.5` (Postgres + PostGIS on 5432) + `redis:7-alpine` (Redis on 6379) with health checks and named volumes |
+| `package.json` | Root monorepo: npm workspaces (`src/backend`, `src/frontend`), turbo dev/build/db scripts |
+| `src/frontend/metro.config.js` | Metro config with monorepo `watchFolders` and `nodeModulesPaths` for workspace hoisting |
+
+**Dev workflow:**
+```
+npm run db:up   → start Postgres + Redis (Docker, first time)
+npm run dev     → turbo TUI: backend (tsx --watch) + frontend (expo start) concurrently
+# In Expo terminal: [s] switch LAN/tunnel, scan QR with Expo Go
+```
 
 ### Frontend
 
@@ -150,6 +152,7 @@ Direct relative paths from project root.
 ## 3. Active Tasks & Roadmap
 
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
+  - [x] Turborepo monorepo + Docker Compose infrastructure migration (Postgres/PostGIS + Redis in Docker, backend/frontend via `turbo run dev`, cross-platform, Expo Go LAN/tunnel support).
 - [x] Frontend HTTP abstraction (`apiRequest`) with auto-refresh on 401.
 - [x] Agent guidelines (`AGENTS.md`), project index (`CURRENT.md`), commit log (`COMMITS.md`).
 - [x] Align `productController` to use `success()` helper.

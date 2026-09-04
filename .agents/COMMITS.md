@@ -1923,3 +1923,57 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/services/auth.ts`
   - `src/frontend/content/themeContent.tsx`
   - `src/frontend/app/settings.tsx`
+
+## [2026-09-03 22:00] - chore(tooling): Turborepo monorepo + Docker Compose infrastructure migration
+
+- **Description:** Replaced all legacy dev launcher scripts with Turborepo orchestration and Docker Compose for infrastructure services. Removed all platform-specific shell/batch scripts in favor of a single, cross-platform `turbo run dev` command.
+  1. **Turborepo**: Added `turbo.json` with `dev` (persistent, cache-off), `build`, `typecheck`, `lint`, `db:seed`, `db:migrate`, `db:check` pipeline tasks.
+  2. **Docker Compose**: Added `docker-compose.yml` with `postgis/postgis:17-3.5` (PostgreSQL + PostGIS) and `redis:7-alpine` with named volumes, health checks, and port bindings matching `.env.example` defaults.
+  3. **npm workspaces**: Root `package.json` now declares `workspaces: ["src/backend", "src/frontend"]`, enabling unified dependency hoisting and workspace-aware turbo filtering.
+  4. **Package names**: `src/backend/package.json` renamed to `backend`, `src/frontend/package.json` renamed to `frontend`, both got a `dev` task for turbo.
+  5. **Metro monorepo config**: Updated `src/frontend/metro.config.js` to set `watchFolders` and `nodeModulesPaths` for the workspace root, ensuring Expo resolves hoisted dependencies correctly.
+  6. **Scripts removed**: `start_project.sh`, `start_project.ps1`, `start_project.bat`, `start.bat`, `install_dependencies.bat`, `install_dependencies.sh`, `install.bat`, `reload_services.sh`, `restart_db.sh`, `scripts/dev_backend.bat`, `scripts/dev_frontend.bat`, `scripts/dev_tunnels.bat`, `scripts/start_api_tunnel.ts`, `scripts/verify_connection.ts`, and the `scripts/` directory itself.
+  7. **`.gitignore`**: Added `.turbo/` cache directory exclusion.
+- **Files Modified:**
+  - `turbo.json` (new)
+  - `docker-compose.yml` (new)
+  - `package.json` (root — replaced)
+  - `src/backend/package.json` (name → backend, removed db:reload)
+  - `src/frontend/package.json` (name → frontend, added dev script)
+  - `src/frontend/metro.config.js` (monorepo watchFolders + nodeModulesPaths)
+  - `.gitignore` (added .turbo/)
+  - `.agents/CURRENT.md` (navigation index updated)
+  - `.agents/COMMITS.md` (this entry)
+- **Impact / Next Steps:**
+  - `npm run db:up` → starts Postgres + Redis in Docker (first time or after reset).
+  - `npm run dev` → turbo TUI starts backend (tsx --watch) + frontend (expo start) concurrently.
+  - In the Expo terminal, press `s` to toggle LAN/tunnel/localhost, or scan QR with Expo Go.
+  - For custom API URL, set `EXPO_PUBLIC_API_URL` env var before running `npm run dev`.
+  - Works on Linux, macOS, and Windows (Docker Desktop + Node required).
+
+---
+
+## `[2026-09-03 22:15]` - `fix(infra)`: Docker port remap to avoid host service conflicts
+
+- **Description:** Remapped Docker host ports for PostgreSQL (`5432→5433`) and Redis (`6379→6380`) so that project containers never conflict with system-level `postgresql.service` or `redis.socket` running on the default ports. Updated `env.ts` fallback defaults accordingly. Any dev can now run `npm run db:up` / `npm run db:reset` without first stopping OS services.
+- **Files Modified:**
+  - `docker-compose.yml` (postgres port `5433:5432`, redis port `6380:6379`)
+  - `src/backend/src/shared/config/env.ts` (default DATABASE_URL port 5433, REDIS_URL port 6380)
+- **Impact / Next Steps:**
+  - Zero conflict with host PostgreSQL or Redis regardless of system state.
+  - If a `.env` file exists with hardcoded `5432`/`6379`, update those values to `5433`/`6380`.
+
+## `2026-09-03 22:18` - `fix(server)`: Auto-run Drizzle migrations on startup before seed
+
+- **Description:** Fresh database startup failed with `relation "badge" does not exist` because `seedDatabase()` was called without first creating the schema. Added `migrate(db, { migrationsFolder })` in `bootstrap()` between `testDatabaseConnection()` and `seedDatabase()`, so Drizzle automatically applies all pending SQL migrations (idempotent) before seeding. Also imported `db` from database module and `path`/`migrate` from drizzle.
+- **Files Modified:**
+  - `src/backend/src/server.ts`
+- **Impact / Next Steps:** Server now fully self-bootstraps on a clean database. No manual `npm run db:migrate` step needed before first start.
+
+## `2026-09-03 22:22` - `feat(devops)`: Cross-platform setup scripts (Linux, macOS, Windows)
+
+- **Description:** Created `setup.sh` (bash, Linux/macOS) and `setup.ps1` (PowerShell, Windows) that automate the full environment setup from zero: detects/installs Node.js ≥ 20 (via fnm on Unix, winget on Windows), verifies/installs npm ≥ 10, verifies Docker (auto-installs on Linux via get.docker.com, guides on macOS/Windows), installs Expo CLI globally, runs `npm install` for all workspaces, generates `src/backend/.env` from `.env.example` with Docker-mapped ports (PG 5433, Redis 6380), starts Docker containers, waits for PostgreSQL readiness, runs Drizzle migrations, and seeds the database. Both scripts are idempotent and gracefully handle missing Docker.
+- **Files Modified:**
+  - `setup.sh` *(new)* — Linux/macOS setup script (bash, chmod +x)
+  - `setup.ps1` *(new)* — Windows setup script (PowerShell)
+- **Impact / Next Steps:** Any developer can clone the repo and run a single command to get a fully working environment. No manual steps required.

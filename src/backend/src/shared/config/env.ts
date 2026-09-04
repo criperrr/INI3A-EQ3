@@ -29,8 +29,8 @@ if (!loadedPath) {
 }
 
 export const env = {
-  DATABASE_URL: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/presco_db",
-  REDIS_URL: process.env.REDIS_URL || "redis://localhost:6379",
+  DATABASE_URL: process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5433/presco_db",
+  REDIS_URL: process.env.REDIS_URL || "redis://localhost:6380",
   SERVER_PORT: Number(process.env.SERVER_PORT || 3333),
   SERVER_HOST: process.env.SERVER_HOST || "0.0.0.0",
   JWT_SECRET: process.env.JWT_SECRET || "4d281923e13a7357f829fe54fe4229e57aaf415989dc18f93f629bc8876e9f3f",

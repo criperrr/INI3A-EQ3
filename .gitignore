@@ -1,6 +1,9 @@
 # MacOS file that should be ignored by git
 .DS_Store
 
+# Turborepo cache
+.turbo/
+
 **/node_modules/
 
 src/frontend/.expo/

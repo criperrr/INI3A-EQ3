@@ -1,7 +1,9 @@
 import "dotenv/config";
+import path from "path";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import app from "@/app";
 import { connectRedis, redisClient } from "@/shared/redis/server";
-import { pool, testDatabaseConnection } from "@/shared/database/database";
+import { db, pool, testDatabaseConnection } from "@/shared/database/database";
 import { seedDatabase } from "@/shared/database/seed";
 
 const PORT = process.env.SERVER_PORT || 3333;
@@ -10,6 +12,11 @@ const HOST = process.env.SERVER_HOST || "0.0.0.0";
 async function bootstrap() {
   await connectRedis();
   await testDatabaseConnection();
+
+  const migrationsFolder = path.resolve(__dirname, "shared/database/drizzle");
+  await migrate(db, { migrationsFolder });
+  console.log("DATABASE: Migrations applied.");
+
   await seedDatabase().catch((e) => console.error("SEED WARNING:", e));
 
 

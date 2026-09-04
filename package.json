@@ -1,35 +1,34 @@
 {
-  "name": "ini3a-eq3",
+  "name": "presco",
   "version": "1.0.0",
+  "private": true,
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "src/backend",
+    "src/frontend"
+  ],
   "scripts": {
-    "dev": "bash ./start_project.sh",
-    "dev:local": "bash ./start_project.sh --local-nat",
-    "dev:nat": "bash ./start_project.sh --local-nat",
-    "dev:tunnel": "bash ./start_project.sh --tunnel",
-    "dev:ngrok": "bash ./start_project.sh --ngrok",
-    "dev:check": "npx tsx ./scripts/verify_connection.ts",
-    "dev:win": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1",
-    "dev:win:local": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat",
-    "dev:win:separate": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -LocalNat -SeparateWindows",
-    "dev:win:check": "powershell -ExecutionPolicy Bypass -NoProfile -File ./start_project.ps1 -Check",
-    "verify:connection": "npx tsx ./scripts/verify_connection.ts",
-    "verify:local": "npx tsx ./scripts/verify_connection.ts --local",
-    "verify:tunnel": "npx tsx ./scripts/verify_connection.ts --tunnel",
-    "db:reload": "bash ./reload_services.sh",
-    "db:restart": "bash ./reload_services.sh --restart",
-    "db:status": "bash ./reload_services.sh --status",
-    "db:check": "npm run --prefix src/backend db:check",
-    "db:seed": "npm run --prefix src/backend db:seed",
-    "install:all": "npm install && npm install --prefix src/backend && npm install --prefix src/frontend",
-    "install:clean": "npm run install:win:clean",
-    "install:win": "cmd /c install_dependencies.bat",
-    "install:win:clean": "cmd /c install_dependencies.bat --clean"
-  },
-  "dependencies": {
-    "ngrok": "^5.0.0-beta.2"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:reset": "docker compose down -v && docker compose up -d",
+    "db:logs": "docker compose logs -f",
+    "db:seed": "turbo run db:seed --filter=backend",
+    "db:migrate": "turbo run db:migrate --filter=backend",
+    "db:check": "turbo run db:check --filter=backend",
+    "install:all": "npm install"
   },
   "devDependencies": {
-    "localtunnel": "^2.0.2",
-    "tsx": "^4.23.12"
+    "turbo": "^2.5.4"
+  },
+  "allowScripts": {
+    "bcrypt@6.0.0": true,
+    "unrs-resolver@1.12.2": true,
+    "esbuild@0.18.20": true,
+    "esbuild@0.25.12": true,
+    "esbuild@0.28.2": true
   }
 }
