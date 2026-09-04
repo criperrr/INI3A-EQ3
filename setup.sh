@@ -96,16 +96,25 @@ success "npm $(npm --version) pronto"
 step "4. Verificando Docker"
 
 DOCKER_READY=false
-if command -v docker &>/dev/null; then
-  DOCKER_VER="$(docker --version 2>/dev/null || echo "desconhecida")"
-  success "Docker encontrado: $DOCKER_VER"
-  if docker info &>/dev/null 2>&1; then
-    DOCKER_READY=true
-    success "Docker daemon está ativo e pronto"
-  else
-    warn "Docker está instalado mas o daemon não está rodando (inicie o Docker Desktop)."
+
+# Garantir caminhos padrão do Docker Desktop e Homebrew no PATH
+for bin_dir in "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin" "/usr/local/bin" "/opt/homebrew/bin"; do
+  if [ -d "$bin_dir" ] && [[ ":$PATH:" != *":$bin_dir:"* ]]; then
+    export PATH="$bin_dir:$PATH"
   fi
-else
+done
+
+if ! command -v docker &>/dev/null; then
+  warn "Docker não encontrado no PATH."
+  if [ "$PLATFORM" = "macos" ]; then
+    if [ -d "/Applications/Docker.app" ]; then
+      info "Docker Desktop instalado em /Applications/Docker.app, adicionando binários ao PATH..."
+      export PATH="$HOME/.docker/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH"
+    fi
+  fi
+fi
+
+if ! command -v docker &>/dev/null; then
   warn "Docker não encontrado no PATH."
   if [ "$PLATFORM" = "macos" ]; then
     if command -v brew &>/dev/null; then
@@ -117,12 +126,63 @@ else
     info "Você pode instalar o Docker com: curl -fsSL https://get.docker.com | sudo sh"
   fi
   warn "Continuando instalação (o backend possui fallback resiliente de cache in-memory)."
+else
+  DOCKER_VER="$(docker --version 2>/dev/null | sed -E 's/.*version ([0-9.]+).*/\1/' || echo "instalado")"
+  success "Docker $DOCKER_VER encontrado"
+
+  # Verificar se o daemon do Docker está rodando
+  if docker info &>/dev/null 2>&1; then
+    DOCKER_READY=true
+    success "Docker daemon está ativo e pronto"
+  else
+    if [ "$PLATFORM" = "macos" ] && [ -d "/Applications/Docker.app" ]; then
+      info "Iniciando o Docker Desktop..."
+      open -g -a Docker 2>/dev/null || true
+      info "Aguardando daemon do Docker responder..."
+      DOCKER_WAIT=20
+      while ! docker info &>/dev/null 2>&1 && [ "$DOCKER_WAIT" -gt 0 ]; do
+        sleep 2
+        DOCKER_WAIT=$((DOCKER_WAIT - 2))
+      done
+      if docker info &>/dev/null 2>&1; then
+        DOCKER_READY=true
+        success "Docker daemon está ativo e pronto"
+      else
+        warn "Docker Desktop não iniciou a tempo. Continuando..."
+      fi
+    else
+      warn "Docker está instalado mas o daemon não está rodando (inicie o Docker Desktop)."
+    fi
+  fi
+fi
+
+if docker compose version &>/dev/null 2>&1; then
+  success "Docker Compose (plugin v2) disponível"
+elif command -v docker-compose &>/dev/null; then
+  warn "docker-compose v1 encontrado. Recomendado usar Docker >= 23 com plugin compose."
+else
+  warn "Docker Compose não encontrado. Verifique sua instalação do Docker."
 fi
 
 # ==============================================================================
-# 5. Instalar dependências npm com cache resiliente
+# 5. Verificar Expo CLI
 # ==============================================================================
-step "5. Instalando dependências npm (Workspaces + Túneis)"
+step "5. Verificando Expo CLI"
+
+if npx --no-install expo --version &>/dev/null 2>&1; then
+  EXPO_V="$(npx --no-install expo --version)"
+  success "Expo CLI $EXPO_V pronto (via npx expo local)"
+elif command -v expo &>/dev/null; then
+  success "Expo CLI encontrado no sistema"
+else
+  info "Expo CLI será executado via npx expo do projeto (Expo SDK 54)"
+  success "Expo configurado"
+fi
+
+# ==============================================================================
+# 6. Instalar dependências npm com cache resiliente
+# ==============================================================================
+step "6. Instalando dependências npm (Workspaces + Túneis)"
 
 info "Executando: npm install"
 if ! npm install; then

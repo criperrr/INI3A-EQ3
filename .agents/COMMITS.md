@@ -54,6 +54,45 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Developers can seamlessly set up and run the full stack on any network (domestic Wi-Fi, mobile hotspot, or restrictive corporate/university Wi-Fi) on both macOS and Windows.
 
+## [2026-09-04 08:29] - fix(backend): resolve ESM __dirname reference error in server.ts and hoisted types in tsconfig
+
+- **Description:** Fixed backend startup crash `ReferenceError: __dirname is not defined` when starting `server.ts`:
+  1. **ESM __dirname Support:** Imported `fileURLToPath` from `node:url` and derived `__dirname = path.dirname(fileURLToPath(import.meta.url))` in `src/backend/src/server.ts`, allowing Drizzle migrations folder to resolve accurately in Node ESM mode.
+  2. **TypeScript Hoisted TypeRoots:** Added `../../node_modules/@types` to `typeRoots` in `src/backend/tsconfig.json` so `tsc` finds `@types/node` hoisted to the monorepo root.
+  3. **Verification:** Verified `npm run typecheck` passes with 0 errors and tested backend bootstrap startup, verifying DB connection, migrations, seed, and HTTP server listening on port 3333.
+- **Files Modified:**
+  - `src/backend/src/server.ts`
+  - `src/backend/tsconfig.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `npm run dev` and `npm start` start cleanly without runtime exceptions.
+
+## [2026-09-04 08:07] - fix(docker): configure platform linux/amd64 for postgis on Apple Silicon
+
+- **Description:** Resolved Docker Compose manifest error `no matching manifest for linux/arm64/v8 in the manifest list entries` when pulling `postgis/postgis:17-3.5` on macOS Apple Silicon:
+  1. **Platform Flag:** Added `platform: linux/amd64` to `postgres` service in `docker-compose.yml`.
+  2. **Rosetta Emulation:** Allows Docker Desktop for Mac to run the official PostGIS image seamlessly via Rosetta emulation.
+  3. **Verification:** Pulled image, started PostgreSQL (5433) and Redis (6380) containers in healthy state, and executed `npm run db:migrate` and `npm run db:seed` successfully.
+- **Files Modified:**
+  - `docker-compose.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `docker compose up -d`, `./setup.sh`, and `npm run db:up` now work out of the box on both Apple Silicon (M1/M2/M3/M4) and Intel/x86_64 machines.
+
+## [2026-09-04 07:55] - fix(setup): auto-detect macOS Docker Desktop paths, fix BSD grep and modernize expo cli check
+
+- **Description:** Fixed `./setup.sh` failing to detect Docker on macOS despite Docker Desktop being installed and active:
+  1. **Dynamic Path Injection:** Added loop to prepend `$HOME/.docker/bin`, `/Applications/Docker.app/Contents/Resources/bin`, `/usr/local/bin`, and `/opt/homebrew/bin` to `PATH` if not already present.
+  2. **macOS App Fallback:** If `docker` is still not found, automatically verifies if `/Applications/Docker.app` exists and injects its resource binaries directly into `PATH`.
+  3. **BSD Grep Compatibility:** Replaced `grep -oP '[\d.]+'` with portable POSIX `sed -E 's/.*version ([0-9.]+).*/\1/'` to prevent fatal syntax errors on macOS BSD `grep`.
+  4. **Auto-Start Daemon Support:** If `docker info` fails on macOS, automatically launches Docker Desktop via `open -g -a Docker` and polls until ready.
+  5. **Expo CLI Modernization:** Replaced deprecated `npm install -g expo-cli` with project-local `npx expo` detection matching Expo SDK 54 standards.
+- **Files Modified:**
+  - `setup.sh`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `./setup.sh` runs cleanly without manual PATH intervention and correctly provisions Docker containers and DB seeds.
+
 ## [2026-09-01 12:13] - fix(map): native map crash remediation, coordinate validation, and safe distance formatting
 
 - **Description:** Diagnosed and resolved map crashing issues when opening the interactive map:
