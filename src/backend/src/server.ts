@@ -1,6 +1,10 @@
 import "dotenv/config";
-import path from "path";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import app from "@/app";
 import { connectRedis, redisClient } from "@/shared/redis/server";
 import { db, pool, testDatabaseConnection } from "@/shared/database/database";

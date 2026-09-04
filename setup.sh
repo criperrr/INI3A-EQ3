@@ -90,8 +90,24 @@ success "npm $(npm --version) pronto"
 # ==============================================================================
 step "4. Verificando Docker"
 
+# Garantir caminhos padrão do Docker Desktop e Homebrew no PATH
+for bin_dir in "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin" "/usr/local/bin" "/opt/homebrew/bin"; do
+  if [ -d "$bin_dir" ] && [[ ":$PATH:" != *":$bin_dir:"* ]]; then
+    export PATH="$bin_dir:$PATH"
+  fi
+done
+
 if ! command -v docker &>/dev/null; then
-  warn "Docker não encontrado."
+  warn "Docker não encontrado no PATH."
+  if [ "$PLATFORM" = "macos" ]; then
+    if [ -d "/Applications/Docker.app" ]; then
+      info "Docker Desktop instalado em /Applications/Docker.app, adicionando binários ao PATH..."
+      export PATH="$HOME/.docker/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH"
+    fi
+  fi
+fi
+
+if ! command -v docker &>/dev/null; then
   if [ "$PLATFORM" = "macos" ]; then
     info "Instale o Docker Desktop para Mac: https://docs.docker.com/desktop/install/mac-install/"
     warn "Depois de instalar o Docker, rode este script novamente."
@@ -104,8 +120,22 @@ if ! command -v docker &>/dev/null; then
     success "Docker instalado"
   fi
 else
-  DOCKER_VER="$(docker --version | grep -oP '[\d.]+' | head -1)"
+  DOCKER_VER="$(docker --version 2>/dev/null | sed -E 's/.*version ([0-9.]+).*/\1/' || echo "instalado")"
   success "Docker $DOCKER_VER encontrado"
+
+  # Verificar se o daemon do Docker está rodando
+  if ! docker info &>/dev/null 2>&1; then
+    if [ "$PLATFORM" = "macos" ] && [ -d "/Applications/Docker.app" ]; then
+      info "Iniciando o Docker Desktop..."
+      open -g -a Docker 2>/dev/null || true
+      info "Aguardando daemon do Docker responder..."
+      DOCKER_WAIT=20
+      while ! docker info &>/dev/null 2>&1 && [ "$DOCKER_WAIT" -gt 0 ]; do
+        sleep 2
+        DOCKER_WAIT=$((DOCKER_WAIT - 2))
+      done
+    fi
+  fi
 fi
 
 if docker compose version &>/dev/null 2>&1; then
@@ -121,12 +151,14 @@ fi
 # ==============================================================================
 step "5. Verificando Expo CLI"
 
-if ! command -v expo &>/dev/null; then
-  info "Instalando Expo CLI globalmente..."
-  npm install -g expo-cli
-  success "Expo CLI instalado"
+if npx --no-install expo --version &>/dev/null 2>&1; then
+  EXPO_V="$(npx --no-install expo --version)"
+  success "Expo CLI $EXPO_V pronto (via npx expo local)"
+elif command -v expo &>/dev/null; then
+  success "Expo CLI encontrado no sistema"
 else
-  success "Expo CLI encontrado"
+  info "Expo CLI será executado via npx expo do projeto (Expo SDK 54)"
+  success "Expo configurado"
 fi
 
 # ==============================================================================
