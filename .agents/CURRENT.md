@@ -100,15 +100,22 @@ Direct relative paths from project root.
 | File | Key exports / purpose |
 |---|---|
 | `turbo.json` | Turborepo pipeline: `dev` (persistent, concurrent), `build`, `typecheck`, `lint`, `db:seed`, `db:migrate`, `db:check` tasks |
-| `docker-compose.yml` | Docker Compose: `postgis/postgis:17-3.5` (Postgres + PostGIS on 5432) + `redis:7-alpine` (Redis on 6379) with health checks and named volumes |
-| `package.json` | Root monorepo: npm workspaces (`src/backend`, `src/frontend`), turbo dev/build/db scripts |
+| `docker-compose.yml` | Docker Compose: `postgis/postgis:16-3.4` (multi-arch PostGIS on 5433:5432) + `redis:7-alpine` (Redis on 6380:6379) with health checks |
+| `package.json` | Root monorepo: workspaces (`src/backend`, `src/frontend`), turbo build/lint/typecheck, dev network launchers |
+| `scripts/dev_launcher.ts` | Unified cross-platform dev launcher: interactive network mode selector (LAN, Corporate Tunnel, Localhost), process tree lifecycle manager |
+| `scripts/start_api_tunnel.ts` | Cloud tunnel manager for Backend API on port 3333 with health verification |
+| `scripts/verify_connection.ts` | Cross-platform network and services diagnostic tool |
+| `start_project.sh` | Shell launcher for macOS/Linux supporting `--lan`, `--corp`, `--localhost` or interactive menu |
+| `start_project.ps1` / `start.bat` | PowerShell and Batch launchers for Windows supporting `-Mode lan`, `-Mode corp` or double-click execution |
+| `setup.sh` / `setup.ps1` / `setup.bat` | Automated multi-platform environment setup, cache resilience, Docker auto-start, migrations & seed |
 | `src/frontend/metro.config.js` | Metro config with monorepo `watchFolders` and `nodeModulesPaths` for workspace hoisting |
 
 **Dev workflow:**
-```
-npm run db:up   → start Postgres + Redis (Docker, first time)
-npm run dev     → turbo TUI: backend (tsx --watch) + frontend (expo start) concurrently
-# In Expo terminal: [s] switch LAN/tunnel, scan QR with Expo Go
+```bash
+./setup.sh           → run once to install dependencies, configure .env, start Docker, migrate & seed
+./start_project.sh   → interactive launcher (or ./start_project.sh --lan / --corp)
+# Windows: .\start_project.ps1 (or double click start.bat)
+# Turbo mode: npm run dev:turbo
 ```
 
 ### Frontend
@@ -210,6 +217,7 @@ npm run dev     → turbo TUI: backend (tsx --watch) + frontend (expo start) con
 - [x] Real Supermarket Catalog Alignment & Defunct Market Remediation (removed defunct supermarket *Supermercados Paulistão - Bauru* from PostgreSQL database and `seed.ts`, cleanly migrated legacy price occurrences to *Atacadão - Bauru*, added missing prominent supermarkets in Bauru including *Tenda Atacado*, *Supermercado Panelão*, *Supermercados Jaú Serve*, *Confiança Nações*, *Tauste Rio Branco*, updated exact PostGIS GPS coordinates, and automatically seeded comprehensive price comparison occurrences for both São Paulo capital and Bauru/Interior regional markets).
 - [x] Dynamic OpenStreetMap Real-World Supermarket Discovery & Auto-Persistence (`OsmMarketDiscovery` service created in `src/backend/src/shared/services/osmMarketDiscovery.service.ts` integrating Photon, Nominatim, and Overpass with auto-deduplication, geo-cell caching, and automatic synchronization with PostgreSQL PostGIS, enabling real supermarkets to appear dynamically and accurately anywhere in Brazil based on user GPS location).
 - [x] Native Map Hardening & Coordinate Bounds Crash Remediation (`map.native.tsx` fully hardened against NaN/undefined coordinates, non-numeric strings, and out-of-bounds latitude/longitude values across backend PostGIS feeds and raw OSM streams; backend `market.service.ts` decoupled from blocking OSM HTTP calls into fire-and-forget background execution; protected distance formatting and Marker rendering against runtime exceptions).
+- [x] Multi-Platform Setup & Network Mode Dev Launcher (`setup.sh`, `setup.ps1`, `setup.bat`, `start_project.sh`, `start_project.ps1`, `start.bat`, `scripts/dev_launcher.ts`, `scripts/start_api_tunnel.ts`, `scripts/verify_connection.ts`; multi-arch Apple Silicon & Windows Docker PostGIS 16-3.4; interactive network mode selector for Ultra-low Latency LAN [0-5ms] vs Corporate AP-isolated Tunnel [<50ms]; automatic .env port configuration, Drizzle extensions migration pre-flight, and cross-platform process tree cleanup).
 
 ---
 

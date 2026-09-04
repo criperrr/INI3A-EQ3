@@ -24,6 +24,36 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-04 09:17] - feat(scripts): enhance setup and startup scripts with multi-platform support and network mode selector
+
+- **Description:** Enhanced environment setup and application launcher scripts for seamless cross-platform execution on macOS (MacBook) and Windows:
+  1. **Multi-Platform Setup Scripts (`setup.sh`, `setup.ps1`, `setup.bat`):** Upgraded setup to verify Node.js >= 20, npm >= 10, Docker, and automatic `.env` generation. Added cache error resilience (`--cache /tmp/.npm-cache`) to bypass EACCES permission locks.
+  2. **Multi-Architecture PostGIS Docker Fix:** Updated `docker-compose.yml` to `postgis/postgis:16-3.4` providing multi-arch support for Apple Silicon ARM64 and Windows/Linux AMD64. Fixed `migrate.ts` with automated pre-flight `CREATE EXTENSION IF NOT EXISTS postgis` and `pg_trgm`.
+  3. **Universal Dev Launcher (`scripts/dev_launcher.ts`):** Created a cross-platform launcher with an interactive menu and CLI flags (`--lan`, `--corp`, `--localhost`) allowing users to select:
+     - **Rede Local (LAN):** 0 to 5ms ultra-low latency, direct LAN IP routing (`http://<IP>:3333` and `expo start --lan`).
+     - **Rede Corporativa / Fechada (Túnel Cloud):** Automated HTTPS cloud tunnel via `scripts/start_api_tunnel.ts` and `expo start --tunnel`, bypassing corporate firewalls and AP client isolation on networks like UNESP/eduroam.
+     - **Localhost:** 0ms latency for simulator, emulator, and web development.
+  4. **Native Launchers:** Created `start_project.sh` (macOS/Linux), `start_project.ps1` (Windows PowerShell), and double-clickable `start.bat` / `start_project.bat` (Windows).
+  5. **Network Diagnostics & Turbo Retention:** Added `npm run dev:check` (`scripts/verify_connection.ts`), kept Turborepo pipelines (`build`, `lint`, `typecheck`, `db:seed`, `db:migrate`, `dev:turbo`) 100% operational, and fixed workspace hoisting `typeRoots` in `src/backend/tsconfig.json`.
+- **Files Modified:**
+  - `setup.sh`
+  - `setup.ps1`
+  - `setup.bat`
+  - `start_project.sh`
+  - `start_project.ps1`
+  - `start_project.bat`
+  - `start.bat`
+  - `scripts/dev_launcher.ts`
+  - `scripts/start_api_tunnel.ts`
+  - `scripts/verify_connection.ts`
+  - `docker-compose.yml`
+  - `src/backend/tsconfig.json`
+  - `src/backend/src/shared/database/migrate.ts`
+  - `package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers can seamlessly set up and run the full stack on any network (domestic Wi-Fi, mobile hotspot, or restrictive corporate/university Wi-Fi) on both macOS and Windows.
+
 ## [2026-09-01 12:13] - fix(map): native map crash remediation, coordinate validation, and safe distance formatting
 
 - **Description:** Diagnosed and resolved map crashing issues when opening the interactive map:
