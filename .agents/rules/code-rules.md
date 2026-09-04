@@ -91,3 +91,20 @@ description: Apply when writing, building, refactoring, or fixing code — proje
 > 🔴 **Agents & Skills can invoke ANY script** via `python .agents/skills/<skill>/scripts/<script>.py`
 
 ---
+
+## 🧠 Presco Intelligence & Self-Healing Protocol (Token-Efficient)
+
+### 1. Mini-Raciocínio Estruturado (2 linhas antes de editar)
+Antes de modificar ou criar código, defina de forma ultra-concisa:
+- **Dependências & Tipos:** Quais interfaces e imports o arquivo consome?
+- **Impacto Adjacente:** Algum outro arquivo precisa de sincronização imediata?
+
+### 2. Regras de Ouro do Presco (Anti-Patterns)
+- **HTTP / API:** Nunca use `fetch` direto; use sempre `apiRequest<T>` (`services/api.ts`) com tratamento de erro e tipagem.
+- **Design Tokens:** Nunca use cores hexadecimais estáticas no JSX; use tokens semânticos via `useTheme()` / `useThemeTokens()`.
+- **Textos & i18n:** Nunca deixe strings literais voltadas ao usuário soltas no JSX; use `const { t } = useI18n()` / `useTranslation()`.
+- **Bibliotecas Nativas & Runtimes:** Priorize compatibilidade com o runtime ativo (Expo Go), mas permita e sinalize dependências nativas destinadas à migração para o **Expo Development Build (EAS / Prebuild)** quando planejado.
+
+### 3. Auto-Correção Silenciosa (Self-Healing via TypeScript — 0 Tokens de IA)
+- Após modificações em arquivos `.ts` / `.tsx`, execute silenciosamente `npx tsc --noEmit`.
+- Se houver erro de tipagem ou import ausente, resolva imediatamente antes de entregar a resposta final.

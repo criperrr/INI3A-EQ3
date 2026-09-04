@@ -2201,3 +2201,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `scripts/measure_tokens.mjs` (new)
 - **Impact / Next Steps:** Developers and AI agents operate with maximum token efficiency, preventing tab accumulation and wasteful context reads.
+
+---
+
+## `2026-09-04 19:40` - `feat(rules)`: Presco Intelligence & Self-Healing Protocol
+
+- **Description:** Added the Presco Intelligence & Self-Healing Protocol to `.agents/rules/code-rules.md`. Includes 2-line mini-reasoning before edits, Golden Rules (anti-patterns for API, design tokens, and i18n), silent TypeScript self-healing (`npx tsc --noEmit`), and forward-compatibility with Expo Development Builds (EAS / Prebuild) for native libraries.
+- **Files Modified:**
+  - `.agents/rules/code-rules.md`
+- **Impact / Next Steps:** AI produces higher-accuracy code with automatic compilation self-correction at zero token cost.
