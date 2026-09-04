@@ -8,8 +8,14 @@
     "src/frontend"
   ],
   "scripts": {
-    "dev": "turbo run dev",
-    "dev:tunnel": "turbo run dev:tunnel",
+    "dev": "tsx scripts/dev_launcher.ts",
+    "dev:local": "tsx scripts/dev_launcher.ts --lan",
+    "dev:lan": "tsx scripts/dev_launcher.ts --lan",
+    "dev:corp": "tsx scripts/dev_launcher.ts --corp",
+    "dev:tunnel": "tsx scripts/dev_launcher.ts --corp",
+    "dev:localhost": "tsx scripts/dev_launcher.ts --localhost",
+    "dev:turbo": "turbo run dev",
+    "dev:check": "tsx scripts/verify_connection.ts",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -23,7 +29,8 @@
     "install:all": "npm install"
   },
   "devDependencies": {
-    "expo-router": "~57.0.19",
+    "@types/localtunnel": "^2.0.4",
+    "localtunnel": "^2.0.2",
     "turbo": "^2.5.4"
   },
   "allowScripts": {

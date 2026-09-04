@@ -24,6 +24,37 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-04 17:50] - chore(agents): audit, cleanup bloat and integrate native Presco AI skills and memory
+
+- **Description:** Audited the `.agents` ecosystem following `ag-kit init`, purged irrelevant components, and integrated native Presco knowledge:
+  1. **Purged Bloat:** Removed irrelevant skills (`game-development`, `rust-pro`, `python-patterns`, `tailwind-patterns`, `nextjs-react-expert`, `seo-fundamentals`, `geo-fundamentals`, `red-team-tactics`), obsolete templates (flutter, nuxt, astro, electron, etc.), unneeded agents (`game-developer`, `seo-specialist`), and kit-internal changelog/readme bloat.
+  2. **Created Native Presco Skills:** Implemented `.agents/skills/presco-backend/SKILL.md` (Express 5, Drizzle ORM, PostGIS spatial queries, Redis session/blacklist) and `.agents/skills/presco-frontend/SKILL.md` (React Native 0.81.5, Expo SDK 54, Expo Router, Reanimated 4 swipe gestures, Monet design tokens, i18n in 7 languages).
+  3. **Synchronized Memory Index:** Refactored `memory/MEMORY.md`, `memory/tech-decisions.md` and `memory/project-conventions.md` to encode the real architectural decisions and commands of the Presco project, establishing the 5 core documents (`AGENTS.md`, `CURRENT.md`, `COMMITS.md`, `DESIGN.md`, `ISSUES.md`) as P0 authorities.
+  4. **Agent & Rules Alignment:** Updated `mobile-developer` and `backend-specialist` agents, code routing in `rules/code-rules.md`, and regenerated `manifest.json`, `manifest.lock.json`, and `DEPENDENCY_GRAPH.md`.
+  5. **Validation:** Executed `python .agents/scripts/validate_kit.py` reaching 0 errors and 0 warnings.
+- **Files Modified:**
+  - `.agents/skills/presco-backend/SKILL.md`
+  - `.agents/skills/presco-frontend/SKILL.md`
+  - `.agents/agent/mobile-developer.md`
+  - `.agents/agent/backend-specialist.md`
+  - `.agents/agent/frontend-specialist.md`
+  - `.agents/agent/security-auditor.md`
+  - `.agents/agent/penetration-tester.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/tech-decisions.md`
+  - `.agents/memory/project-conventions.md`
+  - `.agents/rules/code-rules.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/VERSION`
+  - `.agents/manifest.json`
+  - `.agents/manifest.lock.json`
+  - `.agents/DEPENDENCY_GRAPH.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Agents now navigate exclusively through relevant tools, skills and architecture for Presco, preventing context pollution and hallucinated guidelines.
+
+---
+
 ## [2026-09-04 09:38] - feat(frontend): implement hand-drawn onboarding tutorial modal, storage util and i18n in 7 languages
 
 - **Description:** Implemented collaborative multi-agent onboarding flow architecture with hand-drawn / doodle sketch aesthetic:
@@ -51,6 +82,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Ready to mount on `index.tsx`, `registerUser.tsx`, and add replay button in `settings.tsx` / `help.tsx` upon session resume.
 
+---
 
 ## [2026-09-04 09:24] - fix(frontend): install @expo/metro-runtime, harden API dynamic hostUri and add dev:tunnel script
 
@@ -70,6 +102,39 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Developers can connect via zero-latency LAN or bypass isolated Wi-Fi networks immediately via `npm run dev:tunnel`.
 
+---
+
+## [2026-09-04 09:17] - feat(scripts): enhance setup and startup scripts with multi-platform support and network mode selector
+
+- **Description:** Enhanced environment setup and application launcher scripts for seamless cross-platform execution on macOS (MacBook) and Windows:
+  1. **Multi-Platform Setup Scripts (`setup.sh`, `setup.ps1`, `setup.bat`):** Upgraded setup to verify Node.js >= 20, npm >= 10, Docker, and automatic `.env` generation. Added cache error resilience (`--cache /tmp/.npm-cache`) to bypass EACCES permission locks.
+  2. **Multi-Architecture PostGIS Docker Fix:** Updated `docker-compose.yml` to `postgis/postgis:16-3.4` providing multi-arch support for Apple Silicon ARM64 and Windows/Linux AMD64. Fixed `migrate.ts` with automated pre-flight `CREATE EXTENSION IF NOT EXISTS postgis` and `pg_trgm`.
+  3. **Universal Dev Launcher (`scripts/dev_launcher.ts`):** Created a cross-platform launcher with an interactive menu and CLI flags (`--lan`, `--corp`, `--localhost`) allowing users to select:
+     - **Rede Local (LAN):** 0 to 5ms ultra-low latency, direct LAN IP routing (`http://<IP>:3333` and `expo start --lan`).
+     - **Rede Corporativa / Fechada (Túnel Cloud):** Automated HTTPS cloud tunnel via `scripts/start_api_tunnel.ts` and `expo start --tunnel`, bypassing corporate firewalls and AP client isolation on networks like UNESP/eduroam.
+     - **Localhost:** 0ms latency for simulator, emulator, and web development.
+  4. **Native Launchers:** Created `start_project.sh` (macOS/Linux), `start_project.ps1` (Windows PowerShell), and double-clickable `start.bat` / `start_project.bat` (Windows).
+  5. **Network Diagnostics & Turbo Retention:** Added `npm run dev:check` (`scripts/verify_connection.ts`), kept Turborepo pipelines (`build`, `lint`, `typecheck`, `db:seed`, `db:migrate`, `dev:turbo`) 100% operational, and fixed workspace hoisting `typeRoots` in `src/backend/tsconfig.json`.
+- **Files Modified:**
+  - `setup.sh`
+  - `setup.ps1`
+  - `setup.bat`
+  - `start_project.sh`
+  - `start_project.ps1`
+  - `start_project.bat`
+  - `start.bat`
+  - `scripts/dev_launcher.ts`
+  - `scripts/start_api_tunnel.ts`
+  - `scripts/verify_connection.ts`
+  - `docker-compose.yml`
+  - `src/backend/tsconfig.json`
+  - `src/backend/src/shared/database/migrate.ts`
+  - `package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers can seamlessly set up and run the full stack on any network (domestic Wi-Fi, mobile hotspot, or restrictive corporate/university Wi-Fi) on both macOS and Windows.
+
+---
 
 ## [2026-09-04 09:03] - chore(frontend): upgrade to Expo SDK 57 and React Native 0.86 with full compatibility
 
@@ -90,6 +155,10 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Expo Go on mobile running SDK 57 can now connect and run the app seamlessly.
+
+---
+
+## [2026-09-04 08:29] - fix(backend): resolve ESM __dirname reference error in server.ts and hoisted types in tsconfig
 
 - **Description:** Fixed backend startup crash `ReferenceError: __dirname is not defined` when starting `server.ts`:
   1. **ESM __dirname Support:** Imported `fileURLToPath` from `node:url` and derived `__dirname = path.dirname(fileURLToPath(import.meta.url))` in `src/backend/src/server.ts`, allowing Drizzle migrations folder to resolve accurately in Node ESM mode.

@@ -7,6 +7,8 @@ const migrateFolder = path.resolve(process.cwd(), 'src/shared/database/drizzle')
 
 async function runMigrate() {
   try {
+    await pool.query("CREATE EXTENSION IF NOT EXISTS postgis;");
+    await pool.query("CREATE EXTENSION IF NOT EXISTS pg_trgm;");
     await migrate(db, {
       migrationsFolder: migrateFolder,
     });
