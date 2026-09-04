@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "dev": "turbo run dev",
+    "dev:tunnel": "turbo run dev:tunnel",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
@@ -22,6 +23,7 @@
     "install:all": "npm install"
   },
   "devDependencies": {
+    "expo-router": "~57.0.19",
     "turbo": "^2.5.4"
   },
   "allowScripts": {

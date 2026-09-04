@@ -74,6 +74,8 @@ const DEFAULT_SETTINGS: SettingsState = {
 };
 
 // ─── Base64 Code Serialization Helpers ───────────────────────────
+declare const Buffer: any;
+
 function encodeSettingsToCode(obj: any): string {
   const jsonStr = JSON.stringify(obj);
   let base64 = "";

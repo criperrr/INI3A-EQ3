@@ -39,7 +39,7 @@ Routes:
 - `POST /customizations/unequip/:category` — restore a customization category to default (requireAuth)
 - `GET /health` — inspect database and Redis health
 
-**Frontend** is a React Native Expo app (SDK 54, React Native 0.81.5, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
+**Frontend** is a React Native Expo app (SDK 57, React Native 0.86.3, React 19.2.3, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 - `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
 - `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, contribution activity heatmap, dynamic visual banners, animated/glow avatar frames, custom level badges, and an interactive Customization Shop modal with live avatar preview.
 - `productDetails.tsx` displays market prices list, allows community price voting, and grants exclusive edit/delete controls to admins.
@@ -144,6 +144,8 @@ npm run dev     → turbo TUI: backend (tsx --watch) + frontend (expo start) con
 | `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
 | `src/frontend/content/tabNavigationContext.tsx` | Directional screen navigation context for swipe gestures |
 | `src/frontend/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, and i18n localization helpers) |
+| `src/frontend/utils/tutorialStorage.ts` | Tutorial onboarding storage manager under `@presco:hasSeenTutorial` |
+| `src/frontend/components/OnboardingTutorialModal.tsx` | Hand-drawn / sketch doodle onboarding carousel modal with 6 pedagogical steps, Reanimated swipe gestures, Haptics, and useTheme integration |
 | `src/frontend/components/CategorySelector.tsx` | Reusable category selector with preset chips, emoji/icon badges, custom category option, and theme accent highlighting |
 | `src/frontend/components/SwipeTabNavigator.tsx` | 1:1 real-time finger-tracking Reanimated gesture navigator |
 
@@ -213,6 +215,9 @@ npm run dev     → turbo TUI: backend (tsx --watch) + frontend (expo start) con
 - [x] macOS Docker Desktop Path Auto-Detection & Setup Script Hardening (`setup.sh` upgraded to automatically inject macOS Docker paths `~/.docker/bin`, `/Applications/Docker.app/Contents/Resources/bin`, `/usr/local/bin`, and `/opt/homebrew/bin` into execution PATH, replaced macOS-incompatible `grep -oP` with portable `sed -E`, auto-starts Docker Desktop if daemon is not running, and updated Expo CLI detection to use project-local `npx expo`).
 - [x] Apple Silicon ARM64 Docker PostGIS Compatibility (`docker-compose.yml` configured with `platform: linux/amd64` under `postgres` to enable seamless emulation via Rosetta on macOS Apple Silicon M-series chips, successfully pulling `postgis/postgis:17-3.5`, starting healthy containers, and executing Drizzle migrations and seed).
 - [x] Backend ESM `__dirname` Remediation & Hoisted Types Resolution (`src/backend/src/server.ts` updated to construct `__dirname` via `fileURLToPath(import.meta.url)` eliminating ESM ReferenceError, and `src/backend/tsconfig.json` updated with hoisted `../../node_modules/@types` path ensuring clean typecheck).
+- [x] Full-Stack Upgrade to Expo SDK 57 & React Native 0.86 (upgraded `expo@57.0.20`, `react-native@0.86.3`, `react@19.2.3`, `expo-router@~57.0.19`, `react-native-reanimated@4.5.1`, and 28 companion native modules in `src/frontend`; resolved `StyleSheet.absoluteFill` compatibility in `map.native.tsx` and `profile.tsx`; declared global `Buffer` fallback in `settings.tsx`; adjusted `eslint.config.js` with Reanimated SharedValue immutability and React 19 rules; verified 0 errors on `tsc --noEmit` and `npm run lint`).
+- [x] Expo Go Connection Debug & Mobile Network Hardening (installed `@expo/metro-runtime@~57.0.15` eliminating HTTP 500 bundler resolution crash, enhanced `api.ts` with dynamic `hostUri` detection for automatic physical device backend IP resolution, added `npm run dev:tunnel` across Turborepo for instant AP-isolated Wi-Fi bypass via ngrok, and created `src/frontend/.env` with active LAN IP `10.153.0.145`).
+- [/] Hand-Drawn Onboarding Tutorial & Interactive Flow (`onboarding-tutorial-flow.md` orchestration plan, `tutorialStorage.ts` for `@presco:hasSeenTutorial`, 7-language i18n support, `OnboardingTutorialModal.tsx` with 6 hand-drawn pedagogical steps, Reanimated swipe gestures, haptics, and theme integration).
 
 ---
 

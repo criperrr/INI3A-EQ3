@@ -880,7 +880,7 @@ const styles = StyleSheet.create({
     retryButton: { backgroundColor: THEME_COLORS.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
     retryButtonText: { color: '#fff', fontWeight: 'bold' },
     mapContainer: { flex: 1 },
-    map: { ...StyleSheet.absoluteFillObject },
+    map: { ...StyleSheet.absoluteFill },
     filtersWrapper: {
         flexDirection: "row",
         justifyContent: "space-between",

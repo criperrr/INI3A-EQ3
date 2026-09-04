@@ -28,4 +28,4 @@ src/frontend/ios/
 src/backend/.notes
 src/frontend/.notes
 .tunnel_url
-
+*.vsix

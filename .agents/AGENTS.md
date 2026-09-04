@@ -33,7 +33,7 @@ Deep architecture references are split into skills — load them only if the tas
 - **Session layer:** Redis (`redis` package). All token data lives in Redis; no token columns on DB tables.
 - **Auth:** JWT access tokens (15 min, signed with `JWT_SECRET`, carry `id, email, name, roleId, jti`). Refresh tokens are 96-byte hex strings stored in Redis as `refresh:<token> → userId`.
 - **Permissions:** Multi-role authority system with `requireAuth`, `requireAdmin` (roleId 5), `requireMinAuthority`.
-- **Frontend:** React Native 0.81.5, Expo SDK 54, Expo Router for file-based routing, AsyncStorage for token persistence.
+- **Frontend:** React Native 0.86.3, Expo SDK 57, Expo Router for file-based routing, AsyncStorage for token persistence.
 - **Motion & Gestures:** React Native Reanimated 4 with 1:1 finger tracking, `react-native-gesture-handler` 2, and `expo-haptics`.
 - **Design:** Dynamic theming with Light, Dark, and AMOLED modes + System Monet color extraction via `useTheme()`.
 - **i18n:** Type-safe translation engine with 7 languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).

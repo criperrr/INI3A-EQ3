@@ -1,10 +1,26 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333";
+function resolveBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+  const hostUri = Constants.expoConfig?.hostUri;
+  if (hostUri) {
+    const host = hostUri.split(":")[0];
+    if (host && host !== "localhost" && host !== "127.0.0.1") {
+      return `http://${host}:3333`;
+    }
+  }
+  return "http://localhost:3333";
+}
+
+const BASE_URL = resolveBaseUrl();
 
 const STORAGE_KEYS = {
   ACCESS_TOKEN: "@presco:accessToken",
   REFRESH_TOKEN: "@presco:refreshToken",
+  HAS_SEEN_TUTORIAL: "@presco:hasSeenTutorial",
 } as const;
 
 interface ApiResponse<T = any> {

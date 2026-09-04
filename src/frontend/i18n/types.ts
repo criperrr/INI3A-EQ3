@@ -573,6 +573,39 @@ export interface TranslationSchema {
     utilidades_bazar: string;
     outros: string;
   };
+  onboarding: {
+    skip: string;
+    next: string;
+    back: string;
+    finish: string;
+    stepIndicator: string;
+    screen1Title: string;
+    screen1Subtitle: string;
+    screen1Badge: string;
+    screen1Tip: string;
+    screen2Title: string;
+    screen2Subtitle: string;
+    screen2Badge: string;
+    screen2Tip: string;
+    screen3Title: string;
+    screen3Subtitle: string;
+    screen3Badge: string;
+    screen3Tip: string;
+    screen4Title: string;
+    screen4Subtitle: string;
+    screen4Badge: string;
+    screen4Tip: string;
+    screen5Title: string;
+    screen5Subtitle: string;
+    screen5Badge: string;
+    screen5Tip: string;
+    screen6Title: string;
+    screen6Subtitle: string;
+    screen6Badge: string;
+    screen6Tip: string;
+    replayTutorial: string;
+    replayTutorialDesc: string;
+  };
 }
 
 export type SupportedLanguage = "pt-BR" | "en-US" | "es-ES" | "de-DE" | "ru-RU" | "zh-CN" | "ja-JP";
@@ -599,5 +632,6 @@ export type TranslationKey =
   | `help.${keyof TranslationSchema["help"]}`
   | `about.${keyof TranslationSchema["about"]}`
   | `errors.${keyof TranslationSchema["errors"]}`
-  | `productCategories.${keyof TranslationSchema["productCategories"]}`;
+  | `productCategories.${keyof TranslationSchema["productCategories"]}`
+  | `onboarding.${keyof TranslationSchema["onboarding"]}`;
 

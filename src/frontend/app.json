@@ -29,7 +29,10 @@
           "locationWhenInUsePermission": "O Presco precisa da sua localização para encontrar mercados próximos a você.",
           "locationAlwaysPermission": "O Presco precisa da sua localização para encontrar mercados próximos a você."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-splash-screen",
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

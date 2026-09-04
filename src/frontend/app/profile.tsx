@@ -1883,7 +1883,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   bannerDarkOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(0, 0, 0, 0.22)",
   },
   bannerThumbnailIcon: {

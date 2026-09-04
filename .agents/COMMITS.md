@@ -24,7 +24,72 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
-## [2026-09-04 08:29] - fix(backend): resolve ESM __dirname reference error in server.ts and hoisted types in tsconfig
+## [2026-09-04 09:38] - feat(frontend): implement hand-drawn onboarding tutorial modal, storage util and i18n in 7 languages
+
+- **Description:** Implemented collaborative multi-agent onboarding flow architecture with hand-drawn / doodle sketch aesthetic:
+  1. **Orchestration Plan:** Authored `onboarding-tutorial-flow.md` and `implementation_plan.md` defining the 6-step user journey, prompt engineering, and acceptance criteria.
+  2. **Persistence Utility:** Created `src/frontend/utils/tutorialStorage.ts` with `hasSeenTutorial()`, `markTutorialAsSeen()`, and `resetTutorialStatus()` using `@presco:hasSeenTutorial`.
+  3. **Multilingual Localization (i18n):** Extended `src/frontend/i18n/types.ts` with `onboarding` schema and implemented 100% of translations across all 7 languages (`pt.ts`, `en.ts`, `es.ts`, `de.ts`, `ru.ts`, `zh.ts`, `ja.ts`).
+  4. **Visual Doodle Assets:** Generated and integrated high-resolution mascot sketch `mascot-doodle.jpg` and 9:16 layout mockup `onboarding-sketch-hero.jpg` under `src/frontend/components/images/`.
+  5. **Hand-Drawn Carousel Component:** Developed `src/frontend/components/OnboardingTutorialModal.tsx` featuring 6 custom UI sketch mockups with chalk brackets, washi tape, tilted post-its, scribbled arrows, Reanimated 4 swipe gestures, Expo Haptics, and `useTheme()` support across Light, Dark, and AMOLED.
+- **Files Modified:**
+  - `onboarding-tutorial-flow.md`
+  - `src/frontend/utils/tutorialStorage.ts`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/components/images/mascot-doodle.jpg`
+  - `src/frontend/components/images/onboarding-sketch-hero.jpg`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Ready to mount on `index.tsx`, `registerUser.tsx`, and add replay button in `settings.tsx` / `help.tsx` upon session resume.
+
+
+## [2026-09-04 09:24] - fix(frontend): install @expo/metro-runtime, harden API dynamic hostUri and add dev:tunnel script
+
+- **Description:** Investigated and resolved Expo Go mobile connection failures on matching SDK and network:
+  1. **Metro Runtime Resolution:** Installed missing `@expo/metro-runtime@~57.0.15` in `src/frontend`, fixing fatal HTTP 500 bundler crashes (`Unable to resolve module @expo/metro-runtime`) whenever mobile devices or web browsers requested assets from Metro.
+  2. **Dynamic Backend URL Resolution:** Enhanced `src/frontend/services/api.ts` to dynamically inspect `Constants.expoConfig?.hostUri` when `EXPO_PUBLIC_API_URL` is omitted, resolving backend API requests automatically to the machine's LAN IP (`http://<host>:3333`) on physical devices instead of failing against mobile `http://localhost:3333`.
+  3. **Tunnel & LAN Script Presets:** Added `dev:tunnel` and `dev:lan` scripts to root `package.json`, `turbo.json`, `src/backend/package.json`, and `src/frontend/package.json` to enable 1-command bypass of router AP/Client Isolation.
+  4. **Active Environment Detection:** Created `src/frontend/.env` with current LAN IP `10.153.0.145:3333`.
+- **Files Modified:**
+  - `src/frontend/package.json`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/.env`
+  - `package.json`
+  - `turbo.json`
+  - `src/backend/package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers can connect via zero-latency LAN or bypass isolated Wi-Fi networks immediately via `npm run dev:tunnel`.
+
+
+## [2026-09-04 09:03] - chore(frontend): upgrade to Expo SDK 57 and React Native 0.86 with full compatibility
+
+- **Description:** Upgraded frontend to Expo SDK 57 to resolve Expo Go app version mismatch on mobile devices:
+  1. **Expo SDK 57 Migration:** Upgraded `expo` to `57.0.20`, `react-native` to `0.86.3`, `react` & `react-dom` to `19.2.3`, `expo-router` to `~57.0.19`, `react-native-reanimated` to `4.5.1`, `react-native-gesture-handler` to `~2.32.0`, and companion Expo modules via `npx expo install --fix`.
+  2. **TypeScript & Style Compatibility:** Replaced deprecated `StyleSheet.absoluteFillObject` with `StyleSheet.absoluteFill` in `app/map.native.tsx` and `app/profile.tsx`. Declared `declare const Buffer: any` in `app/settings.tsx` for Node-less base64 serialization typing.
+  3. **ESLint Rules Tuning:** Configured `eslint.config.js` to disable `react-hooks/immutability` false positive on Reanimated `SharedValue.value` mutations and set `react-hooks/set-state-in-effect` to warning.
+  4. **Verification:** Verified `npx tsc --noEmit` passes with 0 errors, `npm run lint` passes with 0 errors, and `npx expo config --type public` reports valid SDK 57 config.
+- **Files Modified:**
+  - `package-lock.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/eslint.config.js`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `.agents/AGENTS.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Expo Go on mobile running SDK 57 can now connect and run the app seamlessly.
 
 - **Description:** Fixed backend startup crash `ReferenceError: __dirname is not defined` when starting `server.ts`:
   1. **ESM __dirname Support:** Imported `fileURLToPath` from `node:url` and derived `__dirname = path.dirname(fileURLToPath(import.meta.url))` in `src/backend/src/server.ts`, allowing Drizzle migrations folder to resolve accurately in Node ESM mode.
