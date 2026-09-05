@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Modal,
   Dimensions,
   Platform,
+  LayoutChangeEvent,
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,9 +16,9 @@ import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withTiming,
   runOnJS,
+  Easing,
 } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 
@@ -26,7 +27,7 @@ import { useI18n } from "../content/i18nContext";
 import { markTutorialAsSeen } from "../utils/tutorialStorage";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SWIPE_THRESHOLD = 50;
+const SWIPE_THRESHOLD = 45;
 
 interface OnboardingTutorialModalProps {
   visible: boolean;
@@ -38,20 +39,21 @@ export default function OnboardingTutorialModal({
   onClose,
 }: OnboardingTutorialModalProps) {
   const insets = useSafeAreaInsets();
-  const { isDark, amoledEnabled, accent } = useTheme();
+  const { isDark, amoledEnabled } = useTheme();
   const { t } = useI18n();
 
   const [currentStep, setCurrentStep] = useState(0);
   const totalSteps = 6;
+  const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH - 40);
 
-  // Animation values for gesture swipe
+  // Animação horizontal contínua de trilha de carrossel
   const translateX = useSharedValue(0);
+  const startX = useSharedValue(0);
 
-  // Paleta tátil de supermercado adaptada ao tema ativo
   const isAmoled = isDark && amoledEnabled;
 
   const colors = {
-    backdrop: isAmoled ? "rgba(0,0,0,0.95)" : isDark ? "rgba(10,15,22,0.92)" : "rgba(244,241,235,0.96)",
+    backdrop: isAmoled ? "rgba(0,0,0,0.96)" : isDark ? "rgba(10,15,22,0.94)" : "rgba(244,241,235,0.97)",
     surfaceCard: isAmoled ? "#0D1117" : isDark ? "#161F2E" : "#FFFFFF",
     cardBorder: isAmoled ? "#2A3649" : isDark ? "#2A3649" : "#D4DBC9",
     craftPaper: isAmoled ? "#000000" : isDark ? "#0D1117" : "#F7F5EE",
@@ -60,7 +62,6 @@ export default function OnboardingTutorialModal({
     emerald: "#10B981",
     emeraldDark: "#047857",
     emeraldLight: isDark ? "#064E3B" : "#D1FAE5",
-    forestGreen: "#1A2E1A",
     amber: "#F59E0B",
     amberDark: "#B45309",
     amberLight: isDark ? "#78350F" : "#FEF3C7",
@@ -69,7 +70,6 @@ export default function OnboardingTutorialModal({
     postItText: isDark ? "#FEF9C3" : "#713F12",
     chalkWhite: isDark ? "#E2E8F0" : "#4A5568",
     chalkYellow: "#FBBF24",
-    chalkGreen: "#34D399",
     washiTape: isDark ? "rgba(255,255,255,0.15)" : "rgba(203,213,225,0.65)",
     stampRed: isDark ? "#F87171" : "#DC2626",
   };
@@ -86,6 +86,14 @@ export default function OnboardingTutorialModal({
     }
   }, []);
 
+  const handleContainerLayout = (e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0 && width !== containerWidth) {
+      setContainerWidth(width);
+      translateX.value = -currentStep * width;
+    }
+  };
+
   const handleFinish = useCallback(async () => {
     triggerHaptic("success");
     await markTutorialAsSeen();
@@ -94,19 +102,29 @@ export default function OnboardingTutorialModal({
 
   const handleNext = useCallback(() => {
     if (currentStep < totalSteps - 1) {
+      const next = currentStep + 1;
       triggerHaptic("selection");
-      setCurrentStep((prev) => prev + 1);
+      setCurrentStep(next);
+      translateX.value = withTiming(-next * containerWidth, {
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+      });
     } else {
       handleFinish();
     }
-  }, [currentStep, totalSteps, triggerHaptic, handleFinish]);
+  }, [currentStep, totalSteps, containerWidth, triggerHaptic, handleFinish, translateX]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 0) {
+      const prev = currentStep - 1;
       triggerHaptic("selection");
-      setCurrentStep((prev) => prev - 1);
+      setCurrentStep(prev);
+      translateX.value = withTiming(-prev * containerWidth, {
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+      });
     }
-  }, [currentStep, triggerHaptic]);
+  }, [currentStep, containerWidth, triggerHaptic, translateX]);
 
   const handleSkip = useCallback(async () => {
     triggerHaptic("selection");
@@ -114,31 +132,57 @@ export default function OnboardingTutorialModal({
     onClose();
   }, [triggerHaptic, onClose]);
 
-  // Swipe gesture configuration
+  useEffect(() => {
+    if (visible) {
+      setCurrentStep(0);
+      translateX.value = 0;
+    }
+  }, [visible, translateX]);
+
+  // Gestos de Pan com rastreamento contínuo 1:1 e deslizamento horizontal suave
   const panGesture = Gesture.Pan()
-    .activeOffsetX([-15, 15])
+    .activeOffsetX([-10, 10])
+    .onBegin(() => {
+      startX.value = translateX.value;
+    })
     .onUpdate((event) => {
-      translateX.value = event.translationX;
+      const rawX = startX.value + event.translationX;
+      const minX = -(totalSteps - 1) * containerWidth;
+      const maxX = 0;
+      if (rawX > maxX) {
+        translateX.value = rawX * 0.25;
+      } else if (rawX < minX) {
+        translateX.value = minX + (rawX - minX) * 0.25;
+      } else {
+        translateX.value = rawX;
+      }
     })
     .onEnd((event) => {
+      let targetStep = currentStep;
       if (event.translationX < -SWIPE_THRESHOLD && currentStep < totalSteps - 1) {
-        runOnJS(handleNext)();
+        targetStep = currentStep + 1;
       } else if (event.translationX > SWIPE_THRESHOLD && currentStep > 0) {
-        runOnJS(handleBack)();
+        targetStep = currentStep - 1;
+      } else {
+        targetStep = Math.max(0, Math.min(totalSteps - 1, Math.round(-translateX.value / containerWidth)));
       }
-      translateX.value = withSpring(0);
+
+      runOnJS(setCurrentStep)(targetStep);
+      translateX.value = withTiming(-targetStep * containerWidth, {
+        duration: 250,
+        easing: Easing.out(Easing.cubic),
+      });
     });
 
-  const animatedSlideStyle = useAnimatedStyle(() => ({
+  const animatedTrackStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
 
   if (!visible) return null;
 
-  // --- Renderizadores dos Mockups com Doodles Hand-Drawn por Tela ---
-
-  const renderScreenMockup = () => {
-    switch (currentStep) {
+  // --- Mockups Ricos com Estética Artesanal (Hand-Drawn / Craft Paper) ---
+  const renderScreenMockup = (stepIndex: number) => {
+    switch (stepIndex) {
       case 0:
         // Tela 1: Buscar & Comparar
         return (
@@ -182,7 +226,7 @@ export default function OnboardingTutorialModal({
                   <Text style={[styles.vsText, { color: colors.textSecondary }]}>vs</Text>
                 </View>
                 <View>
-                  <Text style={[styles.marketName, { color: colors.textSecondary }]}>Atacadão</Text>
+                  <Text style={[styles.marketName, { color: colors.textSecondary }]}>Outros Mercados</Text>
                   <Text style={[styles.marketPriceOld, { color: colors.textSecondary }]}>R$ 22,50</Text>
                 </View>
               </View>
@@ -221,7 +265,7 @@ export default function OnboardingTutorialModal({
 
               {/* Código de barras desenhado */}
               <View style={styles.barcodeWrapper}>
-                <Ionicons name="barcode" size={90} color={isDark ? "#FFFFFF" : "#E2E8F0"} />
+                <Ionicons name="barcode" size={88} color={isDark ? "#FFFFFF" : "#E2E8F0"} />
                 <Text style={styles.barcodeEan}>7891000315507</Text>
               </View>
 
@@ -237,7 +281,7 @@ export default function OnboardingTutorialModal({
             <View style={[styles.washiTapeWide, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
               <Ionicons name="cloud-done-outline" size={16} color={colors.emeraldDark} />
               <Text style={[styles.washiText, { color: colors.emeraldDark }]}>
-                OpenFoodFacts + Base Local Integrada
+                Base Local + OpenFoodFacts Integrada
               </Text>
             </View>
           </View>
@@ -249,7 +293,6 @@ export default function OnboardingTutorialModal({
           <View style={styles.mockupContainer}>
             {/* Mapa ilustrado com ruas e pinos orgânicos */}
             <View style={[styles.mapContainer, { backgroundColor: isDark ? "#111827" : "#E8F0E4", borderColor: colors.cardBorder }]}>
-              {/* Ruas desenhadas */}
               <View style={[styles.mapRoadHorizontal, { backgroundColor: isDark ? "#1F2937" : "#FFFFFF" }]} />
               <View style={[styles.mapRoadVertical, { backgroundColor: isDark ? "#1F2937" : "#FFFFFF" }]} />
 
@@ -282,7 +325,7 @@ export default function OnboardingTutorialModal({
             {/* Post-it de geolocalização PostGIS */}
             <View style={[styles.postItNote, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald, transform: [{ rotate: "1.5deg" }] }]}>
               <Text style={[styles.postItText, { color: colors.emeraldDark }]}>
-                📍 Raio inteligente: economize combustível e tempo!
+                📍 Raio inteligente: economize tempo e combustível!
               </Text>
             </View>
           </View>
@@ -292,7 +335,7 @@ export default function OnboardingTutorialModal({
         // Tela 4: Registrar Preços (+15 XP / +25 XP)
         return (
           <View style={styles.mockupContainer}>
-            {/* Card com formulário e anotação a lápis */}
+            {/* Card com formulário e anotação */}
             <View style={[styles.sketchFormCard, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
               <Text style={[styles.formLabel, { color: colors.textSecondary }]}>Preço na Gôndola</Text>
               <View style={[styles.formPriceInput, { borderColor: colors.emerald, backgroundColor: colors.craftPaper }]}>
@@ -316,7 +359,7 @@ export default function OnboardingTutorialModal({
                 🎉 +15 XP Garantidos!
               </Text>
               <Text style={[styles.postItSubtitle, { color: colors.postItText }]}>
-                Toda oferta informada ajuda quem mais precisa e sobe seu nível no ranking.
+                Toda oferta informada ajuda quem mais precisa e sobe seu ranking.
               </Text>
             </View>
           </View>
@@ -335,13 +378,13 @@ export default function OnboardingTutorialModal({
               {/* Botões de voto desenhados */}
               <View style={styles.voteButtonsRow}>
                 <View style={[styles.sketchVoteBtn, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight }]}>
-                  <Ionicons name="thumbs-up" size={26} color={colors.emerald} />
+                  <Ionicons name="thumbs-up" size={24} color={colors.emerald} />
                   <Text style={[styles.voteCount, { color: colors.emeraldDark }]}>+18 Sim</Text>
                   <View style={[styles.voteCircleHandDrawn, { borderColor: colors.emerald }]} />
                 </View>
 
                 <View style={[styles.sketchVoteBtn, { borderColor: colors.cardBorder, backgroundColor: colors.craftPaper }]}>
-                  <Ionicons name="thumbs-down-outline" size={26} color={colors.textSecondary} />
+                  <Ionicons name="thumbs-down-outline" size={24} color={colors.textSecondary} />
                   <Text style={[styles.voteCount, { color: colors.textSecondary }]}>0 Não</Text>
                 </View>
               </View>
@@ -371,9 +414,13 @@ export default function OnboardingTutorialModal({
             {/* Card com barra de XP e Mascote */}
             <View style={[styles.sketchProfileCard, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
               <View style={styles.profileHeaderMini}>
-                <View style={styles.mascotAvatarMini}>
+                <View style={[styles.mascotAvatarMini, { backgroundColor: isDark ? "#1E293B" : "#F1F5F9" }]}>
                   <Image
-                    source={require("./images/mascot-doodle.jpg")}
+                    source={
+                      isDark
+                        ? require("./images/logo-darkmode.png")
+                        : require("./images/logo-presco.png")
+                    }
                     style={styles.mascotImage}
                     contentFit="contain"
                   />
@@ -397,7 +444,7 @@ export default function OnboardingTutorialModal({
                 </View>
               </View>
 
-              {/* Badges de conquistas rabiscadas */}
+              {/* Badges de conquistas */}
               <View style={styles.badgesRowMini}>
                 <View style={[styles.badgeMiniPill, { borderColor: colors.amber, backgroundColor: colors.amberLight }]}>
                   <Ionicons name="star" size={14} color={colors.amber} />
@@ -424,7 +471,7 @@ export default function OnboardingTutorialModal({
     }
   };
 
-  // Textos dinâmicos do passo atual
+  // Textos Simplificados & Diretos (sem excesso de palavras)
   const stepTitles = [
     t("onboarding.screen1Title") || "Buscar & Comparar",
     t("onboarding.screen2Title") || "Leitor de Gôndola EAN",
@@ -435,30 +482,30 @@ export default function OnboardingTutorialModal({
   ];
 
   const stepSubtitles = [
-    t("onboarding.screen1Subtitle") || "Encontre qualquer produto pelo nome ou categorias para comparar preços.",
-    t("onboarding.screen2Subtitle") || "Aponte a câmera para o código de barras na prateleira e consulte preços.",
-    t("onboarding.screen3Subtitle") || "Descubra supermercados próximos no raio de 15 km com as melhores ofertas.",
-    t("onboarding.screen4Subtitle") || "Colabore reportando preços que você encontra e fature experiência.",
-    t("onboarding.screen5Subtitle") || "Vote com upvote ou downvote nas ofertas para manter a base confiável.",
-    t("onboarding.screen6Subtitle") || "Acumule XP, suba de nível, desbloqueie insígnias e resgate molduras.",
+    t("onboarding.screen1Subtitle") || "Encontre qualquer produto pelo nome ou categorias para comparar preços entre mercados.",
+    t("onboarding.screen2Subtitle") || "Aponte a câmera para o código de barras na prateleira e descubra se há preços menores.",
+    t("onboarding.screen3Subtitle") || "Localize supermercados em até 15 km com as melhores ofertas e trajetos rápidos.",
+    t("onboarding.screen4Subtitle") || "Reporte os preços que encontrar nas lojas e acumule experiência para subir de nível.",
+    t("onboarding.screen5Subtitle") || "Vote com upvote ou downvote nas ofertas registradas para manter os dados 100% confiáveis.",
+    t("onboarding.screen6Subtitle") || "Acumule XP, ganhe insígnias exclusivas e resgate molduras e banners personalizados na Loja.",
   ];
 
   const stepBadges = [
-    t("onboarding.screen1Badge") || "Economia Real",
+    t("onboarding.screen1Badge") || "Economia",
     t("onboarding.screen2Badge") || "Leitura Rápida",
-    t("onboarding.screen3Badge") || "Geolocalização",
-    t("onboarding.screen4Badge") || "+15 XP por Oferta",
-    t("onboarding.screen5Badge") || "+5 XP por Voto",
+    t("onboarding.screen3Badge") || "15 km GPS",
+    t("onboarding.screen4Badge") || "+15 XP",
+    t("onboarding.screen5Badge") || "+5 XP",
     t("onboarding.screen6Badge") || "Gamificação",
   ];
 
   const stepTips = [
-    t("onboarding.screen1Tip") || "Dica: Veja o histórico de preços para saber se o desconto é real!",
-    t("onboarding.screen2Tip") || "Funciona integrado com base local e OpenFoodFacts.",
-    t("onboarding.screen3Tip") || "Filtre por proximidade para economizar tempo e combustível.",
-    t("onboarding.screen4Tip") || "Cadastre produtos novos para faturar +25 XP bônus!",
-    t("onboarding.screen5Tip") || "Sua avaliação garante preços atualizados para todos.",
-    t("onboarding.screen6Tip") || "Equipe molduras épicas e mostre sua relevância!",
+    t("onboarding.screen1Tip") || "Dica: Veja o histórico de preços para checar se a promoção é real.",
+    t("onboarding.screen2Tip") || "Dica: Funciona integrado com a base local e OpenFoodFacts.",
+    t("onboarding.screen3Tip") || "Dica: Filtre por menor preço e distância para economizar combustível.",
+    t("onboarding.screen4Tip") || "Dica: Cadastre produtos novos para faturar +25 XP bônus!",
+    t("onboarding.screen5Tip") || "Dica: Sua avaliação ajuda milhares de pessoas a economizarem.",
+    t("onboarding.screen6Tip") || "Dica: Equipe molduras raras no seu perfil para se destacar no ranking.",
   ];
 
   return (
@@ -473,122 +520,132 @@ export default function OnboardingTutorialModal({
             },
           ]}
         >
-          {/* Header com indicador e botão Pular */}
+          {/* Header com indicador de passo */}
           <View style={styles.headerRow}>
             <View style={[styles.stepPill, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
-              <Ionicons name="book-outline" size={14} color={colors.emeraldDark} />
+              <Ionicons name="book-outline" size={13} color={colors.emeraldDark} />
               <Text style={[styles.stepPillText, { color: colors.emeraldDark }]}>
-                {currentStep + 1} de {totalSteps}
+                Passo {currentStep + 1} de {totalSteps}
               </Text>
             </View>
-
-            <TouchableOpacity
-              onPress={handleSkip}
-              activeOpacity={0.7}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.skipButton}
-            >
-              <Text style={[styles.skipText, { color: colors.textSecondary }]}>
-                {t("onboarding.skip") || "Pular"}
-              </Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Área Interativa com Reconhecimento de Gesto Swipe */}
+          {/* Área Interativa com Carrossel Contínuo e Deslizamento Horizontal Suave */}
           <GestureDetector gesture={panGesture}>
-            <Animated.View style={[styles.carouselCard, animatedSlideStyle]}>
-              {/* Mockup Hand-Drawn renderizado com doodles nativos */}
-              {renderScreenMockup()}
+            <View style={styles.carouselViewport} onLayout={handleContainerLayout}>
+              <Animated.View
+                style={[
+                  styles.carouselTrack,
+                  { width: containerWidth * totalSteps },
+                  animatedTrackStyle,
+                ]}
+              >
+                {Array.from({ length: totalSteps }).map((_, stepIndex) => (
+                  <View
+                    key={`slide-${stepIndex}`}
+                    style={[styles.carouselSlide, { width: containerWidth }]}
+                  >
+                    {/* Mockup Hand-Drawn Artesanal */}
+                    {renderScreenMockup(stepIndex)}
 
-              {/* Textos explicativos */}
-              <View style={styles.textContainer}>
-                <View style={styles.titleRow}>
-                  <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
-                    {stepTitles[currentStep]}
-                  </Text>
-                  <View style={[styles.badgeChip, { backgroundColor: colors.amberLight, borderColor: colors.amber }]}>
-                    <Text style={[styles.badgeChipText, { color: colors.amberDark }]}>
-                      {stepBadges[currentStep]}
-                    </Text>
+                    {/* Textos explicativos */}
+                    <View style={styles.textContainer}>
+                      <View style={styles.titleRow}>
+                        <Text style={[styles.stepTitle, { color: colors.textPrimary }]}>
+                          {stepTitles[stepIndex]}
+                        </Text>
+                        <View style={[styles.badgeChip, { backgroundColor: colors.amberLight, borderColor: colors.amber }]}>
+                          <Text style={[styles.badgeChipText, { color: colors.amberDark }]}>
+                            {stepBadges[stepIndex]}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
+                        {stepSubtitles[stepIndex]}
+                      </Text>
+
+                      {/* Nota tátil de dica */}
+                      <View style={[styles.tipBanner, { backgroundColor: colors.craftPaper, borderColor: colors.cardBorder }]}>
+                        <Ionicons name="bulb-outline" size={16} color={colors.amber} />
+                        <Text style={[styles.tipText, { color: colors.textSecondary }]}>
+                          {stepTips[stepIndex]}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-
-                <Text style={[styles.stepSubtitle, { color: colors.textSecondary }]}>
-                  {stepSubtitles[currentStep]}
-                </Text>
-
-                {/* Nota tátil de dica */}
-                <View style={[styles.tipBanner, { backgroundColor: colors.craftPaper, borderColor: colors.cardBorder }]}>
-                  <Ionicons name="bulb-outline" size={16} color={colors.amber} />
-                  <Text style={[styles.tipText, { color: colors.textSecondary }]}>
-                    {stepTips[currentStep]}
-                  </Text>
-                </View>
-              </View>
-            </Animated.View>
+                ))}
+              </Animated.View>
+            </View>
           </GestureDetector>
 
-          {/* Barra de Navegação Inferior */}
+          {/* Barra de Navegação Inferior com Pular e Próximo (Branco) no Canto Inferior Direito */}
           <View style={styles.bottomBar}>
-            {/* Dots de Paginação */}
-            <View style={styles.dotsRow}>
-              {Array.from({ length: totalSteps }).map((_, index) => {
-                const isActive = index === currentStep;
-                return (
-                  <View
-                    key={`dot-${index}`}
-                    style={[
-                      styles.dot,
-                      {
-                        backgroundColor: isActive
-                          ? colors.emerald
-                          : isDark
-                          ? "#334155"
-                          : "#CBD5E1",
-                        width: isActive ? 22 : 8,
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-
-            {/* Ações de navegação */}
-            <View style={styles.actionButtonsRow}>
-              {currentStep > 0 ? (
+            {/* Canto Inferior Esquerdo: Voltar (se > 0) e Dots de Paginação */}
+            <View style={styles.bottomLeftContainer}>
+              {currentStep > 0 && (
                 <TouchableOpacity
                   onPress={handleBack}
                   activeOpacity={0.7}
-                  style={[styles.backBtn, { borderColor: colors.cardBorder }]}
+                  style={[styles.miniBackBtn, { borderColor: colors.cardBorder, backgroundColor: colors.surfaceCard }]}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <Ionicons name="chevron-back" size={20} color={colors.textPrimary} />
-                  <Text style={[styles.backBtnText, { color: colors.textPrimary }]}>
-                    {t("onboarding.back") || "Voltar"}
+                  <Ionicons name="chevron-back" size={18} color={colors.textPrimary} />
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.dotsRow}>
+                {Array.from({ length: totalSteps }).map((_, index) => {
+                  const isActive = index === currentStep;
+                  return (
+                    <View
+                      key={`dot-${index}`}
+                      style={[
+                        styles.dot,
+                        {
+                          backgroundColor: isActive
+                            ? colors.emerald
+                            : isDark
+                            ? "#334155"
+                            : "#CBD5E1",
+                          width: isActive ? 18 : 6,
+                        },
+                      ]}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Canto Inferior Direito: Escrito de Pular + Botão Branco de Próximo */}
+            <View style={styles.bottomRightContainer}>
+              {currentStep < totalSteps - 1 && (
+                <TouchableOpacity
+                  onPress={handleSkip}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={styles.skipTextButton}
+                >
+                  <Text style={[styles.skipTextBottom, { color: colors.textSecondary }]}>
+                    {t("onboarding.skip") || "Pular"}
                   </Text>
                 </TouchableOpacity>
-              ) : (
-                <View style={styles.backBtnSpacer} />
               )}
 
               <TouchableOpacity
                 onPress={handleNext}
                 activeOpacity={0.85}
-                style={[
-                  styles.primaryBtn,
-                  {
-                    backgroundColor: currentStep === totalSteps - 1 ? colors.emerald : (typeof accent === "string" ? accent : colors.emerald),
-                  },
-                ]}
+                style={styles.whiteNextButton}
               >
-                <Text style={styles.primaryBtnText}>
+                <Text style={styles.whiteNextButtonText} numberOfLines={1}>
                   {currentStep === totalSteps - 1
-                    ? t("onboarding.finish") || "Começar a Economizar"
-                    : t("onboarding.next") || "Avançar"}
+                    ? t("onboarding.finish") || "Começar"
+                    : t("onboarding.next") || "Próximo"}
                 </Text>
                 <Ionicons
                   name={currentStep === totalSteps - 1 ? "rocket" : "arrow-forward"}
-                  size={18}
-                  color="#FFFFFF"
+                  size={16}
+                  color="#0F172A"
                   style={{ marginLeft: 6 }}
                 />
               </TouchableOpacity>
@@ -615,9 +672,9 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   stepPill: {
     flexDirection: "row",
@@ -632,27 +689,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
   },
-  skipButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+  carouselViewport: {
+    flex: 1,
+    overflow: "hidden",
+    width: "100%",
+    justifyContent: "center",
   },
-  skipText: {
-    fontSize: 14,
-    fontWeight: "600",
+  carouselTrack: {
+    flexDirection: "row",
+    flex: 1,
+    alignItems: "center",
   },
-  carouselCard: {
+  carouselSlide: {
     flex: 1,
     justifyContent: "center",
+    paddingHorizontal: 2,
   },
   mockupContainer: {
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 260,
-    marginVertical: 10,
+    minHeight: 210,
+    marginVertical: 4,
   },
   washiTape: {
     width: 90,
-    height: 18,
+    height: 16,
     borderRadius: 3,
     marginBottom: -8,
     zIndex: 2,
@@ -666,7 +727,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    marginTop: 10,
+    marginTop: 8,
   },
   washiText: {
     fontSize: 11,
@@ -677,7 +738,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "92%",
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: 14,
     borderWidth: 1.5,
     shadowColor: "#000",
@@ -708,11 +769,11 @@ const styles = StyleSheet.create({
   chipsRow: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 12,
+    marginTop: 10,
   },
   sketchChip: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
   },
@@ -722,14 +783,14 @@ const styles = StyleSheet.create({
   },
   sketchCompareCard: {
     width: "92%",
-    padding: 14,
-    borderRadius: 16,
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowRadius: 4,
     elevation: 2,
   },
   compareRow: {
@@ -742,11 +803,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   marketPrice: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
   },
   marketPriceOld: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "700",
     textDecorationLine: "line-through",
   },
@@ -763,22 +824,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 6,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: "rgba(0,0,0,0.05)",
   },
   arrowAnnotation: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     fontStyle: "italic",
   },
   postItNote: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 10,
     maxWidth: "88%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -787,10 +848,10 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   postItNoteLarge: {
-    padding: 14,
+    padding: 12,
     borderRadius: 10,
     borderWidth: 1,
-    marginTop: 12,
+    marginTop: 10,
     maxWidth: "92%",
     position: "relative",
   },
@@ -798,20 +859,21 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -6,
     left: "40%",
-    width: 45,
+    width: 50,
     height: 12,
     backgroundColor: "rgba(255,255,255,0.4)",
     borderRadius: 2,
+    transform: [{ rotate: "-2deg" }],
   },
   postItTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   postItSubtitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
   },
   postItText: {
     fontSize: 12,
@@ -820,76 +882,81 @@ const styles = StyleSheet.create({
   },
   cameraViewport: {
     width: "88%",
-    height: 190,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    justifyContent: "center",
+    height: 140,
+    borderRadius: 16,
+    borderWidth: 1,
     alignItems: "center",
+    justifyContent: "center",
     position: "relative",
     overflow: "hidden",
   },
   bracketTL: {
     position: "absolute",
-    top: 14,
-    left: 14,
-    width: 24,
-    height: 24,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderRadius: 2,
+    top: 8,
+    left: 8,
+    width: 18,
+    height: 18,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderRadius: 3,
   },
   bracketTR: {
     position: "absolute",
-    top: 14,
-    right: 14,
-    width: 24,
-    height: 24,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderRadius: 2,
+    top: 8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderTopWidth: 2,
+    borderRightWidth: 2,
+    borderRadius: 3,
   },
   bracketBL: {
     position: "absolute",
-    bottom: 14,
-    left: 14,
-    width: 24,
-    height: 24,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderRadius: 2,
+    bottom: 8,
+    left: 8,
+    width: 18,
+    height: 18,
+    borderBottomWidth: 2,
+    borderLeftWidth: 2,
+    borderRadius: 3,
   },
   bracketBR: {
     position: "absolute",
-    bottom: 14,
-    right: 14,
-    width: 24,
-    height: 24,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderRadius: 2,
+    bottom: 8,
+    right: 8,
+    width: 18,
+    height: 18,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderRadius: 3,
   },
   laserBeam: {
     position: "absolute",
-    left: 0,
-    right: 0,
+    top: "50%",
+    left: 14,
+    right: 14,
     height: 2,
-    opacity: 0.8,
+    shadowColor: "#10B981",
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 2,
   },
   barcodeWrapper: {
     alignItems: "center",
   },
   barcodeEan: {
     color: "#94A3B8",
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: "700",
     letterSpacing: 2,
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginTop: 2,
   },
   speechBubble: {
     position: "absolute",
-    bottom: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 12,
+    top: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
   speechText: {
@@ -897,57 +964,57 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   mapContainer: {
-    width: "90%",
-    height: 190,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    width: "88%",
+    height: 140,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
     position: "relative",
     overflow: "hidden",
-    justifyContent: "center",
-    alignItems: "center",
   },
   mapRoadHorizontal: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    top: 85,
-    height: 26,
+    width: "100%",
+    height: 16,
+    top: "45%",
+    opacity: 0.7,
   },
   mapRoadVertical: {
     position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 110,
-    width: 26,
+    height: "100%",
+    width: 16,
+    left: "40%",
+    opacity: 0.7,
   },
   mapRadiusDashed: {
-    width: 140,
-    height: 140,
-    borderRadius: 999,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    opacity: 0.6,
+    opacity: 0.8,
   },
   userPinDot: {
-    position: "absolute",
-    left: 118,
-    top: 93,
     width: 12,
     height: 12,
     borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute",
   },
   userPulseRing: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 1.5,
+    position: "absolute",
+    top: -4,
+    left: -4,
+    right: -4,
+    bottom: -4,
+    borderRadius: 10,
+    borderWidth: 1,
+    opacity: 0.5,
   },
   marketPinTarget: {
     position: "absolute",
-    top: 40,
-    right: 45,
+    top: 18,
+    right: 32,
     alignItems: "center",
   },
   sketchPinBadge: {
@@ -955,8 +1022,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   sketchPinText: {
     color: "#FFFFFF",
@@ -966,160 +1033,159 @@ const styles = StyleSheet.create({
   pinTail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 6,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderTopWidth: 5,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
   },
   mapSpeechBubble: {
     position: "absolute",
-    bottom: 10,
+    bottom: 8,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     borderWidth: 1,
   },
   mapSpeechText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
   sketchFormCard: {
-    width: "92%",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
+    width: "88%",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
   },
   formLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     marginBottom: 6,
   },
   formPriceInput: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
     borderWidth: 1.5,
+    gap: 6,
   },
   formPriceCurrency: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginRight: 6,
+    fontSize: 16,
+    fontWeight: "800",
   },
   formPriceValue: {
-    fontSize: 22,
-    fontWeight: "900",
-    flex: 1,
+    fontSize: 20,
+    fontWeight: "800",
   },
   pencilIcon: {
-    transform: [{ rotate: "-45deg" }],
+    marginLeft: 6,
   },
   stampBox: {
-    marginTop: 12,
-    borderWidth: 1.5,
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    borderWidth: 1,
     borderStyle: "dashed",
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    alignItems: "center",
   },
   stampText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   sketchAuditCard: {
-    width: "92%",
-    padding: 16,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    width: "88%",
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: "center",
   },
   auditQuestion: {
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
-    marginBottom: 14,
+    marginBottom: 10,
   },
   voteButtonsRow: {
     flexDirection: "row",
-    gap: 16,
-    marginBottom: 14,
+    gap: 12,
+    marginBottom: 8,
   },
   sketchVoteBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    borderWidth: 1,
     position: "relative",
+  },
+  voteCount: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   voteCircleHandDrawn: {
     position: "absolute",
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    top: -2,
+    left: -2,
+    right: -2,
+    bottom: -2,
+    borderRadius: 12,
+    borderWidth: 1,
     borderStyle: "dashed",
-  },
-  voteCount: {
-    fontSize: 13,
-    fontWeight: "700",
   },
   trustStamp: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
   },
   trustStampText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   sketchProfileCard: {
-    width: "92%",
-    padding: 16,
-    borderRadius: 18,
-    borderWidth: 1.5,
+    width: "88%",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   profileHeaderMini: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
-    marginBottom: 14,
+    gap: 12,
+    marginBottom: 10,
   },
   mascotAvatarMini: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   mascotImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
   },
   laurelWreath: {
     position: "absolute",
-    top: -4,
-    left: -4,
-    right: -4,
-    bottom: -4,
+    top: -3,
+    left: -3,
+    right: -3,
+    bottom: -3,
     borderRadius: 999,
     borderWidth: 1.5,
     borderStyle: "dashed",
@@ -1128,24 +1194,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileRankTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
     marginBottom: 2,
   },
   profilePoints: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
   xpBarTrack: {
-    height: 12,
-    borderRadius: 6,
+    height: 10,
+    borderRadius: 5,
     borderWidth: 1,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 8,
   },
   xpBarFill: {
     height: "100%",
-    borderRadius: 6,
+    borderRadius: 5,
   },
   pencilHatching: {
     width: "100%",
@@ -1159,36 +1225,36 @@ const styles = StyleSheet.create({
   badgeMiniPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
   badgeMiniText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
   textContainer: {
-    marginTop: 10,
+    marginTop: 8,
   },
   titleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 4,
     flexWrap: "wrap",
     gap: 8,
   },
   stepTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
   badgeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
   },
   badgeChipText: {
@@ -1196,77 +1262,94 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   stepSubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13.5,
+    lineHeight: 19,
     fontWeight: "500",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   tipBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    padding: 10,
-    borderRadius: 12,
+    padding: 8,
+    borderRadius: 10,
     borderWidth: 1,
   },
   tipText: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 11.5,
+    lineHeight: 15,
     fontWeight: "500",
     flex: 1,
   },
   bottomBar: {
-    marginTop: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: 8,
+    paddingTop: 6,
+  },
+  bottomLeftContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  miniBackBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dotsRow: {
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 16,
+    gap: 5,
   },
   dot: {
-    height: 8,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
-  actionButtonsRow: {
+  bottomRightContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
+    flexShrink: 1,
+    justifyContent: "flex-end",
   },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 16,
-    height: 50,
-    borderRadius: 14,
-    borderWidth: 1,
+  skipTextButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 6,
     justifyContent: "center",
+    alignItems: "center",
   },
-  backBtnSpacer: {
-    width: 0,
-  },
-  backBtnText: {
+  skipTextBottom: {
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
   },
-  primaryBtn: {
-    flex: 1,
+  whiteNextButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 50,
-    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    height: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.08)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.14,
     shadowRadius: 5,
     elevation: 3,
+    flexShrink: 0,
   },
-  primaryBtnText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
+  whiteNextButtonText: {
+    color: "#0F172A",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: -0.2,
   },
 });

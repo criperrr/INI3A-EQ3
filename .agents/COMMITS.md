@@ -2402,3 +2402,10 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/productDetails.tsx`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Complete feature implementation validated with zero TypeScript errors across backend and frontend. Database schema migration executed and catalog seeded.
+
+## `2026-09-05 11:53` - `feat(tutorial)`: Continuous multi-slide horizontal carousel track
+
+- **Description:** Converted the tutorial card system to a true continuous multi-slide horizontal carousel track (`carouselViewport` & `carouselTrack`). All steps are positioned horizontally in a single flex track driven by Reanimated 4 `translateX`, providing 1:1 real-time finger drag and smooth continuous glide transitions without any in-place fading, popping, or bouncing.
+- **Files Modified:**
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+- **Impact / Next Steps:** Native-feeling, continuous horizontal carousel pagination on both swipe gestures and button navigation.

@@ -17,6 +17,8 @@ import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
 import { getUserLocation } from "../utils/userLocation";
+import { hasSeenTutorial } from "../utils/tutorialStorage";
+import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -246,6 +248,20 @@ export default function HomeScreen() {
     }
   }, [router]);
 
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    hasSeenTutorial().then((seen) => {
+      if (isMounted && !seen) {
+        setShowTutorialModal(true);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const gridData = activeView === "products" ? realProducts : realMarkets;
   const gridTitle =
     activeView === "products"
@@ -254,28 +270,35 @@ export default function HomeScreen() {
   const gridSubtitle = activeView === "products" ? t("home.radiusFilter15km") : undefined;
 
   return (
-    <ScrollView
-      ref={scrollViewRef}
-      contentContainerStyle={[
-        styles.content,
-        { backgroundColor: semantic.colors.surface.background },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      <Banner />
-      <ActionMenu
-        onTabPress={handleTabAction}
-        tabs={actionTabs}
-        activeView={activeView}
+    <>
+      <ScrollView
+        ref={scrollViewRef}
+        contentContainerStyle={[
+          styles.content,
+          { backgroundColor: semantic.colors.surface.background },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Banner />
+        <ActionMenu
+          onTabPress={handleTabAction}
+          tabs={actionTabs}
+          activeView={activeView}
+        />
+        <ItemsGrid
+          title={gridTitle}
+          subtitle={gridSubtitle}
+          data={gridData}
+          isProductView={activeView === "products"}
+          onItemPress={handleItemPress}
+        />
+      </ScrollView>
+
+      <OnboardingTutorialModal
+        visible={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
       />
-      <ItemsGrid
-        title={gridTitle}
-        subtitle={gridSubtitle}
-        data={gridData}
-        isProductView={activeView === "products"}
-        onItemPress={handleItemPress}
-      />
-    </ScrollView>
+    </>
   );
 }
 

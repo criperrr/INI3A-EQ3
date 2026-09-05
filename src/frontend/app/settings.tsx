@@ -41,11 +41,16 @@ import {
   Globe,
   Share2,
   Code2,
+  BookOpen,
+  FlaskConical,
 } from "lucide-react-native";
 import { useTheme, MONET_PRESETS } from "../theme";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
+import { resetTutorialStatus } from "../utils/tutorialStorage";
+import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 interface SettingsState {
   theme: "light" | "dark";
@@ -128,6 +133,7 @@ const SettingsScreen: React.FC = () => {
   const router = useRouter();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { isAdmin } = useAuth();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -138,6 +144,7 @@ const SettingsScreen: React.FC = () => {
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [clearCacheModalOpen, setClearCacheModalOpen] = useState(false);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
 
   // i18n
   const {
@@ -1068,6 +1075,108 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Exclusive Admin Developer & QA Testing Panel */}
+        {isAdmin && (
+          <View
+            style={[
+              styles.section,
+              themeStyles.card,
+              themeStyles.border,
+              { borderColor: accent + "50" },
+            ]}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <FlaskConical size={20} color={accent} />
+                <Text style={[styles.sectionTitle, themeStyles.text]}>
+                  Painel de Testes (Admin)
+                </Text>
+              </View>
+              <View style={[styles.adminBadgePill, { backgroundColor: accent + "20" }]}>
+                <Text style={[styles.adminBadgeText, { color: accent }]}>ADMIN ONLY</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.rowSubLabel, themeStyles.subText, { marginBottom: 12 }]}>
+              Ferramentas exclusivas de depuração e validação de primeiro acesso.
+            </Text>
+
+            {/* Testar Tutorial Agora */}
+            <TouchableOpacity
+              style={[
+                styles.adminActionCard,
+                {
+                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                  borderColor: accent + "30",
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => {
+                triggerHaptic();
+                setShowTutorialModal(true);
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+                  <BookOpen size={18} color={accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                    Testar Tutorial de Boas-Vindas
+                  </Text>
+                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                    Abre imediatamente o fluxo guiado simplificado
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.linkText, { color: accent, fontWeight: "700" }]}>Testar</Text>
+            </TouchableOpacity>
+
+            {/* Resetar Primeiro Acesso */}
+            <TouchableOpacity
+              style={[
+                styles.adminActionCard,
+                {
+                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                  borderColor: "rgba(0,0,0,0.06)",
+                  marginTop: 8,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={async () => {
+                triggerHaptic();
+                await resetTutorialStatus();
+                Alert.alert(
+                  "Primeiro Acesso Resetado",
+                  "O status de tutorial visto foi removido. Ao acessar a tela inicial, o tutorial abrirá automaticamente como em uma conta nova.",
+                  [
+                    { text: "OK" },
+                    {
+                      text: "Abrir Tutorial Agora",
+                      onPress: () => setShowTutorialModal(true),
+                    },
+                  ]
+                );
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View style={[styles.adminIconBox, { backgroundColor: "rgba(245, 158, 11, 0.2)" }]}>
+                  <RefreshCw size={18} color="#F59E0B" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                    Simular Conta Nova (Reset)
+                  </Text>
+                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                    Limpa a flag @presco:hasSeenTutorial no armazenamento
+                  </Text>
+                </View>
+              </View>
+              <Text style={[styles.linkText, { color: "#F59E0B", fontWeight: "700" }]}>Resetar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Bottom Restore Defaults Action */}
         <View style={styles.footerActions}>
           <TouchableOpacity
@@ -1470,6 +1579,11 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+
+      <OnboardingTutorialModal
+        visible={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+      />
     </ScrollView>
   );
 };
@@ -1693,6 +1807,31 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  adminBadgePill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  adminBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  adminActionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 4,
+  },
+  adminIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
 

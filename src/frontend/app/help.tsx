@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useI18n, TranslationKey } from "../content/i18nContext";
+import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 type FaqCategory =
   | "all"
@@ -241,6 +242,7 @@ export default function HelpScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedFaq, setExpandedFaq] = useState<string | null>("1");
   const [feedbackGiven, setFeedbackGiven] = useState<Record<string, "yes" | "no">>({});
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
 
   const handleSelectCategory = (category: FaqCategory) => {
     if (Platform.OS !== "web") {
@@ -339,6 +341,34 @@ export default function HelpScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Replay Tutorial Banner */}
+        <TouchableOpacity
+          style={[
+            styles.tutorialBanner,
+            themeStyles.card,
+            themeStyles.border,
+            { borderColor: accent + "60" },
+          ]}
+          activeOpacity={0.8}
+          onPress={() => {
+            if (Platform.OS !== "web") Haptics.selectionAsync();
+            setShowTutorialModal(true);
+          }}
+        >
+          <View style={[styles.tutorialIconCircle, { backgroundColor: accent + "20" }]}>
+            <Ionicons name="sparkles" size={20} color={accent} />
+          </View>
+          <View style={styles.tutorialTextContainer}>
+            <Text style={[styles.tutorialBannerTitle, themeStyles.text]} numberOfLines={1}>
+              {t("onboarding.replayTutorial") || "Rever Tutorial de Boas-Vindas"}
+            </Text>
+            <Text style={[styles.tutorialBannerDesc, themeStyles.subText]} numberOfLines={2}>
+              {t("onboarding.replayTutorialDesc") || "Relembre como buscar, escanear, navegar pelo mapa e faturar XP"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={accent} />
+        </TouchableOpacity>
+
         {/* Search Bar Card */}
         <View
           style={[
@@ -779,6 +809,11 @@ export default function HelpScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <OnboardingTutorialModal
+        visible={showTutorialModal}
+        onClose={() => setShowTutorialModal(false)}
+      />
     </View>
   );
 }
@@ -786,6 +821,38 @@ export default function HelpScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  tutorialBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    gap: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  tutorialIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tutorialTextContainer: {
+    flex: 1,
+  },
+  tutorialBannerTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  tutorialBannerDesc: {
+    fontSize: 12,
+    lineHeight: 16,
   },
   header: {
     flexDirection: "row",
