@@ -2244,6 +2244,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - .agents/CURRENT.md
 - **Impact / Next Steps:** Database and API are 100% clean of phantom markets and fake occurrences. All markets dynamically correspond to real physical stores at the user's GPS coordinates via OpenStreetMap.
 
+<<<<<<< HEAD
 ## 2026-09-04 21:46 - perf(frontend): Otimização de RAM e ciclo de vida de componentes
 
 - **Description:** Implementada otimização profunda de memória RAM no frontend: desmontagem do CameraView em scannerProduct quando desfocado, tracksViewChanges={false} e capping dos 60 marcadores mais próximos no map.native, transição de expo-image para cachePolicy=disk com recyclingKey nas listas e detalhes, e calibração de virtualização em FlatList.
@@ -2291,3 +2292,14 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/scannerProduct.tsx`
   - `src/backend/src/shared/database/repositories/product.repository.ts`
 - **Impact / Next Steps:** Camera preview fills cleanly with a professional viewfinder cutout, reads barcodes instantly with tactile feedback, and external products resolve 3x faster.
+=======
+## `2026-09-04 23:13` - `docs(architecture)`: Generate and persist UML class and database ERD diagrams in gestao/
+
+- **Description:** Generated high-resolution (200 DPI) UML Class Diagram and Database ERD diagrams using PlantUML/Graphviz. Resolved text collisions and overlapping labels between User and CustomizationItem by introducing the UserCustomization associative entity and consolidating equipped slots into a clean multi-role association. Saved both diagrams directly to the management folder.
+- **Files Modified:**
+  - `gestao/diagrama_classes.png`
+  - `gestao/diagrama_banco_de_dados.png`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Clean and readable architectural documentation available for presentations, academic review, and technical reference in the gestao/ directory.
+>>>>>>> 8cf9ed74d238967c6e1cb457e5b549cbec7da857
