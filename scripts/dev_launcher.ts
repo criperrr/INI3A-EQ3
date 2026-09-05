@@ -199,6 +199,7 @@ async function main() {
 
   // Pre-flight port & db checks
   await ensurePortFree(3333);
+  await ensurePortFree(4040);
   await checkDatabaseInfrastructure();
 
   // Determine URLs & flags
@@ -222,24 +223,11 @@ async function main() {
       console.log(`${colors.yellow}💡 Dica: Se o celular não carregar nesta rede corporativa (10.x.x.x), reinicie com a Opção 2 (Túnel) ou use o Hotspot do celular.${colors.reset}`);
     }
   } else {
-    // Corporate tunnel mode
-    console.log(`\n🚀 ${colors.bold}Modo REDE CORPORATIVA / FECHADA ativado!${colors.reset}`);
-    console.log(`🏢 Inicializando túnel seguro para contornar isolamento de rede...`);
-
-    try {
-      const tunnel = await startApiTunnel(customUrl);
-      backendApiUrl = tunnel.url;
-      activeTunnelClose = tunnel.close;
-      expoFlags = ["--tunnel", "--clear"];
-      console.log(`✅ ${colors.green}Túnel estabelecido com sucesso:${colors.reset} ${colors.cyan}${backendApiUrl}${colors.reset}`);
-    } catch (err: any) {
-      console.error(`${colors.red}❌ Falha ao abrir túnel (${err.message}). Revertendo para Rede Local.${colors.reset}`);
-      backendApiUrl = `http://${detectedLanIp}:3333`;
-      expoFlags = ["--lan", "--clear"];
-    }
+    // Modo corporativo inicializará o túnel após o backend estar pronto
+    expoFlags = ["--tunnel", "--clear"];
   }
 
-  // 1. Launch Backend Server in background
+  // 1. Launch Backend Server in background (deve subir antes do túnel para validação de saúde)
   console.log(`\n${colors.cyan}[1/2] Iniciando Backend API Presco na porta 3333...${colors.reset}`);
 
   backendProcess = spawn(
@@ -294,9 +282,37 @@ async function main() {
     console.log(`${colors.yellow}⚠️  Backend demorou a responder, mas continuaremos a inicialização...${colors.reset}`);
   }
 
+  // Inicializar túnel se modo corporativo (agora que a porta 3333 está ativa e respondendo /health)
+  if (mode === "corp") {
+    console.log(`\n🚀 ${colors.bold}Modo REDE CORPORATIVA / FECHADA ativado!${colors.reset}`);
+    console.log(`🏢 Inicializando túnel seguro para contornar isolamento de rede...`);
+
+    try {
+      const tunnel = await startApiTunnel(customUrl);
+      backendApiUrl = tunnel.url;
+      activeTunnelClose = tunnel.close;
+      expoFlags = ["--tunnel", "--clear"];
+      console.log(`✅ ${colors.green}Túnel estabelecido com sucesso:${colors.reset} ${colors.cyan}${backendApiUrl}${colors.reset}`);
+    } catch (err: any) {
+      console.error(`${colors.red}❌ Falha ao abrir túnel (${err.message}). Revertendo para Rede Local.${colors.reset}`);
+      backendApiUrl = `http://${detectedLanIp}:3333`;
+      expoFlags = ["--lan", "--clear"];
+    }
+  }
+
   // 2. Launch Expo in foreground with full interactive terminal (QR Code + key commands)
   console.log(`\n${colors.cyan}[2/2] Iniciando Frontend Expo (${expoFlags.join(" ")})...${colors.reset}`);
   console.log(`${colors.bold}🔗 API configurada no Frontend:${colors.reset} ${colors.green}${backendApiUrl}${colors.reset}\n`);
+
+  // Sincronizar src/frontend/.env para garantir que o bundler do Metro sempre use a URL ativa
+  try {
+    const frontendEnvPath = path.resolve(FRONTEND_DIR, ".env");
+    fs.writeFileSync(
+      frontendEnvPath,
+      `# Gerado automaticamente pelo Dev Launcher do Presco\nEXPO_PUBLIC_API_URL=${backendApiUrl}\n`,
+      "utf8"
+    );
+  } catch {}
 
   expoProcess = spawn(
     IS_WINDOWS ? "npx.cmd" : "npx",

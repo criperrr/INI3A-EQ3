@@ -2,16 +2,25 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
 function resolveBaseUrl(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
+  const envUrl = process.env.EXPO_PUBLIC_API_URL;
   const hostUri = Constants.expoConfig?.hostUri;
+
+  // Se o dispositivo estiver conectado a um Metro bundler via LAN (hostUri ativo)
   if (hostUri) {
     const host = hostUri.split(":")[0];
     if (host && host !== "localhost" && host !== "127.0.0.1") {
-      return `http://${host}:3333`;
+      // Se não há envUrl, ou se envUrl é HTTP local mas não bate com o host do Metro ativo,
+      // prioriza a máquina que está servindo o app agora para evitar falha de rede/timeout
+      if (!envUrl || (envUrl.startsWith("http://") && !envUrl.includes(host))) {
+        return `http://${host}:3333`;
+      }
     }
   }
+
+  if (envUrl) {
+    return envUrl;
+  }
+
   return "http://localhost:3333";
 }
 
@@ -177,6 +186,7 @@ async function apiRequest<T = any>(
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "Bypass-Tunnel-Reminder": "true",
+    "ngrok-skip-browser-warning": "true",
     ...(options.headers as Record<string, string>),
   };
 
@@ -208,8 +218,20 @@ async function apiRequest<T = any>(
     return handleResponse<T>(response);
   } catch (error: any) {
     clearTimeout(id);
-    if (error.name === "AbortError") {
-      throw new ApiError(408, "TIMEOUT", "A requisição demorou muito para responder.");
+    const isTimeoutOrAborted =
+      error?.name === "AbortError" ||
+      typeof error?.message === "string" && (
+        error.message.includes("FetchRequestCanceledException") ||
+        error.message.includes("Fetch request has been canceled") ||
+        error.message.includes("aborted")
+      );
+
+    if (isTimeoutOrAborted) {
+      throw new ApiError(
+        408,
+        "TIMEOUT",
+        `A requisição para ${BASE_URL} demorou mais de 15s ou foi cancelada pelo sistema. Verifique a conexão com o backend.`,
+      );
     }
     throw error;
   }

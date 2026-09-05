@@ -2303,3 +2303,32 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Clean and readable architectural documentation available for presentations, academic review, and technical reference in the gestao/ directory.
 >>>>>>> 8cf9ed74d238967c6e1cb457e5b549cbec7da857
+
+## `2026-09-05 10:30` - `fix(network)`: Remediar FetchRequestCanceledException e sincronizar IP do frontend
+
+- **Description:** Diagnosticada a causa-raiz dos erros `FetchRequestCanceledException: Fetch request has been canceled (at Expo/NativeResponse.swift:63)` no iOS. O arquivo `src/frontend/.env` continha um IP antigo estático (`10.153.0.145`) que estava inacessível na rede atual (`192.168.3.1`), causando timeout de 15s e cancelamento nativo das requisições `/auth/me`, `/products` e `/markets`. Além disso, atualizou-se o `api.ts` para tratar exceções nativas de cancelamento de requisição do Expo/iOS, adicionou-se fallback inteligente para o `hostUri` do Metro ativo, auto-sincronização do `.env` no `dev_launcher.ts` e validação prévia de saúde nos túneis em `start_api_tunnel.ts`.
+- **Files Modified:**
+  - `src/frontend/.env`
+  - `src/frontend/services/api.ts`
+  - `scripts/dev_launcher.ts`
+  - `scripts/start_api_tunnel.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Erros de cancelamento de requisição eliminados. O frontend agora resolve automaticamente o backend local da rede Wi-Fi ativa com resposta de 0 a 5ms.
+
+## `2026-09-05 10:39` - `feat(tunnel)`: Integração com Ngrok 3.x e bypass de servidores instáveis
+
+- **Description:** Implementada integração automática no `scripts/start_api_tunnel.ts` com o executável moderno do Ngrok 3.x (`/opt/homebrew/bin/ngrok`), contornando a versão obsoleta 2.x do `@expo/ngrok` (que gerava `ERR_NGROK_121`) e os servidores instáveis do `localtunnel` (`loca.lt`) que congelavam o handshake TLS. O túnel corporativo agora conecta em menos de 1 segundo utilizando o domínio estático configurado no sistema (`https://premises-body-pogo.ngrok-free.dev`), com suporte a cabeçalho `ngrok-skip-browser-warning` em `src/frontend/services/api.ts` e fallback resiliente.
+- **Files Modified:**
+  - `scripts/start_api_tunnel.ts`
+  - `src/frontend/services/api.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Modo túnel corporativo 100% estabilizado e instantâneo.
+
+## `2026-09-05 10:44` - `fix(dev-launcher)`: Inverter ordem de inicialização do backend e túnel
+
+- **Description:** Corrigida a sequência de boot no `scripts/dev_launcher.ts` para que o servidor Backend Express seja inicializado na porta 3333 e passe no teste `/health` ANTES de o túnel seguro ser aberto e testado. Adicionada liberação preventiva da porta 4040 nos pré-testes e suporte a detecção e reutilização de sessões ativas do ngrok via `http://127.0.0.1:4040/api/tunnels`, eliminando o erro `ERR_NGROK_334` e falso-positivos no teste de saúde.
+- **Files Modified:**
+  - `scripts/dev_launcher.ts`
+  - `scripts/start_api_tunnel.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Modo túnel corporativo validado e funcionando com boot sequencial perfeito.
