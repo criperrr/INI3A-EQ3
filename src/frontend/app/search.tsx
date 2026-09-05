@@ -329,9 +329,9 @@ export default function SearchScreen() {
         ListFooterComponent={ListFooter}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
-        initialNumToRender={10}
-        maxToRenderPerBatch={10}
-        windowSize={7}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
         removeClippedSubviews={Platform.OS !== "web"}
         refreshControl={
           <RefreshControl
@@ -556,7 +556,7 @@ const ProductCardItem = memo(function ProductCardItem({
             style={styles.productImage}
             contentFit="cover"
             cachePolicy="memory-disk"
-            transition={200}
+            transition={150}
           />
         ) : (
           <View

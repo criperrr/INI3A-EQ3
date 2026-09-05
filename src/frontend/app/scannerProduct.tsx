@@ -1,15 +1,67 @@
-import React, { useState, useCallback, useRef } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Dimensions,
+  Platform,
+} from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const VIEWFINDER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 300);
+const VIEWFINDER_HEIGHT = 160;
+
+function AnimatedLaser({ accent }: { accent: string }) {
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    translateY.value = withRepeat(
+      withTiming(VIEWFINDER_HEIGHT - 16, {
+        duration: 1800,
+        easing: Easing.inOut(Easing.quad),
+      }),
+      -1,
+      true
+    );
+  }, [translateY]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <Animated.View
+      style={[
+        styles.laserLine,
+        { backgroundColor: accent, shadowColor: accent },
+        animatedStyle,
+      ]}
+    />
+  );
+}
 
 export default function ScannerProduct() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [torch, setTorch] = useState(false);
   const isProcessing = useRef(false);
   const router = useRouter();
   const { themeStyles, accent } = useTheme();
@@ -19,19 +71,35 @@ export default function ScannerProduct() {
     useCallback(() => {
       setScanned(false);
       setLoading(false);
+      setTorch(false);
       isProcessing.current = false;
-    }, []),
+    }, [])
   );
 
+  const toggleTorch = () => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    setTorch((prev) => !prev);
+  };
+
   if (!permission) {
-    return <View style={[styles.container, themeStyles.bg]} />;
+    return <View style={styles.container} />;
   }
 
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
-    if (isProcessing.current) return;
+    if (isProcessing.current || scanned) return;
     isProcessing.current = true;
     setScanned(true);
     setLoading(true);
+
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+    }
 
     const showNotFoundAlert = () => {
       Alert.alert(
@@ -44,7 +112,7 @@ export default function ScannerProduct() {
               setTimeout(() => {
                 setScanned(false);
                 isProcessing.current = false;
-              }, 1000);
+              }, 800);
             },
             style: "cancel",
           },
@@ -67,7 +135,7 @@ export default function ScannerProduct() {
               });
             },
           },
-        ],
+        ]
       );
     };
 
@@ -117,61 +185,124 @@ export default function ScannerProduct() {
         errorMsg = t("errors.timeoutError");
       }
 
-      Alert.alert(
-        t("common.error"),
-        errorMsg,
-        [
-          {
-            text: t("common.retry"),
-            onPress: () => {
-              setTimeout(() => {
-                setScanned(false);
-                isProcessing.current = false;
-              }, 1500);
-            },
+      Alert.alert(t("common.error"), errorMsg, [
+        {
+          text: t("common.retry"),
+          onPress: () => {
+            setTimeout(() => {
+              setScanned(false);
+              isProcessing.current = false;
+            }, 1000);
           },
-        ],
-      );
+        },
+      ]);
     }
   };
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
+    <View style={styles.container}>
       {!permission.granted ? (
         <PermissionNotice onRequestPermission={requestPermission} t={t} />
       ) : (
-        <CameraView
-          style={styles.cameraBackground}
-          facing="back"
-          barcodeScannerSettings={{
-            barcodeTypes: ["ean13", "ean8", "code128", "qr"],
-          }}
-          onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-        >
-          {loading ? (
-             <View style={styles.loadingOverlay}>
-               <ActivityIndicator size="large" color={accent} />
-               <Text style={styles.loadingText}>{t("scanner.searchingProduct")}</Text>
-             </View>
-          ) : (
-             <>
-               <ScannerInstructions t={t} />
-               <ScannerViewFinder />
-               <View style={styles.manualEntryContainer}>
-                 <TouchableOpacity
-                   style={styles.manualEntryButton}
-                   activeOpacity={0.8}
-                   onPress={() => {
-                     isProcessing.current = false;
-                     router.push("/manualEanSearch");
-                   }}
-                 >
-                   <Text style={styles.manualEntryText}>{t("scanner.manualEntry")}</Text>
-                 </TouchableOpacity>
-               </View>
-             </>
-          )}
-        </CameraView>
+        <>
+          <CameraView
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            enableTorch={torch}
+            barcodeScannerSettings={{
+              barcodeTypes: ["ean13", "ean8", "upc_a", "code128"],
+            }}
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+          />
+
+          {/* Mask Overlay: Top, Center Row (Left, Cutout, Right), Bottom */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+            {/* Top Mask */}
+            <View style={styles.maskTop}>
+              <View style={styles.topInfoCard}>
+                <Text style={styles.topTitle}>{t("scanner.title")}</Text>
+                <Text style={styles.topSubtitle}>{t("scanner.alignBarcode")}</Text>
+              </View>
+            </View>
+
+            {/* Center Row */}
+            <View style={styles.maskCenterRow}>
+              <View style={styles.maskSide} />
+
+              <View
+                style={[
+                  styles.viewfinder,
+                  { width: VIEWFINDER_WIDTH, height: VIEWFINDER_HEIGHT },
+                ]}
+              >
+                {/* 4 Corners */}
+                <View style={[styles.corner, styles.topLeft, { borderColor: accent }]} />
+                <View style={[styles.corner, styles.topRight, { borderColor: accent }]} />
+                <View style={[styles.corner, styles.bottomLeft, { borderColor: accent }]} />
+                <View style={[styles.corner, styles.bottomRight, { borderColor: accent }]} />
+
+                {/* Animated Scanning Laser Line */}
+                {!loading && !scanned && <AnimatedLaser accent={accent} />}
+
+                {/* Loading state indicator in center */}
+                {loading && (
+                  <View style={styles.centerLoadingContainer}>
+                    <ActivityIndicator size="large" color={accent} />
+                    <Text style={styles.centerLoadingText}>
+                      {t("scanner.searchingProduct")}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.maskSide} />
+            </View>
+
+            {/* Bottom Mask */}
+            <View style={styles.maskBottom}>
+              <View style={styles.controlsRow}>
+                {/* Torch / Flashlight Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.controlButton,
+                    torch && { backgroundColor: accent, borderColor: accent },
+                  ]}
+                  onPress={toggleTorch}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons
+                    name={torch ? "flash" : "flash-outline"}
+                    size={22}
+                    color={torch ? "#000" : "#FFF"}
+                  />
+                  <Text
+                    style={[
+                      styles.controlButtonText,
+                      torch && { color: "#000", fontWeight: "700" },
+                    ]}
+                  >
+                    {t("scanner.flashlight")}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Manual EAN Entry Button */}
+                <TouchableOpacity
+                  style={styles.controlButton}
+                  onPress={() => {
+                    isProcessing.current = false;
+                    router.push("/manualEanSearch");
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="keypad-outline" size={22} color="#FFF" />
+                  <Text style={styles.controlButtonText}>
+                    {t("scanner.manualEntry")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </>
       )}
     </View>
   );
@@ -189,6 +320,7 @@ const PermissionNotice = ({
   const { themeStyles, accent } = useTheme();
   return (
     <View style={styles.permissionContainer}>
+      <Ionicons name="camera-outline" size={64} color={accent} style={{ marginBottom: 16 }} />
       <Text style={[styles.permissionText, themeStyles.text]}>
         {t("scanner.permissionRequired")}
       </Text>
@@ -203,72 +335,91 @@ const PermissionNotice = ({
   );
 };
 
-const ScannerInstructions = ({ t }: { t: (key: any) => string }) => (
-  <View style={styles.overlayTextContainer}>
-    <Text style={styles.placeholderText} numberOfLines={1}>{t("scanner.title")}</Text>
-    <Text style={styles.instructionText} numberOfLines={2}>
-      {t("scanner.alignBarcode")}
-    </Text>
-  </View>
-);
-
-const ScannerViewFinder = () => (
-  <View style={styles.scannerFrame}>
-    <View style={[styles.corner, styles.topLeft]} />
-    <View style={[styles.corner, styles.topRight]} />
-    <View style={[styles.corner, styles.bottomLeft]} />
-    <View style={[styles.corner, styles.bottomRight]} />
-    <View style={styles.laserLine} />
-  </View>
-);
-
 // --- Estilos ---
+const MASK_BG = "rgba(0, 0, 0, 0.58)";
+
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  cameraBackground: { flex: 1, alignItems: "center", justifyContent: "center" },
-  loadingOverlay: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.6)", width: "100%" },
-  loadingText: { color: "#FFFFFF", marginTop: 16, fontSize: 16, fontWeight: "bold" },
+  container: {
+    flex: 1,
+    backgroundColor: "#000000",
+  },
   permissionContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    backgroundColor: "#000",
   },
   permissionText: {
     fontSize: 16,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 24,
     fontWeight: "500",
+    color: "#FFF",
   },
-  overlayTextContainer: {
-    position: "absolute",
-    top: 60,
+  tempButtonStatic: {
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 28,
+  },
+  tempButtonTextStatic: {
+    color: "#000",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  // Mask Sections
+  maskTop: {
+    flex: 1,
+    backgroundColor: MASK_BG,
     alignItems: "center",
-    width: "100%",
-    backgroundColor: "rgba(0,0,0,0.4)",
-    paddingVertical: 10,
+    justifyContent: "center",
+    paddingHorizontal: 24,
   },
-  placeholderText: {
-    fontSize: 20,
+  topInfoCard: {
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+  topTitle: {
+    fontSize: 18,
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 5,
+    marginBottom: 4,
+    letterSpacing: 0.3,
   },
-  instructionText: { fontSize: 14, color: "#FFFFFF", opacity: 0.9 },
-  scannerFrame: {
-    width: 280,
-    height: 180,
+  topSubtitle: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
+  },
+
+  maskCenterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  maskSide: {
+    flex: 1,
+    height: VIEWFINDER_HEIGHT,
+    backgroundColor: MASK_BG,
+  },
+  viewfinder: {
+    backgroundColor: "transparent",
+    position: "relative",
     justifyContent: "center",
     alignItems: "center",
-    position: "relative",
-    marginBottom: 80,
   },
+
+  // Viewfinder Corners
   corner: {
     position: "absolute",
-    width: 40,
-    height: 40,
-    borderColor: "#C8D92D",
-    borderWidth: 6,
+    width: 32,
+    height: 32,
+    borderWidth: 4,
   },
   topLeft: {
     top: 0,
@@ -298,35 +449,68 @@ const styles = StyleSheet.create({
     borderLeftWidth: 0,
     borderBottomRightRadius: 16,
   },
-  laserLine: { width: "85%", height: 2, backgroundColor: "red", opacity: 0.6 },
-  tempButtonStatic: {
-    paddingVertical: 15,
-    paddingHorizontal: 25,
-    borderRadius: 30,
-  },
-  tempButtonTextStatic: {
-    color: "#FFF",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  manualEntryContainer: {
+
+  // Laser Scan Line
+  laserLine: {
     position: "absolute",
-    bottom: 40,
-    width: "100%",
-    paddingHorizontal: 30,
-    alignItems: "center",
+    top: 8,
+    width: "90%",
+    height: 3,
+    borderRadius: 2,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  manualEntryButton: {
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
+
+  // Center Loading
+  centerLoadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.75)",
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+  },
+  centerLoadingText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 10,
+    textAlign: "center",
+  },
+
+  // Bottom Mask
+  maskBottom: {
+    flex: 1.25,
+    backgroundColor: MASK_BG,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    width: "100%",
+  },
+  controlButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    gap: 8,
   },
-  manualEntryText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
+  controlButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

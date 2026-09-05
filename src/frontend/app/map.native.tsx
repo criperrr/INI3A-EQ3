@@ -595,7 +595,9 @@ export default function MapScreen() {
             }
         }
 
-        return unique.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
+        return unique
+            .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
+            .slice(0, 60);
     }, [userLocation, rawOsmElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
@@ -684,6 +686,7 @@ export default function MapScreen() {
                                     longitude: Number(marker.coordinate.longitude),
                                 }}
                                 pinColor={themeAccentColor || "#1565C0"}
+                                tracksViewChanges={false}
                                 onPress={() => setSelectedMarket(marker)}
                             />
                         ))}

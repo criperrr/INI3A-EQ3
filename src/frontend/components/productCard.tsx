@@ -83,7 +83,7 @@ const ProductImage = memo(function ProductImage({
           style={styles.productImage}
           contentFit="contain"
           cachePolicy="memory-disk"
-          transition={200}
+          transition={150}
         />
       ) : (
         <View style={styles.imagePlaceholder}>

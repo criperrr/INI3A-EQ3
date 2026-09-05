@@ -14,26 +14,12 @@ class ProductRepositoryClass {
 
     const digitsOnly = cleanBarcode.replace(/\D/g, "");
     const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
-
     const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, cleanBarcode].filter(Boolean)));
 
-    const urls: string[] = [];
-    for (const code of codesToTry) {
-      urls.push(
-        `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
-        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
-        `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
-        `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
-        `https://world.openpetfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
-      );
-    }
-
-    const uniqueUrls = Array.from(new Set(urls));
-
-    const fetchUrl = async (url: string): Promise<OpenFoodFactsResponse | null> => {
+    const fetchUrl = async (url: string, timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3500);
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
         const response = await fetch(url, {
           headers: {
@@ -57,15 +43,51 @@ class ProductRepositoryClass {
       }
     };
 
-    // Run parallel batches of 3 requests for fast response
-    for (let i = 0; i < uniqueUrls.length; i += 3) {
-      const batch = uniqueUrls.slice(i, i + 3);
-      const results = await Promise.all(batch.map(fetchUrl));
-      const found = results.find((r) => r !== null);
-      if (found) return found;
-    }
+    // Helper: race multiple URLs and resolve as soon as the first one returns a valid product
+    const fetchFastest = (urls: string[], timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
+      return new Promise((resolve) => {
+        let completed = 0;
+        let hasResolved = false;
+        if (urls.length === 0) return resolve(null);
 
-    return null;
+        urls.forEach((u) => {
+          fetchUrl(u, timeoutMs).then((res) => {
+            if (hasResolved) return;
+            if (res) {
+              hasResolved = true;
+              resolve(res);
+            } else {
+              completed++;
+              if (completed >= urls.length) {
+                resolve(null);
+              }
+            }
+          });
+        });
+      });
+    };
+
+    // Phase 1: High priority primary food databases (world & br openfoodfacts) - resolves in ~800ms
+    const primaryUrls: string[] = [];
+    for (const code of codesToTry) {
+      primaryUrls.push(
+        `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
+      );
+    }
+    const primaryResult = await fetchFastest(Array.from(new Set(primaryUrls)), 2200);
+    if (primaryResult) return primaryResult;
+
+    // Phase 2: Secondary niche databases (beauty, pet food, products) with fast 1600ms timeout
+    const secondaryUrls: string[] = [];
+    for (const code of codesToTry) {
+      secondaryUrls.push(
+        `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openpetfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
+      );
+    }
+    return await fetchFastest(Array.from(new Set(secondaryUrls)), 1600);
   }
 
   async getProductByEan(ean: string) {

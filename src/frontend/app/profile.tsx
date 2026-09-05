@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
-  Image,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -305,7 +305,8 @@ const ProfileBanner = memo(function ProfileBanner({
       <Image
         source={imageSource}
         style={styles.bannerImage}
-        resizeMode="cover"
+        contentFit="cover"
+        cachePolicy="disk"
       />
       <View style={styles.bannerDarkOverlay} />
       <AdminBadge isAdmin={isAdmin} t={t} />
@@ -1671,7 +1672,8 @@ const ItemCategoryIcon = memo(function ItemCategoryIcon({
         <Image
           source={bannerImg}
           style={styles.bannerThumbnailIcon}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="disk"
         />
       );
     }

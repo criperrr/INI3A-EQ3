@@ -111,8 +111,9 @@ class OcurrencyRepositoryClass {
       distanceMeters: distanceExpr,
     };
 
+    let rows = [];
     if (currentUserId) {
-      const rows = await db
+      rows = await db
         .select({
           ...selectFields,
           userVote: Cured.verdict,
@@ -128,29 +129,60 @@ class OcurrencyRepositoryClass {
             : desc(Ocurrency.createdAt)
         );
 
-      return rows.map((r) => {
-        let formattedDistance: string | null = null;
-        if (r.distanceMeters !== null && r.distanceMeters !== undefined) {
-          formattedDistance = r.distanceMeters < 1000 ? `${r.distanceMeters} m` : `${(r.distanceMeters / 1000).toFixed(1).replace(".", ",")} km`;
-        }
-        return { ...r, formattedDistance };
-      });
-    }
+      if (rows.length === 0 && hasCoords) {
+        const fallbackConditions = [
+          eq(Ocurrency.productId, productId),
+          eq(Ocurrency.isSuspended, false),
+        ];
+        rows = await db
+          .select({
+            ...selectFields,
+            userVote: Cured.verdict,
+          })
+          .from(Ocurrency)
+          .leftJoin(User, eq(Ocurrency.userId, User.id))
+          .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
+          .leftJoin(Cured, and(eq(Cured.ocurrencyId, Ocurrency.id), eq(Cured.userId, currentUserId)))
+          .where(and(...fallbackConditions))
+          .orderBy(
+            sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+          );
+      }
+    } else {
+      rows = await db
+        .select({
+          ...selectFields,
+          userVote: sql<boolean | null>`NULL`,
+        })
+        .from(Ocurrency)
+        .leftJoin(User, eq(Ocurrency.userId, User.id))
+        .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
+        .where(and(...whereConditions))
+        .orderBy(
+          hasCoords
+            ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            : desc(Ocurrency.createdAt)
+        );
 
-    const rows = await db
-      .select({
-        ...selectFields,
-        userVote: sql<boolean | null>`NULL`,
-      })
-      .from(Ocurrency)
-      .leftJoin(User, eq(Ocurrency.userId, User.id))
-      .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
-      .where(and(...whereConditions))
-      .orderBy(
-        hasCoords
-          ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
-          : desc(Ocurrency.createdAt)
-      );
+      if (rows.length === 0 && hasCoords) {
+        const fallbackConditions = [
+          eq(Ocurrency.productId, productId),
+          eq(Ocurrency.isSuspended, false),
+        ];
+        rows = await db
+          .select({
+            ...selectFields,
+            userVote: sql<boolean | null>`NULL`,
+          })
+          .from(Ocurrency)
+          .leftJoin(User, eq(Ocurrency.userId, User.id))
+          .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
+          .where(and(...fallbackConditions))
+          .orderBy(
+            sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+          );
+      }
+    }
 
     return rows.map((r) => {
       let formattedDistance: string | null = null;

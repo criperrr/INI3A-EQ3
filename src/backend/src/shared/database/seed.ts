@@ -678,27 +678,10 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Dynamic OpenStreetMap Market Discovery (Purge legacy phantom seed markets)
-  // Completely purge any hardcoded static regional markets and their occurrences
+  // 4. Dynamic OpenStreetMap Market Discovery (Purge invalid street address names)
   await db.execute(sql`
     DELETE FROM ocurrency WHERE market_id IN (
       SELECT id FROM market WHERE 
-        name ILIKE '%Bauru%' OR
-        name ILIKE '%Jaú Serve%' OR
-        name ILIKE '%Jau Serve%' OR
-        name ILIKE '%Confiança%' OR
-        name ILIKE '%Confianca%' OR
-        name ILIKE '%Tauste%' OR
-        name ILIKE '%Panelão%' OR
-        name ILIKE '%Panelao%' OR
-        name ILIKE '%Barracão%' OR
-        name ILIKE '%Barracao%' OR
-        name ILIKE '%Global Padrão%' OR
-        name ILIKE '%Global Padrao%' OR
-        name ILIKE '%St. Marche Gourmet%' OR
-        name ILIKE '%Atacadão Central%' OR
-        name ILIKE '%Supermercado Extra%' OR
-        name ILIKE '%Carrefour Express%' OR
         name ILIKE 'Rua %' OR
         name ILIKE 'Av. %' OR
         name ILIKE 'Avenida %' OR
@@ -706,29 +689,13 @@ export async function seedDatabase() {
         name ILIKE 'Rodovia %'
     );
     DELETE FROM market WHERE 
-      name ILIKE '%Bauru%' OR
-      name ILIKE '%Jaú Serve%' OR
-      name ILIKE '%Jau Serve%' OR
-      name ILIKE '%Confiança%' OR
-      name ILIKE '%Confianca%' OR
-      name ILIKE '%Tauste%' OR
-      name ILIKE '%Panelão%' OR
-      name ILIKE '%Panelao%' OR
-      name ILIKE '%Barracão%' OR
-      name ILIKE '%Barracao%' OR
-      name ILIKE '%Global Padrão%' OR
-      name ILIKE '%Global Padrao%' OR
-      name ILIKE '%St. Marche Gourmet%' OR
-      name ILIKE '%Atacadão Central%' OR
-      name ILIKE '%Supermercado Extra%' OR
-      name ILIKE '%Carrefour Express%' OR
       name ILIKE 'Rua %' OR
       name ILIKE 'Av. %' OR
       name ILIKE 'Avenida %' OR
       name ILIKE 'Estrada %' OR
       name ILIKE 'Rodovia %';
   `);
-  console.log("🗺️ [Seed] Markets are managed dynamically via OpenStreetMap proximity discovery. Legacy phantom markets purged.");
+  console.log("🗺️ [Seed] Markets checked: invalid address street names purged.");
 
   // 5. Seed Admin Test User: admin@admin.org / admin
   const adminEmail = "admin@admin.org";
@@ -1453,6 +1420,24 @@ export async function seedDatabase() {
     },
   ];
 
+  let availableMarkets = await db.select().from(market).limit(10);
+  if (availableMarkets.length === 0) {
+    const starterMarkets = [
+      { name: "Supermercado Pacaembu", lat: -22.3145, lng: -49.0587 },
+      { name: "Supermercado da Família", lat: -22.3212, lng: -49.0654 },
+      { name: "Supermercado Panela Cheia", lat: -22.3188, lng: -49.0712 },
+      { name: "Pão de Açúcar", lat: -23.5658, lng: -46.6612 },
+      { name: "Carrefour Hipermercado", lat: -23.5701, lng: -46.6567 },
+    ];
+    for (const sm of starterMarkets) {
+      const [newM] = await db.insert(market).values({
+        name: sm.name,
+        location: sql`ST_GeographyFromText('POINT(${sm.lng} ${sm.lat})')`,
+      }).returning();
+      if (newM) availableMarkets.push(newM);
+    }
+  }
+
   let insertedProductCount = 0;
   let insertedOccurrencesCount = 0;
 
@@ -1485,10 +1470,35 @@ export async function seedDatabase() {
         .where(eq(product.id, targetProduct.id));
     }
 
+    if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
+      for (let i = 0; i < item.prices.length; i++) {
+        const p = item.prices[i];
+        const assignedMarket = availableMarkets[i % availableMarkets.length];
+        if (!assignedMarket) continue;
+
+        const existingOcc = await db.query.ocurrency.findFirst({
+          where: (table, { and, eq }) =>
+            and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
+        });
+
+        if (!existingOcc) {
+          await db.insert(ocurrency).values({
+            userId: adminUserId,
+            marketId: assignedMarket.id,
+            productId: targetProduct.id,
+            value: p.value,
+            trustFlag: p.trustFlag ?? true,
+            upvoteCount: p.upvotes ?? 0,
+            downvoteCount: p.downvotes ?? 0,
+          });
+          insertedOccurrencesCount++;
+        }
+      }
+    }
   }
 
   console.log(
-    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products).`
+    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} price occurrences seeded).`
   );
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }

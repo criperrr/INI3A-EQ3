@@ -352,6 +352,9 @@ const Banner = memo(function Banner() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={3}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         getItemLayout={(_, index) => ({
@@ -377,7 +380,7 @@ const Banner = memo(function Banner() {
                 style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
                 contentFit="cover"
                 cachePolicy="memory-disk"
-                transition={200}
+                transition={150}
               />
               <Text
                 style={[
@@ -588,7 +591,7 @@ const ItemsGrid = memo(function ItemsGrid({
                 ]}
                 contentFit="cover"
                 cachePolicy="memory-disk"
-                transition={200}
+                transition={150}
               />
               {isProductView && item.isPromotion && (
                 <View style={styles.promoBadge}>

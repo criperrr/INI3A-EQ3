@@ -38,6 +38,8 @@ import CategorySelector from "../components/CategorySelector";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
 
 
+const EMPTY_HISTORY: PriceHistoryItem[] = [];
+
 export default function ProductDetails() {
   const params = useLocalSearchParams<{
     id?: string;
@@ -561,7 +563,7 @@ export default function ProductDetails() {
   }
 
   const imageUri = product.imageUri || product.icon;
-  const history = product.priceHistory || [];
+  const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
@@ -601,7 +603,7 @@ export default function ProductDetails() {
                 style={styles.productImage}
                 contentFit="contain"
                 cachePolicy="memory-disk"
-                transition={200}
+                transition={150}
               />
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />
@@ -1095,8 +1097,10 @@ const PriceHistorySection = ({
 
   useEffect(() => {
     let isMounted = true;
-    const localFiltered = filterByPeriod(history, selectedPeriod);
-    setPeriodHistory(localFiltered);
+    if (history && history.length > 0) {
+      const localFiltered = filterByPeriod(history, selectedPeriod);
+      setPeriodHistory(localFiltered);
+    }
 
     if (productId && productId > 0) {
       setLoadingPeriod(true);
@@ -1115,7 +1119,7 @@ const PriceHistorySection = ({
     return () => {
       isMounted = false;
     };
-  }, [productId, selectedPeriod, history, filterByPeriod]);
+  }, [productId, selectedPeriod]);
 
   const displayHistory = periodHistory.length > 0 ? periodHistory : filterByPeriod(history, selectedPeriod);
   const values = displayHistory.map((h) => h.value);
