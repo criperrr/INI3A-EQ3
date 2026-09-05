@@ -19,15 +19,21 @@ import {
 } from "../constants/productCategories";
 
 interface CategorySelectorProps {
-  selectedCategory: string;
-  onSelectCategory: (categoryName: string) => void;
+  selectedCategory?: string;
+  selectedCategories?: string[];
+  isMultiSelect?: boolean;
+  onSelectCategory?: (categoryName: string) => void;
+  onSelectCategories?: (categoryNames: string[]) => void;
   label?: string;
   showCustomOption?: boolean;
 }
 
 const CategorySelector = memo(function CategorySelector({
-  selectedCategory,
+  selectedCategory = "",
+  selectedCategories = [],
+  isMultiSelect = false,
   onSelectCategory,
+  onSelectCategories,
   label,
   showCustomOption = true,
 }: CategorySelectorProps) {
@@ -35,51 +41,139 @@ const CategorySelector = memo(function CategorySelector({
   const { semantic } = tokens;
   const { t } = useI18n();
 
-  const [isCustomMode, setIsCustomMode] = useState<boolean>(() => {
-    if (!selectedCategory) return false;
-    const found = findCategoryDefinition(selectedCategory);
-    return !found && selectedCategory.trim().length > 0;
-  });
-  const [customText, setCustomText] = useState<string>(() => {
-    const found = findCategoryDefinition(selectedCategory);
-    return found ? "" : selectedCategory || "";
-  });
+  // Normalize selected list for multi-select
+  const currentSelectedList = useMemo(() => {
+    if (isMultiSelect) {
+      if (selectedCategories && selectedCategories.length > 0) return selectedCategories;
+      if (selectedCategory) {
+        return selectedCategory.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      return [];
+    }
+    return selectedCategory ? [selectedCategory.trim()] : [];
+  }, [isMultiSelect, selectedCategories, selectedCategory]);
 
-  const matchedPreset = useMemo(() => {
-    return findCategoryDefinition(selectedCategory);
-  }, [selectedCategory]);
+  const [isCustomMode, setIsCustomMode] = useState<boolean>(false);
+  const [customText, setCustomText] = useState<string>("");
 
-  const handleSelectPreset = useCallback(
+  const handleTogglePreset = useCallback(
     (item: ProductCategoryItem) => {
-      setIsCustomMode(false);
-      onSelectCategory(item.name);
+      if (isMultiSelect) {
+        const isAlreadySelected = currentSelectedList.some(
+          (c) => c.toLowerCase() === item.name.toLowerCase() || c.toLowerCase() === item.id.toLowerCase()
+        );
+        let updated: string[];
+        if (isAlreadySelected) {
+          updated = currentSelectedList.filter(
+            (c) => c.toLowerCase() !== item.name.toLowerCase() && c.toLowerCase() !== item.id.toLowerCase()
+          );
+        } else {
+          updated = [...currentSelectedList, item.name];
+        }
+
+        if (onSelectCategories) {
+          onSelectCategories(updated);
+        }
+        if (onSelectCategory) {
+          onSelectCategory(updated.join(", "));
+        }
+      } else {
+        setIsCustomMode(false);
+        if (onSelectCategory) {
+          onSelectCategory(item.name);
+        }
+        if (onSelectCategories) {
+          onSelectCategories([item.name]);
+        }
+      }
     },
-    [onSelectCategory]
+    [isMultiSelect, currentSelectedList, onSelectCategory, onSelectCategories]
   );
 
   const handleToggleCustom = useCallback(() => {
-    setIsCustomMode(true);
-    if (customText.trim()) {
-      onSelectCategory(customText.trim());
-    }
-  }, [customText, onSelectCategory]);
+    setIsCustomMode((prev) => !prev);
+  }, []);
 
-  const handleCustomTextChange = useCallback(
-    (text: string) => {
-      setCustomText(text);
-      onSelectCategory(text.trim());
+  const handleAddCustomCategory = useCallback(() => {
+    const trimmed = customText.trim();
+    if (!trimmed) return;
+
+    if (isMultiSelect) {
+      if (!currentSelectedList.includes(trimmed)) {
+        const updated = [...currentSelectedList, trimmed];
+        if (onSelectCategories) onSelectCategories(updated);
+        if (onSelectCategory) onSelectCategory(updated.join(", "));
+      }
+      setCustomText("");
+    } else {
+      if (onSelectCategory) onSelectCategory(trimmed);
+      if (onSelectCategories) onSelectCategories([trimmed]);
+    }
+  }, [customText, isMultiSelect, currentSelectedList, onSelectCategory, onSelectCategories]);
+
+  const handleRemoveCategory = useCallback(
+    (catToRemove: string) => {
+      const updated = currentSelectedList.filter(
+        (c) => c.toLowerCase() !== catToRemove.toLowerCase()
+      );
+      if (onSelectCategories) onSelectCategories(updated);
+      if (onSelectCategory) onSelectCategory(updated.join(", "));
     },
-    [onSelectCategory]
+    [currentSelectedList, onSelectCategories, onSelectCategory]
   );
 
   return (
     <View style={styles.container}>
-      {label && (
+      <View style={styles.headerRow}>
         <View style={styles.labelRow}>
-          <Ionicons name="pricetag-outline" size={14} color={accent} style={styles.labelIcon} />
+          <Ionicons name="pricetags-outline" size={15} color={accent} style={styles.labelIcon} />
           <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>
-            {label}
+            {label || t("products.selectMultipleCategories")}
           </Text>
+        </View>
+        {isMultiSelect && currentSelectedList.length > 0 && (
+          <View style={[styles.badgeCount, { backgroundColor: accent + "20" }]}>
+            <Text style={[styles.badgeCountText, { color: accent }]}>
+              {currentSelectedList.length}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Selected tags chip pills (if multi-select) */}
+      {isMultiSelect && currentSelectedList.length > 0 && (
+        <View style={styles.selectedRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.selectedScroll}
+          >
+            {currentSelectedList.map((cat) => {
+              const def = findCategoryDefinition(cat);
+              const displayName = def ? (t(`productCategories.${def.i18nKey}` as any) || def.name) : cat;
+              return (
+                <View
+                  key={cat}
+                  style={[
+                    styles.selectedPill,
+                    { backgroundColor: accent + "25", borderColor: accent },
+                  ]}
+                >
+                  <Text style={styles.selectedPillEmoji}>{def ? def.emoji : "🏷️"}</Text>
+                  <Text style={[styles.selectedPillText, { color: isDark ? "#FFFFFF" : "#1A202C" }]}>
+                    {displayName}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveCategory(cat)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    style={styles.removePillBtn}
+                  >
+                    <Ionicons name="close-circle" size={14} color={accent} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
         </View>
       )}
 
@@ -91,23 +185,26 @@ const CategorySelector = memo(function CategorySelector({
           contentContainerStyle={styles.horizontalScroll}
         >
           {PREDEFINED_PRODUCT_CATEGORIES.map((item) => {
-            const isSelected = !isCustomMode && matchedPreset?.id === item.id;
+            const isSelected = currentSelectedList.some(
+              (c) => c.toLowerCase() === item.name.toLowerCase() || c.toLowerCase() === item.id.toLowerCase()
+            );
             const localizedName = t(`productCategories.${item.i18nKey}` as any) || item.name;
 
             return (
               <TouchableOpacity
                 key={item.id}
                 activeOpacity={0.7}
-                onPress={() => handleSelectPreset(item)}
+                onPress={() => handleTogglePreset(item)}
                 style={[
                   styles.chip,
                   {
                     backgroundColor: isSelected
-                      ? accent + "1A"
+                      ? accent + "20"
                       : isDark
                       ? "#1A2234"
                       : "#EBF1E6",
                     borderColor: isSelected ? accent : isDark ? "#2D3748" : "#D4DCC8",
+                    borderWidth: isSelected ? 1.5 : 1,
                   },
                 ]}
               >
@@ -158,8 +255,8 @@ const CategorySelector = memo(function CategorySelector({
               ]}
             >
               <Ionicons
-                name="create-outline"
-                size={14}
+                name={isCustomMode ? "close-outline" : "add-outline"}
+                size={15}
                 color={isCustomMode ? accent : isDark ? "#94A3B8" : "#64748B"}
                 style={styles.customIcon}
               />
@@ -177,7 +274,7 @@ const CategorySelector = memo(function CategorySelector({
                 ]}
                 numberOfLines={1}
               >
-                {t("productCategories.customCategory")}
+                {isCustomMode ? t("common.cancel") : t("productCategories.customCategory")}
               </Text>
             </TouchableOpacity>
           )}
@@ -187,9 +284,6 @@ const CategorySelector = memo(function CategorySelector({
       {/* Input for custom category when in custom mode */}
       {isCustomMode && (
         <View style={styles.customInputWrapper}>
-          <Text style={[styles.customInputLabel, themeStyles.subText]}>
-            {t("productCategories.customCategory")}:
-          </Text>
           <View
             style={[
               styles.inputContainer,
@@ -208,20 +302,18 @@ const CategorySelector = memo(function CategorySelector({
               placeholder={t("productCategories.customCategoryPlaceholder")}
               placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
               value={customText}
-              onChangeText={handleCustomTextChange}
+              onChangeText={setCustomText}
               autoCapitalize="words"
               maxLength={50}
+              onSubmitEditing={handleAddCustomCategory}
+              returnKeyType="done"
             />
             {customText.length > 0 && (
               <TouchableOpacity
-                onPress={() => handleCustomTextChange("")}
-                style={styles.clearBtn}
+                onPress={handleAddCustomCategory}
+                style={[styles.addBtn, { backgroundColor: accent }]}
               >
-                <Ionicons
-                  name="close-circle"
-                  size={16}
-                  color={isDark ? "#94A3B8" : "#64748B"}
-                />
+                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             )}
           </View>
@@ -308,5 +400,55 @@ const styles = StyleSheet.create({
   },
   clearBtn: {
     padding: 4,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  badgeCount: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  badgeCountText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  selectedRow: {
+    marginBottom: 8,
+  },
+  selectedScroll: {
+    gap: 6,
+    paddingVertical: 2,
+  },
+  selectedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 4,
+  },
+  selectedPillEmoji: {
+    fontSize: 13,
+  },
+  selectedPillText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  removePillBtn: {
+    padding: 2,
+    marginLeft: 2,
+  },
+  addBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
   },
 });

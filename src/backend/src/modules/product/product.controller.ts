@@ -95,7 +95,7 @@ class ProductControllerClass {
 
   async createCustomProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { name, category, description, icon, ean, ncm } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -107,10 +107,12 @@ class ProductControllerClass {
       const product = await productService.createCustomProduct({
         name: name.trim(),
         category,
+        categories: Array.isArray(categories) ? categories : undefined,
         description,
         icon,
         ean,
         ncm,
+        isPromotion: Boolean(isPromotion),
       });
 
       if (req.user?.id) {
@@ -127,7 +129,7 @@ class ProductControllerClass {
     try {
       const { id } = req.params;
       const numId = Number(id);
-      const { name, category, description, icon, ean, ncm } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!id || isNaN(numId) || numId <= 0) {
@@ -139,10 +141,12 @@ class ProductControllerClass {
       const updated = await productService.updateProduct(numId, {
         name,
         category,
+        categories: Array.isArray(categories) ? categories : undefined,
         description,
         icon,
         ean,
         ncm,
+        isPromotion: isPromotion !== undefined ? Boolean(isPromotion) : undefined,
       });
 
       return res.status(200).json(success(updated));

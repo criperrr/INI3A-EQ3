@@ -12,6 +12,7 @@ class OcurrencyServiceClass {
     marketId: number;
     value: number | string;
     icon?: string | undefined;
+    isPromotion?: boolean | undefined;
     createdAt?: string | Date | undefined;
   }) {
     const numValue = typeof data.value === "string" ? parseFloat(data.value.replace(/[^0-9.,]/g, "").replace(",", ".")) : data.value;
@@ -59,6 +60,7 @@ class OcurrencyServiceClass {
       marketId: data.marketId,
       value: numValue,
       icon: data.icon,
+      isPromotion: Boolean(data.isPromotion),
       createdAt: data.createdAt,
     });
 

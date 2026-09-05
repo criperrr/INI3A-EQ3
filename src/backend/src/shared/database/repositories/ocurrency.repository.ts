@@ -14,6 +14,7 @@ export interface CreateOccurrenceDTO {
   productId: number;
   value: string | number;
   icon?: string | undefined;
+  isPromotion?: boolean | undefined;
   createdAt?: string | Date | undefined;
 }
 
@@ -23,6 +24,7 @@ export interface UpdateOccurrenceDTO {
   isSuspended?: boolean | undefined;
   isResolved?: boolean | undefined;
   trustFlag?: boolean | undefined;
+  isPromotion?: boolean | undefined;
 }
 
 
@@ -38,6 +40,7 @@ class OcurrencyRepositoryClass {
         productId: data.productId,
         value: formattedValue,
         icon: data.icon,
+        isPromotion: Boolean(data.isPromotion),
         ...(data.createdAt ? { createdAt: new Date(data.createdAt).toISOString() } : {}),
       })
       .returning();
@@ -59,6 +62,7 @@ class OcurrencyRepositoryClass {
         isResolved: Ocurrency.isResolved,
         upvoteCount: Ocurrency.upvoteCount,
         downvoteCount: Ocurrency.downvoteCount,
+        isPromotion: Ocurrency.isPromotion,
         createdAt: Ocurrency.createdAt,
       })
       .from(Ocurrency)
@@ -107,6 +111,7 @@ class OcurrencyRepositoryClass {
       isResolved: Ocurrency.isResolved,
       upvoteCount: Ocurrency.upvoteCount,
       downvoteCount: Ocurrency.downvoteCount,
+      isPromotion: Ocurrency.isPromotion,
       createdAt: Ocurrency.createdAt,
       distanceMeters: distanceExpr,
     };

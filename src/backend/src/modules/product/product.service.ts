@@ -14,7 +14,19 @@ import type {
 
 class ProductServiceClass {
   private formatProductDTO(raw: any, latestPrice?: string | null): ProductDTO {
-    const category = normalizeCategoryName(raw.description);
+    const rawDesc = (raw.description || "").trim();
+    let categoriesList: string[] = [];
+    if (rawDesc.includes(",")) {
+      categoriesList = rawDesc
+        .split(",")
+        .map((p: string) => normalizeCategoryName(p.trim()))
+        .filter((c: string, idx: number, arr: string[]) => c && arr.indexOf(c) === idx);
+    } else if (rawDesc) {
+      categoriesList = [normalizeCategoryName(rawDesc)];
+    } else {
+      categoriesList = ["Outros"];
+    }
+    const category = categoriesList[0] || "Outros";
 
     let formattedDistance: string | null = null;
     if (raw.nearestMarketDistance !== undefined && raw.nearestMarketDistance !== null) {
@@ -51,6 +63,8 @@ class ProductServiceClass {
       name: raw.name,
       description: raw.description || "",
       category,
+      categories: categoriesList,
+      brand: raw.brand || null,
       imageUri: raw.icon || null,
       icon: raw.icon || null,
       createdAt: raw.createdAt || new Date().toISOString(),
@@ -250,21 +264,29 @@ class ProductServiceClass {
       }
     }
 
+    const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories.join(", ")
+      : (data.description || data.category || "");
+
     const created = await ProductRepository.createProduct({
       ean: trimmedEan || undefined,
       ncm: data.ncm?.trim() || undefined,
       name: data.name.trim(),
-      description: data.description?.trim() || data.category?.trim() || "",
+      categories: data.categories,
+      description: categoryStr.trim(),
       icon: data.icon?.trim() || "",
+      isPromotion: data.isPromotion,
     });
 
     if (!created) {
       throw new Error("Erro ao salvar produto no banco de dados.");
     }
 
-    await invalidateCachePattern("products");
-
-    return this.formatProductDTO(created, null);
+    const dto = this.formatProductDTO(created, null);
+    if (data.isPromotion !== undefined) {
+      dto.isPromotion = data.isPromotion;
+    }
+    return dto;
   }
 
   async updateProduct(id: number, data: UpdateProductDTO): Promise<ProductDTO> {
@@ -285,12 +307,18 @@ class ProductServiceClass {
       }
     }
 
+    const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories.join(", ")
+      : (data.description || data.category);
+
     const updated = await ProductRepository.updateProduct(id, {
       name: data.name?.trim(),
       ean: trimmedEan !== undefined ? trimmedEan || "" : undefined,
       ncm: data.ncm?.trim(),
-      description: data.description?.trim() || data.category?.trim(),
+      categories: data.categories,
+      description: categoryStr?.trim(),
       icon: data.icon?.trim(),
+      isPromotion: data.isPromotion,
     });
 
     if (!updated) {

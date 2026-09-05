@@ -6,7 +6,7 @@ import { ValidationError } from "@/shared/errors/errors";
 class OcurrencyControllerClass {
   async create(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { productId, marketId, value, icon, createdAt } = req.body;
+      const { productId, marketId, value, icon, createdAt, isPromotion } = req.body;
       const errors: Array<{ field: string; message: string }> = [];
 
       if (!productId || isNaN(Number(productId))) {
@@ -27,6 +27,7 @@ class OcurrencyControllerClass {
         marketId: Number(marketId),
         value,
         icon,
+        isPromotion: Boolean(isPromotion),
         createdAt,
       });
 

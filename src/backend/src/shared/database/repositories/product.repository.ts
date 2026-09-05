@@ -533,7 +533,10 @@ class ProductRepositoryClass {
   async createProduct(data: CreateProductDTO) {
     this.categoryCache = null;
     const safeName = data.name.trim().slice(0, 195);
-    const safeDescription = (data.description || data.category || "").trim().slice(0, 250);
+    const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories.join(", ")
+      : (data.description || data.category || "");
+    const safeDescription = categoryStr.trim().slice(0, 250);
 
     const result = await db.insert(product).values({
       ean: data.ean?.trim() || null,
@@ -551,7 +554,9 @@ class ProductRepositoryClass {
     if (data.name !== undefined) updatePayload.name = data.name;
     if (data.ean !== undefined) updatePayload.ean = data.ean;
     if (data.ncm !== undefined) updatePayload.ncm = data.ncm;
-    if (data.description !== undefined || data.category !== undefined) {
+    if (data.categories !== undefined) {
+      updatePayload.description = Array.isArray(data.categories) ? data.categories.join(", ") : data.categories;
+    } else if (data.description !== undefined || data.category !== undefined) {
       updatePayload.description = data.description ?? data.category;
     }
     if (data.icon !== undefined) updatePayload.icon = data.icon;
@@ -613,35 +618,35 @@ class ProductRepositoryClass {
   }
 
   async getLatestPriceForProduct(productId: number): Promise<string | null> {
-    const res = await db
+    const result = await db
       .select({ value: ocurrency.value })
       .from(ocurrency)
       .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)))
       .orderBy(desc(ocurrency.createdAt))
       .limit(1);
 
-    if (!res[0] || !res[0].value) return null;
-    const num = Number(res[0].value);
-    return `R$ ${num.toFixed(2).replace(".", ",")}`;
+    if (!result[0]?.value) return null;
+    return `R$ ${Number(result[0].value).toFixed(2).replace(".", ",")}`;
   }
 
   async getLatestPricesForProductIds(productIds: number[]): Promise<Map<number, string>> {
-    const priceMap = new Map<number, string>();
-    if (!productIds || productIds.length === 0) return priceMap;
-
-    const uniqueIds = Array.from(new Set(productIds.filter((id) => id > 0)));
-    if (uniqueIds.length === 0) return priceMap;
+    if (!productIds || productIds.length === 0) return new Map();
 
     const rows = await db
       .select({
         productId: ocurrency.productId,
         value: ocurrency.value,
-        createdAt: ocurrency.createdAt,
       })
       .from(ocurrency)
-      .where(and(inArray(ocurrency.productId, uniqueIds), eq(ocurrency.isSuspended, false)))
+      .where(
+        and(
+          inArray(ocurrency.productId, productIds),
+          eq(ocurrency.isSuspended, false)
+        )
+      )
       .orderBy(desc(ocurrency.createdAt));
 
+    const priceMap = new Map<number, string>();
     for (const row of rows) {
       if (row.productId && !priceMap.has(row.productId) && row.value) {
         const num = Number(row.value);
@@ -653,18 +658,28 @@ class ProductRepositoryClass {
   }
 
   async getPriceStats(productId: number) {
-    const res = await db
+    // 1. Fetch 5 most recent active price records for calculating 5-last average
+    const recentOccurrences = await db
+      .select({
+        value: ocurrency.value,
+      })
+      .from(ocurrency)
+      .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)))
+      .orderBy(desc(ocurrency.createdAt))
+      .limit(5);
+
+    // 2. Fetch min, max and total count for the product
+    const globalRes = await db
       .select({
         minPrice: sql<string | null>`min(${ocurrency.value})`,
         maxPrice: sql<string | null>`max(${ocurrency.value})`,
-        avgPrice: sql<string | null>`avg(${ocurrency.value})`,
         count: sql<number>`count(*)::int`,
       })
       .from(ocurrency)
       .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)));
 
-    const row = res[0];
-    if (!row || !row.count) {
+    const globalRow = globalRes[0];
+    if (!globalRow || !globalRow.count || recentOccurrences.length === 0) {
       return {
         minPrice: null,
         maxPrice: null,
@@ -673,11 +688,20 @@ class ProductRepositoryClass {
       };
     }
 
+    const recentValues = recentOccurrences
+      .map((r) => Number(r.value))
+      .filter((v) => !isNaN(v) && v > 0);
+
+    const avg5Recent =
+      recentValues.length > 0
+        ? recentValues.reduce((sum, val) => sum + val, 0) / recentValues.length
+        : null;
+
     return {
-      minPrice: row.minPrice ? `R$ ${Number(row.minPrice).toFixed(2).replace(".", ",")}` : null,
-      maxPrice: row.maxPrice ? `R$ ${Number(row.maxPrice).toFixed(2).replace(".", ",")}` : null,
-      avgPrice: row.avgPrice ? `R$ ${Number(row.avgPrice).toFixed(2).replace(".", ",")}` : null,
-      count: Number(row.count),
+      minPrice: globalRow.minPrice ? `R$ ${Number(globalRow.minPrice).toFixed(2).replace(".", ",")}` : null,
+      maxPrice: globalRow.maxPrice ? `R$ ${Number(globalRow.maxPrice).toFixed(2).replace(".", ",")}` : null,
+      avgPrice: avg5Recent !== null ? `R$ ${avg5Recent.toFixed(2).replace(".", ",")}` : null,
+      count: Number(globalRow.count),
     };
   }
 

@@ -191,6 +191,10 @@ export interface TranslationSchema {
     reportSubmit: string;
     reportSuccess: string;
     reportSubmitting: string;
+    avgPriceLast5: string;
+    avgPriceLast5Desc: string;
+    registeredAt: string;
+    promotionTag: string;
   };
   settings: {
     title: string;
@@ -338,6 +342,15 @@ export interface TranslationSchema {
     locationRequiredForProximity: string;
     cooldownNotice: string;
     cooldownError: string;
+    isPromotion: string;
+    isPromotionSubtitle: string;
+    isPromotionPrice: string;
+    isPromotionPriceSubtitle: string;
+    selectMultipleCategories: string;
+    categoriesSelectedCount: string;
+    productRegisteredDate: string;
+    brandPlaceholder: string;
+    unitPlaceholder: string;
   };
   profile: {
     title: string;

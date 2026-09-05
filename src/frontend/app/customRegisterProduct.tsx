@@ -11,6 +11,7 @@ import {
   ScrollView,
   Keyboard,
   TouchableWithoutFeedback,
+  Switch,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,10 +25,14 @@ export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
   const [ean, setEan] = useState(params.ean || "");
   const [name, setName] = useState("");
-  const [category, setCategory] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [brand, setBrand] = useState("");
+  const [unitInfo, setUnitInfo] = useState("");
+  const [isPromotion, setIsPromotion] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { themeStyles, accent, isDark } = useTheme();
+  const { themeStyles, accent, isDark, tokens } = useTheme();
+  const { semantic } = tokens;
   const { t } = useI18n();
   const { isAuthenticated, user, loginAsTestUser } = useAuth();
 
@@ -63,10 +68,21 @@ export default function CustomRegisterProduct() {
   const executeRegistration = async () => {
     setLoading(true);
     try {
+      let finalName = name.trim();
+      if (brand.trim() && !finalName.toLowerCase().includes(brand.trim().toLowerCase())) {
+        finalName = `${brand.trim()} ${finalName}`;
+      }
+      if (unitInfo.trim() && !finalName.toLowerCase().includes(unitInfo.trim().toLowerCase())) {
+        finalName = `${finalName} ${unitInfo.trim()}`;
+      }
+
       const created = await createCustomProduct({
-        name: name.trim(),
-        category: category.trim() || undefined,
+        name: finalName,
+        categories: selectedCategories.length > 0 ? selectedCategories : undefined,
+        category: selectedCategories.join(", ") || undefined,
         ean: ean.trim() || undefined,
+        isPromotion,
+        brand: brand.trim() || undefined,
       });
 
       setLoading(false);
@@ -127,7 +143,7 @@ export default function CustomRegisterProduct() {
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
         >
-        <Ionicons name="cube-outline" size={80} color={accent} style={styles.icon} />
+        <Ionicons name="cube-outline" size={70} color={accent} style={styles.icon} />
         <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>{t("products.customProductTitle")}</Text>
         <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
           {t("products.customProductSubtitle")}
@@ -181,12 +197,78 @@ export default function CustomRegisterProduct() {
           </View>
         </View>
 
+        {/* Informações Complementares (Marca & Unidade) */}
+        <View style={styles.rowInputs}>
+          <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+            <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>Marca</Text>
+            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+              <TextInput
+                style={[styles.input, themeStyles.text]}
+                placeholder={t("products.brandPlaceholder")}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                value={brand}
+                onChangeText={setBrand}
+              />
+            </View>
+          </View>
+
+          <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+            <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>Peso / Unidade</Text>
+            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+              <TextInput
+                style={[styles.input, themeStyles.text]}
+                placeholder={t("products.unitPlaceholder")}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                value={unitInfo}
+                onChangeText={setUnitInfo}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Seleção de Múltiplas Categorias */}
         <View style={styles.inputGroup}>
           <CategorySelector
-            selectedCategory={category}
-            onSelectCategory={setCategory}
-            label={t("productDetails.category")}
+            selectedCategories={selectedCategories}
+            onSelectCategories={setSelectedCategories}
+            isMultiSelect={true}
+            label={t("products.selectMultipleCategories")}
             showCustomOption={true}
+          />
+        </View>
+
+        {/* Card de Opção: É Promoção? */}
+        <View
+          style={[
+            styles.promoToggleCard,
+            {
+              backgroundColor: isPromotion
+                ? accent + "18"
+                : isDark
+                ? "#1A2234"
+                : "#F8FAFC",
+              borderColor: isPromotion ? accent : isDark ? "#2D3748" : "#E2E8F0",
+            },
+          ]}
+        >
+          <View style={styles.promoToggleContent}>
+            <View style={[styles.promoIconWrapper, { backgroundColor: isPromotion ? accent : (isDark ? "#2D3748" : "#CBD5E1") }]}>
+              <Ionicons name="pricetag" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.promoTextCol}>
+              <Text style={[styles.promoToggleTitle, themeStyles.text]}>
+                {t("products.isPromotion")}
+              </Text>
+              <Text style={[styles.promoToggleSubtitle, themeStyles.subText]}>
+                {t("products.isPromotionSubtitle")}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={isPromotion}
+            onValueChange={setIsPromotion}
+            trackColor={{ false: isDark ? "#4B5563" : "#D1D5DB", true: accent + "80" }}
+            thumbColor={isPromotion ? accent : "#F3F4F6"}
           />
         </View>
 
@@ -289,5 +371,45 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 18,
     fontWeight: "bold",
+  },
+  rowInputs: {
+    flexDirection: "row",
+    width: "100%",
+  },
+  promoToggleCard: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 20,
+  },
+  promoToggleContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 12,
+  },
+  promoIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  promoTextCol: {
+    flex: 1,
+  },
+  promoToggleTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  promoToggleSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
   },
 });

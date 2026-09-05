@@ -17,8 +17,11 @@ export interface ProductData {
   name: string;
   description?: string;
   category: string;
+  categories?: string[];
+  brand?: string | null;
   imageUri?: string | null;
   icon?: string | null;
+  createdAt?: string;
   lastPrice?: string;
   bestPrice?: string | null;
   minPrice?: string | null;
@@ -60,19 +63,25 @@ export interface FetchProductsParams {
 export interface CreateProductParams {
   name: string;
   category?: string;
+  categories?: string[];
   description?: string;
   icon?: string;
   ean?: string;
   ncm?: string;
+  isPromotion?: boolean;
+  brand?: string;
 }
 
 export interface UpdateProductParams {
   name?: string;
   category?: string;
+  categories?: string[];
   description?: string;
   icon?: string;
   ean?: string;
   ncm?: string;
+  isPromotion?: boolean;
+  brand?: string;
 }
 
 let memoryProductsCache: Record<string, { data: PaginatedProductsData; timestamp: number }> = {};

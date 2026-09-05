@@ -10,6 +10,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Alert,
+  Switch,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -31,6 +32,7 @@ const FALLBACK_PRODUCT = {
 
 export default function RegisterProduct() {
   const [price, setPrice] = useState("");
+  const [isPromotion, setIsPromotion] = useState(false);
   const [product, setProduct] = useState<ProductData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -240,6 +242,7 @@ export default function RegisterProduct() {
         numPrice,
         undefined,
         recordDate.toISOString(),
+        isPromotion,
       );
 
       await refreshProfile();
@@ -699,6 +702,73 @@ export default function RegisterProduct() {
                   </Text>
                 </View>
               </View>
+            </View>
+
+            {/* Promo Price Toggle Card */}
+            <View
+              style={[
+                styles.promoCard,
+                {
+                  backgroundColor: isPromotion
+                    ? accent + "18"
+                    : semantic.colors.surface.input,
+                  borderColor: isPromotion
+                    ? accent
+                    : semantic.colors.border.default,
+                  borderRadius: semantic.radius.card,
+                  marginBottom: semantic.spacing.itemGap,
+                },
+              ]}
+            >
+              <View style={styles.promoCardLeft}>
+                <View
+                  style={[
+                    styles.promoIconContainer,
+                    {
+                      backgroundColor: isPromotion
+                        ? accent
+                        : isDark
+                        ? "#2D3748"
+                        : "#CBD5E1",
+                    },
+                  ]}
+                >
+                  <Ionicons name="pricetag" size={16} color="#FFFFFF" />
+                </View>
+                <View style={styles.promoTextCol}>
+                  <Text
+                    style={[
+                      styles.promoTitle,
+                      {
+                        color: semantic.colors.text.primary,
+                        ...semantic.typography.bodyBold,
+                      },
+                    ]}
+                  >
+                    {t("products.isPromotionPrice")}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.promoSubtitle,
+                      {
+                        color: semantic.colors.text.secondary,
+                        ...semantic.typography.caption,
+                      },
+                    ]}
+                  >
+                    {t("products.isPromotionPriceSubtitle")}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                value={isPromotion}
+                onValueChange={setIsPromotion}
+                trackColor={{
+                  false: isDark ? "#4B5563" : "#D1D5DB",
+                  true: accent + "80",
+                }}
+                thumbColor={isPromotion ? accent : "#F3F4F6"}
+              />
             </View>
 
             {/* Market Selection */}
@@ -1334,5 +1404,33 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 12,
     fontWeight: "700",
+  },
+  promoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 14,
+    borderWidth: 1,
+  },
+  promoCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+    marginRight: 10,
+  },
+  promoIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoTextCol: {
+    flex: 1,
+  },
+  promoTitle: {},
+  promoSubtitle: {
+    marginTop: 2,
   },
 });

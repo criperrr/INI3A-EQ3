@@ -13,6 +13,7 @@ export interface PriceOccurrence {
   isResolved: boolean;
   upvoteCount: number;
   downvoteCount: number;
+  isPromotion?: boolean;
   createdAt: string;
   userVote?: boolean | null;
 }
@@ -38,6 +39,7 @@ export async function submitPriceOccurrence(
   value: string | number,
   icon?: string,
   createdAt?: string,
+  isPromotion?: boolean,
 ): Promise<SubmitOccurrenceResult> {
   return apiRequest<SubmitOccurrenceResult>("/ocurrency", {
     method: "POST",
@@ -47,6 +49,7 @@ export async function submitPriceOccurrence(
       value,
       icon,
       createdAt,
+      isPromotion,
     }),
   });
 }

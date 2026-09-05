@@ -64,6 +64,7 @@ export default function ProductDetails() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editName, setEditName] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [editCategories, setEditCategories] = useState<string[]>([]);
   const [editEan, setEditEan] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
@@ -75,6 +76,16 @@ export default function ProductDetails() {
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
+
+  const productCategories: string[] = React.useMemo(() => {
+    if (product?.categories && product.categories.length > 0) {
+      return product.categories;
+    }
+    if (product?.category) {
+      return product.category.split(",").map((c) => c.trim()).filter(Boolean);
+    }
+    return [];
+  }, [product?.categories, product?.category]);
 
   const loadOccurrences = useCallback(async (productId: number) => {
     setLoadingOccurrences(true);
@@ -383,7 +394,13 @@ export default function ProductDetails() {
   const handleOpenEdit = () => {
     if (!product) return;
     setEditName(product.name || "");
-    setEditCategory(product.category || "");
+    const cats = product.categories && product.categories.length > 0
+      ? product.categories
+      : product.category
+      ? product.category.split(",").map((c) => c.trim()).filter(Boolean)
+      : [];
+    setEditCategories(cats);
+    setEditCategory(product.category || (cats.length > 0 ? cats.join(", ") : ""));
     setEditEan(product.barcode || product.ean || "");
     setIsEditModalVisible(true);
   };
@@ -401,9 +418,16 @@ export default function ProductDetails() {
 
     setSavingEdit(true);
     try {
+      const selectedCats = editCategories.length > 0
+        ? editCategories
+        : editCategory.trim()
+        ? [editCategory.trim()]
+        : [];
+
       const updated = await updateProduct(product.id, {
         name: editName.trim(),
-        category: editCategory.trim(),
+        category: selectedCats.join(", "),
+        categories: selectedCats,
         ean: editEan.trim() || undefined,
       });
 
@@ -608,24 +632,54 @@ export default function ProductDetails() {
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />
             )}
-            {Boolean(product.category) ? (
-              <View style={[styles.categoryBadge, { backgroundColor: accent }]}>
-                <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
-                <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
-                  {getLocalizedCategoryName(product.category, t).toUpperCase()}
-                </Text>
+            {productCategories.length > 0 ? (
+              <View style={styles.categoriesBadgeContainer}>
+                {productCategories.slice(0, 2).map((cat, idx) => (
+                  <View key={`${cat}-${idx}`} style={[styles.categoryBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(cat)}</Text>
+                    <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                      {getLocalizedCategoryName(cat, t).toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+                {productCategories.length > 2 && (
+                  <View style={[styles.categoryBadge, styles.moreCategoryBadge, themeStyles.card, themeStyles.border]}>
+                    <Text style={[styles.moreCategoryBadgeText, themeStyles.text]}>
+                      +{productCategories.length - 2}
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : null}
           </View>
 
           <Text style={[styles.productName, themeStyles.text]}>{product.name}</Text>
 
-          {Boolean(product.barcode) ? (
-            <View style={[styles.barcodeChip, themeStyles.inputBg, themeStyles.border]}>
-              <Ionicons name="barcode-outline" size={16} color={semantic.colors.text.secondary} />
-              <Text style={[styles.barcodeText, themeStyles.subText]}>{product.barcode}</Text>
-            </View>
-          ) : null}
+          {/* Product Meta Row: Brand, Barcode, Creation Date */}
+          <View style={styles.metaRow}>
+            {Boolean(product.brand) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="pricetag-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>{product.brand}</Text>
+              </View>
+            )}
+
+            {Boolean(product.barcode) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="barcode-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>{product.barcode}</Text>
+              </View>
+            )}
+
+            {Boolean(product.createdAt) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="calendar-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>
+                  {`${t("productDetails.registeredAt") || "Cadastrado em"}: ${new Date(product.createdAt!).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}`}
+                </Text>
+              </View>
+            )}
+          </View>
 
           <View style={[styles.divider, { backgroundColor: semantic.colors.border.divider || semantic.colors.border.default }]} />
 
@@ -648,7 +702,11 @@ export default function ProductDetails() {
               ) : null}
               {Boolean(product.avgPrice) ? (
                 <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
-                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.averagePrice")}</Text>
+                  <View style={styles.statLabelHeader}>
+                    <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>
+                      {t("productDetails.avgPriceLast5") || t("productDetails.averagePrice")}
+                    </Text>
+                  </View>
                   <Text style={[styles.statValue, themeStyles.text]}>{product.avgPrice}</Text>
                 </View>
               ) : null}
@@ -705,9 +763,19 @@ export default function ProductDetails() {
                 return (
                   <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
                     <View style={styles.occurrenceMainCol}>
-                      <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
-                        {occ.marketName || t("products.selectMarket")}
-                      </Text>
+                      <View style={styles.occurrenceMarketTitleRow}>
+                        <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                          {occ.marketName || t("products.selectMarket")}
+                        </Text>
+                        {Boolean(occ.isPromotion) && (
+                          <View style={[styles.promoOccurrenceBadge, { backgroundColor: accent }]}>
+                            <Ionicons name="pricetag" size={10} color="#FFFFFF" />
+                            <Text style={styles.promoOccurrenceText}>
+                              {t("productDetails.promotionTag")}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={[styles.occurrenceValue, { color: accent }]}>
                         R$ {occ.value}
                       </Text>
@@ -900,8 +968,17 @@ export default function ProductDetails() {
 
             <View style={{ marginVertical: 4 }}>
               <CategorySelector
+                isMultiSelect={true}
+                selectedCategories={editCategories}
+                onSelectCategories={(cats) => {
+                  setEditCategories(cats);
+                  setEditCategory(cats.join(", "));
+                }}
                 selectedCategory={editCategory}
-                onSelectCategory={setEditCategory}
+                onSelectCategory={(cat) => {
+                  setEditCategory(cat);
+                  setEditCategories(cat ? [cat] : []);
+                }}
                 label={t("productDetails.category")}
                 showCustomOption={true}
               />
@@ -1913,6 +1990,73 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
+  },
+  categoriesBadgeContainer: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    maxWidth: "85%",
+  },
+  moreCategoryBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  moreCategoryBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 5,
+    borderWidth: 1,
+  },
+  metaChipText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  statLabelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  occurrenceMarketTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  promoOccurrenceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  promoOccurrenceText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "bold",
+    letterSpacing: 0.3,
   },
 });
 

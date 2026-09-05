@@ -40,6 +40,8 @@ export interface ProductDTO {
   name: string;
   description: string;
   category: string;
+  categories?: string[] | undefined;
+  brand?: string | null | undefined;
   imageUri: string | null;
   icon: string | null;
   createdAt: string;
@@ -86,8 +88,11 @@ export interface CreateProductDTO {
   ean?: string | undefined;
   ncm?: string | undefined;
   category?: string | undefined;
+  categories?: string[] | undefined;
   description?: string | undefined;
   icon?: string | undefined;
+  isPromotion?: boolean | undefined;
+  brand?: string | undefined;
 }
 
 export interface UpdateProductDTO {
@@ -95,8 +100,11 @@ export interface UpdateProductDTO {
   ean?: string | undefined;
   ncm?: string | undefined;
   category?: string | undefined;
+  categories?: string[] | undefined;
   description?: string | undefined;
   icon?: string | undefined;
+  isPromotion?: boolean | undefined;
+  brand?: string | undefined;
 }
 
 export interface ProductCategoryDTO {

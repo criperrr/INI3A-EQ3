@@ -218,6 +218,7 @@ export const ocurrency = pgTable(
     upvoteCount: integer("upvote_count").default(0).notNull(),
     downvoteCount: integer("downvote_count").default(0).notNull(),
     volate: boolean().default(false).notNull(),
+    isPromotion: boolean("is_promotion").default(false).notNull(),
   },
   (table) => [
     index("idx_ocurrency_market_id_created_at_desc").using(

@@ -45,6 +45,7 @@ export async function seedDatabase() {
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE "ocurrency" ADD COLUMN IF NOT EXISTS is_promotion BOOLEAN DEFAULT FALSE;
     ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
     ALTER TABLE "user" ALTER COLUMN points SET DEFAULT 0;
     ALTER TABLE "user" ALTER COLUMN danger_flag SET DEFAULT FALSE;
@@ -812,6 +813,7 @@ export async function seedDatabase() {
     name: string;
     description: string;
     icon: string;
+    createdAt?: Date | string;
     prices?: any[];
   }
 
@@ -822,37 +824,43 @@ export async function seedDatabase() {
     {
       ean: "7891000100101",
       name: "Café Especial Torrado e Moído 500g",
-      description: "Alimentos",
+      description: "Alimentos, Padaria",
       icon: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+      createdAt: "2026-02-15T09:00:00Z",
       prices: [
-        { marketId: mExtra, value: "14.90", trustFlag: true, upvotes: 12, downvotes: 0 }, // Promoção!
+        { marketId: mExtra, value: "14.90", isPromotion: true, trustFlag: true, upvotes: 12, downvotes: 0 }, // Promoção!
         { marketId: mCarrefour, value: "24.90", trustFlag: true, upvotes: 5, downvotes: 1 },
         { marketId: mPaoDeAcucar, value: "26.50", trustFlag: true, upvotes: 4, downvotes: 0 },
         { marketId: mAtacadao, value: "18.90", trustFlag: true, upvotes: 8, downvotes: 0 },
+        { marketId: mAssai, value: "21.50", trustFlag: true, upvotes: 6, downvotes: 0 },
       ],
     },
     {
       ean: "7891000100102",
       name: "Azeite de Oliva Extra Virgem 500ml",
-      description: "Alimentos",
+      description: "Alimentos, Utilidades",
       icon: "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
+      createdAt: "2026-02-18T14:30:00Z",
       prices: [
-        { marketId: mCarrefour, value: "26.90", trustFlag: true, upvotes: 14, downvotes: 1 }, // Promoção!
+        { marketId: mCarrefour, value: "26.90", isPromotion: true, trustFlag: true, upvotes: 14, downvotes: 1 }, // Promoção!
         { marketId: mPaoDeAcucar, value: "39.90", trustFlag: true, upvotes: 3, downvotes: 0 },
         { marketId: mAssai, value: "29.90", trustFlag: true, upvotes: 7, downvotes: 0 },
         { marketId: mStMarche, value: "42.00", trustFlag: true, upvotes: 2, downvotes: 0 },
+        { marketId: mAtacadao, value: "31.50", trustFlag: true, upvotes: 5, downvotes: 0 },
       ],
     },
     {
       ean: "7891000100104",
       name: "Arroz Nobre Tipo 1 5kg",
-      description: "Alimentos",
+      description: "Alimentos, Grãos",
       icon: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+      createdAt: "2026-02-20T11:00:00Z",
       prices: [
-        { marketId: mAtacadao, value: "21.90", trustFlag: true, upvotes: 15, downvotes: 0 },
+        { marketId: mAtacadao, value: "21.90", isPromotion: true, trustFlag: true, upvotes: 15, downvotes: 0 },
         { marketId: mAssai, value: "22.50", trustFlag: true, upvotes: 9, downvotes: 1 },
         { marketId: mExtra, value: "26.90", trustFlag: true, upvotes: 4, downvotes: 0 },
         { marketId: mCarrefour, value: "27.50", trustFlag: true, upvotes: 3, downvotes: 0 },
+        { marketId: mPaoDeAcucar, value: "28.90", trustFlag: true, upvotes: 2, downvotes: 0 },
       ],
     },
     {
@@ -1454,6 +1462,7 @@ export async function seedDatabase() {
           name: item.name,
           description: item.description,
           icon: item.icon,
+          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
         })
         .returning();
       targetProduct = newProduct;
@@ -1466,6 +1475,7 @@ export async function seedDatabase() {
           name: item.name,
           description: item.description,
           icon: item.icon,
+          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
         })
         .where(eq(product.id, targetProduct.id));
     }
@@ -1488,8 +1498,10 @@ export async function seedDatabase() {
             productId: targetProduct.id,
             value: p.value,
             trustFlag: p.trustFlag ?? true,
+            isPromotion: Boolean(p.isPromotion),
             upvoteCount: p.upvotes ?? 0,
             downvoteCount: p.downvotes ?? 0,
+            ...(p.createdAt ? { createdAt: new Date(p.createdAt).toISOString() } : {}),
           });
           insertedOccurrencesCount++;
         }

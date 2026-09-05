@@ -8,6 +8,9 @@ import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/product
 interface ProductCardProps {
   name: string;
   category?: string;
+  categories?: string[];
+  brand?: string | null;
+  isPromotion?: boolean;
   imageUri?: string;
   children?: ReactNode;
 }
@@ -15,6 +18,9 @@ interface ProductCardProps {
 const ProductCard = memo(function ProductCard({
   name,
   category,
+  categories,
+  brand,
+  isPromotion,
   imageUri,
   children,
 }: ProductCardProps) {
@@ -36,7 +42,13 @@ const ProductCard = memo(function ProductCard({
     >
       <ProductImage imageUri={imageUri} />
 
-      <ProductInfo name={name} category={category} />
+      <ProductInfo
+        name={name}
+        category={category}
+        categories={categories}
+        brand={brand}
+        isPromotion={isPromotion}
+      />
 
       {/* Divisor semântico */}
       <View
@@ -107,13 +119,25 @@ const ProductImage = memo(function ProductImage({
 const ProductInfo = memo(function ProductInfo({
   name,
   category,
+  categories,
+  brand,
+  isPromotion,
 }: {
   name: string;
   category?: string;
+  categories?: string[];
+  brand?: string | null;
+  isPromotion?: boolean;
 }) {
   const { tokens } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
+
+  const displayCategories = React.useMemo(() => {
+    if (categories && categories.length > 0) return categories;
+    if (category) return category.split(",").map((c) => c.trim()).filter(Boolean);
+    return [];
+  }, [categories, category]);
 
   return (
     <View
@@ -122,21 +146,40 @@ const ProductInfo = memo(function ProductInfo({
         { marginBottom: semantic.spacing.itemGap },
       ]}
     >
-      {category && (
-        <Text
-          style={[
-            styles.productCategory,
-            {
-              color: semantic.colors.text.secondary,
-              ...semantic.typography.badge,
-            },
-          ]}
-          numberOfLines={1}
-          ellipsizeMode="tail"
-        >
-          {getCategoryEmoji(category)} {getLocalizedCategoryName(category, t).toUpperCase()}
-        </Text>
+      {displayCategories.length > 0 && (
+        <View style={styles.categoriesBadgeRow}>
+          {displayCategories.slice(0, 2).map((cat, idx) => (
+            <Text
+              key={`${cat}-${idx}`}
+              style={[
+                styles.productCategory,
+                {
+                  color: semantic.colors.text.secondary,
+                  ...semantic.typography.badge,
+                },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {getCategoryEmoji(cat)} {getLocalizedCategoryName(cat, t).toUpperCase()}
+            </Text>
+          ))}
+          {displayCategories.length > 2 && (
+            <Text
+              style={[
+                styles.productCategory,
+                {
+                  color: semantic.colors.text.tertiary,
+                  ...semantic.typography.badge,
+                },
+              ]}
+            >
+              +{displayCategories.length - 2}
+            </Text>
+          )}
+        </View>
       )}
+
       <Text
         style={[
           styles.productName,
@@ -150,6 +193,48 @@ const ProductInfo = memo(function ProductInfo({
       >
         {name}
       </Text>
+
+      {(Boolean(brand) || Boolean(isPromotion)) && (
+        <View style={styles.extraInfoRow}>
+          {Boolean(brand) && (
+            <Text
+              style={[
+                styles.brandText,
+                {
+                  color: semantic.colors.text.secondary,
+                  ...semantic.typography.caption,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {brand}
+            </Text>
+          )}
+          {Boolean(isPromotion) && (
+            <View
+              style={[
+                styles.promoBadge,
+                {
+                  backgroundColor: semantic.colors.feedback.error,
+                  borderRadius: semantic.radius.badge,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.promoBadgeText,
+                  {
+                    color: semantic.colors.text.inverse,
+                    ...semantic.typography.micro,
+                  },
+                ]}
+              >
+                {t("productDetails.promotionTag")}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 });
@@ -191,5 +276,33 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     width: "100%",
+  },
+  categoriesBadgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  extraInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 4,
+  },
+  brandText: {
+    fontStyle: "italic",
+  },
+  promoBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  promoBadgeText: {
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
 });
