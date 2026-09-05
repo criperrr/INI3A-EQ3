@@ -2446,3 +2446,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Gráfico inicia focado nos preços mais novos na direita, permitindo navegação fluida para os dados históricos na esquerda.
+
+## `2026-09-05 12:18` - `fix(frontend)`: Correção de fundo branco ao arrastar/rolar tela inicial
+
+- **Description:** Corrigido o vazamento de fundo branco no scroll da tela inicial (`index.tsx`). O `ScrollView` da HomeScreen e o `_layout.tsx` não definiam `contentStyle` no `Stack` nem container raiz com a cor semântica de superfície, expondo a tela branca padrão do React Navigation durante o overscroll/bounce ao arrastar para cima. Adicionado `styles.container` e `styles.scrollView` com `semantic.colors.surface.background`, margem inferior `paddingBottom: 32`, e background nos containers do `SwipeTabNavigator`. Corrigida dependência de memoização do React Compiler no `productDetails.tsx`.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/components/SwipeTabNavigator.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** A rolagem e overscroll da tela inicial agora mantêm consistência visual 100% harmonizada com o tema ativo (Dark, Light, AMOLED, Monet), eliminando qualquer flash ou tela branca ao arrastar para cima.

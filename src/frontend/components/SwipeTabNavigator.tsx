@@ -18,6 +18,7 @@ import {
   useTabNavigation,
   getTabIndex,
 } from "../content/tabNavigationContext";
+import { useTheme } from "../theme";
 
 export { MAIN_TABS };
 
@@ -28,6 +29,8 @@ interface SwipeTabNavigatorProps {
 }
 
 export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) {
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
   const pathname = usePathname();
   const { navigateToTab } = useTabNavigation();
 
@@ -164,12 +167,22 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
   });
 
   if (!isSwipeEnabled) {
-    return <View style={styles.container}>{children}</View>;
+    return (
+      <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+        {children}
+      </View>
+    );
   }
 
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.container, animatedStyle]}>
+      <Animated.View
+        style={[
+          styles.container,
+          { backgroundColor: semantic.colors.surface.background },
+          animatedStyle,
+        ]}
+      >
         {children}
       </Animated.View>
     </GestureDetector>

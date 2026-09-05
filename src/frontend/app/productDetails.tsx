@@ -91,7 +91,7 @@ export default function ProductDetails() {
       return product.category.split(",").map((c) => c.trim()).filter(Boolean);
     }
     return [];
-  }, [product?.categories, product?.category]);
+  }, [product]);
 
   const loadOccurrences = useCallback(async (productId: number) => {
     setLoadingOccurrences(true);

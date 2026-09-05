@@ -16,7 +16,8 @@ import SwipeTabNavigator from "../components/SwipeTabNavigator";
 function LayoutContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
-  const { isDark, themeStyles } = useTheme();
+  const { isDark, themeStyles, tokens } = useTheme();
+  const { semantic } = tokens;
   const { getTabIndex } = useTabNavigation();
   const isMainTab = getTabIndex(pathname) !== -1;
 
@@ -53,7 +54,7 @@ function LayoutContent() {
       {!isAuthScreen && (
         <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       )}
-      <View style={styles.contentWrapper}>
+      <View style={[styles.contentWrapper, { backgroundColor: semantic.colors.surface.background }]}>
         <SwipeTabNavigator>
           <Stack
             screenOptions={{
@@ -67,6 +68,7 @@ function LayoutContent() {
                 : "slide_from_right",
               fullScreenGestureEnabled: false,
               animationDuration: 220,
+              contentStyle: { backgroundColor: semantic.colors.surface.background },
             }}
           />
         </SwipeTabNavigator>

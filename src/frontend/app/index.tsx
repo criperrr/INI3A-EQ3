@@ -270,14 +270,18 @@ export default function HomeScreen() {
   const gridSubtitle = activeView === "products" ? t("home.radiusFilter15km") : undefined;
 
   return (
-    <>
+    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
       <ScrollView
         ref={scrollViewRef}
+        style={[styles.scrollView, { backgroundColor: semantic.colors.surface.background }]}
         contentContainerStyle={[
           styles.content,
           { backgroundColor: semantic.colors.surface.background },
         ]}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bounces={true}
+        overScrollMode="always"
       >
         <Banner />
         <ActionMenu
@@ -298,7 +302,7 @@ export default function HomeScreen() {
         visible={showTutorialModal}
         onClose={() => setShowTutorialModal(false)}
       />
-    </>
+    </View>
   );
 }
 
@@ -666,7 +670,9 @@ const ItemsGrid = memo(function ItemsGrid({
 
 // --- Estilos Estruturais ---
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingVertical: 16 },
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  content: { flexGrow: 1, paddingVertical: 16, paddingBottom: 32 },
   bannerSection: { paddingHorizontal: 16, marginBottom: 20 },
   bannerCardFull: {
     width: "100%",
