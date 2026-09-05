@@ -95,7 +95,7 @@ class ProductControllerClass {
 
   async createCustomProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { name, category, categories, description, icon, ean, ncm, isPromotion } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -113,6 +113,7 @@ class ProductControllerClass {
         ean,
         ncm,
         isPromotion: Boolean(isPromotion),
+        createdAt,
       });
 
       if (req.user?.id) {
@@ -129,7 +130,7 @@ class ProductControllerClass {
     try {
       const { id } = req.params;
       const numId = Number(id);
-      const { name, category, categories, description, icon, ean, ncm, isPromotion } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!id || isNaN(numId) || numId <= 0) {
@@ -147,6 +148,7 @@ class ProductControllerClass {
         ean,
         ncm,
         isPromotion: isPromotion !== undefined ? Boolean(isPromotion) : undefined,
+        createdAt,
       });
 
       return res.status(200).json(success(updated));

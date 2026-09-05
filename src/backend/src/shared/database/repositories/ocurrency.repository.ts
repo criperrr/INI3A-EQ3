@@ -71,7 +71,16 @@ class OcurrencyRepositoryClass {
       .leftJoin(Product, eq(Ocurrency.productId, Product.id))
       .where(eq(Ocurrency.id, id));
 
-    return result[0] || null;
+    const row = result[0];
+    if (!row) return null;
+    let isoCreatedAt = new Date().toISOString();
+    if (row.createdAt) {
+      const parsed = new Date(row.createdAt);
+      if (!isNaN(parsed.getTime())) {
+        isoCreatedAt = parsed.toISOString();
+      }
+    }
+    return { ...row, createdAt: isoCreatedAt };
   }
 
   async findByProduct(
@@ -194,12 +203,19 @@ class OcurrencyRepositoryClass {
       if (r.distanceMeters !== null && r.distanceMeters !== undefined) {
         formattedDistance = r.distanceMeters < 1000 ? `${r.distanceMeters} m` : `${(r.distanceMeters / 1000).toFixed(1).replace(".", ",")} km`;
       }
-      return { ...r, formattedDistance };
+      let isoCreatedAt = new Date().toISOString();
+      if (r.createdAt) {
+        const parsed = new Date(r.createdAt);
+        if (!isNaN(parsed.getTime())) {
+          isoCreatedAt = parsed.toISOString();
+        }
+      }
+      return { ...r, createdAt: isoCreatedAt, formattedDistance };
     });
   }
 
   async findByUser(userId: number, limit = 20) {
-    return db
+    const rows = await db
       .select({
         id: Ocurrency.id,
         productId: Ocurrency.productId,
@@ -216,6 +232,17 @@ class OcurrencyRepositoryClass {
       .where(eq(Ocurrency.userId, userId))
       .orderBy(desc(Ocurrency.createdAt))
       .limit(limit);
+
+    return rows.map((r) => {
+      let isoCreatedAt = new Date().toISOString();
+      if (r.createdAt) {
+        const parsed = new Date(r.createdAt);
+        if (!isNaN(parsed.getTime())) {
+          isoCreatedAt = parsed.toISOString();
+        }
+      }
+      return { ...r, createdAt: isoCreatedAt };
+    });
   }
 
   async countByUser(userId: number): Promise<number> {

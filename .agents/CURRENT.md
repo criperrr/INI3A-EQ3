@@ -45,7 +45,7 @@ Routes:
 **Frontend** is a React Native Expo app (SDK 57, React Native 0.86.3, React 19.2.3, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 - `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
 - `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, contribution activity heatmap, dynamic visual banners, animated/glow avatar frames, custom level badges, and an interactive Customization Shop modal with live avatar preview.
-- `productDetails.tsx` displays market prices list, allows community price voting, and grants exclusive edit/delete controls to admins.
+- `productDetails.tsx` displays market prices list, allows community price voting, interactive timeline chart starting at the right edge with newest prices, and grants exclusive edit/delete controls to admins.
 - `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.
 - `settings.tsx` manages themes, system Monet color palettes, encoded config backup/import, cache clearing, and account security.
 - `SwipeTabNavigator.tsx` provides 1:1 real-time finger-tracking horizontal swipe navigation between main tabs using Reanimated spring physics.
@@ -157,6 +157,7 @@ Direct relative paths from project root.
 | `src/frontend/content/i18nContext.tsx` | `I18nProvider`, `useI18n()` / `useTranslation()` supporting 7 languages |
 | `src/frontend/content/tabNavigationContext.tsx` | Directional screen navigation context for swipe gestures |
 | `src/frontend/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, and i18n localization helpers) |
+| src/frontend/utils/dateUtils.ts | Safe date parsing and formatting utilities (parseDateSafe, parseDateSafeMs, formatDisplayDate, formatFullDisplayDate, formatShortDate, formatLongDateWithWeekday) |
 | `src/frontend/utils/tutorialStorage.ts` | Tutorial onboarding storage manager under `@presco:hasSeenTutorial` |
 | `src/frontend/components/OnboardingTutorialModal.tsx` | Hand-drawn / sketch doodle onboarding carousel modal with 6 pedagogical steps, Reanimated swipe gestures, Haptics, and useTheme integration |
 | `src/frontend/components/CategorySelector.tsx` | Reusable category selector with preset chips, emoji/icon badges, custom category option, and theme accent highlighting |

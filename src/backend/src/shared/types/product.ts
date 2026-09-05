@@ -93,6 +93,7 @@ export interface CreateProductDTO {
   icon?: string | undefined;
   isPromotion?: boolean | undefined;
   brand?: string | undefined;
+  createdAt?: string | Date | undefined;
 }
 
 export interface UpdateProductDTO {
@@ -105,6 +106,7 @@ export interface UpdateProductDTO {
   icon?: string | undefined;
   isPromotion?: boolean | undefined;
   brand?: string | undefined;
+  createdAt?: string | Date | undefined;
 }
 
 export interface ProductCategoryDTO {

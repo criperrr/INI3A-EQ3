@@ -27,6 +27,7 @@ import {
   type EquippedCustomizations,
   type ShopCatalogData,
 } from "../services/customizationService";
+import { formatDisplayDate } from "../utils/dateUtils";
 
 const COLORS = {
   amber: "#FFC107",
@@ -975,7 +976,7 @@ const BadgesSection = memo(function BadgesSection({
                   {selectedBadge.isUnlocked
                     ? selectedBadge.awardedAt
                       ? t("profile.badgeEarnedOn", {
-                          date: new Date(selectedBadge.awardedAt).toLocaleDateString(),
+                          date: formatDisplayDate(selectedBadge.awardedAt),
                         })
                       : t("profile.unlocked")
                     : t("profile.locked")}

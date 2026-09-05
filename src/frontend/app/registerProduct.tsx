@@ -22,6 +22,7 @@ import { fetchProductByEan, fetchProductById, ProductData } from "../services/pr
 import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence, fetchProductOccurrences } from "../services/ocurrencyService";
 import { getUserLocation } from "../utils/userLocation";
+import { formatLongDateWithWeekday, parseDateSafeMs } from "../utils/dateUtils";
 
 const FALLBACK_PRODUCT = {
   category: "Produto",
@@ -118,21 +119,6 @@ export default function RegisterProduct() {
     }
   }, [targetEan, targetId]);
 
-  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
-    if (!dateInput) return 0;
-    if (typeof dateInput === "number") return dateInput;
-    if (dateInput instanceof Date) return dateInput.getTime();
-    let str = String(dateInput).trim();
-    if (str.includes(" ")) {
-      str = str.replace(" ", "T");
-    }
-    str = str.replace(/([+-]\d{2})$/, "$1:00");
-    const parsed = new Date(str).getTime();
-    if (!isNaN(parsed) && parsed > 0) return parsed;
-    const fallback = new Date(dateInput).getTime();
-    return isNaN(fallback) ? 0 : fallback;
-  };
-
   useEffect(() => {
     const effectiveId = product?.id || targetId;
     if (!user?.id || !effectiveId) {
@@ -148,14 +134,14 @@ export default function RegisterProduct() {
         const currentUserId = Number(user.id);
         const userOcc = occList.find((occ) => {
           if (Number(occ.userId) !== currentUserId) return false;
-          const createdMs = parseDateSafe(occ.createdAt);
+          const createdMs = parseDateSafeMs(occ.createdAt);
           if (!createdMs) return false;
           const diff = Date.now() - createdMs;
           return diff >= 0 && diff < 5 * 60 * 1000;
         });
 
         if (userOcc) {
-          const createdMs = parseDateSafe(userOcc.createdAt);
+          const createdMs = parseDateSafeMs(userOcc.createdAt);
           const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
           setCooldownRemainingSeconds(remaining);
         } else {
@@ -359,12 +345,7 @@ export default function RegisterProduct() {
 
   const displayProduct = product || scannedProduct || FALLBACK_PRODUCT;
 
-  const formattedTodayDate = recordDate.toLocaleDateString(language, {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const formattedTodayDate = formatLongDateWithWeekday(recordDate, language);
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>

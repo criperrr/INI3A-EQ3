@@ -36,6 +36,12 @@ import {
 import { getUserLocation } from "../utils/userLocation";
 import CategorySelector from "../components/CategorySelector";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import {
+  formatDisplayDate,
+  formatFullDisplayDate,
+  formatShortDate,
+  parseDateSafeMs,
+} from "../utils/dateUtils";
 
 
 const EMPTY_HISTORY: PriceHistoryItem[] = [];
@@ -188,21 +194,6 @@ export default function ProductDetails() {
     loadProductData();
   }, [loadProductData]);
 
-  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
-    if (!dateInput) return 0;
-    if (typeof dateInput === "number") return dateInput;
-    if (dateInput instanceof Date) return dateInput.getTime();
-    let str = String(dateInput).trim();
-    if (str.includes(" ")) {
-      str = str.replace(" ", "T");
-    }
-    str = str.replace(/([+-]\d{2})$/, "$1:00");
-    const parsed = new Date(str).getTime();
-    if (!isNaN(parsed) && parsed > 0) return parsed;
-    const fallback = new Date(dateInput).getTime();
-    return isNaN(fallback) ? 0 : fallback;
-  };
-
   useEffect(() => {
     if (!user?.id || occurrences.length === 0) {
       setCooldownRemainingSeconds(0);
@@ -213,14 +204,14 @@ export default function ProductDetails() {
       const currentUserId = Number(user.id);
       const userRecentOcc = occurrences.find((occ) => {
         if (Number(occ.userId) !== currentUserId) return false;
-        const createdMs = parseDateSafe(occ.createdAt);
+        const createdMs = parseDateSafeMs(occ.createdAt);
         if (!createdMs) return false;
         const diff = Date.now() - createdMs;
         return diff >= 0 && diff < 5 * 60 * 1000;
       });
 
       if (userRecentOcc) {
-        const createdMs = parseDateSafe(userRecentOcc.createdAt);
+        const createdMs = parseDateSafeMs(userRecentOcc.createdAt);
         const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
         setCooldownRemainingSeconds(remaining);
       } else {
@@ -675,7 +666,7 @@ export default function ProductDetails() {
               <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
                 <Ionicons name="calendar-outline" size={12} color={semantic.colors.text.secondary} />
                 <Text style={[styles.metaChipText, themeStyles.subText]}>
-                  {`${t("productDetails.registeredAt") || "Cadastrado em"}: ${new Date(product.createdAt!).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}`}
+                  {`${t("productDetails.registeredAt") || "Cadastrado em"}: ${formatDisplayDate(product.createdAt, language)}`}
                 </Text>
               </View>
             )}
@@ -780,7 +771,7 @@ export default function ProductDetails() {
                         R$ {occ.value}
                       </Text>
                       <Text style={[styles.occurrenceMeta, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
-                        {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {new Date(occ.createdAt).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "en-US" ? "en-US" : language === "es-ES" ? "es-ES" : language === "de-DE" ? "de-DE" : language === "ru-RU" ? "ru-RU" : language === "zh-CN" ? "zh-CN" : "ja-JP")}
+                        {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {formatDisplayDate(occ.createdAt, language)}
                       </Text>
                     </View>
 
@@ -1143,6 +1134,7 @@ const PriceHistorySection = ({
   const [periodHistory, setPeriodHistory] = useState<PriceHistoryItem[]>([]);
   const [loadingPeriod, setLoadingPeriod] = useState(false);
   const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
+  const chartScrollRef = React.useRef<ScrollView>(null);
 
   const periods: { id: PeriodType; label: string }[] = [
     { id: "7d", label: t("productDetails.period7D") },
@@ -1165,11 +1157,15 @@ const PriceHistorySection = ({
 
     const cutoff = now - days * 24 * 60 * 60 * 1000;
     const filtered = items.filter((item) => {
-      const itemTime = item.createdAt ? new Date(item.createdAt).getTime() : 0;
+      const itemTime = parseDateSafeMs(item.createdAt);
       return itemTime >= cutoff;
     });
 
-    return filtered.slice(-15);
+    const sorted = [...filtered].sort(
+      (a, b) => parseDateSafeMs(a.createdAt) - parseDateSafeMs(b.createdAt)
+    );
+
+    return sorted.slice(-15);
   }, []);
 
   useEffect(() => {
@@ -1199,6 +1195,14 @@ const PriceHistorySection = ({
   }, [productId, selectedPeriod]);
 
   const displayHistory = periodHistory.length > 0 ? periodHistory : filterByPeriod(history, selectedPeriod);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      chartScrollRef.current?.scrollToEnd({ animated: false });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [displayHistory.length, selectedPeriod]);
+
   const values = displayHistory.map((h) => h.value);
   const minVal = values.length > 0 ? Math.min(...values) : 0;
   const maxVal = values.length > 0 ? Math.max(...values) : 0;
@@ -1206,23 +1210,8 @@ const PriceHistorySection = ({
 
   const selectedItem = displayHistory.find((item) => item.id === selectedPointId) || null;
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString(language, { day: "2-digit", month: "2-digit" });
-    } catch {
-      return "";
-    }
-  };
-
-  const formatFullDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString(language, { day: "2-digit", month: "short", year: "numeric" });
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatDate = (dateStr: string) => formatShortDate(dateStr, language);
+  const formatFullDate = (dateStr: string) => formatFullDisplayDate(dateStr, language);
 
   return (
     <View style={styles.historySection}>
@@ -1311,9 +1300,16 @@ const PriceHistorySection = ({
       ) : (
         <View style={[styles.chartBox, themeStyles.inputBg, themeStyles.border]}>
           <ScrollView
+            ref={chartScrollRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.barsScrollContent}
+            onContentSizeChange={() => {
+              chartScrollRef.current?.scrollToEnd({ animated: false });
+            }}
+            onLayout={() => {
+              chartScrollRef.current?.scrollToEnd({ animated: false });
+            }}
           >
             {displayHistory.slice(-15).map((item, idx) => {
               const pct = Math.max(18, Math.round(((item.value - minVal) / range) * 70) + 20);

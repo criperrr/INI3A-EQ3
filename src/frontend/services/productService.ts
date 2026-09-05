@@ -70,6 +70,7 @@ export interface CreateProductParams {
   ncm?: string;
   isPromotion?: boolean;
   brand?: string;
+  createdAt?: string;
 }
 
 export interface UpdateProductParams {
@@ -82,6 +83,7 @@ export interface UpdateProductParams {
   ncm?: string;
   isPromotion?: boolean;
   brand?: string;
+  createdAt?: string;
 }
 
 let memoryProductsCache: Record<string, { data: PaginatedProductsData; timestamp: number }> = {};

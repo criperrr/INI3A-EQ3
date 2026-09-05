@@ -19,6 +19,7 @@ import {
   getCategoryEmoji,
   getLocalizedCategoryName,
 } from "../constants/productCategories";
+import { parseDateSafeMs } from "../utils/dateUtils";
 
 export default function ScannerConfirmation() {
   const router = useRouter();
@@ -48,21 +49,6 @@ export default function ScannerConfirmation() {
     ean: params.ean || params.barcode || "",
   };
 
-  const parseDateSafe = (dateInput: string | Date | number | null | undefined): number => {
-    if (!dateInput) return 0;
-    if (typeof dateInput === "number") return dateInput;
-    if (dateInput instanceof Date) return dateInput.getTime();
-    let str = String(dateInput).trim();
-    if (str.includes(" ")) {
-      str = str.replace(" ", "T");
-    }
-    str = str.replace(/([+-]\d{2})$/, "$1:00");
-    const parsed = new Date(str).getTime();
-    if (!isNaN(parsed) && parsed > 0) return parsed;
-    const fallback = new Date(dateInput).getTime();
-    return isNaN(fallback) ? 0 : fallback;
-  };
-
   useEffect(() => {
     if (!user?.id || !product.id) {
       setCooldownRemainingSeconds(0);
@@ -77,14 +63,14 @@ export default function ScannerConfirmation() {
         const currentUserId = Number(user.id);
         const userOcc = occList.find((occ) => {
           if (Number(occ.userId) !== currentUserId) return false;
-          const createdMs = parseDateSafe(occ.createdAt);
+          const createdMs = parseDateSafeMs(occ.createdAt);
           if (!createdMs) return false;
           const diff = Date.now() - createdMs;
           return diff >= 0 && diff < 5 * 60 * 1000;
         });
 
         if (userOcc) {
-          const createdMs = parseDateSafe(userOcc.createdAt);
+          const createdMs = parseDateSafeMs(userOcc.createdAt);
           const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
           setCooldownRemainingSeconds(remaining);
         } else {

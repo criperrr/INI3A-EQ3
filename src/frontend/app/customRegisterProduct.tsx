@@ -20,6 +20,7 @@ import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import { createCustomProduct } from "../services/productService";
 import CategorySelector from "../components/CategorySelector";
+import { formatLongDateWithWeekday } from "../utils/dateUtils";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -29,12 +30,15 @@ export default function CustomRegisterProduct() {
   const [brand, setBrand] = useState("");
   const [unitInfo, setUnitInfo] = useState("");
   const [isPromotion, setIsPromotion] = useState(false);
+  const [recordDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { themeStyles, accent, isDark, tokens } = useTheme();
   const { semantic } = tokens;
-  const { t } = useI18n();
+  const { t, language } = useI18n();
   const { isAuthenticated, user, loginAsTestUser } = useAuth();
+
+  const formattedRecordDate = formatLongDateWithWeekday(recordDate, language);
 
   const promptLogin = (onSuccessAction?: () => Promise<void>) => {
     Alert.alert(
@@ -83,6 +87,7 @@ export default function CustomRegisterProduct() {
         ean: ean.trim() || undefined,
         isPromotion,
         brand: brand.trim() || undefined,
+        createdAt: recordDate.toISOString(),
       });
 
       setLoading(false);
@@ -235,6 +240,26 @@ export default function CustomRegisterProduct() {
             label={t("products.selectMultipleCategories")}
             showCustomOption={true}
           />
+        </View>
+
+        {/* Data do Cadastro */}
+        <View style={styles.inputGroup}>
+          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>
+            {t("products.productRegisteredDate") || "Data do Cadastro"}
+          </Text>
+          <View style={[styles.dateCard, themeStyles.inputBg, themeStyles.border]}>
+            <View style={[styles.dateIconWrapper, { backgroundColor: `${accent}20` }]}>
+              <Ionicons name="calendar" size={18} color={accent} />
+            </View>
+            <View style={styles.dateTextCol}>
+              <Text style={[styles.dateText, themeStyles.text]} numberOfLines={1}>
+                {formattedRecordDate}
+              </Text>
+              <Text style={[styles.dateSubText, themeStyles.subText]} numberOfLines={1}>
+                {t("products.automaticDateNotice") || "Data vinculada automaticamente ao registro"}
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Card de Opção: É Promoção? */}
@@ -411,5 +436,33 @@ const styles = StyleSheet.create({
   promoToggleSubtitle: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  dateCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  dateIconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  dateTextCol: {
+    flex: 1,
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 2,
+    textTransform: "capitalize",
+  },
+  dateSubText: {
+    fontSize: 11,
+    lineHeight: 15,
   },
 });

@@ -55,6 +55,14 @@ class ProductServiceClass {
 
     const finalLastPrice = minPriceFormatted || latestPrice || "Preço não informado";
 
+    let isoCreatedAt = new Date().toISOString();
+    if (raw.createdAt) {
+      const parsed = new Date(raw.createdAt);
+      if (!isNaN(parsed.getTime())) {
+        isoCreatedAt = parsed.toISOString();
+      }
+    }
+
     return {
       id: raw.id,
       barcode: raw.ean || `ID-${raw.id}`,
@@ -67,7 +75,7 @@ class ProductServiceClass {
       brand: raw.brand || null,
       imageUri: raw.icon || null,
       icon: raw.icon || null,
-      createdAt: raw.createdAt || new Date().toISOString(),
+      createdAt: isoCreatedAt,
       lastPrice: finalLastPrice,
       bestPrice: minPriceFormatted || finalLastPrice,
       minPrice: minPriceFormatted,
@@ -276,6 +284,7 @@ class ProductServiceClass {
       description: categoryStr.trim(),
       icon: data.icon?.trim() || "",
       isPromotion: data.isPromotion,
+      createdAt: data.createdAt,
     });
 
     if (!created) {

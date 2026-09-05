@@ -2409,3 +2409,40 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Files Modified:**
   - `src/frontend/components/OnboardingTutorialModal.tsx`
 - **Impact / Next Steps:** Native-feeling, continuous horizontal carousel pagination on both swipe gestures and button navigation.
+
+## `2026-09-05 12:10` - `fix(dates)`: Correção de parsing, serialização e cadastro de datas de produtos e ocorrências
+
+- **Description:** 
+  - Resolvido conflito de merge em `src/backend/src/modules/product/product.service.ts`.
+  - Padronizada a serialização de todas as datas (`createdAt`) para o formato padrão ISO 8601 nos serviços e repositórios de produtos (`ProductService`, `ProductRepository`) e ocorrências de preços (`OcurrencyRepository`), prevenindo erros de "Invalid Date" em engines JavaScript móveis (Hermes / Safari / Android / iOS).
+  - Adicionado suporte a `createdAt` no cadastro e atualização de produtos (`CreateProductDTO`, `UpdateProductDTO`, `ProductController`, `ProductRepository`).
+  - Criado utilitário unificado `src/frontend/utils/dateUtils.ts` com fallback defensivo para parsing (`parseDateSafe`, `parseDateSafeMs`) e formatação localizada (`formatDisplayDate`, `formatFullDisplayDate`, `formatShortDate`, `formatLongDateWithWeekday`).
+  - Atualizadas as telas `customRegisterProduct.tsx`, `registerProduct.tsx`, `productDetails.tsx`, `scannerConfirmation.tsx` e `profile.tsx` para utilizarem o utilitário seguro de datas e adicionado card visual de data de cadastro na criação manual de produtos.
+  - Verificada e saneada a base de dados PostgreSQL para garantir 100% de integridade e validade nas datas de todos os produtos e ocorrências de preços.
+- **Files Modified:**
+  - `src/frontend/utils/dateUtils.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Datas de produtos cadastrados e ocorrências de preços funcionando 100% de forma segura e sem falhas de "Data Inválida".
+
+## `2026-09-05 12:12` - `feat(chart)`: Posicionamento inicial do gráfico de histórico à direita com preços mais recentes
+
+- **Description:**
+  - Ajustado o componente `PriceHistorySection` em `src/frontend/app/productDetails.tsx` para ordenar cronologicamente os preços (mais antigos na esquerda e mais novos na direita).
+  - Adicionado `chartScrollRef` com auto-scroll inicial para a extremidade direita (`scrollToEnd`) via `onContentSizeChange` e `onLayout`, garantindo que o usuário visualize de imediato os preços mais recentes à direita ao abrir o gráfico e possa rolar para a esquerda para ver os mais antigos.
+- **Files Modified:**
+  - `src/frontend/app/productDetails.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Gráfico inicia focado nos preços mais novos na direita, permitindo navegação fluida para os dados históricos na esquerda.

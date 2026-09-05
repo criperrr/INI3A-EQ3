@@ -538,13 +538,22 @@ class ProductRepositoryClass {
       : (data.description || data.category || "");
     const safeDescription = categoryStr.trim().slice(0, 250);
 
-    const result = await db.insert(product).values({
+    const payload: any = {
       ean: data.ean?.trim() || null,
       ncm: data.ncm?.trim() || null,
       name: safeName,
       description: safeDescription,
       icon: data.icon?.trim() || "",
-    }).returning();
+    };
+
+    if (data.createdAt) {
+      const parsedDate = new Date(data.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        payload.createdAt = parsedDate.toISOString();
+      }
+    }
+
+    const result = await db.insert(product).values(payload).returning();
     return result[0];
   }
 
@@ -560,6 +569,12 @@ class ProductRepositoryClass {
       updatePayload.description = data.description ?? data.category;
     }
     if (data.icon !== undefined) updatePayload.icon = data.icon;
+    if (data.createdAt !== undefined) {
+      const parsedDate = new Date(data.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        updatePayload.createdAt = parsedDate.toISOString();
+      }
+    }
 
     const result = await db
       .update(product)
@@ -736,13 +751,20 @@ class ProductRepositoryClass {
 
     return sorted.map((r) => {
       const numVal = Number(r.value);
+      let isoCreatedAt = new Date().toISOString();
+      if (r.createdAt) {
+        const parsed = new Date(r.createdAt);
+        if (!isNaN(parsed.getTime())) {
+          isoCreatedAt = parsed.toISOString();
+        }
+      }
       return {
         id: r.id,
         value: numVal,
         formattedValue: `R$ ${numVal.toFixed(2).replace(".", ",")}`,
         marketId: r.marketId,
         marketName: r.marketName || "Mercado não identificado",
-        createdAt: r.createdAt,
+        createdAt: isoCreatedAt,
       };
     });
   }
