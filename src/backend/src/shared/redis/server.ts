@@ -56,12 +56,46 @@ export class InMemoryStore {
     return 1;
   }
 
+  keys(pattern?: string): string[] {
+    const now = Date.now();
+    const result: string[] = [];
+    const regex = pattern ? new RegExp(pattern.replace(/\*/g, ".*")) : null;
+
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiresAt && now > entry.expiresAt) {
+        this.store.delete(key);
+        continue;
+      }
+      if (!regex || regex.test(key)) {
+        result.push(key);
+      }
+    }
+    return result;
+  }
+
+  // Active sweep of expired entries to prevent memory accumulation
+  cleanExpired(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiresAt && now > entry.expiresAt) {
+        this.store.delete(key);
+      }
+    }
+  }
+
   flush(): void {
     this.store.clear();
   }
 }
 
 export const inMemoryStore = new InMemoryStore();
+
+// Run sweep every 5 minutes in background
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    inMemoryStore.cleanExpired();
+  }, 5 * 60 * 1000).unref();
+}
 
 export const redisClient = createClient({
   url: redisUrl,

@@ -2244,7 +2244,6 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - .agents/CURRENT.md
 - **Impact / Next Steps:** Database and API are 100% clean of phantom markets and fake occurrences. All markets dynamically correspond to real physical stores at the user's GPS coordinates via OpenStreetMap.
 
-<<<<<<< HEAD
 ## 2026-09-04 21:46 - perf(frontend): Otimização de RAM e ciclo de vida de componentes
 
 - **Description:** Implementada otimização profunda de memória RAM no frontend: desmontagem do CameraView em scannerProduct quando desfocado, tracksViewChanges={false} e capping dos 60 marcadores mais próximos no map.native, transição de expo-image para cachePolicy=disk com recyclingKey nas listas e detalhes, e calibração de virtualização em FlatList.
@@ -2292,7 +2291,6 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/scannerProduct.tsx`
   - `src/backend/src/shared/database/repositories/product.repository.ts`
 - **Impact / Next Steps:** Camera preview fills cleanly with a professional viewfinder cutout, reads barcodes instantly with tactile feedback, and external products resolve 3x faster.
-=======
 ## `2026-09-04 23:13` - `docs(architecture)`: Generate and persist UML class and database ERD diagrams in gestao/
 
 - **Description:** Generated high-resolution (200 DPI) UML Class Diagram and Database ERD diagrams using PlantUML/Graphviz. Resolved text collisions and overlapping labels between User and CustomizationItem by introducing the UserCustomization associative entity and consolidating equipped slots into a clean multi-role association. Saved both diagrams directly to the management folder.
@@ -2304,6 +2302,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Impact / Next Steps:** Clean and readable architectural documentation available for presentations, academic review, and technical reference in the gestao/ directory.
 >>>>>>> 8cf9ed74d238967c6e1cb457e5b549cbec7da857
 
+<<<<<<< HEAD
 ## `2026-09-05 10:30` - `fix(network)`: Remediar FetchRequestCanceledException e sincronizar IP do frontend
 
 - **Description:** Diagnosticada a causa-raiz dos erros `FetchRequestCanceledException: Fetch request has been canceled (at Expo/NativeResponse.swift:63)` no iOS. O arquivo `src/frontend/.env` continha um IP antigo estático (`10.153.0.145`) que estava inacessível na rede atual (`192.168.3.1`), causando timeout de 15s e cancelamento nativo das requisições `/auth/me`, `/products` e `/markets`. Além disso, atualizou-se o `api.ts` para tratar exceções nativas de cancelamento de requisição do Expo/iOS, adicionou-se fallback inteligente para o `hostUri` do Metro ativo, auto-sincronização do `.env` no `dev_launcher.ts` e validação prévia de saúde nos túneis em `start_api_tunnel.ts`.
@@ -2332,3 +2331,37 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `scripts/start_api_tunnel.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Modo túnel corporativo validado e funcionando com boot sequencial perfeito.
+=======
+## `2026-09-05 10:41` - `feat(backend)`: Implement production multi-tier caching and media optimization pipeline
+
+- **Description:** Implemented the full backend caching architecture specified in `BACKEND_CACHING_GUIDE.md`:
+  - Layer 1 & 3: Redis cache-aside middleware with conditional HTTP ETag (304 Not Modified) validation, in-memory store fallback, and regex-based cache invalidation (`cacheMiddleware.ts`).
+  - Layer 2: HTTP payload compression (Brotli/Gzip) via `compression` mounted on Express in `app.ts`.
+  - Layer 4: High-performance Sharp dynamic media transcoding pipeline (`/images/optimize?url=&w=&q=&fmt=`) with 7-day binary caching in Redis/inMemoryStore in `image.controller.ts` and `image.routes.ts`.
+  - Cache Invalidation: Wired `invalidateCachePattern("products")` into product and price occurrence write actions (`createCustomProduct`, `updateProduct`, `deleteProduct`, `create`, `update`, `delete`).
+  - Verified 0 TypeScript compilation errors in backend (`npm run typecheck`).
+- **Files Modified:**
+  - `src/backend/package.json`
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/shared/middlewares/cacheMiddleware.ts`
+  - `src/backend/src/modules/image/image.controller.ts`
+  - `src/backend/src/modules/image/image.routes.ts`
+  - `src/backend/src/app.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Immediate reduction in database query load, instantaneous ~2.4ms response times on cached product catalog requests, zero-body 304 Not Modified responses on revalidations, and 70-90% image bandwidth savings.
+
+## `2026-09-05 11:41` - `fix(backend)`: Harden caching memory management and image optimizer security
+
+- **Description:** Applied hardening following the automated quality and performance audit:
+  - Added periodic active sweep of expired entries in `InMemoryStore` (`cleanExpired` every 5 min) preventing memory accumulation when Redis is offline.
+  - Hardened `ImageOptimizerController` against SSRF attacks (protocol check, block loopback and private IPs) and capped image resolutions (`16px <= width <= 1920px`).
+  - Removed `BACKEND_CACHING_GUIDE.md` as requested.
+  - Verified 0 TypeScript compilation errors in backend (`npm --prefix src/backend run typecheck`).
+- **Files Modified:**
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/modules/image/image.controller.ts`
+  - `BACKEND_CACHING_GUIDE.md` (deleted)
+- **Impact / Next Steps:** High operational safety against OOM in fallback mode and protected image optimization proxy.

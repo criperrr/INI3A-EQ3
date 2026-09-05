@@ -1,6 +1,7 @@
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import { ConflictError, NotFoundError, ValidationError } from "@/shared/errors/errors";
 import { normalizeCategoryName } from "@/shared/constants/productCategories";
+import { invalidateCachePattern } from "@/shared/middlewares/cacheMiddleware";
 import type {
   CreateProductDTO,
   PaginatedProductsResult,
@@ -261,6 +262,8 @@ class ProductServiceClass {
       throw new Error("Erro ao salvar produto no banco de dados.");
     }
 
+    await invalidateCachePattern("products");
+
     return this.formatProductDTO(created, null);
   }
 
@@ -294,6 +297,8 @@ class ProductServiceClass {
       throw new Error("Erro ao atualizar o produto no banco de dados.");
     }
 
+    await invalidateCachePattern("products");
+
     const latestPrice = await ProductRepository.getLatestPriceForProduct(id);
     return this.formatProductDTO(updated, latestPrice);
   }
@@ -308,7 +313,11 @@ class ProductServiceClass {
       throw new NotFoundError("Produto não encontrado para exclusão.");
     }
 
-    return ProductRepository.deleteProduct(id);
+    const deleted = await ProductRepository.deleteProduct(id);
+    if (deleted) {
+      await invalidateCachePattern("products");
+    }
+    return deleted;
   }
 
   async getCategories(): Promise<string[]> {

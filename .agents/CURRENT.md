@@ -37,7 +37,10 @@ Routes:
 - `POST /customizations/buy/:itemId` — buy a customization item using contribution points/XP (requireAuth)
 - `POST /customizations/equip/:itemId` — equip an owned banner, avatar frame or level badge (requireAuth)
 - `POST /customizations/unequip/:category` — restore a customization category to default (requireAuth)
+- `GET /images/optimize` — dynamic media transcoding to WebP/AVIF with Sharp and 7-day Redis binary cache
 - `GET /health` — inspect database and Redis health
+
+**Caching & Performance Architecture:** Multi-tier caching with HTTP ETag (304 Not Modified), Brotli/Gzip payload compression (`compression`), Redis cache-aside on product routes with in-memory fallback and pattern invalidation, and Sharp dynamic image pipeline.
 
 **Frontend** is a React Native Expo app (SDK 57, React Native 0.86.3, React 19.2.3, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
 - `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
@@ -75,6 +78,8 @@ Direct relative paths from project root.
 | `src/backend/src/modules/market/market.routes.ts` | Market Router (`GET /`, `GET /:id`, `POST /`) |
 | `src/backend/src/modules/market/market.controller.ts` | `marketController` singleton — getAllMarkets, getMarketById, createMarket |
 | `src/backend/src/modules/market/market.service.ts` | `marketService` singleton — market listing and creation |
+| `src/backend/src/modules/image/image.routes.ts` | Image Router (`GET /optimize?url=&w=&q=&fmt=`) |
+| `src/backend/src/modules/image/image.controller.ts` | `imageOptimizerController` — Sharp image transcoding (WebP/AVIF), resizing, and 7-day Redis binary cache |
 | `src/backend/src/shared/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, description, and normalization helpers) |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, customizationItem, userCustomization, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 
@@ -87,6 +92,7 @@ Direct relative paths from project root.
 | `src/backend/src/shared/database/repositories/product.repository.ts` | `ProductRepository` — getProductFromOpenFoodFacts, getProductByEan, getProductById, searchProducts, countProducts, createProduct, updateProduct, deleteProduct, getCategories, getPriceStats, getPriceHistory |
 | `src/backend/src/shared/database/repositories/market.repository.ts` | `MarketRepository` — createMarket, updateMarket, deleteMarket, getMarket, getAllMarkets, getMarketsByRadius (PostGIS `ST_DWithin`) |
 | `src/backend/src/shared/errors/errors.ts` | `AppError` base + `ForbiddenError (403)`, `NotFoundError (404)`, `ValidationError (422)`, `UnauthorizedError (401)`, `ConflictError (409)`, `TooManyRequestsError (429)`, `JTIrefused (401)`, `MultipleApiError (400)`, `NotImplemented (501)`, `InternalError` |
+| `src/backend/src/shared/middlewares/cacheMiddleware.ts` | `cacheResponse` (ETag + Redis/Memory cache-aside), `invalidateCachePattern` |
 | `src/backend/src/shared/middlewares/rateLimiter.ts` | `authRateLimiter`, `searchRateLimiter`, `createRateLimiter` (Redis atomic bucket with in-memory fallback) |
 | `src/backend/src/shared/middlewares/errorHandler.ts` | Express global error handler — maps `AppError` to JSON, sanitized 500 in production |
 | `src/backend/src/shared/middlewares/authMiddleware.ts` | `requireAuth`, `requireAdmin`, `requireMinAuthority` |
@@ -239,6 +245,7 @@ Direct relative paths from project root.
 - [x] FetchRequestCanceledException & Network Auto-Sync Remediation (diagnosed root cause of iOS Native `FetchRequestCanceledException` caused by stale `10.153.0.145` IP in `src/frontend/.env` and dead `loca.lt` tunnels; upgraded `src/frontend/services/api.ts` with iOS native fetch cancellation detection and dynamic Metro `hostUri` fallback; synchronized `scripts/dev_launcher.ts` to auto-update `src/frontend/.env` on every start; and added health validation to `scripts/start_api_tunnel.ts`).
 - [x] System Ngrok 3.x Tunnel Auto-Discovery & Zero-Freeze Cloud Mode (`scripts/start_api_tunnel.ts` upgraded to detect and launch the authenticated system Ngrok 3.x binary (`/opt/homebrew/bin/ngrok`), bypassing obsolete Expo 2.x `ERR_NGROK_121` binaries and broken `loca.lt` servers; binds directly to `127.0.0.1:3333` using the user's permanent static domain `https://premises-body-pogo.ngrok-free.dev` in <1 second; added `ngrok-skip-browser-warning: true` header to `src/frontend/services/api.ts`).
 - [x] Dev Launcher Boot Order & Port 4040 Orphan Zombie Remediation (fixed `scripts/dev_launcher.ts` sequence to boot and verify Backend API on port 3333 before initializing cloud tunnel, eliminating false-negative tunnel health checks; added port 4040 cleanup to pre-flight checks and implemented `getActiveNgrokTunnel()` in `scripts/start_api_tunnel.ts` to seamlessly reuse existing active ngrok tunnels without `ERR_NGROK_334` collisions).
+- [x] Production Multi-Tier Backend Caching & Media Pipeline (`BACKEND_CACHING_GUIDE.md` implemented with HTTP ETag / 304 validation, Brotli/Gzip payload compression via `compression`, Redis cache-aside with `inMemoryStore` fallback and regex keys support in `cacheMiddleware.ts`, automatic route invalidation on write operations in `product.service.ts` and `ocurrency.service.ts`, dynamic Sharp WebP/AVIF image transcoding and binary caching in `image.controller.ts` & `image.routes.ts`, and clean backend typecheck verification).
 
 ---
 

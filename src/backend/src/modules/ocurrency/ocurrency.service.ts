@@ -3,6 +3,7 @@ import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
 import { NotFoundError, ForbiddenError, ValidationError, TooManyRequestsError } from "@/shared/errors/errors";
+import { invalidateCachePattern } from "@/shared/middlewares/cacheMiddleware";
 
 class OcurrencyServiceClass {
   async create(data: {
@@ -63,6 +64,8 @@ class OcurrencyServiceClass {
 
     // Award +15 XP for contributing price
     const updatedUser = await UserRepository.incrementPoints(data.userId, 15);
+
+    await invalidateCachePattern("products");
 
     return {
       occurrence: created,
@@ -145,6 +148,8 @@ class OcurrencyServiceClass {
       marketId: data.marketId,
     });
 
+    await invalidateCachePattern("products");
+
     return updated;
   }
 
@@ -160,6 +165,7 @@ class OcurrencyServiceClass {
     }
 
     await OcurrencyRepository.delete(ocurrencyId);
+    await invalidateCachePattern("products");
     return { deleted: true, id: ocurrencyId };
   }
 }

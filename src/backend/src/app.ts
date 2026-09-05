@@ -10,6 +10,9 @@ import customizationRouter from "@/modules/customization/customization.routes";
 import { checkDatabaseHealth } from "@/shared/database/database";
 import { redisClient } from "@/shared/redis/server";
 
+import compression from "compression";
+import imageRouter from "@/modules/image/image.routes";
+
 const app = e();
 
 // Defensive security headers
@@ -38,6 +41,19 @@ app.use(
     credentials: true,
   }),
 );
+
+// Layer 2: HTTP Payload Compression (Brotli / Gzip)
+app.use(
+  compression({
+    level: 6,           // Balanced CPU usage to compression ratio
+    threshold: 1024,    // Skip compression for responses smaller than 1KB
+    filter: (req, res) => {
+      if (req.headers["x-no-compression"]) return false;
+      return compression.filter(req, res);
+    },
+  }),
+);
+
 app.use(e.json({ limit: "1mb" }));
 app.use(e.urlencoded({ extended: true, limit: "1mb" }));
 
@@ -64,6 +80,7 @@ app.use("/products", productRouter);
 app.use("/ocurrency", ocurrencyRouter);
 app.use("/markets", marketRouter);
 app.use("/customizations", customizationRouter);
+app.use("/images", imageRouter);
 
 app.use(errorHandler);
 
