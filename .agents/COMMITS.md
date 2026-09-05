@@ -2243,3 +2243,13 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/frontend/services/ocurrencyService.ts
   - .agents/CURRENT.md
 - **Impact / Next Steps:** Database and API are 100% clean of phantom markets and fake occurrences. All markets dynamically correspond to real physical stores at the user's GPS coordinates via OpenStreetMap.
+
+## `2026-09-04 23:13` - `docs(architecture)`: Generate and persist UML class and database ERD diagrams in gestao/
+
+- **Description:** Generated high-resolution (200 DPI) UML Class Diagram and Database ERD diagrams using PlantUML/Graphviz. Resolved text collisions and overlapping labels between User and CustomizationItem by introducing the UserCustomization associative entity and consolidating equipped slots into a clean multi-role association. Saved both diagrams directly to the management folder.
+- **Files Modified:**
+  - `gestao/diagrama_classes.png`
+  - `gestao/diagrama_banco_de_dados.png`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Clean and readable architectural documentation available for presentations, academic review, and technical reference in the gestao/ directory.
