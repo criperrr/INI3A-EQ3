@@ -2458,3 +2458,9 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** A rolagem e overscroll da tela inicial agora mantêm consistência visual 100% harmonizada com o tema ativo (Dark, Light, AMOLED, Monet), eliminando qualquer flash ou tela branca ao arrastar para cima.
+
+## 2026-09-05 22:25 - chore(agents): add on-demand atomic commit decomposition policy
+
+- **Description:** Added strict guidelines to AGENTS.md, code-rules.md, project-conventions.md, and CURRENT.md specifying that the AI must never commit spontaneously. Large/complex changes must be decomposed into cohesive atomic commits (by domain/layer) using Conventional Commits strictly when explicitly requested by the user.
+- **Files Modified:**
+  - .agents/AGENTS.md`n  - .agents/rules/code-rules.md`n  - .agents/memory/project-conventions.md`n  - .agents/CURRENT.md`n- **Impact / Next Steps:** Preserves user control over git history, preventing unintended commits while ensuring clean atomic commits when requested.

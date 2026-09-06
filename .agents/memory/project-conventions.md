@@ -33,14 +33,17 @@ Diretrizes de fluxo de trabalho, ferramentas e execução para o projeto.
 
 ## 3. Fluxo de Git e Commits
 
+- **Commits Exclusivamente sob Demanda:** A IA NUNCA deve fazer commits por iniciativa própria. Commits só são gerados se o usuário pedir explicitamente ("faça os commits", "commite as alterações").
+- **Desmembramento de Grandes Commits (Commits Atômicos):** Ao receber o comando para commitar, a IA deve inspecionar o diff e desmembrar alterações complexas em commits atômicos e lógicos agrupados por camada (banco, api, ui, infra, docs), usando Conventional Commits.
 - Todas as alterações significativas de tarefas devem ser registradas em `.agents/CURRENT.md` (seções 1, 2 e 3) e logadas em `.agents/COMMITS.md`.
-- Formato de commit:
+- Formato de log em `COMMITS.md`:
   ```markdown
-  ## [YYYY-MM-DD] tipo: resumo da alteração
+  ## `YYYY-MM-DD HH:MM` - `type(scope)`: Short title
 
-  - **Contexto:** Motivação da mudança
-  - **Alterações:** Lista de arquivos e componentes alterados
-  - **Validação:** Como foi testado e verificado
+  - **Description:** Summary of changes...
+  - **Files Modified:**
+    - `path/to/file`
+  - **Impact / Next Steps:** Outcome and next steps.
   ```
 
 ## 4. Prioridade de Leitura e Protocolo de Execução

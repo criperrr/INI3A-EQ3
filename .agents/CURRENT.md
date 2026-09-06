@@ -247,6 +247,7 @@ Direct relative paths from project root.
 - [x] Dev Launcher Boot Order & Port 4040 Orphan Zombie Remediation (fixed `scripts/dev_launcher.ts` sequence to boot and verify Backend API on port 3333 before initializing cloud tunnel, eliminating false-negative tunnel health checks; added port 4040 cleanup to pre-flight checks and implemented `getActiveNgrokTunnel()` in `scripts/start_api_tunnel.ts` to seamlessly reuse existing active ngrok tunnels without `ERR_NGROK_334` collisions).
 - [x] Production Multi-Tier Backend Caching & Media Pipeline (`BACKEND_CACHING_GUIDE.md` implemented with HTTP ETag / 304 validation, Brotli/Gzip payload compression via `compression`, Redis cache-aside with `inMemoryStore` fallback and regex keys support in `cacheMiddleware.ts`, automatic route invalidation on write operations in `product.service.ts` and `ocurrency.service.ts`, dynamic Sharp WebP/AVIF image transcoding and binary caching in `image.controller.ts` & `image.routes.ts`, and clean backend typecheck verification).
 - [x] Home Screen Overscroll Background & White Flash Remediation (`index.tsx` wrapped with root `View` and `ScrollView` styled with `flex: 1` and `semantic.colors.surface.background` plus `paddingBottom: 32`; `_layout.tsx` updated with `contentStyle: { backgroundColor: semantic.colors.surface.background }` on `Stack` and `contentWrapper`; `SwipeTabNavigator.tsx` container given theme background; resolved React Compiler memoization lint error in `productDetails.tsx`; verified 0 errors on `tsc --noEmit` and `npm run lint`).
+- [x] Atomic Commit Decomposition Policy Strictly On-Demand (`AGENTS.md`, `code-rules.md`, `project-conventions.md`, and `CURRENT.md` updated with strict protocol: AI never commits spontaneously; large changes are sliced into logical, cohesive atomic commits grouped by layer/domain with Conventional Commits exclusively when the user requests).
 
 ---
 
@@ -255,3 +256,4 @@ Direct relative paths from project root.
 1. Read `.agents/CURRENT.md` first on every task to locate target files without directory scans.
 2. After any code change: update sections 1 and 2 of this file if context or file inventory changed.
 3. Append a commit log entry to `.agents/COMMITS.md` for every change made.
+4. Git commits are strictly on-demand: NEVER execute `git commit` spontaneously; decompose large changes into atomic commits using Conventional Commits only when the user explicitly requests it.

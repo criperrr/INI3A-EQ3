@@ -211,6 +211,20 @@ After any file modification or addition:
    - **Impact / Next Steps:** Outcome and next steps.
    ```
 
+### 6.1. Git Commit Policy (Atomic Commits Strictly On Request)
+
+- **NO SPONTANEOUS COMMITS (CRITICAL):** The AI must NEVER execute `git commit` or stage files spontaneously. Commits are executed **ONLY IF AND WHEN THE USER EXPLICITLY REQUESTS IT** (e.g., "commita", "pode commitar", "faça os commits"). Otherwise, all modifications must remain in the working directory.
+- **Decomposition of Large Tasks (Atomic Commits):** When explicitly asked to commit after complex multi-file or multi-layer changes:
+  1. Inspect modified files (`git status`).
+  2. DO NOT create a single monolithic commit (`git add . && git commit`).
+  3. Decompose and slice the changes into distinct, logical atomic commits grouped by architectural layer/domain:
+     - Database & Schema (`feat(db): ...`)
+     - Backend API, Services, Repositories (`feat(api): ...`)
+     - Frontend UI, Screens, Components (`feat(ui): ...`)
+     - Configuration, Tooling, Dependencies (`chore: ...` or `build: ...`)
+     - Documentation & Tests (`docs: ...` or `test: ...`)
+  4. Use Conventional Commits with clear, descriptive messages.
+
 ---
 
 ## 7. Code Style & Conventions

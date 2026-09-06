@@ -108,3 +108,16 @@ Antes de modificar ou criar código, defina de forma ultra-concisa:
 ### 3. Auto-Correção Silenciosa (Self-Healing via TypeScript — 0 Tokens de IA)
 - Após modificações em arquivos `.ts` / `.tsx`, execute silenciosamente `npx tsc --noEmit`.
 - Se houver erro de tipagem ou import ausente, resolva imediatamente antes de entregar a resposta final.
+
+### 4. Política de Commits Atômicos (Exclusivamente sob Demanda do Usuário)
+- **NUNCA commitar espontaneamente:** A IA NÃO deve executar comandos de commit por iniciativa própria. Qualquer commit só deve ser realizado se o usuário solicitar expressamente (ex: "commite", "faça os commits", "pode commitar").
+- **Desmembramento de Grandes Alterações:** Quando o usuário pedir para commitar após uma tarefa com múltiplas alterações/arquivos:
+  1. Inspecione `git status`.
+  2. Nunca faça um único commit gigante (`git add .`).
+  3. Desmembre e agrupe em commits atômicos por domínio:
+     - `feat(db):` schema, migrations e sementes de dados.
+     - `feat(api):` controllers, services, repositories e rotas.
+     - `feat(ui):` telas, componentes visuais e design tokens.
+     - `chore:` / `build:` dependências, configs de ambiente e scripts.
+     - `docs:` / `test:` documentação, guias e testes.
+  4. Use o padrão Conventional Commits com mensagens claras e objetivas.
