@@ -1,20 +1,16 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Presco (INI3A-EQ3) — Setup Script para Linux & macOS
-# Instala e valida dependências, configura ambiente e diagnostica a rede local.
-# Uso: bash setup.sh
+# Presco (INI3A-EQ3) — Setup para Linux & macOS
+# Garante Node + npm + git, instala as dependências e delega o resto
+# (Docker/Postgres/Redis, .env, migrations, diagnóstico) para scripts/bootstrap.ts.
+#
+# Uso:  bash setup.sh [--yes] [--force-docker|--force-native] [--skip-services]
 # ==============================================================================
 
 set -euo pipefail
 
-# ── Cores ──────────────────────────────────────────────────────────────────────
-RED="\033[0;31m"
-GREEN="\033[0;32m"
-YELLOW="\033[1;33m"
-CYAN="\033[0;36m"
-BOLD="\033[1m"
-RESET="\033[0m"
-
+RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; CYAN="\033[0;36m"
+BOLD="\033[1m"; RESET="\033[0m"
 info()    { echo -e "${CYAN}${BOLD}[INFO]${RESET}  $*"; }
 success() { echo -e "${GREEN}${BOLD}[OK]${RESET}    $*"; }
 warn()    { echo -e "${YELLOW}${BOLD}[AVISO]${RESET} $*"; }
@@ -24,268 +20,70 @@ step()    { echo -e "\n${BOLD}━━━  $*  ━━━${RESET}"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# ==============================================================================
-# 1. Detectar SO
-# ==============================================================================
+# ── 1. Sistema operacional ────────────────────────────────────────────────────
 step "1. Detectando Sistema Operacional"
-
 OS="$(uname -s)"
 case "$OS" in
   Linux*)  PLATFORM="linux" ;;
   Darwin*) PLATFORM="macos" ;;
-  *)       error "Sistema não suportado diretamente por este script shell: $OS. Use Windows (setup.ps1 ou setup.bat)."; exit 1 ;;
+  *) error "Use setup.ps1 / setup.bat no Windows. SO não suportado aqui: $OS"; exit 1 ;;
 esac
-success "Plataforma detectada: ${BOLD}$PLATFORM${RESET}"
+success "Plataforma: ${BOLD}$PLATFORM${RESET}"
 
-# ==============================================================================
-# 2. Verificar/instalar Node.js >= 20
-# ==============================================================================
-step "2. Verificando Node.js"
-
-check_node() {
-  if command -v node &>/dev/null; then
-    NODE_VER="$(node -e "process.stdout.write(process.versions.node)")"
-    NODE_MAJOR="${NODE_VER%%.*}"
-    if [ "$NODE_MAJOR" -ge 20 ]; then
-      success "Node.js $NODE_VER encontrado"
-      return 0
-    else
-      warn "Node.js $NODE_VER encontrado, mas é necessário >= 20"
-      return 1
-    fi
-  fi
-  return 1
-}
-
-if ! check_node; then
-  info "Instalando Node.js 22 LTS via fnm..."
-  if ! command -v fnm &>/dev/null; then
-    if [ "$PLATFORM" = "macos" ] && command -v brew &>/dev/null; then
-      brew install node@22 || true
-      brew link node@22 --force --overwrite || true
-    else
-      info "Instalando fnm (Fast Node Manager)..."
-      curl -fsSL https://fnm.vercel.app/install | bash
-      export FNM_PATH="$HOME/.local/share/fnm"
-      export PATH="$FNM_PATH:$PATH"
-      eval "$(fnm env --use-on-cd 2>/dev/null || true)"
-      fnm install 22 --lts
-      fnm use 22
-      fnm default 22
-    fi
-  fi
-  check_node || { error "Falha ao instalar Node.js. Instale manualmente: https://nodejs.org"; exit 1; }
-fi
-
-# ==============================================================================
-# 3. Verificar npm >= 10
-# ==============================================================================
-step "3. Verificando npm"
-
-NPM_VER="$(npm --version)"
-NPM_MAJOR="${NPM_VER%%.*}"
-if [ "$NPM_MAJOR" -lt 10 ]; then
-  info "Atualizando npm para versão mais recente..."
-  npm install -g npm@latest || true
-fi
-success "npm $(npm --version) pronto"
-
-# ==============================================================================
-# 4. Verificar Docker & Serviços de Infraestrutura
-# ==============================================================================
-step "4. Verificando Docker"
-
-DOCKER_READY=false
-
-# Garantir caminhos padrão do Docker Desktop e Homebrew no PATH
-for bin_dir in "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin" "/usr/local/bin" "/opt/homebrew/bin"; do
-  if [ -d "$bin_dir" ] && [[ ":$PATH:" != *":$bin_dir:"* ]]; then
-    export PATH="$bin_dir:$PATH"
-  fi
+# Homebrew / Docker Desktop no PATH (macOS)
+for bin_dir in "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin" \
+               "/usr/local/bin" "/opt/homebrew/bin" "$HOME/.local/share/fnm"; do
+  [ -d "$bin_dir" ] && [[ ":$PATH:" != *":$bin_dir:"* ]] && export PATH="$bin_dir:$PATH" || true
 done
 
-if ! command -v docker &>/dev/null; then
-  warn "Docker não encontrado no PATH."
-  if [ "$PLATFORM" = "macos" ]; then
-    if [ -d "/Applications/Docker.app" ]; then
-      info "Docker Desktop instalado em /Applications/Docker.app, adicionando binários ao PATH..."
-      export PATH="$HOME/.docker/bin:/Applications/Docker.app/Contents/Resources/bin:$PATH"
-    fi
-  fi
-fi
-
-if ! command -v docker &>/dev/null; then
-  warn "Docker não encontrado no PATH."
-  if [ "$PLATFORM" = "macos" ]; then
-    if command -v brew &>/dev/null; then
-      info "Homebrew detectado. Você pode instalar o Docker com: brew install --cask docker"
-    else
-      info "Baixe o Docker Desktop para Mac: https://docs.docker.com/desktop/install/mac-install/"
-    fi
-  elif [ "$PLATFORM" = "linux" ]; then
-    info "Você pode instalar o Docker com: curl -fsSL https://get.docker.com | sudo sh"
-  fi
-  warn "Continuando instalação (o backend possui fallback resiliente de cache in-memory)."
-else
-  DOCKER_VER="$(docker --version 2>/dev/null | sed -E 's/.*version ([0-9.]+).*/\1/' || echo "instalado")"
-  success "Docker $DOCKER_VER encontrado"
-
-  # Verificar se o daemon do Docker está rodando
-  if docker info &>/dev/null 2>&1; then
-    DOCKER_READY=true
-    success "Docker daemon está ativo e pronto"
+# ── 2. Node.js >= 20 (auto) ───────────────────────────────────────────────────
+step "2. Verificando Node.js"
+check_node() {
+  command -v node &>/dev/null || return 1
+  local ver major; ver="$(node -e 'process.stdout.write(process.versions.node)')"
+  major="${ver%%.*}"
+  [ "$major" -ge 20 ] && { success "Node.js $ver"; return 0; } || { warn "Node.js $ver < 20"; return 1; }
+}
+if ! check_node; then
+  info "Instalando Node.js 22 LTS…"
+  if [ "$PLATFORM" = "macos" ] && command -v brew &>/dev/null; then
+    brew install node@22 && brew link --overwrite --force node@22 || true
   else
-    if [ "$PLATFORM" = "macos" ] && [ -d "/Applications/Docker.app" ]; then
-      info "Iniciando o Docker Desktop..."
-      open -g -a Docker 2>/dev/null || true
-      info "Aguardando daemon do Docker responder..."
-      DOCKER_WAIT=20
-      while ! docker info &>/dev/null 2>&1 && [ "$DOCKER_WAIT" -gt 0 ]; do
-        sleep 2
-        DOCKER_WAIT=$((DOCKER_WAIT - 2))
-      done
-      if docker info &>/dev/null 2>&1; then
-        DOCKER_READY=true
-        success "Docker daemon está ativo e pronto"
-      else
-        warn "Docker Desktop não iniciou a tempo. Continuando..."
-      fi
-    else
-      warn "Docker está instalado mas o daemon não está rodando (inicie o Docker Desktop)."
-    fi
+    curl -fsSL https://fnm.vercel.app/install | bash
+    export PATH="$HOME/.local/share/fnm:$PATH"
+    eval "$(fnm env 2>/dev/null || true)"
+    fnm install 22 && fnm use 22 && fnm default 22
   fi
+  check_node || { error "Instale o Node manualmente: https://nodejs.org"; exit 1; }
 fi
 
-if docker compose version &>/dev/null 2>&1; then
-  success "Docker Compose (plugin v2) disponível"
-elif command -v docker-compose &>/dev/null; then
-  warn "docker-compose v1 encontrado. Recomendado usar Docker >= 23 com plugin compose."
-else
-  warn "Docker Compose não encontrado. Verifique sua instalação do Docker."
+# ── 3. npm >= 10 ─────────────────────────────────────────────────────────────
+step "3. Verificando npm"
+NPM_MAJOR="$(npm --version | cut -d. -f1)"
+[ "$NPM_MAJOR" -lt 10 ] && npm install -g npm@latest || true
+success "npm $(npm --version)"
+
+# ── 4. git (auto) ────────────────────────────────────────────────────────────
+step "4. Verificando git"
+if ! command -v git &>/dev/null; then
+  info "Instalando git…"
+  if   command -v apt-get &>/dev/null; then sudo apt-get update && sudo apt-get install -y git
+  elif command -v dnf     &>/dev/null; then sudo dnf install -y git
+  elif command -v pacman  &>/dev/null; then sudo pacman -S --noconfirm git
+  elif command -v zypper  &>/dev/null; then sudo zypper --non-interactive install git
+  elif command -v brew    &>/dev/null; then brew install git
+  else warn "Instale o git manualmente: https://git-scm.com/downloads"; fi
 fi
+command -v git &>/dev/null && success "git $(git --version | awk '{print $3}')" || true
 
-# ==============================================================================
-# 5. Verificar Expo CLI
-# ==============================================================================
-step "5. Verificando Expo CLI"
-
-if npx --no-install expo --version &>/dev/null 2>&1; then
-  EXPO_V="$(npx --no-install expo --version)"
-  success "Expo CLI $EXPO_V pronto (via npx expo local)"
-elif command -v expo &>/dev/null; then
-  success "Expo CLI encontrado no sistema"
-else
-  info "Expo CLI será executado via npx expo do projeto (Expo SDK 54)"
-  success "Expo configurado"
-fi
-
-# ==============================================================================
-# 6. Instalar dependências npm com cache resiliente
-# ==============================================================================
-step "6. Instalando dependências npm (Workspaces + Túneis)"
-
-info "Executando: npm install"
+# ── 5. Dependências npm (workspaces) ─────────────────────────────────────────
+step "5. Instalando dependências (npm workspaces)"
 if ! npm install; then
-  warn "npm install encontrou problema de permissão no cache padrão. Tentando com cache isolado..."
-  npm install --cache "$HOME/.npm-presco-cache" || npm install --cache /tmp/.npm-cache
+  warn "npm install falhou no cache padrão — tentando cache isolado…"
+  npm install --cache "$HOME/.npm-presco-cache" || npm install --cache /tmp/.npm-presco-cache
 fi
-success "Dependências instaladas com sucesso"
+success "Dependências instaladas"
 
-# ==============================================================================
-# 6. Configurar arquivo .env do backend
-# ==============================================================================
-step "6. Configurando src/backend/.env"
-
-ENV_FILE="$SCRIPT_DIR/src/backend/.env"
-
-if [ ! -f "$ENV_FILE" ]; then
-  cat > "$ENV_FILE" << "EOF_ENV"
-# Presco Backend Environment Variables
-DATABASE_URL=postgres://postgres:postgres@localhost:5433/presco_db
-REDIS_URL=redis://localhost:6380
-SERVER_PORT=3333
-SERVER_HOST=0.0.0.0
-JWT_SECRET=super_secret_jwt_presco_key_2026_dev_ini3a
-NODE_ENV=development
-EOF_ENV
-  success ".env criado em src/backend/.env (Portas mapeadas: PostgreSQL→5433, Redis→6380, API→3333)"
-else
-  success "src/backend/.env já existe e foi mantido"
-fi
-
-# ==============================================================================
-# 7. Subir Docker (se disponível) e rodar Migrations/Seed
-# ==============================================================================
-step "7. Inicializando Banco de Dados e Migrations"
-
-if [ "$DOCKER_READY" = true ]; then
-  info "Subindo containers Docker (PostgreSQL 17 + PostGIS e Redis 7)..."
-  docker compose up -d
-
-  info "Aguardando PostgreSQL ficar saudável..."
-  RETRIES=20
-  until docker compose exec -T postgres pg_isready -U postgres -d presco_db &>/dev/null 2>&1; do
-    RETRIES=$((RETRIES - 1))
-    if [ "$RETRIES" -le 0 ]; then
-      warn "PostgreSQL ainda está inicializando..."
-      break
-    fi
-    sleep 1
-  done
-
-  info "Aplicando migrations Drizzle..."
-  npm run db:migrate || warn "Aviso: Migrations já aplicadas ou aguardando conexão."
-
-  info "Populando banco com catálogo de produtos, mercados e badges (seed)..."
-  npm run db:seed || warn "Aviso: Seed já executado ou aguardando conexão."
-else
-  warn "Docker não está ativo no momento. Quando iniciar o Docker Desktop, execute:"
-  echo -e "    ${CYAN}npm run db:up${RESET}       → Iniciar banco de dados"
-  echo -e "    ${CYAN}npm run db:migrate${RESET}  → Aplicar estrutura de tabelas"
-  echo -e "    ${CYAN}npm run db:seed${RESET}     → Popular dados de teste"
-fi
-
-# ==============================================================================
-# 8. Diagnóstico de Rede & Detecção de Ambiente
-# ==============================================================================
-step "8. Diagnóstico de Rede"
-
-LAN_IP=$(npx tsx -e '
-  import { getLocalLanIp } from "./scripts/verify_connection.ts";
-  console.log(getLocalLanIp());
-' 2>/dev/null || echo "127.0.0.1")
-
-echo -e "📍 ${BOLD}IP de Rede Detectado:${RESET} ${CYAN}${BOLD}${LAN_IP}${RESET}"
-
-case "$LAN_IP" in
-  10.*)
-    echo -e "${YELLOW}ℹ️  Rede corporativa/universitária detectada (10.x.x.x - ex: UNESP, eduroam).${RESET}"
-    echo -e "   • Roteadores corporativos bloqueiam conexões diretas entre celulares e notebooks (AP Isolation)."
-    echo -e "   • Para rodar sem bloqueio, use o ${BOLD}Modo Corporativo / Túnel${RESET} ou conecte o notebook ao Hotspot 4G/5G do celular."
-    ;;
-  172.20.10.*|192.168.43.*)
-    echo -e "${GREEN}✓ Hotspot móvel detectado! Latência mínima garantida (0 a 2ms).${RESET}"
-    ;;
-  *)
-    echo -e "${GREEN}✓ Rede local convencional detectada. Modo Rede Local recomendado para resposta instantânea.${RESET}"
-    ;;
-esac
-
-# ==============================================================================
-# 9. Resumo Final
-# ==============================================================================
-step "✅ Setup Concluído com Sucesso!"
-
-echo ""
-echo -e "${GREEN}${BOLD}Ambiente Presco pronto para desenvolvimento!${RESET}"
-echo ""
-echo -e "  ${BOLD}Como Iniciar o Projeto:${RESET}"
-echo -e "    ${CYAN}./start_project.sh${RESET}          → Menu interativo para escolher o modo"
-echo -e "    ${CYAN}./start_project.sh --lan${RESET}    → ⚡ Modo Rede Local (Menor tempo de resposta: 0-5ms)"
-echo -e "    ${CYAN}./start_project.sh --corp${RESET}   → 🏢 Modo Corporativo (Túnel seguro para UNESP/empresas)"
-echo -e "    ${CYAN}npm run dev${RESET}                 → Inicializador universal multiplataforma"
-echo ""
-echo -e "  ${BOLD}Credenciais de Teste:${RESET}"
-echo -e "    Administrador → ${CYAN}admin@admin.org${RESET} / ${CYAN}admin${RESET}"
-echo -e "    Usuário       → ${CYAN}user@user.org${RESET} / ${CYAN}user${RESET}"
-echo ""
+# ── 6. Bootstrap (Docker/Postgres/Redis, .env, migrations, diagnóstico) ──────
+step "6. Bootstrap do ambiente"
+exec npx tsx scripts/bootstrap.ts "$@"

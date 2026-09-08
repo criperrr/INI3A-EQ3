@@ -12,7 +12,9 @@
 
 services:
   postgres:
-    image: postgis/postgis:16-3.4
+    # imresamu/postgis: rebuild multi-arch fiel do postgis/postgis oficial
+    # (que só publica amd64 e faz "exec format error" em Apple Silicon / ARM).
+    image: imresamu/postgis:16-3.4
     container_name: presco_postgres
     restart: unless-stopped
     environment:

@@ -24,6 +24,27 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-09-08 12:40] - feat(setup): manifesto de dependências + bootstrap cross-platform com serviços híbridos nativo/Docker
+
+- **Description:** Reescreveu o fluxo de setup para instalar tudo que o projeto precisa e resolver Postgres/Redis com estratégia nativo-first:
+  1. **Shell mínimo:** `setup.sh` / `setup.ps1` agora só garantem Node ≥ 20, npm ≥ 10 e git (auto), rodam `npm install` e delegam para `npx tsx scripts/bootstrap.ts`. Toda a lógica passa a ser cross-platform num único arquivo TS (mesmo padrão de `dev_launcher.ts` / `verify_connection.ts`).
+  2. **Manifesto declarativo (`scripts/requirements.ts`):** lista `TOOLS` (git, docker) e `SERVICES` (postgres, redis) com nomes de pacote por gerenciador (apt/dnf/pacman/zypper/brew/winget/choco) e templates de URL nativo/Docker. Adicionar uma dependência = uma entrada aqui.
+  3. **`scripts/lib/system.ts`:** detecção de SO + gerenciador de pacotes, `run`/`runLive`, `withSudo`, prompts `promptYesNo` / `promptChoice` (com `--yes` para CI).
+  4. **`scripts/bootstrap.ts`:** para cada serviço — usa o nativo se já estiver utilizável (porta + banco/role do projeto + PostGIS para o Postgres; PING sem auth para o Redis); senão pergunta `[Docker | instalar nativo agora | pular]` (default nativo quando o binário existe); provisiona o Postgres nativo (role/db + `CREATE EXTENSION`, instala o pacote PostGIS do SO se faltar, via `sudo -u postgres`); qualquer falha nativa cai para Docker automaticamente. Escreve `src/backend/.env` com as URLs resolvidas, roda `db:migrate` + `db:seed`, imprime diagnóstico de rede e salva `.dev/services.json`.
+  5. **`docker-compose.yml`:** troca `postgis/postgis:16-3.4` (amd64-only, faz `exec format error` em Apple Silicon / ARM) por `imresamu/postgis:16-3.4` (multi-arch fiel).
+  6. **Skill `.agents/skills/add-service/SKILL.md`:** contrato para registrar novo tool/serviço obrigatório no manifesto.
+- **Files Modified:**
+  - `scripts/bootstrap.ts` (novo)
+  - `scripts/requirements.ts` (novo)
+  - `scripts/lib/system.ts` (novo)
+  - `.agents/skills/add-service/SKILL.md` (novo)
+  - `setup.sh`
+  - `setup.ps1`
+  - `docker-compose.yml`
+  - `.gitignore`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `bash setup.sh` (ou `setup.ps1`) agora leva do zero ao ambiente pronto em qualquer SO/rede, perguntando antes de instalar Docker/Postgres/Redis. Testado em Linux/aarch64: detecção nativa, provisionamento do Postgres nativo (com sudo), fallback para Docker, e a imagem multi-arch. **Pendência não relacionada:** `npm run db:seed` falha com `08P01` — bug pré-existente em `src/backend/src/shared/database/seed.ts` (~L1441): `ST_GeographyFromText('POINT($2 $3)')` põe os placeholders dentro de string literal, então o driver manda 3 params e o statement só aceita 1. O bootstrap trata o erro sem abortar.
+
 ## [2026-09-04 18:30] - fix(deps): synchronize monorepo Expo SDK 57 dependencies and resolve stale Expo 54 binaries
 
 - **Description:** Fixed outdated Expo CLI / SDK version discrepancy in the workspace:
