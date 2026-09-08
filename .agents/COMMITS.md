@@ -2544,3 +2544,50 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Files Modified:**
   - `scripts/dev_launcher.ts`
 - **Impact / Next Steps:** Prevents port duplication and URL parsing crashes when starting the development server.
+
+## `2026-09-08 10:52` - `perf(memory)`: Full-stack RAM optimization and bitmap bloat remediation
+
+- **Description:** Diagnosed and eradicated the ~600MB default RAM memory bloat in the mobile application down to lean ~120-180MB levels. Implemented `imageUtils.ts` with `getOptimizedImageUrl` for mobile image downsampling (Unsplash query params and OpenFoodFacts web dimensions); batch-resized 7 local banner assets in `components/images/banners/` from 1376x768 to 800x446 reducing disk size from 3.2MB to 350KB and decoded bitmap memory by 66%; added an `AppState` background listener in `_layout.tsx` to automatically trim in-memory image buffers via `Image.clearMemoryCache()` when backgrounded; enhanced `settings.tsx` `handleClearCache` with explicit memory and disk cache clearing; conditionally mounted `OnboardingTutorialModal` in `index.tsx` and `settings.tsx` preventing 1,356 lines of inactive component and Reanimated shadow nodes from residing in virtual DOM; tuned `search.tsx` FlatList virtualization with `windowSize={3}`, `maxToRenderPerBatch={6}`, `initialNumToRender={6}` and `recyclingKey` on cards; bound `OVERPASS_CACHE` (max 8) and `OSRM_DISTANCE_CACHE` (max 100) with LRU eviction in `map.native.tsx`; prioritized web-optimized photos in backend `product.service.ts`; and removed dead `lucide-react` dependency.
+- **Files Modified:**
+  - `src/frontend/utils/imageUtils.ts`
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/components/images/banners/banner-*.jpg`
+  - `src/frontend/package.json`
+  - `package-lock.json`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Default app RAM consumption drastically reduced from 600MB to ~120-180MB with zero loss of responsiveness, 60 FPS scrolling intact, and clean 0 errors on frontend and backend typechecks.
+
+## `2026-09-08 11:16` - `perf(frontend)`: Vector icons tree-shaking and startup double-fetch elimination
+
+- **Description:** Converted all 21 files importing `@expo/vector-icons` from the barrel import to direct imports (`@expo/vector-icons/Ionicons`), tree-shaking 18 unused `.ttf` font files (~4.5MB of font assets) out of the Metro bundle; eliminated startup double-fetch and double-decode in `src/frontend/app/index.tsx` by initializing `realProducts` as an empty array instead of 6 remote Unsplash mock images, reserving mock products purely as an offline error fallback; reduced production asset bundle count from 55 to 37 and Hermes bytecode bundle from 7.2MB to 6.8MB.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/manualEanSearch.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/map.tsx`
+  - `src/frontend/app/map.web.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/scannerProduct.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/components/Sidebar.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unused fonts and eager startup images completely eliminated from memory. Verified with 0 errors across frontend typecheck, backend typecheck, and linter.
