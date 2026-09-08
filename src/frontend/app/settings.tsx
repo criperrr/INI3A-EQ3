@@ -51,6 +51,7 @@ import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
 import { resetTutorialStatus } from "../utils/tutorialStorage";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
+import { Image as ExpoImage } from "expo-image";
 
 interface SettingsState {
   theme: "light" | "dark";
@@ -491,6 +492,8 @@ const SettingsScreen: React.FC = () => {
       if (nonEssentialKeys.length > 0) {
         await AsyncStorage.multiRemove(nonEssentialKeys);
       }
+      await ExpoImage.clearMemoryCache().catch(() => {});
+      await ExpoImage.clearDiskCache().catch(() => {});
       setClearCacheModalOpen(false);
       Alert.alert(t("settings.clearCache"), t("settings.cacheCleared"));
     } catch {
@@ -1580,10 +1583,12 @@ const SettingsScreen: React.FC = () => {
         </View>
       </Modal>
 
-      <OnboardingTutorialModal
-        visible={showTutorialModal}
-        onClose={() => setShowTutorialModal(false)}
-      />
+      {showTutorialModal && (
+        <OnboardingTutorialModal
+          visible={showTutorialModal}
+          onClose={() => setShowTutorialModal(false)}
+        />
+      )}
     </ScrollView>
   );
 };

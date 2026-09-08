@@ -11,7 +11,7 @@ import {
     Linking
 } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import MapView, { Marker } from "react-native-maps";
 import * as Location from "expo-location";
 import { Stack } from "expo-router";
@@ -49,10 +49,28 @@ const OVERPASS_ENDPOINTS = [
 ];
 
 // In-memory cache for Overpass queries (stores raw nodes/ways around coords)
+const MAX_OVERPASS_CACHE_SIZE = 8;
 const OVERPASS_CACHE = new Map<string, { elements: any[]; timestamp: number }>();
 
+function setOverpassCache(key: string, value: { elements: any[]; timestamp: number }) {
+    if (OVERPASS_CACHE.size >= MAX_OVERPASS_CACHE_SIZE) {
+        const firstKey = OVERPASS_CACHE.keys().next().value;
+        if (firstKey) OVERPASS_CACHE.delete(firstKey);
+    }
+    OVERPASS_CACHE.set(key, value);
+}
+
 // In-memory cache for OSRM driving distances
+const MAX_OSRM_CACHE_SIZE = 100;
 const OSRM_DISTANCE_CACHE = new Map<string, number>();
+
+function setOsrmCache(key: string, distance: number) {
+    if (OSRM_DISTANCE_CACHE.size >= MAX_OSRM_CACHE_SIZE) {
+        const firstKey = OSRM_DISTANCE_CACHE.keys().next().value;
+        if (firstKey) OSRM_DISTANCE_CACHE.delete(firstKey);
+    }
+    OSRM_DISTANCE_CACHE.set(key, distance);
+}
 
 // Module-level cache for instant 0ms map open and tab transitions
 let lastSessionLocation: Coordinate | null = null;
@@ -130,7 +148,7 @@ const fetchDrivingDistances = async (userLocation: Coordinate, markers: MarketMa
             toQuery.forEach((marker, index) => {
                 const distanceInMeters = data.distances[0][index + 1];
                 if (distanceInMeters !== null && distanceInMeters !== undefined) {
-                    OSRM_DISTANCE_CACHE.set(`${locKey}_${marker.id}`, distanceInMeters / 1000);
+                    setOsrmCache(`${locKey}_${marker.id}`, distanceInMeters / 1000);
                 }
             });
         }
@@ -344,7 +362,7 @@ const fetchAllMarketsData = async (
         clearTimeout(timeoutId);
 
         if (accumulated.length > 0) {
-            OVERPASS_CACHE.set(cacheKey, { elements: accumulated, timestamp: Date.now() });
+            setOverpassCache(cacheKey, { elements: accumulated, timestamp: Date.now() });
             lastSessionElements = accumulated;
             return accumulated;
         }

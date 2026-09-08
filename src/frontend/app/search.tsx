@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { DesignSystemTokens } from "../theme/types";
@@ -26,6 +26,7 @@ import {
   getLocalizedCategoryName,
 } from "../constants/productCategories";
 import { getUserLocation } from "../utils/userLocation";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 export default function SearchScreen() {
   const { tokens, accent, isDark } = useTheme();
@@ -329,9 +330,9 @@ export default function SearchScreen() {
         ListFooterComponent={ListFooter}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.4}
-        initialNumToRender={8}
-        maxToRenderPerBatch={8}
-        windowSize={5}
+        initialNumToRender={6}
+        maxToRenderPerBatch={6}
+        windowSize={3}
         removeClippedSubviews={Platform.OS !== "web"}
         refreshControl={
           <RefreshControl
@@ -515,7 +516,7 @@ const ProductCardItem = memo(function ProductCardItem({
   t: (key: any) => string;
 }) {
   const { semantic } = tokens;
-  const imageSource = product.imageUri || product.icon;
+  const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 360);
 
   const isUnquoted =
     !product.bestPrice ||
@@ -556,6 +557,7 @@ const ProductCardItem = memo(function ProductCardItem({
             style={styles.productImage}
             contentFit="cover"
             cachePolicy="memory-disk"
+            recyclingKey={imageSource || String(product.id)}
             transition={150}
           />
         ) : (

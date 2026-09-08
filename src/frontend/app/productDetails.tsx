@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
@@ -42,6 +42,7 @@ import {
   formatShortDate,
   parseDateSafeMs,
 } from "../utils/dateUtils";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 
 const EMPTY_HISTORY: PriceHistoryItem[] = [];
@@ -577,7 +578,7 @@ export default function ProductDetails() {
     );
   }
 
-  const imageUri = product.imageUri || product.icon;
+  const imageUri = getOptimizedImageUrl(product.imageUri || product.icon, 400);
   const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
@@ -618,6 +619,7 @@ export default function ProductDetails() {
                 style={styles.productImage}
                 contentFit="contain"
                 cachePolicy="memory-disk"
+                recyclingKey={imageUri}
                 transition={150}
               />
             ) : (

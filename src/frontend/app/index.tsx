@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
@@ -18,6 +18,7 @@ import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
 import { getUserLocation } from "../utils/userLocation";
 import { hasSeenTutorial } from "../utils/tutorialStorage";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 const { width } = Dimensions.get("window");
@@ -106,7 +107,7 @@ export default function HomeScreen() {
   const { resetHomeTrigger } = useTabNavigation();
   const { view } = useLocalSearchParams<{ view?: string }>();
   const [activeView, setActiveView] = useState<string>("products");
-  const [realProducts, setRealProducts] = useState<GridItemType[]>(MOCK_PRODUCTS);
+  const [realProducts, setRealProducts] = useState<GridItemType[]>([]);
   const [realMarkets, setRealMarkets] = useState<GridItemType[]>([]);
   const [hasLocation, setHasLocation] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -162,18 +163,20 @@ export default function HomeScreen() {
           category: p.category,
           price: p.bestPrice || p.lastPrice,
           image:
-            p.imageUri ||
-            p.icon ||
-            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
+            getOptimizedImageUrl(p.imageUri || p.icon, 360) ||
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=360&fit=crop&q=75&auto=format",
           isPromotion: p.isPromotion,
           discountPercentage: p.discountPercentage,
           formattedDistance: p.formattedDistance,
           nearestMarketName: p.nearestMarketName,
         }));
         setRealProducts(mapped);
+      } else {
+        setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
       }
     } catch {
-      // Graceful fallback
+      // Graceful fallback: load mock products only if network request fails
+      setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
     }
 
     try {
@@ -188,10 +191,10 @@ export default function HomeScreen() {
       );
       if (markets && markets.length > 0) {
         const marketImages = [
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=400&fit=crop",
-          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=400&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=360&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=360&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=360&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=360&h=360&fit=crop&q=75&auto=format",
         ];
         const mapped: GridItemType[] = markets.map((m, idx) => ({
           id: m.id,
@@ -298,10 +301,12 @@ export default function HomeScreen() {
         />
       </ScrollView>
 
-      <OnboardingTutorialModal
-        visible={showTutorialModal}
-        onClose={() => setShowTutorialModal(false)}
-      />
+      {showTutorialModal && (
+        <OnboardingTutorialModal
+          visible={showTutorialModal}
+          onClose={() => setShowTutorialModal(false)}
+        />
+      )}
     </View>
   );
 }
@@ -321,7 +326,7 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner1Subtitle"),
         linkText: t("home.banner1Action"),
         image:
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop&q=75&auto=format",
       },
       {
         id: "2",
@@ -329,7 +334,7 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner2Subtitle"),
         linkText: t("home.banner2Action"),
         image:
-          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=800&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=200&fit=crop&q=75&auto=format",
       },
       {
         id: "3",
@@ -337,7 +342,7 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner3Subtitle"),
         linkText: t("home.banner3Action"),
         image:
-          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=800&h=400&fit=crop",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=200&fit=crop&q=75&auto=format",
       },
     ],
     [t]
@@ -407,6 +412,7 @@ const Banner = memo(function Banner() {
                 style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
                 contentFit="cover"
                 cachePolicy="memory-disk"
+                recyclingKey={item.id}
                 transition={150}
               />
               <Text
@@ -618,6 +624,7 @@ const ItemsGrid = memo(function ItemsGrid({
                 ]}
                 contentFit="cover"
                 cachePolicy="memory-disk"
+                recyclingKey={item.image || String(item.id)}
                 transition={150}
               />
               {isProductView && item.isPromotion && (
