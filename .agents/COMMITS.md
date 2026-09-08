@@ -2628,3 +2628,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/components/images/logo-presco.png`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Eliminated navigation crash and micro-stutters during screen switching. Reduced genuine bitmap heap and GPU overhead without CPU decompression penalties.
+
+## `2026-09-08 11:56` - `fix(ui)`: Sincronização de informações do app e stack com Expo SDK 57
+
+- **Description:** Atualizadas as informações estáticas e desatualizadas do aplicativo. Substituída a menção obsoleta a Expo SDK 54 em `settings.tsx`, `about.tsx` e `README.md` pela versão atual do projeto (Expo SDK 57, React Native 0.86.3, Reanimated 4). Em `settings.tsx`, a versão passou a ser dinâmica via `Constants.expoConfig?.version`, o ambiente reflete `Expo SDK 57 (RN 0.86)` e foi adicionado um atalho elegante para a tela Sobre o Presco (`/about`). As strings de build nos 7 arquivos de i18n (`locales/*`) foram atualizadas para a versão vigente (2026.09).
+- **Files Modified:**
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `README.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Informações do sistema, versões e stack tecnológica 100% alinhadas com o código e dependências ativas.

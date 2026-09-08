@@ -55,7 +55,7 @@ O usuário pode escanear o código de barras (EAN) de qualquer produto com a câ
 | **Backend API** | Node.js, Express 5, TypeScript | Servidor HTTP RESTful estruturado em 4 camadas (DDD) |
 | **Banco de Dados** | PostgreSQL 16+ com PostGIS, Drizzle ORM | Persistência relacional e consultas geoespaciais (`ST_DWithin`, `ST_AsGeoJson`) |
 | **Sessões & Cache** | Redis 6+, `redis` client | Gestão de refresh tokens e blacklist de tokens revogados |
-| **Frontend Mobile** | React Native 0.81.5, Expo SDK 54, Expo Router | Aplicativo multiplataforma com navegação baseada em arquivos |
+| **Frontend Mobile** | React Native 0.86.3, Expo SDK 57, Expo Router | Aplicativo multiplataforma com navegação baseada em arquivos |
 | **Animações & Gestos** | React Native Reanimated 4, Gesture Handler 2, Expo Haptics | Gestos fluidos na UI thread e transições de tela direcionais |
 | **Infraestrutura** | Bash, Tmux, Localtunnel, Ngrok | Orquestração de ambiente de desenvolvimento com tunelamento e LAN NAT |
 
