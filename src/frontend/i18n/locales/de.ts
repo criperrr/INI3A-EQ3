@@ -84,7 +84,7 @@ export const de: TranslationSchema = {
     passwordTooShort: "Das Passwort muss mindestens 6 Zeichen lang sein.",
     passwordsDoNotMatch: "Die Passwörter stimmen nicht überein.",
     nameRequired: "Der vollständige Name ist erforderlich.",
-    devMode: "Expo Go / Entwicklerumgebung",
+    devMode: "Entwicklungsumgebung",
     devModeDesc: "Tippen Sie, um sich schnell als Testbenutzer anzumelden:",
     regularUser: "Standardbenutzer",
     adminUser: "Administrator",

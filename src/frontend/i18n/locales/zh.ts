@@ -84,7 +84,7 @@ export const zh: TranslationSchema = {
     passwordTooShort: "密码长度不能少于6位。",
     passwordsDoNotMatch: "两次输入的密码不一致。",
     nameRequired: "姓名不能为空。",
-    devMode: "Expo Go / 开发者环境",
+    devMode: "开发环境",
     devModeDesc: "点击以测试用户身份快速登录：",
     regularUser: "普通用户",
     adminUser: "管理员",

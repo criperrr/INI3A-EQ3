@@ -1,0 +1,10 @@
+env: load .env
+env: export EXPO_PUBLIC_API_URL
+Starting project at /Users/aventureiromax/INI3A-EQ3/src/frontend
+Logs: /Users/aventureiromax/INI3A-EQ3/src/frontend/.expo/dev/logs/start.log
+› Port 8081 is running this app in another window
+  /Users/aventureiromax/INI3A-EQ3/src/frontend (pid 51125)
+Input is required, but 'npx expo' is in non-interactive mode.
+Required input:
+> Use port 8082 instead?
+› Skipping dev server

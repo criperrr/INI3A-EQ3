@@ -84,7 +84,7 @@ export const ja: TranslationSchema = {
     passwordTooShort: "パスワードは6文字以上で入力してください。",
     passwordsDoNotMatch: "パスワードが一致しません。",
     nameRequired: "氏名は必須です。",
-    devMode: "Expo Go / 開発環境",
+    devMode: "開発環境",
     devModeDesc: "タップしてテストユーザーでログイン：",
     regularUser: "一般ユーザー",
     adminUser: "管理者",

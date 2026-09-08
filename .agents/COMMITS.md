@@ -2485,3 +2485,24 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Description:** Added strict guidelines to AGENTS.md, code-rules.md, project-conventions.md, and CURRENT.md specifying that the AI must never commit spontaneously. Large/complex changes must be decomposed into cohesive atomic commits (by domain/layer) using Conventional Commits strictly when explicitly requested by the user.
 - **Files Modified:**
   - .agents/AGENTS.md`n  - .agents/rules/code-rules.md`n  - .agents/memory/project-conventions.md`n  - .agents/CURRENT.md`n- **Impact / Next Steps:** Preserves user control over git history, preventing unintended commits while ensuring clean atomic commits when requested.
+
+## `2026-09-08 07:38` - `chore(mobile)`: Migrate frontend from Expo Go to Expo Dev Builds
+
+- **Description:** Migrated the Presco frontend from Expo Go to Expo Development Builds (`expo-dev-client`). Configured `app.json` with native Android package (`com.presco.app`), iOS bundle identifier (`com.presco.app`), `expo-dev-client` plugin, and `expo-camera` native permissions plugin. Cleaned up obsolete Expo Go schema properties (`newArchEnabled`, `edgeToEdgeEnabled`). Updated `login.tsx` to detect development builds (`__DEV__`) cleanly without legacy `Constants.appOwnership` checks. Updated i18n locales across all 7 languages to replace Expo Go strings with Development Build terminology. Updated `package.json` scripts with `android`, `ios`, `prebuild`, and EAS build commands. Validated complete prebuild and Metro export across Android, iOS and Web.
+- **Files Modified:**
+  - `package.json`
+  - `package-lock.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/eas.json`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `src/frontend/README.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Enables full native compilation, seamless local Android/iOS builds, and complete native library access for maps, camera, and device capabilities. Ready for atomic commits upon user request.

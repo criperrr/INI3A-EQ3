@@ -23,7 +23,7 @@ src/frontend/
 ├── app/                                    # 18 Telas do aplicativo (Expo Router)
 │   ├── _layout.tsx                         # Stack raiz, wrapper de gestos, temas, auth e i18n
 │   ├── index.tsx                           # Home / Dashboard
-│   ├── login.tsx                           # Login com detecção Dev / Expo Go e 1-Tap Quick Login
+│   ├── login.tsx                           # Login com detecção Dev Build e 1-Tap Quick Login
 │   ├── registerUser.tsx                    # Cadastro de usuário
 │   ├── scannerProduct.tsx                  # Leitura de código EAN pela câmera (expo-camera)
 │   ├── scannerConfirmation.tsx             # Confirmação de item lido
