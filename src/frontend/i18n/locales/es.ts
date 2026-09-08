@@ -84,7 +84,7 @@ export const es: TranslationSchema = {
     passwordTooShort: "La contraseña debe tener al menos 6 caracteres.",
     passwordsDoNotMatch: "Las contraseñas no coinciden.",
     nameRequired: "El nombre completo es obligatorio.",
-    devMode: "Entorno Expo Go / Desarrollador",
+    devMode: "Entorno de Desarrollo",
     devModeDesc: "Toque para iniciar sesión con un usuario de prueba:",
     regularUser: "Usuario Estándar",
     adminUser: "Administrador",

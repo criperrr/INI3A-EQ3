@@ -84,7 +84,7 @@ export const en: TranslationSchema = {
     passwordTooShort: "Password must be at least 6 characters long.",
     passwordsDoNotMatch: "Passwords do not match.",
     nameRequired: "Full name is required.",
-    devMode: "Expo Go / Dev Environment",
+    devMode: "Development Environment",
     devModeDesc: "Tap to quickly sign in with a test user:",
     regularUser: "Regular User",
     adminUser: "Administrator",

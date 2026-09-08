@@ -84,7 +84,7 @@ export const pt: TranslationSchema = {
     passwordTooShort: "A senha deve ter pelo menos 6 caracteres.",
     passwordsDoNotMatch: "As senhas não coincidem.",
     nameRequired: "O nome completo é obrigatório.",
-    devMode: "Ambiente Expo Go / Desenvolvedor",
+    devMode: "Ambiente de Desenvolvimento",
     devModeDesc: "Toque para entrar instantaneamente com o usuário de teste:",
     regularUser: "Usuário Comum",
     adminUser: "Administrador",

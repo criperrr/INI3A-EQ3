@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Constants, { ExecutionEnvironment } from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
@@ -32,11 +31,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isExpoGo =
-    Constants.appOwnership === "expo" ||
-    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
-    (Constants.executionEnvironment as string) === "storeClient" ||
-    __DEV__;
+  const isDevBuild = __DEV__;
 
   const handleLogin = async (overrideEmail?: string, overridePass?: string) => {
     const targetEmail = overrideEmail || email;
@@ -90,7 +85,7 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {isExpoGo && (
+          {isDevBuild && (
             <View style={[styles.devBox, themeStyles.card, themeStyles.border]}>
               <View style={styles.devHeader}>
                 <Ionicons name="flash" size={16} color={accent} />
