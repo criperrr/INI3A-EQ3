@@ -516,7 +516,7 @@ const ProductCardItem = memo(function ProductCardItem({
   t: (key: any) => string;
 }) {
   const { semantic } = tokens;
-  const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 360);
+  const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 280, 70);
 
   const isUnquoted =
     !product.bestPrice ||

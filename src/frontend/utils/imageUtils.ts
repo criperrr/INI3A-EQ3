@@ -8,13 +8,13 @@
  * Retorna uma URL otimizada para dispositivos móveis com largura alvo e formato moderno.
  *
  * @param url URL da imagem original
- * @param targetWidth Largura máxima desejada para a exibição na tela (padrão: 400px)
- * @param quality Qualidade da imagem (1-100, padrão: 75)
+ * @param targetWidth Largura máxima desejada para a exibição na tela (padrão: 280px)
+ * @param quality Qualidade da imagem (1-100, padrão: 70)
  */
 export function getOptimizedImageUrl(
   url?: string | null,
-  targetWidth = 400,
-  quality = 75
+  targetWidth = 280,
+  quality = 70
 ): string | undefined {
   if (!url || typeof url !== "string") {
     return undefined;

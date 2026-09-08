@@ -79,7 +79,7 @@ const ProductImage = memo(function ProductImage({
   const { tokens } = useTheme();
   const { semantic } = tokens;
 
-  const optimizedUri = getOptimizedImageUrl(imageUri, 360);
+  const optimizedUri = getOptimizedImageUrl(imageUri, 280, 70);
 
   return (
     <View
