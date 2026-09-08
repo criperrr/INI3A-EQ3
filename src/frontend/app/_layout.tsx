@@ -22,7 +22,7 @@ function LayoutContent() {
   const { getTabIndex } = useTabNavigation();
   const isMainTab = getTabIndex(pathname) !== -1;
 
-  // Libera buffers de bitmap decodificados em RAM nativa quando o app vai para segundo plano
+  // Libera buffers de bitmap decodificados em RAM nativa quando o app vai para segundo plano do celular
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "background" || nextState === "inactive") {

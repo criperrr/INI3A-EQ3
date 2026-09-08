@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import { Image } from "expo-image";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
@@ -51,7 +51,7 @@ const MOCK_PRODUCTS: GridItemType[] = [
     id: 1,
     name: "Café Especial Torrado 500g",
     image:
-      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 14,90",
     isPromotion: true,
     discountPercentage: 40,
@@ -60,7 +60,7 @@ const MOCK_PRODUCTS: GridItemType[] = [
     id: 2,
     name: "Azeite de Oliva Extra Virgem",
     image:
-      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 26,90",
     isPromotion: true,
     discountPercentage: 32,
@@ -69,7 +69,7 @@ const MOCK_PRODUCTS: GridItemType[] = [
     id: 3,
     name: "Leite Integral Orgânico",
     image:
-      "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 4,29",
     isPromotion: true,
     discountPercentage: 34,
@@ -78,21 +78,21 @@ const MOCK_PRODUCTS: GridItemType[] = [
     id: 4,
     name: "Arroz Nobre Tipo 1 5kg",
     image:
-      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 22,90",
   },
   {
     id: 5,
     name: "Pão Artesanal 500g",
     image:
-      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 7,90",
   },
   {
     id: 6,
     name: "Chocolate Meio Amargo 70%",
     image:
-      "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=400&h=400&fit=crop",
+      "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=280&h=280&fit=crop&q=70&auto=format",
     price: "R$ 5,99",
     isPromotion: true,
     discountPercentage: 33,
@@ -101,6 +101,8 @@ const MOCK_PRODUCTS: GridItemType[] = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const pathname = usePathname();
+  const isFocused = !pathname || pathname === "/";
   const { tokens } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
@@ -163,8 +165,8 @@ export default function HomeScreen() {
           category: p.category,
           price: p.bestPrice || p.lastPrice,
           image:
-            getOptimizedImageUrl(p.imageUri || p.icon, 360) ||
-            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=360&fit=crop&q=75&auto=format",
+            getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) ||
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
           isPromotion: p.isPromotion,
           discountPercentage: p.discountPercentage,
           formattedDistance: p.formattedDistance,
@@ -191,12 +193,13 @@ export default function HomeScreen() {
       );
       if (markets && markets.length > 0) {
         const marketImages = [
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=360&fit=crop&q=75&auto=format",
-          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=360&fit=crop&q=75&auto=format",
-          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=360&fit=crop&q=75&auto=format",
-          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=360&h=360&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=280&h=280&fit=crop&q=70&auto=format",
         ];
-        const mapped: GridItemType[] = markets.map((m, idx) => ({
+        // Limita a prévia da Home estritamente aos 6 mercados mais próximos, evitando renderizar dezenas de cards na ScrollView
+        const mapped: GridItemType[] = markets.slice(0, 6).map((m, idx) => ({
           id: m.id,
           name: m.name,
           image: marketImages[idx % marketImages.length]!,
@@ -286,7 +289,7 @@ export default function HomeScreen() {
         bounces={true}
         overScrollMode="always"
       >
-        <Banner />
+        <Banner isFocused={isFocused} />
         <ActionMenu
           onTabPress={handleTabAction}
           tabs={actionTabs}
@@ -311,7 +314,7 @@ export default function HomeScreen() {
   );
 }
 
-const Banner = memo(function Banner() {
+const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
@@ -326,7 +329,7 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner1Subtitle"),
         linkText: t("home.banner1Action"),
         image:
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=400&h=200&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=180&fit=crop&q=70&auto=format",
       },
       {
         id: "2",
@@ -334,7 +337,7 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner2Subtitle"),
         linkText: t("home.banner2Action"),
         image:
-          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=400&h=200&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=180&fit=crop&q=70&auto=format",
       },
       {
         id: "3",
@@ -342,30 +345,32 @@ const Banner = memo(function Banner() {
         subtitle: t("home.banner3Subtitle"),
         linkText: t("home.banner3Action"),
         image:
-          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=400&h=200&fit=crop&q=75&auto=format",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=180&fit=crop&q=70&auto=format",
       },
     ],
     [t]
   );
 
+  const activeIndexRef = useRef(0);
   useEffect(() => {
-    const timer = setInterval(() => {
-      let nextIndex = activeIndex + 1;
-      let shouldAnimate = true;
-      if (nextIndex >= banners.length) {
-        nextIndex = 0;
-        shouldAnimate = false;
-      }
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
 
+  // Pausa o carrossel quando a Home perde o foco ou entra em segundo plano, evitando re-renderizações e consumo de CPU/RAM
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const timer = setInterval(() => {
+      const nextIndex = activeIndexRef.current + 1 >= banners.length ? 0 : activeIndexRef.current + 1;
       flatListRef.current?.scrollToIndex({
         index: nextIndex,
-        animated: shouldAnimate,
+        animated: nextIndex !== 0,
       });
       setActiveIndex(nextIndex);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [activeIndex, banners.length]);
+  }, [isFocused, banners.length]);
 
   const handleScroll = useCallback((event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
