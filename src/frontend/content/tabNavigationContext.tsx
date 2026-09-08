@@ -4,6 +4,7 @@ import React, {
   useState,
   useRef,
   useCallback,
+  useEffect,
   type ReactNode,
 } from "react";
 import { useRouter, usePathname } from "expo-router";
@@ -54,7 +55,9 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const currentPathRef = useRef(pathname);
-  currentPathRef.current = pathname;
+  useEffect(() => {
+    currentPathRef.current = pathname;
+  }, [pathname]);
 
   const triggerHomeReset = useCallback(() => {
     setResetHomeTrigger((prev) => prev + 1);
