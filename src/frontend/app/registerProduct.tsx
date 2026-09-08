@@ -219,17 +219,78 @@ export default function RegisterProduct() {
     );
   };
 
-  const executeSubmission = async (effectiveProductId: number, numPrice: number) => {
+  const executeSubmission = async (effectiveProductId: number, numPrice: number, confirmOutlier = false) => {
     setIsSubmitting(true);
     try {
-      await submitPriceOccurrence(
+      const response = await submitPriceOccurrence(
         effectiveProductId,
         selectedMarketId,
         numPrice,
         undefined,
         recordDate.toISOString(),
         isPromotion,
+        confirmOutlier,
       );
+
+      // 1. Moderate Outlier: Prompt user for confirmation
+      if (response?.requiresConfirmation) {
+        setIsSubmitting(false);
+        const avgFormatted =
+          response.stats?.avgPrice !== null && response.stats?.avgPrice !== undefined
+            ? `R$ ${response.stats.avgPrice.toFixed(2).replace(".", ",")}`
+            : "";
+        const currentFormatted = `R$ ${numPrice.toFixed(2).replace(".", ",")}`;
+        const ratioNotice = response.stats?.ratio ? ` (${response.stats.ratio}x da média)` : "";
+
+        Alert.alert(
+          t("products.outlierAlertTitle") || "Atenção ao Valor Informado",
+          avgFormatted
+            ? `${t("products.outlierAlertBody") || "O valor digitado difere da média recente deste produto"}: ${currentFormatted} vs ${avgFormatted}${ratioNotice}.\n\n${t("products.outlierAlertQuestion") || "Tem certeza de que o valor está correto?"}`
+            : (t("products.outlierAlertBodySimple") || `O valor informado (${currentFormatted}) parece atípico. Deseja confirmar este preço?`),
+          [
+            {
+              text: t("products.correctPrice") || "Corrigir Valor",
+              style: "cancel",
+            },
+            {
+              text: t("products.confirmPrice") || "Confirmar Preço",
+              style: "default",
+              onPress: () => {
+                executeSubmission(effectiveProductId, numPrice, true);
+              },
+            },
+          ]
+        );
+        return;
+      }
+
+      // 2. Extreme Outlier: Informs user that price is pending admin approval
+      if (response?.pendingApproval) {
+        await refreshProfile();
+        Alert.alert(
+          t("products.pendingApprovalTitle") || "Preço em Análise",
+          t("products.pendingApprovalBody") ||
+            "Como o valor informado difere expressivamente da média histórica deste produto, ele foi retido para análise de um moderador antes de ser exibido publicamente.\n\nObrigado pela sua contribuição!",
+          [
+            {
+              text: t("common.ok") || "OK",
+              onPress: () => {
+                router.replace({
+                  pathname: "/productDetails",
+                  params: {
+                    id: String(effectiveProductId),
+                    barcode: targetEan || product?.barcode,
+                    name: displayProduct.name,
+                    category: displayProduct.category,
+                    imageUri: displayProduct.imageUri || undefined,
+                  },
+                });
+              },
+            },
+          ]
+        );
+        return;
+      }
 
       await refreshProfile();
 
@@ -263,7 +324,7 @@ export default function RegisterProduct() {
         String(err?.message).toLowerCase().includes("autentica");
 
       if (isAuthError) {
-        promptLogin(() => executeSubmission(effectiveProductId, numPrice));
+        promptLogin(() => executeSubmission(effectiveProductId, numPrice, confirmOutlier));
         return;
       }
 

@@ -54,6 +54,7 @@ import { BASE_URL } from "../services/api";
 import { resetTutorialStatus } from "../utils/tutorialStorage";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 import { Image as ExpoImage } from "expo-image";
+import { fetchPendingOccurrences } from "../services/ocurrencyService";
 
 interface SettingsState {
   theme: "light" | "dark";
@@ -148,6 +149,7 @@ const SettingsScreen: React.FC = () => {
   const [clearCacheModalOpen, setClearCacheModalOpen] = useState(false);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [pendingModerationCount, setPendingModerationCount] = useState(0);
 
   // i18n
   const {
@@ -230,6 +232,24 @@ const SettingsScreen: React.FC = () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isAdmin) {
+      fetchPendingOccurrences()
+        .then((data) => {
+          if (isMounted) {
+            setPendingModerationCount(Array.isArray(data) ? data.length : 0);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setPendingModerationCount(0);
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isAdmin]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1121,6 +1141,54 @@ const SettingsScreen: React.FC = () => {
             <Text style={[styles.rowSubLabel, themeStyles.subText, { marginBottom: 12 }]}>
               Ferramentas exclusivas de depuração e validação de primeiro acesso.
             </Text>
+
+            {/* Moderação de Preços Pendentes */}
+            <TouchableOpacity
+              style={[
+                styles.adminActionCard,
+                {
+                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                  borderColor: accent + "30",
+                  marginBottom: 10,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => {
+                triggerHaptic();
+                router.push("/adminModeration");
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+                  <Shield size={18} color={accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                      {t("admin.moderationTitle") || "Moderação de Preços"}
+                    </Text>
+                    {pendingModerationCount > 0 && (
+                      <View
+                        style={{
+                          backgroundColor: "#EF4444",
+                          paddingHorizontal: 6,
+                          paddingVertical: 1,
+                          borderRadius: 10,
+                        }}
+                      >
+                        <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "800" }}>
+                          {pendingModerationCount}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                    {t("admin.moderationSub") || "Auditar e aprovar preços retidos por desvio atípico"}
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={accent} />
+            </TouchableOpacity>
 
             {/* Testar Tutorial Agora */}
             <TouchableOpacity
