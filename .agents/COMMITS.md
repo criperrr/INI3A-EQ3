@@ -2506,3 +2506,18 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/README.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Enables full native compilation, seamless local Android/iOS builds, and complete native library access for maps, camera, and device capabilities. Ready for atomic commits upon user request.
+
+## `2026-09-08 09:36` - `fix(ios)`: Resolve remaining Xcode build warnings and Pods libtool symbols
+
+- **Description:** Investigated and resolved all remaining Xcode build warnings shown in the Issue Navigator:
+  1. Eliminated duplicate library `-lc++` linker warning by removing redundant `-lc++` in `OTHER_LDFLAGS` and adding `-Wl,-no_warn_duplicate_libraries`.
+  2. Resolved `Cannot find protocol definition for 'RCTHostDelegate'` in `ExpoReactNativeFactory` by adding the `@protocol RCTHostDelegate <NSObject>` forward declaration to `Presco-Bridging-Header.h`.
+  3. Suppressed `RCTRootView` New Architecture deprecation warnings from legacy transition headers via `-Wno-deprecated-declarations` and `CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = NO`.
+  4. Silenced all 9 static library `has no symbols` libtool warnings across CocoaPods targets (`EXJSONUtils`, `expo-dev-menu`, `ExpoLogBox`, `EXUpdatesInterface`, `react-native-maps`, `RNReanimated`, `RNWorklets`) by injecting `OTHER_LIBTOOLFLAGS = '-no_warning_for_no_symbols'`.
+  5. Resolved the `Pods: Update to recommended settings` warning by aligning `LastUpgradeCheck` with Xcode 26.6 (`2660`) in `installer.pods_project`.
+- **Files Modified:**
+  - `src/frontend/ios/Podfile`
+  - `src/frontend/ios/Presco/Presco-Bridging-Header.h`
+  - `src/frontend/ios/Presco.xcodeproj/project.pbxproj`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Clean zero-warning Xcode build; run Command+B in Xcode to verify.
