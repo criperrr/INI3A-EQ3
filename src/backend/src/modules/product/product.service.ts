@@ -148,7 +148,12 @@ class ProductServiceClass {
         productData.categories?.split(",")[0]?.trim() ||
         "Outros";
       const category = normalizeCategoryName(rawCategory);
-      const imageUri = productData.image_url || productData.image_front_url || productData.image_small_url || "";
+      const imageUri =
+        productData.image_front_url ||
+        productData.image_front_small_url ||
+        productData.image_small_url ||
+        productData.image_url ||
+        "";
 
       let createdProduct = null;
       try {
