@@ -19,9 +19,43 @@ export interface PriceOccurrence {
 }
 
 export interface SubmitOccurrenceResult {
-  occurrence: PriceOccurrence;
-  pointsEarned: number;
-  currentPoints: number;
+  occurrence?: PriceOccurrence;
+  pointsEarned?: number;
+  currentPoints?: number;
+  isSuspended?: boolean;
+  pendingApproval?: boolean;
+  requiresConfirmation?: boolean;
+  stats?: {
+    avgPrice: number | null;
+    currentPrice: number;
+    ratio: number;
+    zScore: number;
+    trendDetected?: boolean;
+  };
+  message?: string;
+}
+
+export interface PendingOccurrenceItem {
+  id: number;
+  userId: number;
+  userName: string | null;
+  userEmail: string | null;
+  marketId: number;
+  marketName: string | null;
+  productId: number;
+  productName: string | null;
+  productIcon: string | null;
+  productCategory: string | null;
+  value: string;
+  trustFlag: boolean;
+  isSuspended: boolean;
+  isResolved: boolean;
+  createdAt: string;
+  baselineAvgPrice: number | null;
+  stddevPrice: number;
+  diffPercent: number;
+  hasTrendQuorum: boolean;
+  quorumUsersCount: number;
 }
 
 export interface VoteResult {
@@ -40,6 +74,7 @@ export async function submitPriceOccurrence(
   icon?: string,
   createdAt?: string,
   isPromotion?: boolean,
+  confirmOutlier?: boolean,
 ): Promise<SubmitOccurrenceResult> {
   return apiRequest<SubmitOccurrenceResult>("/ocurrency", {
     method: "POST",
@@ -50,6 +85,7 @@ export async function submitPriceOccurrence(
       icon,
       createdAt,
       isPromotion,
+      confirmOutlier,
     }),
   });
 }
@@ -99,3 +135,22 @@ export async function deleteOccurrence(
     method: "DELETE",
   });
 }
+
+export async function fetchPendingOccurrences(): Promise<PendingOccurrenceItem[]> {
+  return apiRequest<PendingOccurrenceItem[]>("/ocurrency/admin/pending", {
+    method: "GET",
+  });
+}
+
+export async function approveOccurrence(id: number): Promise<{ approved: boolean; occurrence: any }> {
+  return apiRequest<{ approved: boolean; occurrence: any }>(`/ocurrency/${id}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function rejectOccurrence(id: number): Promise<{ rejected: boolean; occurrence: any }> {
+  return apiRequest<{ rejected: boolean; occurrence: any }>(`/ocurrency/${id}/reject`, {
+    method: "POST",
+  });
+}
+

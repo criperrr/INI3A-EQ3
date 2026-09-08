@@ -351,6 +351,29 @@ export interface TranslationSchema {
     productRegisteredDate: string;
     brandPlaceholder: string;
     unitPlaceholder: string;
+    outlierAlertTitle: string;
+    outlierAlertBody: string;
+    outlierAlertBodySimple: string;
+    outlierAlertQuestion: string;
+    confirmPrice: string;
+    correctPrice: string;
+    pendingApprovalTitle: string;
+    pendingApprovalBody: string;
+  };
+  admin: {
+    moderationTitle: string;
+    moderationSub: string;
+    adminOnly: string;
+    approvedSuccess: string;
+    rejectPromptTitle: string;
+    rejectPromptBody: string;
+    rejectButton: string;
+    rejectedSuccess: string;
+    moderationEmptyTitle: string;
+    moderationEmptySubtitle: string;
+    moderationBanner: string;
+    rejectAction: string;
+    approveAction: string;
   };
   profile: {
     title: string;
@@ -646,5 +669,6 @@ export type TranslationKey =
   | `about.${keyof TranslationSchema["about"]}`
   | `errors.${keyof TranslationSchema["errors"]}`
   | `productCategories.${keyof TranslationSchema["productCategories"]}`
-  | `onboarding.${keyof TranslationSchema["onboarding"]}`;
+  | `onboarding.${keyof TranslationSchema["onboarding"]}`
+  | `admin.${keyof TranslationSchema["admin"]}`;
 
