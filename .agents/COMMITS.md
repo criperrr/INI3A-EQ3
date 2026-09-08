@@ -2653,3 +2653,26 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/PLANO_SISTEMA_DESVIO_PADRAO_E_MONITORAMENTO.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Contexto 100% preservado em disco para retomada imediata na próxima sessão ou troca de conta pelo usuário.
+
+## `2026-09-08 12:15` - `feat(stats)`: Sistema de desvio padrão adaptativo, retenção antifraude e moderação admin
+
+- **Description:** Implementação de motor estatístico adaptativo no PostgreSQL/Drizzle com janela temporal móvel (45 dias/20 amostras) e detecção de quórum multiusuário para acomodar inflação real. Preços moderadamente discrepantes exigem confirmação do usuário no envio (`registerProduct.tsx`), enquanto valores extremos são bloqueados e retidos (`is_suspended = true`) para moderação administrativa. Criada nova tela exclusiva `adminModeration.tsx` com aprovação/rejeição e feedback háptico, atalho dinâmico com badge em `settings.tsx`, novos endpoints de backend e sincronização i18n completa em 7 idiomas.
+- **Files Modified:**
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.controller.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.routes.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Banco de dados 100% protegido contra sabotagem e typos sem travar aumentos inflacionários legítimos. Pronto para a próxima etapa: implementar o monitoramento de listas no perfil.
