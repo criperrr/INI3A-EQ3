@@ -2591,3 +2591,40 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/components/Sidebar.tsx`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unused fonts and eager startup images completely eliminated from memory. Verified with 0 errors across frontend typecheck, backend typecheck, and linter.
+
+## `2026-09-08 11:35` - `perf(frontend)`: Otimização extrema de consumo de RAM e GPU na Home e no Mapa
+
+- **Description:** Implementou políticas nativas de desanexação e economia de memória em React Native e Expo SDK 57:
+  1. Ativou `enableScreens(true)` e `enableFreeze(true)` de `react-native-screens` e adicionou `freezeOnBlur: true` no Stack raiz de `_layout.tsx`, congelando componentes e timers de telas inativas.
+  2. Implementou expurgo contextual de bitmaps em RAM (`Image.clearMemoryCache()`) na transição para o mapa e no ciclo de vida de `MapScreen`.
+  3. Desativou malhas 3D de edifícios (`showsBuildings={false}`), interiores (`showsIndoors={false}`) e POIs gerais (`showsPointsOfInterests={false}`) no `MapView`, além da barra do Google Maps no Android (`toolbarEnabled={false}`).
+  4. Reduziu os marcadores simultâneos no mapa de 60 para 25 e podou os objetos de cache Overpass/OSRM em memória.
+  5. Ajustou `targetWidth` de `imageUtils.ts` para 280px a q=70, reduzindo ~51% da memória de bitmap sem perda visual em telas retina.
+  6. Limitou a prévia de mercados na Home a 6 itens e pausou o carrossel de banners quando a tela perde o foco via `useIsFocused`.
+  7. Redimensionou assets de logo estáticos de 598x598 para 180x180 px (3x exato para 60x60 dp), economizando 1.3 MB de bitmap fixo.
+- **Files Modified:**
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/utils/imageUtils.ts`
+  - `src/frontend/components/images/logo-darkmode.png`
+  - `src/frontend/components/images/logo-presco.png`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Consumo de RAM na Home reduzido drasticamente (estimado de 480MB para ~240-300MB) e no Mapa (estimado de 600MB para ~340-400MB). Zero erros de compilação e lint.
+
+## `2026-09-08 11:45` - `perf(frontend)`: Stabilize RAM and eliminate stutter regressions
+
+- **Description:** Removed counter-productive memory optimizations (`enableScreens(true)`, `enableFreeze(true)`, `freezeOnBlur: true` and aggressive `Image.clearMemoryCache()` on route navigation and map mount) that caused CPU decompressor thrashing and peak RAM buffer spikes. Fixed navigation container crash in `HomeScreen` by using Expo Router native `usePathname()`. Decoupled imperative `scrollToIndex` calls from the React state updater in the Home `Banner` carousel. Maintained high-impact safe optimizations: downsampled image pipeline (280px q=70), resized static logo assets (180x180 px), trimmed MapView 3D buildings/POIs, capped map markers to 25, and pruned in-memory OSM caches.
+- **Files Modified:**
+  - `src/frontend/app/_layout.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/utils/imageUtils.ts`
+  - `src/frontend/components/images/logo-darkmode.png`
+  - `src/frontend/components/images/logo-presco.png`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Eliminated navigation crash and micro-stutters during screen switching. Reduced genuine bitmap heap and GPU overhead without CPU decompression penalties.
