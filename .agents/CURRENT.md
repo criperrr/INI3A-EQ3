@@ -42,8 +42,8 @@ Routes:
 
 **Caching & Performance Architecture:** Multi-tier caching with HTTP ETag (304 Not Modified), Brotli/Gzip payload compression (`compression`), Redis cache-aside on product routes with in-memory fallback and pattern invalidation, and Sharp dynamic image pipeline.
 
-**Frontend** is a React Native Expo app (SDK 57, React Native 0.86.3, React 19.2.3, Expo Router). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
-- `login.tsx` features automatic Expo Go / Dev environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
+**Frontend** is a React Native Expo app configured with Expo Dev Builds (SDK 57, React Native 0.86.3, React 19.2.3, Expo Router, `expo-dev-client`). Screens live in `src/frontend/app/`. All API calls go through `services/api.ts → apiRequest` and domain services in `services/`.
+- `login.tsx` features automatic Dev Build environment detection with 1-tap quick login for `admin@admin.org` (password `admin`) and regular test user.
 - `profile.tsx` is 100% dynamic without mock data, displaying real XP levels, ranks, badges, stats, contribution activity heatmap, dynamic visual banners, animated/glow avatar frames, custom level badges, and an interactive Customization Shop modal with live avatar preview.
 - `productDetails.tsx` displays market prices list, allows community price voting, interactive timeline chart starting at the right edge with newest prices, and grants exclusive edit/delete controls to admins.
 - `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.

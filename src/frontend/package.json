@@ -7,11 +7,15 @@
     "dev:tunnel": "expo start --tunnel",
     "dev:lan": "expo start --lan",
     "start": "expo start",
-    "reset-project": "node ./scripts/reset-project.js",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "prebuild": "expo prebuild",
+    "prebuild:clean": "expo prebuild --clean",
+    "build:dev": "eas build --profile development --platform android",
+    "build:preview": "eas build --profile preview --platform android",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@expo/metro-runtime": "~57.0.15",
@@ -25,6 +29,7 @@
     "expo-blur": "~57.0.2",
     "expo-camera": "~57.0.4",
     "expo-constants": "~57.0.17",
+    "expo-dev-client": "~57.0.18",
     "expo-font": "~57.0.3",
     "expo-haptics": "~57.0.2",
     "expo-image": "~57.0.4",

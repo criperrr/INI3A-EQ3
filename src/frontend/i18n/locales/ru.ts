@@ -84,7 +84,7 @@ export const ru: TranslationSchema = {
     passwordTooShort: "Пароль должен содержать не менее 6 символов.",
     passwordsDoNotMatch: "Пароли не совпадают.",
     nameRequired: "Полное имя обязательно для заполнения.",
-    devMode: "Среда Expo Go / Разработчика",
+    devMode: "Среда разработки",
     devModeDesc: "Нажмите, чтобы войти под тестовым пользователем:",
     regularUser: "Обычный пользователь",
     adminUser: "Администратор",
