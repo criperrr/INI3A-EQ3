@@ -18,6 +18,7 @@ import { Stack } from "expo-router";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchMarkets } from "../services/marketService";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -48,8 +49,8 @@ const OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter"
 ];
 
-// In-memory cache for Overpass queries (stores raw nodes/ways around coords)
-const MAX_OVERPASS_CACHE_SIZE = 8;
+// In-memory cache podado para queries Overpass
+const MAX_OVERPASS_CACHE_SIZE = 4;
 const OVERPASS_CACHE = new Map<string, { elements: any[]; timestamp: number }>();
 
 function setOverpassCache(key: string, value: { elements: any[]; timestamp: number }) {
@@ -60,8 +61,8 @@ function setOverpassCache(key: string, value: { elements: any[]; timestamp: numb
     OVERPASS_CACHE.set(key, value);
 }
 
-// In-memory cache for OSRM driving distances
-const MAX_OSRM_CACHE_SIZE = 100;
+// In-memory cache para distâncias calculadas OSRM
+const MAX_OSRM_CACHE_SIZE = 40;
 const OSRM_DISTANCE_CACHE = new Map<string, number>();
 
 function setOsrmCache(key: string, distance: number) {
@@ -318,9 +319,17 @@ const fetchAllMarketsData = async (
                     if (idKey) seenIds.add(idKey);
                     seenGeo.add(geoKey);
                     accumulated.push({
-                        ...el,
+                        id: el.id,
                         lat: latCoord,
                         lon: lonCoord,
+                        name: el.name,
+                        tags: {
+                            name: el.tags?.name || el.name,
+                            brand: el.tags?.brand,
+                            operator: el.tags?.operator,
+                            shop: el.tags?.shop || "supermarket",
+                            opening_hours: el.tags?.opening_hours,
+                        },
                     });
                     added++;
                 }
@@ -615,7 +624,7 @@ export default function MapScreen() {
 
         return unique
             .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
-            .slice(0, 60);
+            .slice(0, 25);
     }, [userLocation, rawOsmElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
@@ -676,6 +685,15 @@ export default function MapScreen() {
                     style={styles.map}
                     showsUserLocation={true}
                     showsMyLocationButton={false}
+                    showsBuildings={false}
+                    showsIndoors={false}
+                    showsPointsOfInterests={false}
+                    showsCompass={false}
+                    showsScale={false}
+                    toolbarEnabled={false}
+                    loadingEnabled={false}
+                    maxZoomLevel={19}
+                    minZoomLevel={11}
                     initialRegion={{
                         latitude: userLocation.latitude || DEFAULT_COORDINATE.latitude,
                         longitude: userLocation.longitude || DEFAULT_COORDINATE.longitude,
@@ -872,7 +890,7 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, a
             <Pressable style={styles.modalOverlay} onPress={onClose}>
                 <Pressable style={[styles.marketDetailContent, themeStyles.card]}>
                     <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=80&w=600&auto=format&fit=crop' }}
+                        source={{ uri: getOptimizedImageUrl('https://images.unsplash.com/photo-1578916171728-46686eac8d58', 320, 70) || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=70&w=320&auto=format&fit=crop' }}
                         style={styles.marketImage}
                         contentFit="cover"
                         cachePolicy="memory-disk"
