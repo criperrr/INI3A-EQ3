@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 interface ProductCardProps {
   name: string;
@@ -78,6 +79,8 @@ const ProductImage = memo(function ProductImage({
   const { tokens } = useTheme();
   const { semantic } = tokens;
 
+  const optimizedUri = getOptimizedImageUrl(imageUri, 360);
+
   return (
     <View
       style={[
@@ -89,12 +92,13 @@ const ProductImage = memo(function ProductImage({
         },
       ]}
     >
-      {imageUri ? (
+      {optimizedUri ? (
         <Image
-          source={{ uri: imageUri }}
+          source={{ uri: optimizedUri }}
           style={styles.productImage}
           contentFit="contain"
           cachePolicy="memory-disk"
+          recyclingKey={optimizedUri}
           transition={150}
         />
       ) : (

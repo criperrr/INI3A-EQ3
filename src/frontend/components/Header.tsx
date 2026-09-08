@@ -1,7 +1,7 @@
 import React, { memo } from "react";
 import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { Image } from "expo-image";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

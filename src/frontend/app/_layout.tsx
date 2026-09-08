@@ -1,9 +1,10 @@
 // app/_layout.tsx
-import React, { useState } from "react";
-import { StyleSheet, View, StatusBar, Platform } from "react-native";
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, StatusBar, Platform, AppState } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Stack, usePathname, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Image } from "expo-image";
 import { ThemeProvider, useTheme } from "../theme";
 import { I18nProvider } from "../content/i18nContext";
 import { AuthProvider } from "../content/authContext";
@@ -20,6 +21,16 @@ function LayoutContent() {
   const { semantic } = tokens;
   const { getTabIndex } = useTabNavigation();
   const isMainTab = getTabIndex(pathname) !== -1;
+
+  // Libera buffers de bitmap decodificados em RAM nativa quando o app vai para segundo plano
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "background" || nextState === "inactive") {
+        Image.clearMemoryCache().catch(() => {});
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const getActiveTab = (): TabKey | undefined => {
     if (!pathname) return "home";

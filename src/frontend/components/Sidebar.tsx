@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, usePathname } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
