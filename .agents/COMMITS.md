@@ -2645,3 +2645,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `README.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Informações do sistema, versões e stack tecnológica 100% alinhadas com o código e dependências ativas.
+
+## `2026-09-08 12:00` - `docs(roadmap)`: Persistência do plano de desvio padrão adaptativo e monitoramento de listas
+
+- **Description:** Formalização e persistência no repositório do plano de implementação completo para o Sistema de Desvio Padrão Adaptativo com Quórum Multiusuário contra Inflação, Retenção Antifraude de Preços, Painel de Moderação Admin e Roadmap de Monitoramento de Listas/Produtos em perfil.
+- **Files Modified:**
+  - `.agents/PLANO_SISTEMA_DESVIO_PADRAO_E_MONITORAMENTO.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Contexto 100% preservado em disco para retomada imediata na próxima sessão ou troca de conta pelo usuário.
