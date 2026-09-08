@@ -14,6 +14,7 @@ class OcurrencyServiceClass {
     icon?: string | undefined;
     isPromotion?: boolean | undefined;
     createdAt?: string | Date | undefined;
+    confirmOutlier?: boolean | undefined;
   }) {
     const numValue = typeof data.value === "string" ? parseFloat(data.value.replace(/[^0-9.,]/g, "").replace(",", ".")) : data.value;
     if (isNaN(numValue) || numValue <= 0) {
@@ -54,6 +55,93 @@ class OcurrencyServiceClass {
       );
     }
 
+    // --- Dynamic Adaptive Standard Deviation & Outlier Analysis ---
+    const stats = await OcurrencyRepository.getAdaptivePriceStats(data.productId, numValue);
+
+    let isExtremeOutlier = false;
+    let isModerateOutlier = false;
+    let outlierRatio = 1;
+    let zScore = 0;
+
+    if (stats.count > 0 && stats.avgPrice && stats.avgPrice > 0) {
+      const mu = stats.avgPrice;
+      const sigma = stats.stddevPrice;
+      const delta = Math.abs(numValue - mu);
+      outlierRatio = numValue >= mu ? numValue / mu : mu / numValue;
+      zScore = sigma > 0 ? delta / sigma : 0;
+
+      if (!stats.hasQuorumForCandidate) {
+        // No multi-user quorum supporting this new level: strictly evaluate deviation
+        if (
+          ((outlierRatio >= 5.0 || numValue <= 0.15 * mu) || (stats.count >= 3 && zScore >= 4.0)) &&
+          delta >= 3.0
+        ) {
+          isExtremeOutlier = true;
+        } else if (
+          ((outlierRatio >= 2.2 || numValue <= 0.45 * mu) || (stats.count >= 3 && zScore >= 2.2)) &&
+          delta >= 1.5
+        ) {
+          isModerateOutlier = true;
+        }
+      } else {
+        // Multi-user consensus / inflation cluster detected (2+ distinct authenticated users)!
+        // Do not block extreme outlier. Only prompt for confirmation if still significantly higher and unconfirmed:
+        if (outlierRatio >= 2.5 && delta >= 2.0 && !data.confirmOutlier) {
+          isModerateOutlier = true;
+        }
+      }
+    }
+
+    // 1. Extreme Outlier: Retain for admin review, suspend, 0 XP until approved
+    if (isExtremeOutlier) {
+      const [created] = await OcurrencyRepository.create({
+        userId: data.userId,
+        productId: data.productId,
+        marketId: data.marketId,
+        value: numValue,
+        icon: data.icon,
+        isPromotion: Boolean(data.isPromotion),
+        isSuspended: true,
+        isResolved: false,
+        trustFlag: false,
+        createdAt: data.createdAt,
+      });
+
+      const user = await UserRepository.getUserById(data.userId);
+      return {
+        occurrence: created,
+        pointsEarned: 0,
+        currentPoints: user?.points ?? 0,
+        isSuspended: true,
+        pendingApproval: true,
+        requiresConfirmation: false,
+        stats: {
+          avgPrice: stats.avgPrice,
+          currentPrice: numValue,
+          ratio: Number(outlierRatio.toFixed(2)),
+          zScore: Number(zScore.toFixed(2)),
+        },
+        message: "O valor informado difere expressivamente da média histórica do produto e foi retido para análise da moderação antes de ser exibido.",
+      };
+    }
+
+    // 2. Moderate Outlier: Require explicit user confirmation before recording
+    if (isModerateOutlier && !data.confirmOutlier) {
+      return {
+        requiresConfirmation: true,
+        pendingApproval: false,
+        stats: {
+          avgPrice: stats.avgPrice,
+          currentPrice: numValue,
+          ratio: Number(outlierRatio.toFixed(2)),
+          zScore: Number(zScore.toFixed(2)),
+          trendDetected: stats.hasQuorumForCandidate,
+        },
+        message: "O valor informado difere da média recente deste produto. Confirme se o preço digitado está correto.",
+      };
+    }
+
+    // 3. Standard / Confirmed Flow: Save normally, award +15 XP
     const [created] = await OcurrencyRepository.create({
       userId: data.userId,
       productId: data.productId,
@@ -61,6 +149,9 @@ class OcurrencyServiceClass {
       value: numValue,
       icon: data.icon,
       isPromotion: Boolean(data.isPromotion),
+      isSuspended: false,
+      isResolved: true,
+      trustFlag: true,
       createdAt: data.createdAt,
     });
 
@@ -73,6 +164,9 @@ class OcurrencyServiceClass {
       occurrence: created,
       pointsEarned: 15,
       currentPoints: updatedUser?.points ?? 0,
+      isSuspended: false,
+      pendingApproval: false,
+      requiresConfirmation: false,
     };
   }
 
@@ -169,6 +263,72 @@ class OcurrencyServiceClass {
     await OcurrencyRepository.delete(ocurrencyId);
     await invalidateCachePattern("products");
     return { deleted: true, id: ocurrencyId };
+  }
+
+  async getPendingAdminOccurrences() {
+    const pending = await OcurrencyRepository.getPendingOccurrences();
+    const enriched = await Promise.all(
+      pending.map(async (item) => {
+        const stats = await OcurrencyRepository.getAdaptivePriceStats(item.productId, Number(item.value));
+        const numVal = Number(item.value);
+        const avg = stats.avgPrice;
+        let diffPercent = 0;
+        if (avg && avg > 0) {
+          diffPercent = Math.round(((numVal - avg) / avg) * 100);
+        }
+
+        return {
+          ...item,
+          baselineAvgPrice: avg,
+          stddevPrice: stats.stddevPrice,
+          diffPercent,
+          hasTrendQuorum: stats.hasQuorumForCandidate,
+          quorumUsersCount: stats.quorumCount,
+        };
+      })
+    );
+
+    return enriched;
+  }
+
+  async approve(adminUserId: number, ocurrencyId: number) {
+    const occurrence = await OcurrencyRepository.findById(ocurrencyId);
+    if (!occurrence) {
+      throw new NotFoundError("Ocorrência não encontrada.");
+    }
+
+    const approved = await OcurrencyRepository.approveOccurrence(ocurrencyId);
+    if (!approved) {
+      throw new NotFoundError("Erro ao aprovar ocorrência.");
+    }
+
+    // Award +15 XP to the original author
+    await UserRepository.incrementPoints(occurrence.userId, 15);
+    await invalidateCachePattern("products");
+
+    return {
+      approved: true,
+      occurrence: approved,
+    };
+  }
+
+  async reject(adminUserId: number, ocurrencyId: number) {
+    const occurrence = await OcurrencyRepository.findById(ocurrencyId);
+    if (!occurrence) {
+      throw new NotFoundError("Ocorrência não encontrada.");
+    }
+
+    const rejected = await OcurrencyRepository.rejectOccurrence(ocurrencyId);
+    if (!rejected) {
+      throw new NotFoundError("Erro ao rejeitar ocorrência.");
+    }
+
+    await invalidateCachePattern("products");
+
+    return {
+      rejected: true,
+      occurrence: rejected,
+    };
   }
 }
 

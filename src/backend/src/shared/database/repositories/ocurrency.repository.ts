@@ -16,6 +16,9 @@ export interface CreateOccurrenceDTO {
   icon?: string | undefined;
   isPromotion?: boolean | undefined;
   createdAt?: string | Date | undefined;
+  isSuspended?: boolean | undefined;
+  isResolved?: boolean | undefined;
+  trustFlag?: boolean | undefined;
 }
 
 export interface UpdateOccurrenceDTO {
@@ -25,6 +28,17 @@ export interface UpdateOccurrenceDTO {
   isResolved?: boolean | undefined;
   trustFlag?: boolean | undefined;
   isPromotion?: boolean | undefined;
+}
+
+export interface AdaptivePriceStats {
+  count: number;
+  distinctUsers: number;
+  avgPrice: number | null;
+  stddevPrice: number;
+  minPrice: number | null;
+  maxPrice: number | null;
+  hasQuorumForCandidate: boolean;
+  quorumCount: number;
 }
 
 
@@ -41,6 +55,9 @@ class OcurrencyRepositoryClass {
         value: formattedValue,
         icon: data.icon,
         isPromotion: Boolean(data.isPromotion),
+        ...(data.isSuspended !== undefined ? { isSuspended: data.isSuspended } : {}),
+        ...(data.isResolved !== undefined ? { isResolved: data.isResolved } : {}),
+        ...(data.trustFlag !== undefined ? { trustFlag: data.trustFlag } : {}),
         ...(data.createdAt ? { createdAt: new Date(data.createdAt).toISOString() } : {}),
       })
       .returning();
@@ -403,6 +420,128 @@ class OcurrencyRepositoryClass {
       .limit(1);
 
     return recent || null;
+  }
+
+  async getAdaptivePriceStats(productId: number, candidatePrice?: number): Promise<AdaptivePriceStats> {
+    const statsResult = await db.execute(sql`
+      WITH recent_prices AS (
+        SELECT 
+          value::numeric AS val, 
+          user_id, 
+          created_at
+        FROM ocurrency
+        WHERE product_id = ${productId}
+          AND is_suspended = false
+        ORDER BY created_at DESC
+        LIMIT 25
+      )
+      SELECT
+        COUNT(*)::int AS recent_count,
+        COUNT(DISTINCT user_id)::int AS distinct_users,
+        AVG(val)::numeric AS avg_price,
+        COALESCE(STDDEV_SAMP(val), 0)::numeric AS stddev_price,
+        MIN(val)::numeric AS min_price,
+        MAX(val)::numeric AS max_price
+      FROM recent_prices;
+    `);
+
+    const rawRows = (statsResult.rows || statsResult) as any[];
+    const row = rawRows[0];
+    const count = Number(row?.recent_count || 0);
+    const distinctUsers = Number(row?.distinct_users || 0);
+    const avgPrice = row?.avg_price ? parseFloat(row.avg_price) : null;
+    const stddevPrice = row?.stddev_price ? parseFloat(row.stddev_price) : 0;
+    const minPrice = row?.min_price ? parseFloat(row.min_price) : null;
+    const maxPrice = row?.max_price ? parseFloat(row.max_price) : null;
+
+    let hasQuorumForCandidate = false;
+    let quorumCount = 0;
+
+    if (candidatePrice && candidatePrice > 0) {
+      const minBand = candidatePrice * 0.8;
+      const maxBand = candidatePrice * 1.2;
+
+      const quorumResult = await db.execute(sql`
+        SELECT COUNT(DISTINCT user_id)::int AS quorum_users
+        FROM ocurrency
+        WHERE product_id = ${productId}
+          AND is_suspended = false
+          AND value::numeric BETWEEN ${minBand} AND ${maxBand}
+          AND created_at >= NOW() - INTERVAL '30 days';
+      `);
+
+      const quorumRows = (quorumResult.rows || quorumResult) as any[];
+      quorumCount = Number(quorumRows[0]?.quorum_users || 0);
+      hasQuorumForCandidate = quorumCount >= 2;
+    }
+
+    return {
+      count,
+      distinctUsers,
+      avgPrice,
+      stddevPrice,
+      minPrice,
+      maxPrice,
+      hasQuorumForCandidate,
+      quorumCount,
+    };
+  }
+
+  async getPendingOccurrences() {
+    const rows = await db
+      .select({
+        id: Ocurrency.id,
+        userId: Ocurrency.userId,
+        userName: User.name,
+        userEmail: User.email,
+        marketId: Ocurrency.marketId,
+        marketName: Market.name,
+        productId: Ocurrency.productId,
+        productName: Product.name,
+        productIcon: Product.icon,
+        productCategory: Product.description,
+        value: Ocurrency.value,
+        trustFlag: Ocurrency.trustFlag,
+        isSuspended: Ocurrency.isSuspended,
+        isResolved: Ocurrency.isResolved,
+        createdAt: Ocurrency.createdAt,
+      })
+      .from(Ocurrency)
+      .leftJoin(User, eq(Ocurrency.userId, User.id))
+      .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
+      .leftJoin(Product, eq(Ocurrency.productId, Product.id))
+      .where(and(eq(Ocurrency.isSuspended, true), eq(Ocurrency.isResolved, false)))
+      .orderBy(desc(Ocurrency.createdAt));
+
+    return rows;
+  }
+
+  async approveOccurrence(id: number) {
+    const [updated] = await db
+      .update(Ocurrency)
+      .set({
+        isSuspended: false,
+        isResolved: true,
+        trustFlag: true,
+      })
+      .where(eq(Ocurrency.id, id))
+      .returning();
+
+    return updated || null;
+  }
+
+  async rejectOccurrence(id: number) {
+    const [updated] = await db
+      .update(Ocurrency)
+      .set({
+        isSuspended: true,
+        isResolved: true,
+        trustFlag: false,
+      })
+      .where(eq(Ocurrency.id, id))
+      .returning();
+
+    return updated || null;
   }
 }
 

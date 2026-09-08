@@ -6,7 +6,7 @@ import { ValidationError } from "@/shared/errors/errors";
 class OcurrencyControllerClass {
   async create(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { productId, marketId, value, icon, createdAt, isPromotion } = req.body;
+      const { productId, marketId, value, icon, createdAt, isPromotion, confirmOutlier } = req.body;
       const errors: Array<{ field: string; message: string }> = [];
 
       if (!productId || isNaN(Number(productId))) {
@@ -29,6 +29,7 @@ class OcurrencyControllerClass {
         icon,
         isPromotion: Boolean(isPromotion),
         createdAt,
+        confirmOutlier: Boolean(confirmOutlier),
       });
 
       return res.status(201).json(success(result));
@@ -122,6 +123,47 @@ class OcurrencyControllerClass {
       }
 
       const result = await ocurrencyService.delete(req.user.id, req.user.roleId, numId);
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async getPending(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const pending = await ocurrencyService.getPendingAdminOccurrences();
+      return res.status(200).json(success(pending));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async approve(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID da ocorrência inválido." }]);
+      }
+
+      const result = await ocurrencyService.approve(req.user.id, numId);
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async reject(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID da ocorrência inválido." }]);
+      }
+
+      const result = await ocurrencyService.reject(req.user.id, numId);
       return res.status(200).json(success(result));
     } catch (e) {
       next(e);
