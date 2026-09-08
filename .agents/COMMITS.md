@@ -2521,3 +2521,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/ios/Presco.xcodeproj/project.pbxproj`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Clean zero-warning Xcode build; run Command+B in Xcode to verify.
+
+## 2026-09-08 10:19 - fix(ios): resolve Xcode PhaseScriptExecution failure and ELOOP symlink recursion
+
+- **Description:** Investigated and resolved the build failure `Command PhaseScriptExecution failed with a nonzero exit code` occurring during the `[CP-User] Generate Specs` phase. Extracted build logs and identified `ELOOP: too many symbolic links encountered` caused by recursive nested symlinks within `ios/build/generated/ios/ReactCodegen/react/renderer/components`. Hardened the Podfile post-install hook to safely unlink existing destination symlinks before invoking `FileUtils.ln_s` to prevent Unix folder self-nesting. Cleared corrupted build artifacts and validated clean Codegen specs generation with exit code 0.
+- **Files Modified:**
+  - `src/frontend/ios/Podfile`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Xcode builds now complete the `Generate Specs` script phase without `ELOOP` crashes. Ready for Xcode Clean & Run.
+
+## 2026-09-08 10:21 - fix(frontend): declare react-native-svg in dependencies and generate missing codegen sources
+
+- **Description:** Resolved Xcode build errors `Build input file cannot be found: rnsvg-generated.mm / States.cpp`. Discovered that while `react-native-svg` was hoisted in the root node_modules and used in components (`FeatherIcon.tsx`), it was not listed under explicit `dependencies` in `src/frontend/package.json`. When `ios/build` was purged, the fallback Codegen scanner skipped `rnsvg`. Added `"react-native-svg": "15.15.5"` to `src/frontend/package.json`, regenerated `autolinking.json`, and executed React Native Codegen, successfully outputting `rnsvg-generated.mm` and `States.cpp` to `ios/build/generated/ios/ReactCodegen`.
+- **Files Modified:**
+  - `src/frontend/package.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Xcode can now find all required build input files for the ReactCodegen target. Ready for Xcode build.
