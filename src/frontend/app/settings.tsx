@@ -43,7 +43,9 @@ import {
   Code2,
   BookOpen,
   FlaskConical,
+  ChevronRight,
 } from "lucide-react-native";
+import Constants from "expo-constants";
 import { useTheme, MONET_PRESETS } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
@@ -1037,7 +1039,9 @@ const SettingsScreen: React.FC = () => {
             <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
               {t("common.version")}
             </Text>
-            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>1.0.0 (Build 42)</Text>
+            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+              {Constants.expoConfig?.version ?? "1.0.0"} (Build 2026.09)
+            </Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -1045,7 +1049,7 @@ const SettingsScreen: React.FC = () => {
               {t("common.environment")}
             </Text>
             <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-              {Platform.OS.toUpperCase()} • Expo SDK 54
+              {Platform.OS.toUpperCase()} • Expo SDK 57 (RN 0.86)
             </Text>
           </View>
 
@@ -1076,6 +1080,20 @@ const SettingsScreen: React.FC = () => {
               </Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 2 }]}
+            activeOpacity={0.7}
+            onPress={() => router.push("/about")}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <BookOpen size={16} color={accent} />
+              <Text style={[styles.infoLabel, themeStyles.text, { fontWeight: "500" }]}>
+                {t("about.title")}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={themeStyles.subText.color} />
+          </TouchableOpacity>
         </View>
 
         {/* Exclusive Admin Developer & QA Testing Panel */}

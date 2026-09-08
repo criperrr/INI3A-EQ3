@@ -202,7 +202,7 @@ export default function AboutScreen() {
           </Text>
 
           <View style={styles.techTagsContainer}>
-            {["React Native", "Expo SDK 54", "PostGIS", "Drizzle ORM", "Redis", "OpenFoodFacts"].map(
+            {["React Native 0.86", "Expo SDK 57", "Reanimated 4", "PostGIS", "Drizzle ORM", "Redis", "OpenFoodFacts"].map(
               (tag) => (
                 <View
                   key={tag}
