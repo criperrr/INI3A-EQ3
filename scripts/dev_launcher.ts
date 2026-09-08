@@ -145,7 +145,7 @@ async function main() {
       customUrl = args[++i];
       mode = "corp";
     } else if (arg === "--ip" && args[i + 1]) {
-      customIp = args[++i];
+      customIp = args[++i].replace(/^https?:\/\//, "").replace(/:\d+.*$/, "").trim();
     }
   }
 

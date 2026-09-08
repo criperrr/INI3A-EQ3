@@ -2537,3 +2537,10 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Xcode can now find all required build input files for the ReactCodegen target. Ready for Xcode build.
+
+## `2026-09-08 10:35` - `fix(scripts)`: Sanitize custom IP input in dev launcher
+
+- **Description:** Sanitized the `--ip` parameter in `scripts/dev_launcher.ts` to automatically strip any accidentally provided HTTP protocol or port (e.g. `:8081`).
+- **Files Modified:**
+  - `scripts/dev_launcher.ts`
+- **Impact / Next Steps:** Prevents port duplication and URL parsing crashes when starting the development server.
