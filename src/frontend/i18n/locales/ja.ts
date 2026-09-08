@@ -547,7 +547,7 @@ export const ja: TranslationSchema = {
     howItWorksDescription: "あなたのような買い物客がバーコードをスキャンし、近所のスーパーの価格をリアルタイムで記録します。アルゴリズムが過去の平均値を計算し、最安値を特定し、信頼性を評価します。",
     openDataTitle: "オープンエコシステムと技術",
     openDataDescription: "React Native、Expo、Node.js、高精度な位置情報計算のためのPostGIS、そしてOpenFoodFactsなどのオープンデータベースと連携して開発されています。",
-    versionInfo: "バージョン 1.0.0 (ビルド 2026.08)",
+    versionInfo: "バージョン 1.0.0 (ビルド 2026.09)",
     buildInfo: "INI3A-EQ3チームによって心を込めて制作されました",
     privacyPolicy: "プライバシーポリシー",
     termsOfService: "利用規約",

@@ -547,7 +547,7 @@ export const es: TranslationSchema = {
     howItWorksDescription: "Los consumidores escanean códigos de barras y registran precios en tiempo real en los supermercados de su barrio. Nuestro algoritmo calcula promedios históricos, identifica las mejores ofertas y establece índices de confiabilidad.",
     openDataTitle: "Ecosistema Abierto y Tecnologías",
     openDataDescription: "Desarrollado con React Native, Expo, Node.js, PostGIS para geolocalización precisa e integración inteligente con bases abiertas como OpenFoodFacts.",
-    versionInfo: "Versión 1.0.0 (Build 2026.08)",
+    versionInfo: "Versión 1.0.0 (Build 2026.09)",
     buildInfo: "Hecho con dedicación por el equipo INI3A-EQ3",
     privacyPolicy: "Política de Privacidad",
     termsOfService: "Términos de Servicio",

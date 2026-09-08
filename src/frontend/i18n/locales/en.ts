@@ -547,7 +547,7 @@ export const en: TranslationSchema = {
     howItWorksDescription: "Shoppers like you scan barcodes and record real-time prices at local supermarkets and neighborhood stores. Our algorithm computes historical averages, identifies best deals, and verifies trustworthiness.",
     openDataTitle: "Open Ecosystem & Technologies",
     openDataDescription: "Built with React Native, Expo, Node.js, PostGIS for high-precision geolocation, and smart integration with open datasets such as OpenFoodFacts.",
-    versionInfo: "Version 1.0.0 (Build 2026.08)",
+    versionInfo: "Version 1.0.0 (Build 2026.09)",
     buildInfo: "Handcrafted with passion by the INI3A-EQ3 team",
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",

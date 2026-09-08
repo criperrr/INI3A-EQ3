@@ -547,7 +547,7 @@ export const ru: TranslationSchema = {
     howItWorksDescription: "Покупатели сканируют штрихкоды и фиксируют цены в супермаркетах своего района в реальном времени. Алгоритм рассчитывает средние показатели и находит лучшие предложения.",
     openDataTitle: "Открытая экосистема и технологии",
     openDataDescription: "Создано на React Native, Expo, Node.js, PostGIS для точной геолокации и интеграции с открытыми базами данных, такими как OpenFoodFacts.",
-    versionInfo: "Версия 1.0.0 (Сборка 2026.08)",
+    versionInfo: "Версия 1.0.0 (Сборка 2026.09)",
     buildInfo: "Разработано с заботой командой INI3A-EQ3",
     privacyPolicy: "Политика конфиденциальности",
     termsOfService: "Условия использования",

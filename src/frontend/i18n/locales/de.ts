@@ -547,7 +547,7 @@ export const de: TranslationSchema = {
     howItWorksDescription: "Verbraucher scannen Barcodes und erfassen Echtzeitpreise in lokalen Geschäften. Unser Algorithmus berechnet Durchschnittswerte, findet die besten Angebote und sichert die Zuverlässigkeit.",
     openDataTitle: "Offenes Ökosystem & Technologien",
     openDataDescription: "Entwickelt mit React Native, Expo, Node.js, PostGIS für präzise Geolokalisierung und Anbindung an offene Datenbanken wie OpenFoodFacts.",
-    versionInfo: "Version 1.0.0 (Build 2026.08)",
+    versionInfo: "Version 1.0.0 (Build 2026.09)",
     buildInfo: "Mit Leidenschaft entwickelt vom INI3A-EQ3 Team",
     privacyPolicy: "Datenschutzerklärung",
     termsOfService: "Nutzungsbedingungen",

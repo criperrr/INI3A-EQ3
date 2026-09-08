@@ -547,7 +547,7 @@ export const zh: TranslationSchema = {
     howItWorksDescription: "消费者扫码并实时记录身边超市的真实售价。我们的智能算法计算历史均价、筛选最优折扣并评估数据可信度。",
     openDataTitle: "开放生态与技术栈",
     openDataDescription: "基于 React Native、Expo、Node.js 开发，借助 PostGIS 实现精准地理位置计算，并与 OpenFoodFacts 等开源数据库智能联动。",
-    versionInfo: "版本 1.0.0 (构建号 2026.08)",
+    versionInfo: "版本 1.0.0 (构建号 2026.09)",
     buildInfo: "由 INI3A-EQ3 团队倾心打造",
     privacyPolicy: "隐私政策",
     termsOfService: "服务条款",
