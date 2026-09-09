@@ -44,33 +44,28 @@ const getOperatingHoursOptions = (t: (key: any) => string) => [
     { label: t("map.hoursWithInfo"), value: "with_hours" },
 ];
 
-const OVERPASS_ENDPOINTS = [
-    "https://overpass.openstreetmap.fr/api/interpreter",
-    "https://overpass-api.de/api/interpreter"
-];
+// In-memory cache podado para queries HERE Places
+const MAX_HERE_CACHE_SIZE = 8;
+const HERE_PLACES_CACHE = new Map<string, { elements: any[]; timestamp: number }>();
 
-// In-memory cache podado para queries Overpass
-const MAX_OVERPASS_CACHE_SIZE = 4;
-const OVERPASS_CACHE = new Map<string, { elements: any[]; timestamp: number }>();
-
-function setOverpassCache(key: string, value: { elements: any[]; timestamp: number }) {
-    if (OVERPASS_CACHE.size >= MAX_OVERPASS_CACHE_SIZE) {
-        const firstKey = OVERPASS_CACHE.keys().next().value;
-        if (firstKey) OVERPASS_CACHE.delete(firstKey);
+function setHerePlacesCache(key: string, value: { elements: any[]; timestamp: number }) {
+    if (HERE_PLACES_CACHE.size >= MAX_HERE_CACHE_SIZE) {
+        const firstKey = HERE_PLACES_CACHE.keys().next().value;
+        if (firstKey) HERE_PLACES_CACHE.delete(firstKey);
     }
-    OVERPASS_CACHE.set(key, value);
+    HERE_PLACES_CACHE.set(key, value);
 }
 
-// In-memory cache para distâncias calculadas OSRM
-const MAX_OSRM_CACHE_SIZE = 40;
-const OSRM_DISTANCE_CACHE = new Map<string, number>();
+// In-memory cache para distâncias calculadas HERE Routing v8
+const MAX_HERE_DISTANCE_CACHE_SIZE = 60;
+const HERE_DISTANCE_CACHE = new Map<string, number>();
 
-function setOsrmCache(key: string, distance: number) {
-    if (OSRM_DISTANCE_CACHE.size >= MAX_OSRM_CACHE_SIZE) {
-        const firstKey = OSRM_DISTANCE_CACHE.keys().next().value;
-        if (firstKey) OSRM_DISTANCE_CACHE.delete(firstKey);
+function setHereDistanceCache(key: string, distance: number) {
+    if (HERE_DISTANCE_CACHE.size >= MAX_HERE_DISTANCE_CACHE_SIZE) {
+        const firstKey = HERE_DISTANCE_CACHE.keys().next().value;
+        if (firstKey) HERE_DISTANCE_CACHE.delete(firstKey);
     }
-    OSRM_DISTANCE_CACHE.set(key, distance);
+    HERE_DISTANCE_CACHE.set(key, distance);
 }
 
 // Module-level cache for instant 0ms map open and tab transitions
@@ -125,170 +120,178 @@ const fetchDrivingDistances = async (userLocation: Coordinate, markers: MarketMa
     if (markers.length === 0) return markers;
 
     const locKey = `${userLocation.latitude.toFixed(3)}_${userLocation.longitude.toFixed(3)}`;
-    const uncachedMarkers = markers.filter(m => !OSRM_DISTANCE_CACHE.has(`${locKey}_${m.id}`));
+    const uncachedMarkers = markers.filter(m => !HERE_DISTANCE_CACHE.has(`${locKey}_${m.id}`));
 
     if (uncachedMarkers.length === 0) {
         return markers.map(m => ({
             ...m,
-            routeDistance: OSRM_DISTANCE_CACHE.get(`${locKey}_${m.id}`) ?? m.straightDistance
+            routeDistance: HERE_DISTANCE_CACHE.get(`${locKey}_${m.id}`) ?? m.straightDistance
         }));
     }
 
-    const toQuery = uncachedMarkers.slice(0, 15);
-    const coordinatesString = toQuery.map(m => `${m.coordinate.longitude},${m.coordinate.latitude}`).join(';');
-    const url = `https://router.project-osrm.org/table/v1/driving/${userLocation.longitude},${userLocation.latitude};${coordinatesString}?sources=0&annotations=distance`;
-
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const response = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        const data = await response.json();
-
-        if (data.code === 'Ok' && data.distances?.[0]) {
-            toQuery.forEach((marker, index) => {
-                const distanceInMeters = data.distances[0][index + 1];
-                if (distanceInMeters !== null && distanceInMeters !== undefined) {
-                    setOsrmCache(`${locKey}_${marker.id}`, distanceInMeters / 1000);
-                }
-            });
-        }
-    } catch {
-        // Fallback to straight distance silently without error blocking
+    const apiKey = process.env.EXPO_PUBLIC_HERE_API_KEY || "";
+    if (!apiKey) {
+        return markers.map(m => ({
+            ...m,
+            routeDistance: m.straightDistance
+        }));
     }
+
+    const toQuery = uncachedMarkers.slice(0, 10);
+    await Promise.allSettled(
+        toQuery.map(async (marker) => {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2500);
+                const url = `https://router.hereapi.com/v8/routes?transportMode=car&origin=${userLocation.latitude},${userLocation.longitude}&destination=${marker.coordinate.latitude},${marker.coordinate.longitude}&return=summary&apiKey=${apiKey}`;
+                const res = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const data = await res.json();
+                    const lengthMeters = data.routes?.[0]?.sections?.[0]?.summary?.length;
+                    if (typeof lengthMeters === "number") {
+                        setHereDistanceCache(`${locKey}_${marker.id}`, lengthMeters / 1000);
+                    }
+                }
+            } catch {
+                // Fallback to straight distance silently without error blocking
+            }
+        })
+    );
 
     return markers.map(m => ({
         ...m,
-        routeDistance: OSRM_DISTANCE_CACHE.get(`${locKey}_${m.id}`) ?? m.straightDistance
+        routeDistance: HERE_DISTANCE_CACHE.get(`${locKey}_${m.id}`) ?? m.straightDistance
     }));
 };
 
 /**
- * Fetch a single Overpass endpoint with strict JSON and timeout validation.
+ * Normaliza e limpa nomes de estabelecimentos da HERE API
  */
-const fetchOverpassEndpoint = async (endpoint: string, query: string, signal: AbortSignal): Promise<any[]> => {
-    const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Accept": "application/json",
-            "User-Agent": "PrescoApp/1.0 (contato@presco.app)"
-        },
-        body: `data=${encodeURIComponent(query)}`,
-        signal,
+const normalizeHereMarketName = (name: string): string => {
+    let clean = (name || "").trim();
+    if (!clean) return "";
+
+    // Rejeitar nomes de ruas/rodovias
+    if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(clean)) {
+        return "";
+    }
+    if (/^\d+/.test(clean)) return "";
+
+    // Rejeitar estabelecimentos não comerciais / irrelevantes
+    if (
+        /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio)\b/i.test(
+            clean
+        )
+    ) {
+        return "";
+    }
+
+    clean = clean.replace(/^(supermercado|mercado|hipermercado)\s+/i, match => {
+        return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    if (!data || !Array.isArray(data.elements)) throw new Error("Invalid elements payload");
-    return data.elements;
+
+    if (/^(supermercado|mercado|loja|mercearia)$/i.test(clean)) return "";
+    return clean;
 };
 
-/**
- * Ultra-fast fallback fetchers using Photon & Nominatim OpenStreetMap engines.
- */
-const fetchPhotonMarkets = async (latitude: number, longitude: number): Promise<any[]> => {
-    const url = `https://photon.komoot.io/api/?q=supermercado&lat=${latitude}&lon=${longitude}&limit=50`;
+const parseHereResponse = (items: any[]): any[] => {
+    return items.map(item => {
+        const rawName = normalizeHereMarketName(item.title);
+        if (!rawName) return null;
+        const pos = item.position;
+        if (!pos || typeof pos.lat !== "number" || typeof pos.lng !== "number") return null;
+
+        let shopType = "supermarket";
+        const catId = item.categories?.[0]?.id;
+        if (catId === "600-6300-0244") shopType = "convenience";
+        else if (catId === "600-6300-0067") shopType = "grocery";
+
+        let openingHours: string | undefined;
+        if (item.openingHours && Array.isArray(item.openingHours) && item.openingHours.length > 0) {
+            const oh = item.openingHours[0];
+            if (Array.isArray(oh.text) && oh.text.length > 0) {
+                openingHours = oh.text.join(" | ");
+            } else if (oh.isOpen !== undefined) {
+                openingHours = oh.isOpen ? "Aberto agora" : "Fechado agora";
+            }
+        }
+
+        return {
+            id: item.id || `here_${pos.lat}_${pos.lng}`,
+            lat: pos.lat,
+            lon: pos.lng,
+            name: rawName,
+            tags: {
+                name: rawName,
+                shop: shopType,
+                opening_hours: openingHours,
+                address: item.address?.label,
+            }
+        };
+    }).filter(Boolean);
+};
+
+const fetchHereDiscover = async (latitude: number, longitude: number, apiKey: string): Promise<any[]> => {
+    const url = `https://discover.search.hereapi.com/v1/discover?at=${latitude},${longitude}&q=supermercado&limit=50&apiKey=${apiKey}`;
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
         const res = await fetch(url, {
-            headers: { "User-Agent": "PrescoApp/1.0 (contato@presco.app)" },
+            headers: { "Accept": "application/json" },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.features || [])
-            .map((f: any) => {
-                const rawName = f.properties?.name?.trim();
-                if (!rawName) return null;
-                // Reject street names and house numbers
-                if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(rawName)) return null;
-                if (/^\d+/.test(rawName)) return null;
-
-                return {
-                    id: f.properties?.osm_id || Math.floor(Math.random() * 1000000),
-                    lat: f.geometry?.coordinates?.[1],
-                    lon: f.geometry?.coordinates?.[0],
-                    tags: {
-                        name: rawName,
-                        shop: f.properties?.osm_value || "supermarket",
-                        street: f.properties?.street,
-                        city: f.properties?.city,
-                        opening_hours: f.properties?.opening_hours
-                    }
-                };
-            })
-            .filter((el: any) => el && el.lat && el.lon);
+        return parseHereResponse(data?.items || []);
     } catch {
         return [];
     }
 };
 
-const fetchNominatimMarkets = async (latitude: number, longitude: number): Promise<any[]> => {
-    const delta = 0.08;
-    const url = `https://nominatim.openstreetmap.org/search?q=supermercado&format=json&bounded=1&viewbox=${longitude - delta},${latitude + delta},${longitude + delta},${latitude - delta}&limit=50`;
+const fetchHereBrowse = async (latitude: number, longitude: number, apiKey: string): Promise<any[]> => {
+    const categories = "600-6300-0066,600-6300-0067,600-6300-0244";
+    const url = `https://browse.search.hereapi.com/v1/browse?at=${latitude},${longitude}&categories=${categories}&limit=50&apiKey=${apiKey}`;
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
         const res = await fetch(url, {
-            headers: { "User-Agent": "PrescoApp/1.0 (contato@presco.app)" },
+            headers: { "Accept": "application/json" },
             signal: controller.signal
         });
         clearTimeout(timeoutId);
         if (!res.ok) return [];
         const data = await res.json();
-        return (data || [])
-            .map((item: any) => {
-                const rawName = (item.name || "").trim();
-                if (!rawName) return null;
-                // Reject street names and house numbers
-                if (/^(rua|r\.|av\.|avenida|alameda|estrada|rodovia|travessa|tv\.|praça|praca|viela|rod\.)\b/i.test(rawName)) return null;
-                if (/^\d+/.test(rawName)) return null;
-
-                return {
-                    id: item.osm_id || Math.floor(Math.random() * 1000000),
-                    lat: parseFloat(item.lat),
-                    lon: parseFloat(item.lon),
-                    tags: {
-                        name: rawName,
-                        shop: "supermarket"
-                    }
-                };
-            })
-            .filter((el: any) => el && el.lat && el.lon);
+        return parseHereResponse(data?.items || []);
     } catch {
         return [];
     }
 };
 
 /**
- * Progressive multi-source fetcher: returns fast Nominatim results immediately (< 900ms)
- * and enriches with Overpass / Photon in parallel.
+ * Ultra-fast market fetcher using HERE Location Services (Discover & Browse v7).
  */
-const fetchAllMarketsData = async (
+const fetchHereMarketsData = async (
     latitude: number,
     longitude: number,
     onProgress?: (elements: any[]) => void
 ): Promise<any[]> => {
     const roundedLat = latitude.toFixed(2);
     const roundedLon = longitude.toFixed(2);
-    const cacheKey = `${roundedLat}_${roundedLon}_all`;
+    const cacheKey = `${roundedLat}_${roundedLon}_here`;
 
-    const cached = OVERPASS_CACHE.get(cacheKey);
+    const cached = HERE_PLACES_CACHE.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < 600000) {
         if (onProgress) onProgress(cached.elements);
         return cached.elements;
     }
 
-    const delta = 0.09; // ~10km bounding box
-    const query = `[out:json][timeout:8];(
-  node["shop"~"supermarket|convenience|grocery|deli|general"](around:8000,${latitude},${longitude});
-  way["shop"~"supermarket|convenience|grocery|deli|general"](around:8000,${latitude},${longitude});
-);out center tags 80;`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const apiKey = process.env.EXPO_PUBLIC_HERE_API_KEY || "";
+    if (!apiKey) {
+        if (cached) return cached.elements;
+        return [];
+    }
 
     const accumulated: any[] = [];
     const seenIds = new Set<string>();
@@ -297,13 +300,13 @@ const fetchAllMarketsData = async (
     const mergeElements = (items: any[]) => {
         let added = 0;
         for (const el of items) {
-            const idKey = el.id !== undefined && el.id !== null ? String(el.id) : null;
-            const rawLat = el.lat ?? el.center?.lat;
-            const rawLon = el.lon ?? el.center?.lon;
-            const latCoord = typeof rawLat === "number" ? rawLat : parseFloat(String(rawLat));
-            const lonCoord = typeof rawLon === "number" ? rawLon : parseFloat(String(rawLon));
+            const idKey = String(el.id || `${el.lat}_${el.lon}`);
+            const latCoord = el.lat;
+            const lonCoord = el.lon;
 
             if (
+                typeof latCoord === "number" &&
+                typeof lonCoord === "number" &&
                 !isNaN(latCoord) &&
                 !isNaN(lonCoord) &&
                 latCoord >= -90 &&
@@ -312,25 +315,10 @@ const fetchAllMarketsData = async (
                 lonCoord <= 180
             ) {
                 const geoKey = `${latCoord.toFixed(4)}_${lonCoord.toFixed(4)}`;
-                const isIdSeen = idKey ? seenIds.has(idKey) : false;
-                const isGeoSeen = seenGeo.has(geoKey);
-
-                if (!isIdSeen && !isGeoSeen) {
-                    if (idKey) seenIds.add(idKey);
+                if (!seenIds.has(idKey) && !seenGeo.has(geoKey)) {
+                    seenIds.add(idKey);
                     seenGeo.add(geoKey);
-                    accumulated.push({
-                        id: el.id,
-                        lat: latCoord,
-                        lon: lonCoord,
-                        name: el.name,
-                        tags: {
-                            name: el.tags?.name || el.name,
-                            brand: el.tags?.brand,
-                            operator: el.tags?.operator,
-                            shop: el.tags?.shop || "supermarket",
-                            opening_hours: el.tags?.opening_hours,
-                        },
-                    });
+                    accumulated.push(el);
                     added++;
                 }
             }
@@ -340,38 +328,24 @@ const fetchAllMarketsData = async (
         }
     };
 
-    // 1. Fast Nominatim Bounded Search (< 900ms)
-    const nominatimPromise = fetchNominatimMarkets(latitude, longitude)
-        .then(nom => {
-            if (nom.length > 0) mergeElements(nom);
-            return nom;
+    const discoverPromise = fetchHereDiscover(latitude, longitude, apiKey)
+        .then(items => {
+            if (items.length > 0) mergeElements(items);
+            return items;
         })
         .catch(() => []);
 
-    // 2. Overpass Parallel Mirror Race
-    const overpassPromise = Promise.any(
-        OVERPASS_ENDPOINTS.map(endpoint => fetchOverpassEndpoint(endpoint, query, controller.signal))
-    )
-        .then(over => {
-            if (over.length > 0) mergeElements(over);
-            return over;
-        })
-        .catch(() => []);
-
-    // 3. Photon Fallback
-    const photonPromise = fetchPhotonMarkets(latitude, longitude)
-        .then(pho => {
-            if (pho.length > 0) mergeElements(pho);
-            return pho;
+    const browsePromise = fetchHereBrowse(latitude, longitude, apiKey)
+        .then(items => {
+            if (items.length > 0) mergeElements(items);
+            return items;
         })
         .catch(() => []);
 
     try {
-        await Promise.allSettled([nominatimPromise, overpassPromise, photonPromise]);
-        clearTimeout(timeoutId);
-
+        await Promise.allSettled([discoverPromise, browsePromise]);
         if (accumulated.length > 0) {
-            setOverpassCache(cacheKey, { elements: accumulated, timestamp: Date.now() });
+            setHerePlacesCache(cacheKey, { elements: accumulated, timestamp: Date.now() });
             lastSessionElements = accumulated;
             return accumulated;
         }
@@ -380,7 +354,6 @@ const fetchAllMarketsData = async (
         if (lastSessionElements.length > 0) return lastSessionElements;
         return [];
     } catch {
-        clearTimeout(timeoutId);
         if (cached) return cached.elements;
         if (lastSessionElements.length > 0) return lastSessionElements;
         return [];
@@ -400,7 +373,7 @@ export default function MapScreen() {
         error: null as string | null
     });
     const [filters, setFilters] = useState({ shopType: "all", maxDistance: 5000, hoursOption: "all" });
-    const [rawOsmElements, setRawOsmElements] = useState<any[]>(lastSessionElements);
+    const [rawHereElements, setRawHereElements] = useState<any[]>(lastSessionElements);
     const [backendMarketsList, setBackendMarketsList] = useState<MarketMarker[]>(lastSessionBackendMarkets);
 
     // Initialize immediately with last known session location or fallback coordinate for instant 0ms mount
@@ -526,25 +499,25 @@ export default function MapScreen() {
         return () => { isMounted = false; };
     }, [userLocation.latitude, userLocation.longitude]);
 
-    // Pre-fetch raw OSM elements progressively in background
+    // Pre-fetch HERE elements progressively in background
     useEffect(() => {
         let isMounted = true;
         if (!isLocationResolved || !userLocation) return;
         setAppState(prev => ({ ...prev, isLoadingMarkets: true }));
 
-        fetchAllMarketsData(
+        fetchHereMarketsData(
             userLocation.latitude,
             userLocation.longitude,
             (partialElements) => {
                 if (isMounted && partialElements?.length) {
-                    setRawOsmElements(partialElements);
+                    setRawHereElements(partialElements);
                     setAppState(prev => ({ ...prev, isLoadingMarkets: false }));
                 }
             }
         )
             .then(elements => {
                 if (isMounted && elements?.length) {
-                    setRawOsmElements(elements);
+                    setRawHereElements(elements);
                 }
             })
             .catch(() => {})
@@ -558,9 +531,9 @@ export default function MapScreen() {
     // Instant in-memory filtering (0ms) across shopType, maxDistance, and hoursOption
     const nearbyMarkets: MarketMarker[] = useMemo(() => {
         const locKey = `${(userLocation.latitude || 0).toFixed(3)}_${(userLocation.longitude || 0).toFixed(3)}`;
-        const overpassMarkers: MarketMarker[] = [];
+        const hereMarkers: MarketMarker[] = [];
 
-        for (const el of rawOsmElements) {
+        for (const el of rawHereElements) {
             const rawLat = el.lat ?? el.center?.lat;
             const rawLon = el.lon ?? el.center?.lon;
             const lat = typeof rawLat === "number" ? rawLat : parseFloat(String(rawLat));
@@ -589,11 +562,12 @@ export default function MapScreen() {
                 continue;
             }
 
-            const name = el.tags?.name || el.tags?.brand || el.tags?.operator || el.name || (el.tags?.shop ? `Mercado (${el.tags.shop})` : "Supermercado");
-            const cachedRoute = OSRM_DISTANCE_CACHE.get(`${locKey}_osm_${el.id}`);
+            const name = el.tags?.name || el.name || "Supermercado";
+            const markerId = String(el.id).startsWith("here_") ? String(el.id) : `here_${el.id}`;
+            const cachedRoute = HERE_DISTANCE_CACHE.get(`${locKey}_${markerId}`);
 
-            overpassMarkers.push({
-                id: `osm_${el.id}`,
+            hereMarkers.push({
+                id: markerId,
                 title: String(name),
                 coordinate: { latitude: lat, longitude: lon },
                 straightDistance: safeDist,
@@ -611,12 +585,24 @@ export default function MapScreen() {
             return true;
         });
 
-        const combined = [...filteredBackend, ...overpassMarkers];
+        const combined = [...filteredBackend, ...hereMarkers];
         const unique: MarketMarker[] = [];
         const seenMarketIds = new Set<string>();
 
         for (const marker of combined) {
-            if (marker.id && !seenMarketIds.has(marker.id)) {
+            if (!marker.id || seenMarketIds.has(marker.id)) continue;
+
+            const isDuplicate = unique.some(existing => {
+                const dist = calculateDistanceInKm(
+                    existing.coordinate.latitude,
+                    existing.coordinate.longitude,
+                    marker.coordinate.latitude,
+                    marker.coordinate.longitude
+                );
+                return dist < 0.08 || (dist < 0.35 && existing.title.toLowerCase().trim() === marker.title.toLowerCase().trim());
+            });
+
+            if (!isDuplicate) {
                 seenMarketIds.add(marker.id);
                 unique.push(marker);
             }
@@ -624,8 +610,8 @@ export default function MapScreen() {
 
         return unique
             .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
-            .slice(0, 25);
-    }, [userLocation, rawOsmElements, backendMarketsList, filters]);
+            .slice(0, 30);
+    }, [userLocation, rawHereElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
     useEffect(() => {
@@ -636,7 +622,7 @@ export default function MapScreen() {
 
         const locKey = `${(userLocation.latitude || 0).toFixed(3)}_${(userLocation.longitude || 0).toFixed(3)}`;
         const needsRouteCalc = nearbyMarkets.slice(0, 15).some(
-            m => !OSRM_DISTANCE_CACHE.has(`${locKey}_${m.id}`)
+            m => !HERE_DISTANCE_CACHE.has(`${locKey}_${m.id}`)
         );
 
         if (needsRouteCalc) {
@@ -774,7 +760,7 @@ export default function MapScreen() {
                     <View style={[styles.noMarkersBanner, themeStyles.card, themeStyles.border]}>
                         <Ionicons name="information-circle-outline" size={18} color={themeAccentColor} />
                         <Text style={[styles.noMarkersText, themeStyles.text]}>
-                            {rawOsmElements.length > 0 ? `Nenhum mercado a até ${filters.maxDistance / 1000} km` : "Nenhum mercado encontrado"}
+                            {rawHereElements.length > 0 ? `Nenhum mercado a até ${filters.maxDistance / 1000} km` : "Nenhum mercado encontrado"}
                         </Text>
                         {filters.maxDistance < 10000 && (
                             <TouchableOpacity
