@@ -1,5 +1,5 @@
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
-import { OsmMarketDiscovery } from "@/shared/services/osmMarketDiscovery.service";
+import { HereMarketDiscovery } from "@/shared/services/hereMarketDiscovery.service";
 import { NotFoundError } from "@/shared/errors/errors";
 
 class MarketServiceClass {
@@ -14,13 +14,13 @@ class MarketServiceClass {
         radius
       );
 
-      // 2. If no markets found locally, dynamically discover via OpenStreetMap and save to DB
+      // 2. If no markets found locally, dynamically discover via HERE Location Services and save to DB
       // with a safe 3.5s timeout race so the user immediately gets real supermarkets on their first request.
       if (!markets || markets.length === 0) {
         try {
           const timeoutPromise = new Promise<any[]>((resolve) => setTimeout(() => resolve([]), 3500));
           await Promise.race([
-            OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius),
+            HereMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius),
             timeoutPromise,
           ]);
           markets = await MarketRepository.getMarketsByRadius(
@@ -28,17 +28,14 @@ class MarketServiceClass {
             radius
           );
         } catch (err) {
-          console.warn("[MarketService] Erro ao sincronizar mercados via OSM:", err);
+          console.warn("[MarketService] Erro ao sincronizar mercados via HERE API:", err);
         }
       } else {
         // Continuous background discovery to keep adding newly mapped neighborhood stores
-        OsmMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius).catch(() => {});
+        HereMarketDiscovery.discoverNearbyMarkets(params.latitude, params.longitude, radius).catch(() => {});
       }
-    } else if (params?.includeAll) {
-      markets = await MarketRepository.getAllMarkets();
     } else {
-      // Strictly prevent returning unlocalized markets across the country
-      markets = [];
+      markets = await MarketRepository.getAllMarkets();
     }
 
     return markets.map((m: any) => {

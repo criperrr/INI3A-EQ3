@@ -36,4 +36,5 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET || "4d281923e13a7357f829fe54fe4229e57aaf415989dc18f93f629bc8876e9f3f",
   NODE_ENV: process.env.NODE_ENV || "development",
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
+  HERE_API_KEY: process.env.HERE_API_KEY || "",
 };
