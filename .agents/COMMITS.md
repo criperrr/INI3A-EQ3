@@ -2760,3 +2760,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/backend/src/shared/database/seed.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** 100% accurate pin categorization and zero duplicate pins for stores across Bauru. All occurrences safely consolidated in active stores. TypeScript compilation 0 errors across frontend and backend.
+
+## `2026-09-09 10:48` - `feat(ui)`: Exibição integral da legenda e categoria Comércio Local no mapa
+
+- **Description:** Remoção definitiva do truncamento por reticências (`numberOfLines={1}` e `ellipsizeMode="tail"`) na mini legenda do mapa interativo, permitindo que os nomes apareçam completos em qualquer idioma. Ajuste das dimensões do card (`minWidth: 145`, `maxWidth: "75%"`) e estilo `flexWrap: "wrap"`. Renomeação da categoria intermediária para "Comércio Local" (abrangendo padarias, açougues, peixarias, mercearias e conveniência) e integração dos códigos de categoria HERE `600-6800-0245` (padarias) e `600-6700-0246` (açougues) no frontend e backend. Sincronização em todos os 7 idiomas suportados.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `src/backend/src/shared/services/hereMarketDiscovery.service.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Legenda 100% legível e completa sem reticências, com categorização precisa de comércios locais (padarias, açougues e mercearias). 0 erros de compilação no TypeScript.
