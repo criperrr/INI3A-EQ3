@@ -679,7 +679,7 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Dynamic HERE Location Services Market Discovery (Purge invalid street address names)
+  // 4. Dynamic HERE Location Services Market Discovery (Purge invalid street address names, non-markets and defunct stores)
   await db.execute(sql`
     DELETE FROM ocurrency WHERE market_id IN (
       SELECT id FROM market WHERE 
@@ -687,16 +687,24 @@ export async function seedDatabase() {
         name ILIKE 'Av. %' OR
         name ILIKE 'Avenida %' OR
         name ILIKE 'Estrada %' OR
-        name ILIKE 'Rodovia %'
+        name ILIKE 'Rodovia %' OR
+        name ILIKE '%Wood Design%' OR
+        name ILIKE '%Padaria Pet%' OR
+        name ILIKE '%Pronto Socorro da Casa%' OR
+        name ILIKE '%Casa Company%'
     );
     DELETE FROM market WHERE 
       name ILIKE 'Rua %' OR
       name ILIKE 'Av. %' OR
       name ILIKE 'Avenida %' OR
       name ILIKE 'Estrada %' OR
-      name ILIKE 'Rodovia %';
+      name ILIKE 'Rodovia %' OR
+      name ILIKE '%Wood Design%' OR
+      name ILIKE '%Padaria Pet%' OR
+      name ILIKE '%Pronto Socorro da Casa%' OR
+      name ILIKE '%Casa Company%';
   `);
-  console.log("🗺️ [Seed] Markets checked: invalid address street names purged.");
+  console.log("🗺️ [Seed] Markets checked: invalid address street names and non-markets purged.");
 
   // 5. Seed Admin Test User: admin@admin.org / admin
   const adminEmail = "admin@admin.org";

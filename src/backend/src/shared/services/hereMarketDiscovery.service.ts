@@ -150,7 +150,7 @@ class HereMarketDiscoveryClass {
     lng: number,
     apiKey: string
   ): Promise<DiscoveredMarket[]> {
-    const categories = "600-6300-0066,600-6300-0067,600-6300-0244";
+    const categories = "600-6300-0066,600-6300-0067,600-6300-0244,600-6800-0245,600-6700-0246,600-6900-0247,600-6000-0061";
     const url = `https://browse.search.hereapi.com/v1/browse?at=${lat},${lng}&categories=${categories}&limit=50&apiKey=${apiKey}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
@@ -205,8 +205,8 @@ class HereMarketDiscoveryClass {
       }
 
       const hasMarketCategory = item.categories?.some((c: any) =>
-        /supermercado|mercado|aliment|mercearia|conveni|grocery|padaria|bakery/i.test(c.name || "") ||
-        ["600-6300-0066", "600-6300-0067", "600-6300-0244"].includes(c.id)
+        /supermercado|mercado|aliment|mercearia|conveni|grocery|padaria|bakery|a[cç]ougue|butcher|carnes|peixaria|hortifruti|frut/i.test(c.name || "") ||
+        ["600-6300-0066", "600-6300-0067", "600-6300-0244", "600-6800-0245", "600-6700-0246", "600-6900-0247", "600-6000-0061"].includes(c.id)
       );
       const hasExcludedCategory = item.categories?.some((c: any) =>
         /estética|estetica|beleza|salão|salao|livraria|embalag|descart|papelaria|gráfica|grafica/i.test(c.name || "")
@@ -254,6 +254,9 @@ class HereMarketDiscoveryClass {
       for (const item of discovered) {
         const wktPoint = `POINT(${item.lng} ${item.lat})`;
 
+        const brand = (item.name.trim().split(/[\s\-]/)[0] || "").toLowerCase();
+        const brandMatch = brand.length >= 4 ? `${brand}%` : item.name.toLowerCase();
+
         const [existing] = await db
           .select({ id: market.id, name: market.name })
           .from(market)
@@ -262,14 +265,14 @@ class HereMarketDiscoveryClass {
               ST_DWithin(
                 ${market.location},
                 ST_GeographyFromText(${wktPoint}),
-                100
+                150
               )
               OR (
-                LOWER(TRIM(${market.name})) = LOWER(TRIM(${item.name}))
+                LOWER(TRIM(${market.name})) ILIKE ${brandMatch}
                 AND ST_DWithin(
                   ${market.location},
                   ST_GeographyFromText(${wktPoint}),
-                  500
+                  600
                 )
               )
             `
@@ -307,9 +310,10 @@ class HereMarketDiscoveryClass {
 
     // Reject non-retail or unwanted organizations / facilities
     if (
-      /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|livraria|estética|estetica|salão|salao|embalagens|descartáveis|descartaveis|pet shop|veterinári|veterinari|papelaria|gráfica|grafica|lavanderia|banco|lotérica|loterica|bar e lanches|pastelaria|restaurante|chocolates|culturista)\b/i.test(
+      /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|livraria|estética|estetica|salão|salao|embalagens|descartáveis|descartaveis|pet shop|veterinári|veterinari|papelaria|gráfica|grafica|lavanderia|banco|lotérica|loterica|bar e lanches|pastelaria|restaurante|chocolates|culturista|móveis|moveis|planejados|churros|tabacaria|barbearia|imobiliária|design)\b/i.test(
         clean
-      )
+      ) ||
+      /\b(padaria\s+pet|wood\s+design|casa\s+company)\b/i.test(clean)
     ) {
       return "";
     }
