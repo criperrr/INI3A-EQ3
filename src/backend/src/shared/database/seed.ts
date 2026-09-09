@@ -679,7 +679,7 @@ export async function seedDatabase() {
     }
   }
 
-  // 4. Dynamic OpenStreetMap Market Discovery (Purge invalid street address names)
+  // 4. Dynamic HERE Location Services Market Discovery (Purge invalid street address names)
   await db.execute(sql`
     DELETE FROM ocurrency WHERE market_id IN (
       SELECT id FROM market WHERE 
@@ -1430,20 +1430,11 @@ export async function seedDatabase() {
 
   let availableMarkets = await db.select().from(market).limit(10);
   if (availableMarkets.length === 0) {
-    const starterMarkets = [
-      { name: "Supermercado Pacaembu", lat: -22.3145, lng: -49.0587 },
-      { name: "Supermercado da Família", lat: -22.3212, lng: -49.0654 },
-      { name: "Supermercado Panela Cheia", lat: -22.3188, lng: -49.0712 },
-      { name: "Pão de Açúcar", lat: -23.5658, lng: -46.6612 },
-      { name: "Carrefour Hipermercado", lat: -23.5701, lng: -46.6567 },
-    ];
-    for (const sm of starterMarkets) {
-      const [newM] = await db.insert(market).values({
-        name: sm.name,
-        location: sql`ST_GeographyFromText('POINT(${sm.lng} ${sm.lat})')`,
-      }).returning();
-      if (newM) availableMarkets.push(newM);
-    }
+    console.log("🌐 [Seed] Discovering real markets via HERE API for initial data...");
+    const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
+    await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
+    await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
+    availableMarkets = await db.select().from(market).limit(10);
   }
 
   let insertedProductCount = 0;
