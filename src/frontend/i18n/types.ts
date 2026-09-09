@@ -473,6 +473,7 @@ export interface TranslationSchema {
     typeSupermarket: string;
     typeConvenience: string;
     typeGrocery: string;
+    legendTitle: string;
     hoursAll: string;
     hoursWithInfo: string;
     hoursUnknown: string;
