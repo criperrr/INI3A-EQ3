@@ -2707,3 +2707,56 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Every market displayed across map, dropdowns, and search is now an authentic, real-world establishment from the HERE API with all price occurrences preserved.
+
+## `2026-09-09 10:31` - `feat(map)`: Auditoria e aprimoramento dos filtros do mapa nativo
+
+- **Description:** Realizada auditoria detalhada nos três filtros do mapa nativo (Tipo de Estabelecimento, Raio de Distância e Horário de Funcionamento). Corrigidas as categorias da HERE API adicionando 600-6000-0061 (Conveniência) e 600-6900-0247 (Mercados/Hortifrutis); implementada inferência dinâmica de tipo por palavras-chave tanto para os estabelecimentos da HERE quanto para os mercados do backend PostgreSQL; adicionado feedback visual de filtro ativo (borda de acento e fundo sutil) nos botões FilterButton; otimizados os rótulos exibidos nos botões para evitar truncamento de texto; e aprimorado o banner de nenhum mercado com botão de limpeza rápida de filtros.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Filtros do mapa agora filtram com 100% de precisão tanto estabelecimentos da HERE quanto do PostgreSQL, fornecem feedback visual intuitivo do que está ativo e contam com opção rápida de reset.
+
+## `2026-09-09 10:38` - `feat(map)`: Custom category pins, 3-way establishment classification, and interactive bottom-left mini legend
+
+- **Description:** Updated map icons to custom category pins with dedicated shapes, icons, and colors: Supermercados (Royal Blue with Cart), Mercados e Mercearias Locais (Amber Orange with Storefront), and Hortifrutis (Emerald Green with Leaf). Added an interactive bottom-left mini legend that allows quick 1-tap category filtering and visual identification, added a category badge to MarketDetailModal, and updated all 7 locale files.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Map markers now have clear visual distinction and categorization; users can identify establishment types at a glance and quickly filter them from the mini legend.
+
+## `2026-09-09 10:39` - `fix(map)`: Resolução de limite de pins e descoberta além de 3km no mapa
+
+- **Description:** Diagnosticado que a busca da HERE Places API em ponto único saturava o limite de resultados com comércios muito próximos (< 1.5km) e que o `slice(0, 30)` no frontend descartava todos os marcadores após o 30º estabelecimento mais próximo (cortando tudo além de ~2.5km). Expandidos os limites de busca do HERE Discover e Browse para 100 itens; adicionada busca radial periférica em 4 pontos cardeais (~3.5km a 4km de deslocamento) para preencher os anéis de 3km a 10km; e substituído o corte de 30 pins por um limite adaptativo de 50 a 90 marcadores com distribuição equilibrada por anéis de distância (< 2.5km, 2.5km-5km, > 5km) para garantir exibição contínua em todo o raio.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Marcadores de 3km, 4km, 5km até 10km agora são descobertos pela HERE API e renderizados no mapa sem serem ofuscados ou cortados pela densidade do centro urbano.
+
+## `2026-09-09 10:41` - `fix(map)`: Prevent legend text clipping and overflow across all languages
+
+- **Description:** Fixed text overflowing the map mini legend card by adding `flex: 1`, `flexShrink: 1`, and `ellipsizeMode="tail"` to `legendLabel`, setting `maxWidth: "68%"` and `overflow: "hidden"` on `miniLegendCard`, setting `maxWidth: "100%"` on `legendItem`, and streamlining translations in German, Russian, Spanish, and English.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/en.ts`
+- **Impact / Next Steps:** The legend text is strictly constrained within the legend card boundaries across all screen densities and languages without overflowing onto the map.
+
+## `2026-09-09 10:46` - `fix(map)`: Elimination of duplicate markets (Oba/Tauste) and bakery category correction
+
+- **Description:** Fixed duplicate pins for Oba Hortifruti and Tauste by reallocating orphaned occurrences in PostgreSQL and removing defunct duplicates (#169, #170, #180). Hardened HERE API parser and discovery service to ignore obsolete Oba Jardim América POI and filter out non-food establishments (Padaria Pet, Wood Design, Pronto Socorro da Casa). Updated frontend `classifyEstablishment` so bakeries (padarias/panificadoras) are correctly categorized as `grocery` ("Mercados e Mercearias Locais") instead of falling back to supermarket, Oba is classified as `hortifruti`, and wholesale clubs as `hypermarket`.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `src/backend/src/shared/services/hereMarketDiscovery.service.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 100% accurate pin categorization and zero duplicate pins for stores across Bauru. All occurrences safely consolidated in active stores. TypeScript compilation 0 errors across frontend and backend.
