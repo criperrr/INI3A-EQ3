@@ -25,11 +25,32 @@ const THEME_COLORS = {
     accent: "#F5B731",
 };
 
+export const CATEGORY_CONFIG = {
+    supermarket: {
+        color: "#2563EB",
+        icon: "cart" as const,
+        labelKey: "map.typeSupermarket",
+        defaultLabel: "Supermercados",
+    },
+    grocery: {
+        color: "#F59E0B",
+        icon: "storefront" as const,
+        labelKey: "map.typeConvenience",
+        defaultLabel: "Comércio Local",
+    },
+    hortifruti: {
+        color: "#10B981",
+        icon: "leaf" as const,
+        labelKey: "map.typeGrocery",
+        defaultLabel: "Hortifrutis",
+    },
+};
+
 const getMarketTypes = (t: (key: any) => string) => [
     { label: t("map.typeAll"), value: "all" },
     { label: t("map.typeSupermarket"), value: "supermarket" },
-    { label: t("map.typeConvenience"), value: "convenience" },
-    { label: t("map.typeGrocery"), value: "grocery" },
+    { label: t("map.typeConvenience"), value: "grocery" },
+    { label: t("map.typeGrocery"), value: "hortifruti" },
 ];
 
 const MAX_DISTANCE_OPTIONS = [
@@ -180,9 +201,10 @@ const normalizeHereMarketName = (name: string): string => {
 
     // Rejeitar estabelecimentos não comerciais / irrelevantes
     if (
-        /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio)\b/i.test(
+        /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|pet\s*shop|agropecu[aá]ria|veterin[aá]ria|m[oó]veis|planejados|churros|tabacaria|barbearia|imobili[aá]ria|design)\b/i.test(
             clean
-        )
+        ) ||
+        /\b(padaria\s+pet|wood\s+design|casa\s+company)\b/i.test(clean)
     ) {
         return "";
     }
@@ -195,6 +217,45 @@ const normalizeHereMarketName = (name: string): string => {
     return clean;
 };
 
+const classifyEstablishment = (name: string, categories: any[] = []): "supermarket" | "grocery" | "hortifruti" => {
+    const nameLower = (name || "").toLowerCase();
+
+    // 1. Hortifrutis, sacolões, quitandas, fruteiras, Oba
+    const hasHortifrutiCat = categories.some((c: any) =>
+        c.id === "600-6900-0247" || /hortifruti|sacol[aã]o|quitanda|greengrocer|produce/i.test(c.name || "")
+    );
+    if (
+        hasHortifrutiCat ||
+        /\b(oba|oba\s+hortifruti)\b/i.test(nameLower) ||
+        /hortifruti|horti-fruti|horti fruti|sacol[aã]o|quitanda|frutaria|frutas|verduras|legumes|pomar|feira|horta/i.test(nameLower)
+    ) {
+        return "hortifruti";
+    }
+
+    // 2. Padarias, panificadoras, confeitarias, confeitarias, bakeries
+    const hasBakeryCat = categories.some((c: any) =>
+        c.id === "600-6300-0244" || /bakery|padaria|panificadora|confeitaria/i.test(c.name || "")
+    );
+    const isBakery = hasBakeryCat || /padaria|panificadora|bakery|confeitaria|p[aã]o\b|fornada|trigal|doceira|bolo/i.test(nameLower);
+
+    // 3. Mercados e mercearias locais, conveniências, empórios, açougues
+    const hasLocalCat = categories.some((c: any) =>
+        c.id === "600-6000-0061" || c.id === "600-6300-0067" ||
+        /mercearia|conveni[eê]ncia|convenience|grocery|armaz[eé]m|emp[oó]rio|a[cç]ougue/i.test(c.name || "")
+    );
+    const isLocalByKeywords = /mercearia|mercadinho|minimercado|mini mercado|mini box|armaz[eé]m|emp[oó]rio|conveni[eê]ncia|am\/?pm|select|br mania|posto|oxxo|venda|bodega|a[cç]ougue|carnes|peixaria|rotisseria/i.test(nameLower);
+
+    const isMajorSupermarket = /super|hiper|atacad[aã]o|atacarejo|atacadista|carrefour|p[aã]o de a[cç][uú]car|extra|assa[ií]|sonda|zaffari|mambo|st\.? marche|tenda|rold[aã]o|spani|makro|compre bem|covabra|enxuto|nagumo|shibata|savegnago/i.test(nameLower);
+    const isNeighborhoodMercado = /^mercado\s+/i.test(nameLower) && !isMajorSupermarket;
+
+    if (isBakery || hasLocalCat || isLocalByKeywords || isNeighborhoodMercado) {
+        return "grocery";
+    }
+
+    // 4. Supermercados
+    return "supermarket";
+};
+
 const parseHereResponse = (items: any[]): any[] => {
     return items.map(item => {
         const rawName = normalizeHereMarketName(item.title);
@@ -202,10 +263,18 @@ const parseHereResponse = (items: any[]): any[] => {
         const pos = item.position;
         if (!pos || typeof pos.lat !== "number" || typeof pos.lng !== "number") return null;
 
-        let shopType = "supermarket";
-        const catId = item.categories?.[0]?.id;
-        if (catId === "600-6300-0244") shopType = "convenience";
-        else if (catId === "600-6300-0067") shopType = "grocery";
+        // Rejeitar unidade extinta do Oba no Jardim América (mudou-se para Av. Getúlio Vargas)
+        if (
+            /\boba\b/i.test(rawName) &&
+            (
+                /jos[eé]\s+maria\s+rodrigues/i.test(item.address?.label || "") ||
+                (Math.abs(pos.lat - (-22.34598)) < 0.005 && Math.abs(pos.lng - (-49.05957)) < 0.005)
+            )
+        ) {
+            return null;
+        }
+
+        const shopType = classifyEstablishment(rawName, item.categories || []);
 
         let openingHours: string | undefined;
         if (item.openingHours && Array.isArray(item.openingHours) && item.openingHours.length > 0) {
@@ -232,11 +301,16 @@ const parseHereResponse = (items: any[]): any[] => {
     }).filter(Boolean);
 };
 
-const fetchHereDiscover = async (latitude: number, longitude: number, apiKey: string): Promise<any[]> => {
-    const url = `https://discover.search.hereapi.com/v1/discover?at=${latitude},${longitude}&q=supermercado&limit=50&apiKey=${apiKey}`;
+const fetchHereDiscover = async (
+    latitude: number,
+    longitude: number,
+    apiKey: string,
+    limit: number = 100
+): Promise<any[]> => {
+    const url = `https://discover.search.hereapi.com/v1/discover?at=${latitude},${longitude}&q=supermercado&limit=${limit}&apiKey=${apiKey}`;
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(url, {
             headers: { "Accept": "application/json" },
             signal: controller.signal
@@ -250,12 +324,17 @@ const fetchHereDiscover = async (latitude: number, longitude: number, apiKey: st
     }
 };
 
-const fetchHereBrowse = async (latitude: number, longitude: number, apiKey: string): Promise<any[]> => {
-    const categories = "600-6300-0066,600-6300-0067,600-6300-0244";
-    const url = `https://browse.search.hereapi.com/v1/browse?at=${latitude},${longitude}&categories=${categories}&limit=50&apiKey=${apiKey}`;
+const fetchHereBrowse = async (
+    latitude: number,
+    longitude: number,
+    apiKey: string,
+    limit: number = 100
+): Promise<any[]> => {
+    const categories = "600-6300-0066,600-6300-0067,600-6000-0061,600-6900-0247,600-6300-0244,600-6800-0245,600-6700-0246";
+    const url = `https://browse.search.hereapi.com/v1/browse?at=${latitude},${longitude}&categories=${categories}&limit=${limit}&apiKey=${apiKey}`;
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
         const res = await fetch(url, {
             headers: { "Accept": "application/json" },
             signal: controller.signal
@@ -267,6 +346,32 @@ const fetchHereBrowse = async (latitude: number, longitude: number, apiKey: stri
     } catch {
         return [];
     }
+};
+
+/**
+ * Busca radial periférica nos 4 pontos cardeais (~3.5km a 4km de deslocamento)
+ * para garantir descoberta profunda de mercados entre 3km e 10km, mesmo em cidades densas.
+ */
+const fetchHereRadialDiscover = async (
+    latitude: number,
+    longitude: number,
+    apiKey: string
+): Promise<any[]> => {
+    const deltaLat = 0.032;
+    const deltaLon = 0.035;
+    const points = [
+        { lat: latitude + deltaLat, lon: longitude },
+        { lat: latitude - deltaLat, lon: longitude },
+        { lat: latitude, lon: longitude + deltaLon },
+        { lat: latitude, lon: longitude - deltaLon },
+    ];
+    const promises = points.map(p =>
+        fetchHereDiscover(p.lat, p.lon, apiKey, 30)
+    );
+    const results = await Promise.allSettled(promises);
+    return results
+        .filter((r): r is PromiseFulfilledResult<any[]> => r.status === "fulfilled")
+        .flatMap(r => r.value);
 };
 
 /**
@@ -328,14 +433,21 @@ const fetchHereMarketsData = async (
         }
     };
 
-    const discoverPromise = fetchHereDiscover(latitude, longitude, apiKey)
+    const discoverPromise = fetchHereDiscover(latitude, longitude, apiKey, 100)
         .then(items => {
             if (items.length > 0) mergeElements(items);
             return items;
         })
         .catch(() => []);
 
-    const browsePromise = fetchHereBrowse(latitude, longitude, apiKey)
+    const browsePromise = fetchHereBrowse(latitude, longitude, apiKey, 100)
+        .then(items => {
+            if (items.length > 0) mergeElements(items);
+            return items;
+        })
+        .catch(() => []);
+
+    const radialPromise = fetchHereRadialDiscover(latitude, longitude, apiKey)
         .then(items => {
             if (items.length > 0) mergeElements(items);
             return items;
@@ -343,7 +455,7 @@ const fetchHereMarketsData = async (
         .catch(() => []);
 
     try {
-        await Promise.allSettled([discoverPromise, browsePromise]);
+        await Promise.allSettled([discoverPromise, browsePromise, radialPromise]);
         if (accumulated.length > 0) {
             setHerePlacesCache(cacheKey, { elements: accumulated, timestamp: Date.now() });
             lastSessionElements = accumulated;
@@ -380,6 +492,7 @@ export default function MapScreen() {
     const [userLocation, setUserLocation] = useState<Coordinate>(lastSessionLocation || DEFAULT_COORDINATE);
     const [isLocationResolved, setIsLocationResolved] = useState<boolean>(!!lastSessionLocation);
     const [visibleMarkers, setVisibleMarkers] = useState<MarketMarker[]>([]);
+    const [tracksViewChanges, setTracksViewChanges] = useState<boolean>(true);
     const [activeFilterModal, setActiveFilterModal] = useState<"type" | "distance" | "hours" | null>(null);
     const [selectedMarket, setSelectedMarket] = useState<MarketMarker | null>(null);
 
@@ -474,6 +587,8 @@ export default function MapScreen() {
                             const safeDist = isNaN(straightDist) ? 0 : straightDist;
                             // Enforce strict proximity bounds: only include backend markets within 25km of the user
                             if (safeDist <= 25) {
+                                const backendShopType = classifyEstablishment(m.name || "");
+
                                 mapped.push({
                                     id: `backend_${m.id}`,
                                     title: m.name || "Supermercado",
@@ -481,7 +596,7 @@ export default function MapScreen() {
                                     straightDistance: safeDist,
                                     routeDistance: safeDist,
                                     isBackendMarket: true,
-                                    shopType: "supermarket",
+                                    shopType: backendShopType,
                                 });
                             }
                         }
@@ -544,10 +659,12 @@ export default function MapScreen() {
             const shop = el.tags?.shop || "supermarket";
             if (filters.shopType !== "all") {
                 if (filters.shopType === "grocery") {
-                    if (shop !== "grocery" && shop !== "deli" && shop !== "general" && shop !== "greengrocer") continue;
-                } else if (filters.shopType === "convenience") {
-                    if (shop !== "convenience" && shop !== "kiosk") continue;
-                } else if (shop !== filters.shopType && shop !== "supermarket" && shop !== "hypermarket") {
+                    if (shop !== "grocery" && shop !== "convenience") continue;
+                } else if (filters.shopType === "hortifruti") {
+                    if (shop !== "hortifruti") continue;
+                } else if (filters.shopType === "supermarket") {
+                    if (shop !== "supermarket") continue;
+                } else if (shop !== filters.shopType) {
                     continue;
                 }
             }
@@ -578,7 +695,12 @@ export default function MapScreen() {
         }
 
         const filteredBackend = backendMarketsList.filter(m => {
-            if (filters.shopType !== "all" && m.shopType && m.shopType !== filters.shopType) return false;
+            if (filters.shopType !== "all") {
+                if (filters.shopType === "grocery" && m.shopType !== "grocery" && m.shopType !== "convenience") return false;
+                if (filters.shopType === "hortifruti" && m.shopType !== "hortifruti") return false;
+                if (filters.shopType === "supermarket" && m.shopType !== "supermarket") return false;
+                if (m.shopType && m.shopType !== filters.shopType) return false;
+            }
             const dist = typeof m.straightDistance === "number" ? m.straightDistance : 0;
             if (dist * 1000 > filters.maxDistance) return false;
             if (filters.hoursOption === "with_hours" && !m.openingHours) return false;
@@ -599,7 +721,24 @@ export default function MapScreen() {
                     marker.coordinate.latitude,
                     marker.coordinate.longitude
                 );
-                return dist < 0.08 || (dist < 0.35 && existing.title.toLowerCase().trim() === marker.title.toLowerCase().trim());
+                // Qualquer ponto a menos de 80m é sempre considerado duplicata física
+                if (dist < 0.08) return true;
+
+                const name1 = existing.title.toLowerCase().trim().replace(/^(supermercado|mercado|hipermercado)\s+/i, "");
+                const name2 = marker.title.toLowerCase().trim().replace(/^(supermercado|mercado|hipermercado)\s+/i, "");
+
+                // Mesmo nome em até 600m (ex: entradas diferentes, coordenadas de estacionamento)
+                if (dist < 0.6 && name1 === name2) return true;
+
+                // Mesma marca (ex: Tauste Rio Branco vs Tauste Supermercados, Pão de Açúcar) em até 500m
+                const brand1 = name1.split(/[\s\-]/)[0];
+                const brand2 = name2.split(/[\s\-]/)[0];
+                if (brand1 && brand1.length >= 4 && brand1 === brand2 && dist < 0.5) return true;
+
+                // Oba Hortifruti: mesma rede em até 2.5km (evita duplicatas de lojas únicas migradas)
+                if (/\boba\b/i.test(name1) && /\boba\b/i.test(name2) && dist < 2.5) return true;
+
+                return false;
             });
 
             if (!isDuplicate) {
@@ -608,9 +747,35 @@ export default function MapScreen() {
             }
         }
 
-        return unique
-            .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
-            .slice(0, 30);
+        const sorted = unique.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
+        const maxLimit = filters.maxDistance <= 3000 ? 50 : (filters.maxDistance <= 5000 ? 75 : 90);
+
+        if (sorted.length <= maxLimit) {
+            return sorted;
+        }
+
+        // Distribui pins equilibradamente por anéis de distância para que mercados além de 3km nunca fiquem de fora
+        const ringLimit = Math.floor(maxLimit / 3);
+        const close = sorted.filter(m => (m.straightDistance ?? 0) < 2.5);
+        const mid = sorted.filter(m => (m.straightDistance ?? 0) >= 2.5 && (m.straightDistance ?? 0) < 5.0);
+        const far = sorted.filter(m => (m.straightDistance ?? 0) >= 5.0);
+
+        const distributed: MarketMarker[] = [
+            ...close.slice(0, ringLimit),
+            ...mid.slice(0, ringLimit),
+            ...far.slice(0, ringLimit),
+        ];
+
+        const distributedIds = new Set(distributed.map(m => m.id));
+        for (const m of sorted) {
+            if (distributed.length >= maxLimit) break;
+            if (!distributedIds.has(m.id)) {
+                distributed.push(m);
+                distributedIds.add(m.id);
+            }
+        }
+
+        return distributed.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
     }, [userLocation, rawHereElements, backendMarketsList, filters]);
 
     // Sync visible markers instantly, then enrich driving routes in background
@@ -640,6 +805,15 @@ export default function MapScreen() {
         return () => { isMounted = false; };
     }, [nearbyMarkets, userLocation]);
 
+    // Keep tracksViewChanges active briefly when markers or selection change, then freeze for 60fps pan/zoom
+    useEffect(() => {
+        setTracksViewChanges(true);
+        const timer = setTimeout(() => {
+            setTracksViewChanges(false);
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [visibleMarkers, selectedMarket?.id]);
+
     const centerMapOnUser = () => {
         if (mapRef.current) {
             mapRef.current.animateToRegion({
@@ -656,7 +830,12 @@ export default function MapScreen() {
     };
 
     const getFilterLabel = (filterType: "type" | "distance" | "hours") => {
-        if (filterType === "type") return getMarketTypes(t).find(s => s.value === filters.shopType)?.label.split("/")[0] || t("map.marketType");
+        if (filterType === "type") {
+            if (filters.shopType === "grocery") return t("map.typeConvenience");
+            if (filters.shopType === "hortifruti") return t("map.typeGrocery");
+            if (filters.shopType === "supermarket") return t("map.typeSupermarket");
+            return t("map.marketType");
+        }
         if (filterType === "distance") return `${filters.maxDistance / 1000} km`;
         if (filterType === "hours") return filters.hoursOption === "with_hours" ? t("map.hoursWithInfo") : t("map.operatingHours");
         return "";
@@ -700,18 +879,47 @@ export default function MapScreen() {
                             marker.coordinate.longitude >= -180 &&
                             marker.coordinate.longitude <= 180
                         )
-                        .map((marker) => (
-                            <Marker
-                                key={marker.id}
-                                coordinate={{
-                                    latitude: Number(marker.coordinate.latitude),
-                                    longitude: Number(marker.coordinate.longitude),
-                                }}
-                                pinColor={themeAccentColor || "#1565C0"}
-                                tracksViewChanges={false}
-                                onPress={() => setSelectedMarket(marker)}
-                            />
-                        ))}
+                        .map((marker) => {
+                            const isSelected = selectedMarket?.id === marker.id;
+                            const config = (CATEGORY_CONFIG as any)[marker.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
+                            const markerColor = config.color;
+
+                            return (
+                                <Marker
+                                    key={marker.id}
+                                    coordinate={{
+                                        latitude: Number(marker.coordinate.latitude),
+                                        longitude: Number(marker.coordinate.longitude),
+                                    }}
+                                    pinColor={markerColor}
+                                    tracksViewChanges={tracksViewChanges}
+                                    anchor={{ x: 0.5, y: 1 }}
+                                    zIndex={isSelected ? 999 : 1}
+                                    onPress={() => setSelectedMarket(marker)}
+                                >
+                                    <View style={[
+                                        styles.customMarkerContainer,
+                                        isSelected && styles.customMarkerContainerSelected
+                                    ]}>
+                                        <View style={[
+                                            styles.customMarkerBubble,
+                                            { backgroundColor: markerColor },
+                                            isSelected && styles.customMarkerBubbleSelected
+                                        ]}>
+                                            <Ionicons
+                                                name={config.icon}
+                                                size={isSelected ? 16 : 14}
+                                                color="#FFFFFF"
+                                            />
+                                        </View>
+                                        <View style={[
+                                            styles.customMarkerArrow,
+                                            { borderTopColor: markerColor }
+                                        ]} />
+                                    </View>
+                                </Marker>
+                            );
+                        })}
                 </MapView>
 
                 <View style={styles.filtersWrapper}>
@@ -722,6 +930,7 @@ export default function MapScreen() {
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
+                        isActive={filters.shopType !== "all"}
                     />
                     <FilterButton
                         icon="navigate-outline"
@@ -730,6 +939,7 @@ export default function MapScreen() {
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
+                        isActive={filters.maxDistance !== 5000}
                     />
                     <FilterButton
                         icon="time-outline"
@@ -738,7 +948,102 @@ export default function MapScreen() {
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
+                        isActive={filters.hoursOption !== "all"}
                     />
+                </View>
+
+                {/* Mini Legenda no canto esquerdo inferior */}
+                <View
+                    style={[
+                        styles.miniLegendCard,
+                        themeStyles.card,
+                        themeStyles.border,
+                        isDark
+                            ? { backgroundColor: "rgba(24, 28, 24, 0.92)", borderColor: "rgba(255, 255, 255, 0.12)" }
+                            : { backgroundColor: "rgba(255, 255, 255, 0.94)", borderColor: "rgba(0, 0, 0, 0.08)" }
+                    ]}
+                >
+                    <View style={styles.miniLegendHeaderRow}>
+                        <Ionicons name="map-outline" size={11} color={isDark ? "#A0AEC0" : "#64748B"} />
+                        <Text style={[styles.miniLegendTitle, themeStyles.text]}>
+                            {t("map.legendTitle")}
+                        </Text>
+                    </View>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.legendItem,
+                            filters.shopType === "supermarket" && [styles.legendItemActive, { backgroundColor: "rgba(37, 99, 235, 0.14)" }]
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => setFilters(prev => ({
+                            ...prev,
+                            shopType: prev.shopType === "supermarket" ? "all" : "supermarket"
+                        }))}
+                    >
+                        <View style={[styles.legendDot, { backgroundColor: CATEGORY_CONFIG.supermarket.color }]}>
+                            <Ionicons name="cart" size={10} color="#FFFFFF" />
+                        </View>
+                        <Text
+                            style={[
+                                styles.legendLabel,
+                                themeStyles.text,
+                                filters.shopType === "supermarket" && { fontWeight: "700", color: CATEGORY_CONFIG.supermarket.color }
+                            ]}
+                        >
+                            {t("map.typeSupermarket")}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.legendItem,
+                            filters.shopType === "grocery" && [styles.legendItemActive, { backgroundColor: "rgba(245, 158, 11, 0.16)" }]
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => setFilters(prev => ({
+                            ...prev,
+                            shopType: prev.shopType === "grocery" ? "all" : "grocery"
+                        }))}
+                    >
+                        <View style={[styles.legendDot, { backgroundColor: CATEGORY_CONFIG.grocery.color }]}>
+                            <Ionicons name="storefront" size={10} color="#FFFFFF" />
+                        </View>
+                        <Text
+                            style={[
+                                styles.legendLabel,
+                                themeStyles.text,
+                                filters.shopType === "grocery" && { fontWeight: "700", color: CATEGORY_CONFIG.grocery.color }
+                            ]}
+                        >
+                            {t("map.typeConvenience")}
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.legendItem,
+                            filters.shopType === "hortifruti" && [styles.legendItemActive, { backgroundColor: "rgba(16, 185, 129, 0.16)" }]
+                        ]}
+                        activeOpacity={0.7}
+                        onPress={() => setFilters(prev => ({
+                            ...prev,
+                            shopType: prev.shopType === "hortifruti" ? "all" : "hortifruti"
+                        }))}
+                    >
+                        <View style={[styles.legendDot, { backgroundColor: CATEGORY_CONFIG.hortifruti.color }]}>
+                            <Ionicons name="leaf" size={10} color="#FFFFFF" />
+                        </View>
+                        <Text
+                            style={[
+                                styles.legendLabel,
+                                themeStyles.text,
+                                filters.shopType === "hortifruti" && { fontWeight: "700", color: CATEGORY_CONFIG.hortifruti.color }
+                            ]}
+                        >
+                            {t("map.typeGrocery")}
+                        </Text>
+                    </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -760,14 +1065,20 @@ export default function MapScreen() {
                     <View style={[styles.noMarkersBanner, themeStyles.card, themeStyles.border]}>
                         <Ionicons name="information-circle-outline" size={18} color={themeAccentColor} />
                         <Text style={[styles.noMarkersText, themeStyles.text]}>
-                            {rawHereElements.length > 0 ? `Nenhum mercado a até ${filters.maxDistance / 1000} km` : "Nenhum mercado encontrado"}
+                            {(filters.shopType !== "all" || filters.hoursOption !== "all")
+                                ? "Nenhum mercado com estes filtros"
+                                : rawHereElements.length > 0
+                                    ? `Nenhum mercado a até ${filters.maxDistance / 1000} km`
+                                    : "Nenhum mercado encontrado"}
                         </Text>
-                        {filters.maxDistance < 10000 && (
+                        {(filters.shopType !== "all" || filters.hoursOption !== "all" || filters.maxDistance < 10000) && (
                             <TouchableOpacity
                                 style={[styles.expandRadiusBtn, { backgroundColor: themeAccentColor }]}
-                                onPress={() => setFilters(prev => ({ ...prev, maxDistance: 10000, shopType: "all" }))}
+                                onPress={() => setFilters({ maxDistance: 10000, shopType: "all", hoursOption: "all" })}
                             >
-                                <Text style={styles.expandRadiusText}>10 km</Text>
+                                <Text style={styles.expandRadiusText}>
+                                    {(filters.shopType !== "all" || filters.hoursOption !== "all") ? "Limpar" : "10 km"}
+                                </Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -798,14 +1109,32 @@ export default function MapScreen() {
     );
 }
 
-const FilterButton = ({ icon, label, onPress, themeStyles, isDark, accentColor }: any) => (
+const FilterButton = ({ icon, label, onPress, themeStyles, isDark, accentColor, isActive }: any) => (
     <TouchableOpacity
-        style={[styles.filterCard, themeStyles.card, themeStyles.border]}
+        style={[
+            styles.filterCard,
+            themeStyles.card,
+            themeStyles.border,
+            isActive && {
+                borderColor: accentColor || "#1565C0",
+                borderWidth: 1.5,
+                backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(21, 101, 192, 0.08)",
+            },
+        ]}
         activeOpacity={0.8}
         onPress={onPress}
     >
-        <Ionicons name={icon} size={20} color={isDark ? "#F0E6D3" : (accentColor || "#1565C0")} />
-        <Text style={[styles.filterText, themeStyles.text]} numberOfLines={1}>{label}</Text>
+        <Ionicons name={icon} size={20} color={isActive ? (accentColor || "#1565C0") : (isDark ? "#F0E6D3" : "#555")} />
+        <Text
+            style={[
+                styles.filterText,
+                themeStyles.text,
+                isActive && { color: accentColor || "#1565C0", fontWeight: "700" }
+            ]}
+            numberOfLines={1}
+        >
+            {label}
+        </Text>
     </TouchableOpacity>
 );
 
@@ -870,6 +1199,7 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
 
 const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, accentColor, t }: any) => {
     if (!market) return null;
+    const categoryConfig = (CATEGORY_CONFIG as any)[market.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
 
     return (
         <Modal visible={true} transparent={true} animationType="slide" onRequestClose={onClose}>
@@ -883,9 +1213,17 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, a
                         transition={200}
                     />
                     <View style={styles.modalHeader}>
-                        <Text style={[styles.modalTitle, themeStyles.text, { flex: 1 }]} numberOfLines={2}>
-                            {market.title}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                            <View style={[styles.marketCategoryBadge, { backgroundColor: categoryConfig.color + "18", borderColor: categoryConfig.color }]}>
+                                <Ionicons name={categoryConfig.icon as any} size={12} color={categoryConfig.color} />
+                                <Text style={[styles.marketCategoryBadgeText, { color: categoryConfig.color }]}>
+                                    {t(categoryConfig.labelKey as any) || categoryConfig.defaultLabel}
+                                </Text>
+                            </View>
+                            <Text style={[styles.modalTitle, themeStyles.text]} numberOfLines={2}>
+                                {market.title}
+                            </Text>
+                        </View>
                         <TouchableOpacity onPress={onClose} style={{ paddingLeft: 10 }}>
                             <Ionicons name="close-circle" size={28} color={isDark ? "#fff" : "#333"} />
                         </TouchableOpacity>
@@ -948,9 +1286,132 @@ const styles = StyleSheet.create({
         elevation: 3,
     },
     filterText: { fontSize: 11, marginTop: 4, textAlign: "center", fontWeight: "600" },
+    customMarkerContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    customMarkerContainerSelected: {
+        zIndex: 999,
+    },
+    customMarkerBubble: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        justifyContent: "center",
+        alignItems: "center",
+        borderWidth: 2,
+        borderColor: "#FFFFFF",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.35,
+        shadowRadius: 3,
+        elevation: 5,
+    },
+    customMarkerBubbleSelected: {
+        width: 38,
+        height: 38,
+        borderRadius: 19,
+        borderWidth: 2.5,
+        borderColor: "#FFFFFF",
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
+        elevation: 8,
+    },
+    customMarkerArrow: {
+        width: 0,
+        height: 0,
+        backgroundColor: "transparent",
+        borderStyle: "solid",
+        borderLeftWidth: 5,
+        borderRightWidth: 5,
+        borderTopWidth: 6,
+        borderLeftColor: "transparent",
+        borderRightColor: "transparent",
+        alignSelf: "center",
+        marginTop: -1,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.25,
+        shadowRadius: 1,
+        elevation: 2,
+    },
+    miniLegendCard: {
+        position: "absolute",
+        bottom: 28,
+        left: 14,
+        borderRadius: 14,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderWidth: 1,
+        elevation: 6,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 3.5,
+        zIndex: 15,
+        minWidth: 145,
+        maxWidth: "75%",
+    },
+    miniLegendHeaderRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+        gap: 5,
+        maxWidth: "100%",
+    },
+    miniLegendTitle: {
+        fontSize: 10,
+        fontWeight: "700",
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+        opacity: 0.7,
+        flexShrink: 1,
+    },
+    legendItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        paddingVertical: 3,
+        paddingHorizontal: 5,
+        borderRadius: 6,
+        marginBottom: 2,
+        gap: 6,
+        width: "100%",
+    },
+    legendItemActive: {
+        borderRadius: 6,
+    },
+    legendDot: {
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        justifyContent: "center",
+        alignItems: "center",
+        flexShrink: 0,
+    },
+    legendLabel: {
+        fontSize: 11,
+        fontWeight: "500",
+        flex: 1,
+        flexWrap: "wrap",
+    },
+    marketCategoryBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        alignSelf: "flex-start",
+        paddingVertical: 3,
+        paddingHorizontal: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 6,
+        gap: 5,
+    },
+    marketCategoryBadgeText: {
+        fontSize: 11,
+        fontWeight: "700",
+    },
     recenterButton: {
         position: "absolute",
-        bottom: 30,
+        bottom: 28,
         right: 16,
         width: 48,
         height: 48,
@@ -963,33 +1424,35 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
-        zIndex: 10,
+        zIndex: 15,
     },
     inlineLoader: {
         position: "absolute",
-        bottom: 40,
+        top: 82,
         alignSelf: "center",
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(255, 255, 255, 0.95)",
-        paddingVertical: 10,
-        paddingHorizontal: 18,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
         borderRadius: 20,
         elevation: 4,
+        zIndex: 12,
     },
     inlineLoaderText: { marginLeft: 8, fontSize: 12, color: "#333", fontWeight: '500' },
     noMarkersBanner: {
         position: "absolute",
-        bottom: 35,
+        top: 80,
         alignSelf: "center",
         flexDirection: "row",
         alignItems: "center",
-        paddingVertical: 8,
+        paddingVertical: 7,
         paddingHorizontal: 14,
         borderRadius: 20,
         elevation: 4,
         borderWidth: 1,
         gap: 8,
+        zIndex: 12,
     },
     noMarkersText: {
         fontSize: 13,
