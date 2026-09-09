@@ -304,14 +304,24 @@ async function main() {
   console.log(`\n${colors.cyan}[2/2] Iniciando Frontend Expo (${expoFlags.join(" ")})...${colors.reset}`);
   console.log(`${colors.bold}🔗 API configurada no Frontend:${colors.reset} ${colors.green}${backendApiUrl}${colors.reset}\n`);
 
-  // Sincronizar src/frontend/.env para garantir que o bundler do Metro sempre use a URL ativa
+  // Sincronizar src/frontend/.env para garantir que o bundler do Metro sempre use a URL ativa e a HERE_API_KEY
+  let hereApiKey = process.env.HERE_API_KEY || process.env.EXPO_PUBLIC_HERE_API_KEY || "";
   try {
+    const backendEnvPath = path.resolve(BACKEND_DIR, ".env");
+    if (!hereApiKey && fs.existsSync(backendEnvPath)) {
+      const backendEnvContent = fs.readFileSync(backendEnvPath, "utf8");
+      const match = backendEnvContent.match(/HERE_API_KEY=["']?([^"'\r\n]+)["']?/);
+      if (match) hereApiKey = match[1];
+    }
     const frontendEnvPath = path.resolve(FRONTEND_DIR, ".env");
-    fs.writeFileSync(
-      frontendEnvPath,
-      `# Gerado automaticamente pelo Dev Launcher do Presco\nEXPO_PUBLIC_API_URL=${backendApiUrl}\n`,
-      "utf8"
-    );
+    const envLines = [
+      "# Gerado automaticamente pelo Dev Launcher do Presco",
+      `EXPO_PUBLIC_API_URL=${backendApiUrl}`,
+    ];
+    if (hereApiKey) {
+      envLines.push(`EXPO_PUBLIC_HERE_API_KEY=${hereApiKey}`);
+    }
+    fs.writeFileSync(frontendEnvPath, envLines.join("\n") + "\n", "utf8");
   } catch {}
 
   expoProcess = spawn(
@@ -323,6 +333,7 @@ async function main() {
       env: {
         ...process.env,
         EXPO_PUBLIC_API_URL: backendApiUrl,
+        ...(hereApiKey ? { EXPO_PUBLIC_HERE_API_KEY: hereApiKey } : {}),
         REACT_NATIVE_PACKAGER_HOSTNAME: packagerHostname,
       },
       detached: !IS_WINDOWS,

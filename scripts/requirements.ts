@@ -147,6 +147,7 @@ export const ENV_DEFAULTS: Record<string, string> = {
   SERVER_PORT: "3333",
   SERVER_HOST: "0.0.0.0",
   NODE_ENV: "development",
+  HERE_API_KEY: "4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4",
   // JWT_SECRET is generated in bootstrap if absent
 };
 
