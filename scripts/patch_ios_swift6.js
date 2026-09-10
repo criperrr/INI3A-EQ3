@@ -31,6 +31,12 @@ function patchSwiftInterfaceContent(content) {
     modified = true;
   }
 
+  // 3. Normalize internal _LocationEssentials module references to CoreLocation for iOS SDK 18 compatibility
+  if (content.includes("_LocationEssentials.")) {
+    content = content.replace(/_LocationEssentials\./g, "CoreLocation.");
+    modified = true;
+  }
+
   return { content, modified };
 }
 
