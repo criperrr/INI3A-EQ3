@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "semantic-versioning": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/semantic-versioning/SKILL.md",
+      "computedHash": "903d8cc74d40680027631393b67aca088042b5cde948ae9c4b8bb500cd449054"
+    }
+  }
+}

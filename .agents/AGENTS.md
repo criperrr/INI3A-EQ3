@@ -225,6 +225,27 @@ After any file modification or addition:
      - Documentation & Tests (`docs: ...` or `test: ...`)
   4. Use Conventional Commits with clear, descriptive messages.
 
+### 6.2. Semantic Versioning & Release Policy (`semver`)
+
+- **Format:** Segue estritamente `MAJOR.MINOR.PATCH` (ex: `1.0.0`, `1.0.1`).
+  - `MAJOR`: Quebras de compatibilidade de API ou arquitetura (`feat!:`, `fix!:`, `BREAKING CHANGE:`).
+  - `MINOR`: Novas funcionalidades compatíveis com versões anteriores (`feat:`).
+  - `PATCH`: Correções de bugs, ajustes de estilo e melhorias de performance (`fix:`, `perf:`).
+- **Instruções Obrigatórias para Modelos Agenticos (IA):**
+  - **O agente deve alterar a versão após a modificação:** Sempre que concluir uma modificação de código (seja adição de feature, correção de bug ou refatoração estrutural), o modelo agentico **DEVE atualizar a versão do projeto** nos arquivos de manifesto de acordo com a skill `@[skills/semantic-versioning]`.
+  - **Sem scripts no nome do APK:** O nome ou artefato do APK gerado não deve depender de scripts mágicos de concatenação de versão em tempo de execução; a versão oficial é lida diretamente dos arquivos de manifesto versionados (`package.json` e `app.json`).
+  - **Protocolo de Atualização Direta pelo Agente:**
+    1. Analisar a natureza da alteração segundo o Conventional Commits (`fix` → Patch, `feat` → Minor, breaking → Major).
+    2. Atualizar simultaneamente:
+       - `package.json` (raiz): campo `"version"`.
+       - `src/backend/package.json`: campo `"version"`.
+       - `src/frontend/package.json`: campo `"version"`.
+       - `src/frontend/app.json`: campo `expo.version` (mesmo valor SemVer) e incrementar `expo.android.versionCode` (+1 inteiro).
+    3. Alternativamente, o agente pode invocar `npm run version:bump` (Patch), `npm run version:bump:minor` (Minor) ou `npm run version:bump:major` (Major) para sincronização automática.
+- **Pipeline de Release & GitHub Actions:**
+  - Releases e builds autônomas do APK Android são acionadas via GitHub Actions (`.github/workflows/release.yml`).
+  - Todo push de tag `v*.*.*` ou disparo manual via `workflow_dispatch` executa a suíte de testes (`npm test`, `npm run typecheck`), gera o APK release nativo e publica automaticamente o artefato no **GitHub Releases** com changelog gerado dinamicamente.
+
 ---
 
 ## 7. Code Style & Conventions
