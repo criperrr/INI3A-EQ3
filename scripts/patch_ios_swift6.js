@@ -270,6 +270,84 @@ function patchSwiftSource(full) {
       }
     }
 
+    // 7. Fix @expo/ui iOS 26 forward-compatibility APIs not present in Xcode 16.4 / iPhoneOS18.5.sdk
+    if (full.includes("@expo") && full.includes("ui") && full.includes("Modifiers")) {
+      if (full.endsWith("SymbolEffectModifier.swift")) {
+        if (content.includes("buildDrawOnEffect") && !content.includes("#if compiler(>=6.2)\n@available(iOS 26.0, tvOS 26.0, *)\nprivate func buildDrawOnEffect")) {
+          content = content.replace(
+            /@available\(iOS 26\.0, tvOS 26\.0, \*\)\s*private func buildDrawOnEffect[\s\S]*?default: played\s*\}\s*\}/,
+            `#if compiler(>=6.2)
+@available(iOS 26.0, tvOS 26.0, *)
+private func buildDrawOnEffect(_ config: SymbolEffectConfig) -> DrawOnSymbolEffect {
+  return switch config.scope {
+  case .byLayer: .drawOn.byLayer
+  case .individually: .drawOn.individually
+  case .wholeSymbol: .drawOn.wholeSymbol
+  default: .drawOn
+  }
+}
+
+@available(iOS 26.0, tvOS 26.0, *)
+private func buildDrawOffEffect(_ config: SymbolEffectConfig) -> DrawOffSymbolEffect {
+  let played: DrawOffSymbolEffect = switch config.playbackStyle {
+  case .reversed: .drawOff.reversed
+  case .nonReversed: .drawOff.nonReversed
+  default: .drawOff
+  }
+  return switch config.scope {
+  case .byLayer: played.byLayer
+  case .individually: played.individually
+  case .wholeSymbol: played.wholeSymbol
+  default: played
+  }
+}
+#endif`
+          );
+          content = content.replace(
+            /case \.drawOn:\s*if #available\(iOS 26\.0, tvOS 26\.0, \*\)\s*\{\s*view\.symbolEffect\(buildDrawOnEffect\(config\), options: options, isActive: isActive\)\s*\} else \{\s*view\s*\}/g,
+            `case .drawOn:
+#if compiler(>=6.2)
+    if #available(iOS 26.0, tvOS 26.0, *) {
+      view.symbolEffect(buildDrawOnEffect(config), options: options, isActive: isActive)
+    } else {
+      view
+    }
+#else
+    view
+#endif`
+          );
+          content = content.replace(
+            /case \.drawOff:\s*if #available\(iOS 26\.0, tvOS 26\.0, \*\)\s*\{\s*view\.symbolEffect\(buildDrawOffEffect\(config\), options: options, isActive: isActive\)\s*\} else \{\s*view\s*\}/g,
+            `case .drawOff:
+#if compiler(>=6.2)
+    if #available(iOS 26.0, tvOS 26.0, *) {
+      view.symbolEffect(buildDrawOffEffect(config), options: options, isActive: isActive)
+    } else {
+      view
+    }
+#else
+    view
+#endif`
+          );
+          modified = true;
+        }
+      }
+
+      if (full.endsWith("ViewModifierRegistry.swift")) {
+        if (content.includes("content.lineHeight(.exact(points: value))")) {
+          content = content.replace(
+            "content.lineHeight(.exact(points: value))",
+            `#if compiler(>=6.2)
+        content.lineHeight(.exact(points: value))
+#else
+        content
+#endif`
+          );
+          modified = true;
+        }
+      }
+    }
+
     if (modified) {
       fs.writeFileSync(full, content, "utf8");
       console.log("Patched Swift syntax in:", full);
