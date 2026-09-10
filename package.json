@@ -1,6 +1,6 @@
 {
   "name": "presco",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [

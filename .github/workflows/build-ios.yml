@@ -177,6 +177,19 @@ jobs:
                       modified = true;
                     }
 
+                    // Patch weak let/var runtime to nonisolated(unsafe) weak var runtime for Swift 6 Sendable classes
+                    if (/\bweak\s+(let|var)\s+runtime\b/.test(content)) {
+                      content = content.replace(/(?:nonisolated\(unsafe\)\s+)?(private|internal|public|fileprivate)?\s*weak\s+(let|var)\s+runtime\b/g, (match, access) => {
+                        return `nonisolated(unsafe) ${access ? access + " " : ""}weak var runtime`;
+                      });
+                      modified = true;
+                    } else if (/\bweak\s+let\b/.test(content)) {
+                      content = content.replace(/(?:nonisolated\(unsafe\)\s+)?(private|internal|public|fileprivate)?\s*weak\s+let\s+/g, (match, access) => {
+                        return `nonisolated(unsafe) ${access ? access + " " : ""}weak var `;
+                      });
+                      modified = true;
+                    }
+
                     if (modified) {
                       fs.writeFileSync(full, content, "utf8");
                       console.log("Patched Swift syntax in:", full);
@@ -276,6 +289,19 @@ jobs:
                     // Remove trailing commas before closing parenthesis or brackets in Swift functions/closures
                     if (/,(\s*[)>])/.test(content)) {
                       content = content.replace(/,(\s*[)>])/g, "$1");
+                      modified = true;
+                    }
+
+                    // Patch weak let/var runtime to nonisolated(unsafe) weak var runtime for Swift 6 Sendable classes
+                    if (/\bweak\s+(let|var)\s+runtime\b/.test(content)) {
+                      content = content.replace(/(?:nonisolated\(unsafe\)\s+)?(private|internal|public|fileprivate)?\s*weak\s+(let|var)\s+runtime\b/g, (match, access) => {
+                        return `nonisolated(unsafe) ${access ? access + " " : ""}weak var runtime`;
+                      });
+                      modified = true;
+                    } else if (/\bweak\s+let\b/.test(content)) {
+                      content = content.replace(/(?:nonisolated\(unsafe\)\s+)?(private|internal|public|fileprivate)?\s*weak\s+let\s+/g, (match, access) => {
+                        return `nonisolated(unsafe) ${access ? access + " " : ""}weak var `;
+                      });
                       modified = true;
                     }
 
