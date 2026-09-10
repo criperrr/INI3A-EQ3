@@ -9,6 +9,10 @@ on:
         description: "Nome da Release / Tag para anexar o IPA (opcional, ex: v1.0.4)"
         required: false
         default: ""
+  push:
+    tags:
+      - "ios-v*"
+      - "v*.*.*-ios"
 
 permissions:
   contents: write
