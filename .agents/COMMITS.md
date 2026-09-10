@@ -3049,3 +3049,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Ensures seamless compilation of ExpoModulesJSI and complete iOS IPA generation on macOS 15 runners.
+
+## `2026-09-10 17:40` - `fix(ci)`: Preserve required comma separator in Package.swift for iOS build
+
+- **Description:** Fixed syntax error in Package.swift patch that previously stripped the required comma separator after `swiftLanguageModes: [.v6]`. Ensured surgical trailing comma removal strictly on closing arguments without touching parameter separators.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unblocks Xcodebuild SPM dependency resolution and completes iOS IPA packaging.
