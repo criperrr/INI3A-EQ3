@@ -148,12 +148,16 @@ jobs:
                       content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
                       modified = true;
                     }
-                    if (/],\s*\n\s*swiftLanguageModes/.test(content)) {
-                      content = content.replace(/],\s*\n\s*swiftLanguageModes/g, "]\n  swiftLanguageModes");
+                    if (content.includes("      ],\n      linkerSettings:")) {
+                      content = content.replace("      ],\n      linkerSettings:", "      ]\n      linkerSettings:");
                       modified = true;
                     }
-                    if (/],\s*\n\s*cxxLanguageStandard/.test(content)) {
-                      content = content.replace(/],\s*\n\s*cxxLanguageStandard/g, "]\n  cxxLanguageStandard");
+                    if (content.includes("      ],\n    ),")) {
+                      content = content.replace("      ],\n    ),", "      ]\n    ),");
+                      modified = true;
+                    }
+                    if (/swiftLanguageModes:\s*\[\.v6\](?!,)/.test(content)) {
+                      content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
                       modified = true;
                     }
 
@@ -245,12 +249,16 @@ jobs:
                       content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
                       modified = true;
                     }
-                    if (/],\s*\n\s*swiftLanguageModes/.test(content)) {
-                      content = content.replace(/],\s*\n\s*swiftLanguageModes/g, "]\n  swiftLanguageModes");
+                    if (content.includes("      ],\n      linkerSettings:")) {
+                      content = content.replace("      ],\n      linkerSettings:", "      ]\n      linkerSettings:");
                       modified = true;
                     }
-                    if (/],\s*\n\s*cxxLanguageStandard/.test(content)) {
-                      content = content.replace(/],\s*\n\s*cxxLanguageStandard/g, "]\n  cxxLanguageStandard");
+                    if (content.includes("      ],\n    ),")) {
+                      content = content.replace("      ],\n    ),", "      ]\n    ),");
+                      modified = true;
+                    }
+                    if (/swiftLanguageModes:\s*\[\.v6\](?!,)/.test(content)) {
+                      content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
                       modified = true;
                     }
 
