@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Preservação de Semântica de Movimentação em `vector.push_back(consuming: propNameId)` (Build iOS):**
+  1. Diagnosticado o erro em `allocator_traits.h:328:5` (`no matching function for call to '__construct_at'`).
+  2. Identificado que `facebook::jsi::PropNameID` é um tipo estritamente não-copiável (`PropNameID(const PropNameID&) = delete;`). O rótulo `consuming:` no Swift é o mecanismo oficial que instrui o compilador a despachar para a sobrecarga C++ rvalue `push_back(T&&)` com semântica de movimentação (`std::move`).
+  3. Atualizado [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js) para preservar `consuming:` e reverter qualquer substituição indevida, garantindo que o C++ instancie a sobrecarga correta sem erros de cópia.
 - **Extração do Script de Patch iOS (`scripts/patch_ios_swift6.js`) & Correção de Sintaxe YAML no Workflow (`v1.0.4`):**
   1. Diagnosticado e comprovado o motivo da falha instantânea na execução da action do iOS (`build-ios.yml`): a presença de scripts inline multiline em `node -e '...'` que continham trechos com indentação reduzida e colons (`init(_:_:)`), gerando erro de chave implícita multilinear no analisador YAML.
   2. Extraída toda a rotina de saneamento para o script autocontido [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js), reduzindo mais de 300 linhas duplicadas de scripts inline no YAML para chamadas limpas `run: node scripts/patch_ios_swift6.js`.

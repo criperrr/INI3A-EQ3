@@ -3137,3 +3137,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** iOS workflow passes full YAML validation. Pushing with tag ios-v1.0.4 will trigger the build cleanly without YAML syntax errors.
+
+## `2026-09-10 18:39` - `fix(ci)`: preserve consuming label in vector.push_back for C++ move semantics (v1.0.4)
+
+- **Description:** Fixed compile failure in Xcode 16.4 where clang failed in allocator_traits.h:328:5 with no matching function for call to __construct_at on facebook::jsi::PropNameID. Because PropNameID has a deleted copy-constructor, stripping the consuming: label had forced Swift to call the lvalue copy overload of std::vector::push_back(const T&). Updated scripts/patch_ios_swift6.js to retain consuming:, ensuring Swift calls the rvalue move overload push_back(T&&) with std::move semantics.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Swift and C++ compile cleanly with move semantics. Tag ios-v1.0.4 will be updated and pushed.
