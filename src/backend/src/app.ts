@@ -47,7 +47,7 @@ app.use(
   compression({
     level: 6,           // Balanced CPU usage to compression ratio
     threshold: 1024,    // Skip compression for responses smaller than 1KB
-    filter: (req, res) => {
+    filter: (req: any, res: any) => {
       if (req.headers["x-no-compression"]) return false;
       return compression.filter(req, res);
     },

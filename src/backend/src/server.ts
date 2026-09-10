@@ -5,6 +5,9 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+import { initCrashLogger, logFatalError } from "@/shared/util/crashLogger";
+
+initCrashLogger();
 import app from "@/app";
 import { connectRedis, redisClient } from "@/shared/redis/server";
 import { db, pool, testDatabaseConnection } from "@/shared/database/database";
@@ -53,5 +56,6 @@ async function bootstrap() {
 
 bootstrap().catch((err) => {
   console.error("Failed to start server:", err);
+  logFatalError("bootstrapCatch", err);
   process.exit(1);
 });
