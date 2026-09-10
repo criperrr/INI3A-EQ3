@@ -7,10 +7,12 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
-- **Preservação de Semântica de Movimentação em `vector.push_back(consuming: propNameId)` (Build iOS):**
-  1. Diagnosticado o erro em `allocator_traits.h:328:5` (`no matching function for call to '__construct_at'`).
-  2. Identificado que `facebook::jsi::PropNameID` é um tipo estritamente não-copiável (`PropNameID(const PropNameID&) = delete;`). O rótulo `consuming:` no Swift é o mecanismo oficial que instrui o compilador a despachar para a sobrecarga C++ rvalue `push_back(T&&)` com semântica de movimentação (`std::move`).
-  3. Atualizado [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js) para preservar `consuming:` e reverter qualquer substituição indevida, garantindo que o C++ instancie a sobrecarga correta sem erros de cópia.
+- **Ponte C++ `HostObjectCallbacks.appendPropName` para Inserção de `PropNameID` Move-Only (Build iOS):**
+  1. Diagnosticado o duplo conflito de interoperabilidade Swift 6.1 / C++:
+     - Quando `vector.push_back(consuming: propNameId)` era mantido, o compilador Swift 6.1 rejeitava com `error: extraneous argument label 'consuming:' in call`, pois na sua tabela de símbolos o `std::vector::push_back` é importado sem rótulos.
+     - Quando `consuming:` era omitido (`vector.push_back(propNameId)`), o Swift despachava para a sobrecarga de cópia (`push_back(const T&)`), falhando no Clang C++ com `error: no matching function for call to '__construct_at'` porque `PropNameID` é não-copiável.
+  2. Implementada a solução definitiva de arquitetura: adicionado método estático inline em C++ `expo::HostObjectCallbacks::appendPropName(PropNameIds &vector, facebook::jsi::Runtime &runtime, const std::string &name)` em `HostObjectCallbacks.h`, executando `vector.push_back(facebook::jsi::PropNameID::forUtf8(runtime, name))` diretamente no C++ com semântica de movimentação de rvalue prvalue nativa.
+  3. No Swift (`JavaScriptRuntime.swift`), substituído o loop para invocar diretamente `expo.HostObjectCallbacks.appendPropName(&vector, iRuntime, std.string(propertyName))`, eliminando simultaneamente a criação de variáveis temporárias com rótulos rejeitados no Swift e qualquer chamada de cópia no C++.
 - **Extração do Script de Patch iOS (`scripts/patch_ios_swift6.js`) & Correção de Sintaxe YAML no Workflow (`v1.0.4`):**
   1. Diagnosticado e comprovado o motivo da falha instantânea na execução da action do iOS (`build-ios.yml`): a presença de scripts inline multiline em `node -e '...'` que continham trechos com indentação reduzida e colons (`init(_:_:)`), gerando erro de chave implícita multilinear no analisador YAML.
   2. Extraída toda a rotina de saneamento para o script autocontido [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js), reduzindo mais de 300 linhas duplicadas de scripts inline no YAML para chamadas limpas `run: node scripts/patch_ios_swift6.js`.

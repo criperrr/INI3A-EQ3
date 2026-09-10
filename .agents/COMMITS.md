@@ -3146,3 +3146,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Swift and C++ compile cleanly with move semantics. Tag ios-v1.0.4 will be updated and pushed.
+
+## `2026-09-10 18:47` - `fix(ci)`: bridge PropNameID vector appending via C++ HostObjectCallbacks.appendPropName (v1.0.4)
+
+- **Description:** Resolved the dual Swift 6.1 / C++ interop dilemma on PropNameID vector insertion. Swift 6.1 rejected vector.push_back(consuming: propNameId) with error: extraneous argument label consuming: in call, while omitting consuming: caused Clang to attempt copy-construction on move-only PropNameID (allocator_traits.h:328: no matching function for call to __construct_at). Implemented C++ static helper expo::HostObjectCallbacks::appendPropName in HostObjectCallbacks.h using pure C++ rvalue push_back, and updated JavaScriptRuntime.swift to delegate directly to it.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Clean Swift and C++ compilation with no extraneous argument labels and zero copy construction on non-copyable types. Tag ios-v1.0.4 updated and pushed.
