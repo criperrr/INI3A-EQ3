@@ -580,6 +580,7 @@ export const de: TranslationSchema = {
     scanStep: "Scannen",
     saveStep: "Sparen",
     githubRepo: "GitHub-Repository",
+    releasesLink: "Releases & APK-Download",
   },
   errors: {
     networkError: "Verbindung fehlgeschlagen. Bitte überprüfen Sie Ihr Netzwerk.",

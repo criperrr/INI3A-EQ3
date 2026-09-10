@@ -49,7 +49,8 @@
     "remote:shell": "bash scripts/remote.sh shell",
     "android:debug": "tsx scripts/android.ts --debug",
     "android:apk": "tsx scripts/android.ts --no-install",
-    "doctor:jdk": "tsx scripts/lib/jdk.ts --install"
+    "doctor:jdk": "tsx scripts/lib/jdk.ts --install",
+    "release": "tsx scripts/upload_release.ts"
   },
   "devDependencies": {
     "@types/localtunnel": "^2.0.4",

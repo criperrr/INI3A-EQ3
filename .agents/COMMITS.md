@@ -2800,6 +2800,23 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Backend Presco 100% operacional no servidor remoto CTI com resposta 200 OK em `https://eq.projetoscti.com.br/26-presco/health`. Frontend pode chavear com 1 comando entre CTI remoto, LAN Wi-Fi e Localhost. Commits locais sincronizam automaticamente com o servidor.
 
+## `2026-09-10 09:30` - `feat(env)`: Configure Google Maps API key in frontend .env
+
+- **Description:** Added `GOOGLE_MAPS_API_KEY` to `src/frontend/.env` to ensure Android builds inject the key via `app.config.js` into the AndroidManifest, preventing `MapView.onCreate` crashes. Also updated `scripts/configure_env.ts` to preserve this key during automated environment configuration runs.
+- **Files Modified:**
+  - `src/frontend/.env`
+  - `scripts/configure_env.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Android Google Maps rendering works without crashing; key is safely gitignored and maintained across environment switches.
+
+## `2026-09-10 09:34` - `chore(android)`: Install and configure Android SDK on macOS
+
+- **Description:** Installed `android-commandlinetools` and `android-platform-tools` via Homebrew, structured `~/Library/Android/sdk`, accepted all SDK package licenses, installed `platforms;android-35` and `build-tools;35.0.0`, and exported `ANDROID_HOME` to `~/.zshrc`. Validated that `npm run android` automatically detects both the Liberica JDK 21 and the Android SDK.
+- **Files Modified:**
+  - `~/.zshrc`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** `npm run android` can now compile Android builds and install directly to devices/emulators without missing SDK errors.
+
 ## 2026-09-10 09:35 - feat(deploy): Configure remote backend, clean DB and restart
 
 - **Description:** Recovered SSH key from downloaded CTI emails, configured deploy/.env.deploy with remote credentials and Upstash Redis URL, dropped pre-existing database tables and stale enum types on remote PostgreSQL, ran fresh Drizzle migrations and seed, and restarted the remote backend process via PM2/npm run.
@@ -2816,6 +2833,34 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/frontend/android/app/src/main/AndroidManifest.xml
   - src/frontend/android/local.properties
 - **Impact / Next Steps:** Production standalone app is ready on phone internal storage for manual install or deployment.
+
+## `2026-09-10 10:41` - `build(android)`: Compilação do APK de Release para Android
+
+- **Description:** Compilação do APK release com Hermes, autolinking e New Architecture para instalação direta em celulares.
+- **Files Modified:**
+  - `.agents/CURRENT.md`
+  - `dist/Presco.apk`
+- **Impact / Next Steps:** APK pronto para instalação via ADB ou download direto na rede local.
+
+## `2026-09-10 10:50` - `feat(release)`: Publicação Oficial do APK v1.0.0 no GitHub Releases e Documentação Completa
+
+- **Description:** Publicação oficial do binário de release Android do Presco (`v1.0.0`) no repositório GitHub `criperrr/INI3A-EQ3`. Upload dos assets de 134 MB (`Presco-v1.0.0.apk` e `Presco.apk`) com checksum SHA-256 verificado. Criação de script autônomo `scripts/upload_release.ts` e atalho `npm run release`. Criação de documentação completa em `apk-release-distribution.md` cobrindo guia de instalação passo a passo, permissões do Android, arquitetura New Architecture/Hermes, conexões de backend e troubleshooting. Atualização da tela Sobre (`about.tsx`), `README.md` com badges de release e download direto, e sincronização de traduções nos 7 idiomas suportados.
+- **Files Modified:**
+  - `scripts/upload_release.ts`
+  - `apk-release-distribution.md`
+  - `README.md`
+  - `package.json`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Usuários e avaliadores agora podem baixar o APK oficial diretamente pela página de Releases do GitHub ou através da tela Sobre dentro do próprio app.
 
 ## 2026-09-10 11:49 - ci(release): Adicionar pipeline GitHub Actions para build autônoma de APK, publicação em Releases e política SemVer
 
@@ -2843,3 +2888,4 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - .agents/rules/code-rules.md
   - .github/workflows/release.yml
 - **Impact / Next Steps:** Modelos agenticos possuem regras canônicas para manter a versão sincronizada nos 4 manifestos após qualquer código modificado.
+

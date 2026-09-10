@@ -580,6 +580,7 @@ export const ru: TranslationSchema = {
     scanStep: "Сканировать",
     saveStep: "Экономить",
     githubRepo: "Репозиторий на GitHub",
+    releasesLink: "Релизы и скачивание APK",
   },
   errors: {
     networkError: "Ошибка подключения к интернету. Проверьте соединение.",

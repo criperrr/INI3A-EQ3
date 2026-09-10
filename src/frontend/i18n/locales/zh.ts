@@ -580,6 +580,7 @@ export const zh: TranslationSchema = {
     scanStep: "扫码",
     saveStep: "省钱",
     githubRepo: "GitHub 仓库",
+    releasesLink: "版本发布与 APK 下载",
   },
   errors: {
     networkError: "网络连接失败，请检查您的网络设置。",

@@ -8,6 +8,8 @@
 
 src/frontend/.expo/
 src/frontend/dist/
+dist/
+*.apk
 src/frontend/web-build/
 src/frontend/.metro/
 

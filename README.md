@@ -1,13 +1,26 @@
 # 🏷️ Presco - Comparador Colaborativo de Preços e Scanner EAN
 ### Projeto de Conclusão de Curso (TCC) — CTI Bauru (UNESP) • Turma 3A-2026 (Grupo 3)
 
+[![GitHub Release](https://img.shields.io/github/v/release/criperrr/INI3A-EQ3?style=for-the-badge&logo=github&color=2ea44f)](https://github.com/criperrr/INI3A-EQ3/releases/latest)
+[![APK Download](https://img.shields.io/badge/Download_APK-v1.0.0-34a853?style=for-the-badge&logo=android&logoColor=white)](https://github.com/criperrr/INI3A-EQ3/releases/download/v1.0.0/Presco-v1.0.0.apk)
 [![Node.js](https://img.shields.io/badge/Node.js-v20+-68a063?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![Express](https://img.shields.io/badge/Express-5.x-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
-[![React Native](https://img.shields.io/badge/React_Native-0.81.5-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-SDK_54-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.86.3-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-SDK_57-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-PostGIS-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-6.x-dc382d?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![Redis](https://img.shields.io/badge/Redis-7.x-dc382d?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+---
+
+## 📱 Download do Aplicativo (APK Android)
+
+O aplicativo oficial está compilado e pronto para instalação em smartphones Android:
+
+- 📥 **[Baixar Presco-v1.0.0.apk (134 MB)](https://github.com/criperrr/INI3A-EQ3/releases/download/v1.0.0/Presco-v1.0.0.apk)**
+- 📥 **[Download Alternativo (Presco.apk)](https://github.com/criperrr/INI3A-EQ3/releases/download/v1.0.0/Presco.apk)**
+- 🚀 **[Ver Página Oficial de Releases no GitHub](https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.0.0)**
+- 📖 **[Guia Passo a Passo de Instalação e Permissões](apk-release-distribution.md)**
 
 ---
 
