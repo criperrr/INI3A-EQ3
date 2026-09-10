@@ -84,6 +84,69 @@ class MarketControllerClass {
       next(e);
     }
   }
+
+  async updateMarket(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID do mercado inválido." }]);
+      }
+
+      const { name, latitude, longitude } = req.body;
+      const errors: Array<{ field: string; message: string }> = [];
+
+      if (name !== undefined && (typeof name !== "string" || name.trim().length === 0)) {
+        errors.push({ field: "name", message: "O nome do mercado não pode ser vazio." });
+      }
+
+      const lat = latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : undefined;
+      const lng = longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : undefined;
+
+      if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) {
+        errors.push({ field: "latitude", message: "Latitude deve estar entre -90 e 90 graus." });
+      }
+      if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
+        errors.push({ field: "longitude", message: "Longitude deve estar entre -180 e 180 graus." });
+      }
+
+      if (errors.length > 0) throw new ValidationError(errors);
+
+      const updated = await marketService.updateMarket(numId, {
+        name,
+        latitude: lat,
+        longitude: lng,
+      });
+
+      return res.status(200).json(success(updated));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async deleteMarket(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID do mercado inválido." }]);
+      }
+
+      const result = await marketService.deleteMarket(numId);
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async reallocateMarkets(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const result = await marketService.reallocateMarkets();
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const marketController = new MarketControllerClass();
