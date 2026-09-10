@@ -2999,3 +2999,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** build-xcframework.sh do expo-modules-jsi agora compila limpo no toolchain Swift 6.0 do Xcode 16.2 sem erros de sintaxe.
+
+## 2026-09-10 16:40 - fix(ci): Remocao de SWIFT_RETURNS_RETAINED em construtores C++ de RuntimeScheduler
+
+- **Description:** Diagnosticado erro no Clang ao compilar o modulo C++ ExpoModulesJSI-Cxx (unknown type name 'SWIFT_RETURNS_RETAINED' e constructor cannot have a return type). O macro SWIFT_RETURNS_RETAINED e invalido para construtores C++ e nao e suportado no Xcode 16.2. Expandido o script Node.js no workflow build-ios.yml para remover esse macro dos construtores em RuntimeScheduler.h e quaisquer headers associados.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Modulo C++ ExpoModulesJSI-Cxx agora compila com sucesso no Xcode 16.2.

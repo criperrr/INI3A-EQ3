@@ -89,6 +89,7 @@ jobs:
           # 1. Downgrade de swift-tools-version de 6.2 para 6.0
           # 2. Remoção de vírgulas trailing antes de parênteses de fechamento (sintaxe do Swift 6.2 inválida no Swift 6.0)
           # 3. Remoção de features experimentais do Swift 6.2 (NonisolatedNonsendingByDefault, InferIsolatedConformances)
+          # 4. Remoção de SWIFT_RETURNS_RETAINED em construtores C++ (inválido e rejeitado pelo Clang/Swift 6.0)
           node -e '
             const fs = require("fs");
             const path = require("path");
@@ -128,6 +129,15 @@ jobs:
                       console.log("Patched Swift syntax in:", full);
                     }
                   } catch (err) {}
+                } else if (entry.name.endsWith(".h") || entry.name.endsWith(".hpp")) {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    if (content.includes("SWIFT_RETURNS_RETAINED")) {
+                      content = content.replace(/SWIFT_RETURNS_RETAINED\s+/g, "");
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
+                    }
+                  } catch (err) {}
                 }
               }
             }
@@ -142,7 +152,7 @@ jobs:
 
       - name: Corrigir Build Scripts e Toolchain nos Pods
         run: |
-          # 1. Re-executa o patch de sintaxe Swift caso o pod install tenha descompactado/gerado arquivos
+          # 1. Re-executa o patch de sintaxe Swift e C++ caso o pod install tenha descompactado/gerado arquivos
           node -e '
             const fs = require("fs");
             const path = require("path");
@@ -180,6 +190,15 @@ jobs:
                     if (modified) {
                       fs.writeFileSync(full, content, "utf8");
                       console.log("Patched Swift syntax in:", full);
+                    }
+                  } catch (err) {}
+                } else if (entry.name.endsWith(".h") || entry.name.endsWith(".hpp")) {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    if (content.includes("SWIFT_RETURNS_RETAINED")) {
+                      content = content.replace(/SWIFT_RETURNS_RETAINED\s+/g, "");
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
                     }
                   } catch (err) {}
                 }
