@@ -3073,3 +3073,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unblocks iOS IPA build pipeline on GitHub Actions.
+
+## `2026-09-10 18:02` - `fix(ci)`: Preserve weak let and remove Swift trailing commas in iOS build (v1.0.9)
+
+- **Description:** Fixed fatal Swift compiler errors in Xcode 16.4 / macOS 15 runner during iOS IPA build:
+  1. Preserved immutable `weak let` in Sendable classes (removed previous faulty mutation to `weak var` which caused mutable stored property compiler errors).
+  2. Removed trailing commas before closing parentheses and generic brackets in `.swift` files using regex `/,(\s*[)>])/g` to ensure compatibility with Swift 6.0/6.1 parser in `JavaScriptRuntime.swift`.
+  3. Refined regex for `linkerSettings` parameter separation in `Package.swift` to be resilient to line breaks.
+  4. Synchronized versions to v1.0.9 (versionCode 10).
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `package-lock.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Clean iOS build on CI and automatic IPA artifact generation for Sideloadly.
