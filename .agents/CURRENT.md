@@ -7,13 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Limpeza de Produtos Remotos:** Executado drop/limpeza transacional estritamente da tabela `product` e suas dependências de ocorrências (`ocurrency`, `cart_product`, `cured`) no banco PostgreSQL remoto da equipe (`26-presco` em `projetoscti.com.br:54432`). Todos os 115 mercados (incluindo Trigal ID 1), usuários, papéis e itens de gamificação foram 100% preservados.
+- **Carregamento & Fallback de Mercados (Trigal):** Corrigido fluxo de busca de mercados em `registerProduct.tsx` e `index.tsx`. Adicionado fallback automático para carregar todos os mercados cadastrados caso o usuário esteja sem GPS, com permissão negada, ou fora do raio local de 15km, garantindo que o mercado "Trigal" e demais opções estejam sempre acessíveis para seleção e no botão "Ver todos".
 - **Usabilidade de Teclado & Auto-Scroll:** Implementado `KeyboardAwareScrollView` e `FocusedInputWrapper` para prevenir sobreposição do teclado sobre inputs de texto, adicionando rolagem automática suave e realce visual (Monet accent) no container focado.
-- Otimização em formulários (`customRegisterProduct.tsx`, `registerProduct.tsx`, `login.tsx`, `registerUser.tsx`) e modais (`settings.tsx`, `productDetails.tsx`, `CategorySelector.tsx`).
-- Publicação Oficial do APK no GitHub Releases (`v1.0.0`) em `https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.0.0`.
-- Assets publicados com sucesso: `Presco-v1.0.0.apk` e `Presco.apk` (134 MB cada, SHA-256: `b84db6ffaaabf514e581c09a30c281c1282de2ca5186251a8e9beb4d7cf81018`).
-- Documentação completa da release, guia de instalação e arquitetura criada em `apk-release-distribution.md`.
-- Tela Sobre (`about.tsx`), `README.md` e traduções nos 7 idiomas enriquecidas com link direto para download do APK e página de releases.
-- Script automatizado de publicação implementado em `scripts/upload_release.ts` com comando `npm run release`.
+- **Publicação Oficial do APK no GitHub Releases (`v1.0.0`):** Assets publicados com sucesso (`Presco-v1.0.0.apk` e `Presco.apk`). Documentação e links diretos configurados.
 
 INI3A-EQ3 (Presco) is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts (with auto-caching to PostgreSQL), and price reports (`ocurrency`) are submitted against a `market` and `product`. A complete role-based permission system differentiates **Administrators** (full delete/edit access across all products and price occurrences) and **Regular Users** (product analysis, market price suggestions, and community price auditing). Gamification tracks user points, unlocks badges, and levels up contributor ranks.
 
