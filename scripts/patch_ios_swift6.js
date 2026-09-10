@@ -227,6 +227,49 @@ function patchSwiftSource(full) {
       modified = true;
     }
 
+    // 6. Fix expo-router iOS 26 forward-compatibility APIs not present in Xcode 16.4 / iPhoneOS18.5.sdk
+    if (full.includes("expo-router") && full.includes("Toolbar")) {
+      if (full.endsWith("RouterToolbarHostView.swift") && content.includes("item.hidesSharedBackground = hidesSharedBackground")) {
+        content = content.replace(
+          /if #available\(iOS 26\.0, \*\)\s*\{[\s\S]*?item\.sharesBackground = sharesBackground\s*\}\s*\}/g,
+          "// iOS 26.0 background properties omitted for iOS 18 SDK compatibility"
+        );
+        modified = true;
+      }
+
+      if (full.endsWith("RouterToolbarItemView.swift")) {
+        if (content.includes("controller.navigationItem.searchBarPlacementBarButtonItem")) {
+          content = content.replace(
+            /guard #available\(iOS 26\.0, \*[\s\S]*?item = controller\.navigationItem\.searchBarPlacementBarButtonItem/g,
+            "logger?.warn(\"[expo-router] navigationItem.searchBarPlacementBarButtonItem not available on iOS 18 SDK.\")\n      currentBarButtonItem = nil\n      return"
+          );
+          modified = true;
+        }
+        if (content.includes("applyCommonProperties")) {
+          content = content.replace(
+            /private func applyCommonProperties\(to item: UIBarButtonItem\)\s*\{[\s\S]*?\n  \}/,
+            `private func applyCommonProperties(to item: UIBarButtonItem) {
+    item.style = barButtonItemStyle ?? .plain
+    item.width = width.map { CGFloat($0) } ?? 0
+    item.isSelected = selected
+    item.accessibilityLabel = routerAccessibilityLabel
+    item.accessibilityHint = routerAccessibilityHint
+    item.isEnabled = !disabled
+  }`
+          );
+          modified = true;
+        }
+      }
+
+      if (full.endsWith("RouterToolbarModule.swift") && content.includes("return .prominent")) {
+        content = content.replace(
+          /case \.prominent:\s*if #available\(iOS 26\.0, \*\)\s*\{[\s\S]*?return \.done\s*\}/g,
+          "case .prominent:\n      return .done"
+        );
+        modified = true;
+      }
+    }
+
     if (modified) {
       fs.writeFileSync(full, content, "utf8");
       console.log("Patched Swift syntax in:", full);
