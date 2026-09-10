@@ -57,6 +57,22 @@ jobs:
           GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
           EOF
 
+      - name: Preparar Frontend para Release (Remover expo-dev-client)
+        working-directory: src/frontend
+        run: |
+          # expo-dev-client e expo-dev-menu contêm assets de simulador incompatíveis com o actool do Xcode 16.2 em builds Release
+          node -e '
+            const fs = require("fs");
+            const appJson = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            appJson.expo.plugins = (appJson.expo.plugins || []).filter(p => p !== "expo-dev-client");
+            fs.writeFileSync("app.json", JSON.stringify(appJson, null, 2));
+
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            delete pkg.dependencies["expo-dev-client"];
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
+          npm install --prefer-offline --no-audit
+
       - name: Gerar Projeto Nativo iOS (Expo Prebuild)
         working-directory: src/frontend
         run: npx expo prebuild --platform ios --clean --no-install
