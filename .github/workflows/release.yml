@@ -1,0 +1,108 @@
+name: Build and Release Android APK
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Nome da Tag / Release (ex: v1.0.1)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk
+  cancel-in-progress: false
+
+jobs:
+  test_and_build:
+    name: Test and Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Validar Tipagem (Typecheck)
+        run: npm run typecheck
+
+      - name: Executar Suíte de Testes Automatizados
+        run: npm test
+
+      - name: Configurar Variáveis de Build do Frontend
+        run: |
+          mkdir -p src/frontend
+          cat << 'EOF' > src/frontend/.env
+          EXPO_PUBLIC_API_URL=${{ secrets.PUBLIC_URL || 'https://eq.projetoscti.com.br/26-presco' }}
+          EXPO_PUBLIC_HERE_API_KEY=${{ secrets.HERE_API_KEY || '4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4' }}
+          GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY || 'AIzaSyAAK_y1iiS6uYUPai5nK_Weue_B8Aaluvc' }}
+          EOF
+
+      - name: Gerar Projeto Nativo Android (Expo Prebuild)
+        working-directory: src/frontend
+        run: npx expo prebuild --platform android --clean
+
+      - name: Configurar Permissão de Execução do Gradle Wrapper
+        run: chmod +x src/frontend/android/gradlew
+
+      - name: Compilar APK de Release com Gradle
+        working-directory: src/frontend/android
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
+        run: ./gradlew app:assembleRelease -x lint -x test
+
+      - name: Localizar APK de Release
+        id: locate_apk
+        run: |
+          APK_PATH=$(find src/frontend/android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::Nenhum arquivo APK de release encontrado!"
+            exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "APK gerado com sucesso: $APK_PATH"
+
+      - name: Publicar Artefato da Action
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.locate_apk.outputs.apk_path }}
+          path: ${{ steps.locate_apk.outputs.apk_path }}
+          retention-days: 14
+
+      - name: Criar GitHub Release e Publicar APK
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag_name != ''
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          name: Release Presco ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: ${{ steps.locate_apk.outputs.apk_path }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
