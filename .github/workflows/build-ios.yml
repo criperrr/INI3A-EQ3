@@ -99,7 +99,7 @@ jobs:
 
       - name: Corrigir Compatibilidade de Swift Package Manager e ExpoModulesJSI
         run: |
-          # Patch de compatibilidade com Swift 6.0 (Xcode 16.2):
+          # Patch de compatibilidade com Swift 6.0 (Xcode 16.2 / 16.3 / 16.4):
           # 1. Downgrade de swift-tools-version de 6.2 para 6.0
           # 2. Remoção de vírgulas trailing antes de parênteses de fechamento (sintaxe do Swift 6.2 inválida no Swift 6.0)
           # 3. Remoção de features experimentais do Swift 6.2 (NonisolatedNonsendingByDefault, InferIsolatedConformances)
@@ -117,18 +117,58 @@ jobs:
                   if (entry.name !== ".git" && entry.name !== ".build" && entry.name !== "build") {
                     patchDirectory(full);
                   }
-                } else if (entry.name === "Package.swift" || entry.name.endsWith(".swift")) {
+                } else if (entry.name === "Package.swift") {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    let modified = false;
+
+                    if (/swift-tools-version:\s*6\.[12]/i.test(content)) {
+                      content = content.replace(/swift-tools-version:\s*6\.[12]/gi, "swift-tools-version: 6.0");
+                      modified = true;
+                    }
+
+                    if (content.includes("NonisolatedNonsendingByDefault")) {
+                      content = content.replace(/.*NonisolatedNonsendingByDefault.*\n?/g, "");
+                      modified = true;
+                    }
+                    if (content.includes("InferIsolatedConformances")) {
+                      content = content.replace(/.*InferIsolatedConformances.*\n?/g, "");
+                      modified = true;
+                    }
+
+                    if (content.includes("targets: [\"ExpoModulesJSI\"],")) {
+                      content = content.replace("targets: [\"ExpoModulesJSI\"],", "targets: [\"ExpoModulesJSI\"]");
+                      modified = true;
+                    }
+                    if (content.includes("path: \"Tests\",")) {
+                      content = content.replace("path: \"Tests\",", "path: \"Tests\"");
+                      modified = true;
+                    }
+                    if (content.includes("path: \"Benchmarks\",")) {
+                      content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
+                      modified = true;
+                    }
+                    if (/],\s*\n\s*swiftLanguageModes/.test(content)) {
+                      content = content.replace(/],\s*\n\s*swiftLanguageModes/g, "]\n  swiftLanguageModes");
+                      modified = true;
+                    }
+                    if (/],\s*\n\s*cxxLanguageStandard/.test(content)) {
+                      content = content.replace(/],\s*\n\s*cxxLanguageStandard/g, "]\n  cxxLanguageStandard");
+                      modified = true;
+                    }
+
+                    if (modified) {
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched Package.swift in:", full);
+                    }
+                  } catch (err) {}
+                } else if (entry.name.endsWith(".swift")) {
                   try {
                     let content = fs.readFileSync(full, "utf8");
                     let modified = false;
 
                     if (/\bweak\s+let\b/.test(content)) {
                       content = content.replace(/\bweak\s+let\b/g, "weak var");
-                      modified = true;
-                    }
-
-                    if (/,(\s*\))/.test(content)) {
-                      content = content.replace(/,(\s*\))/g, "$1");
                       modified = true;
                     }
 
@@ -150,7 +190,7 @@ jobs:
               }
             }
 
-            ["node_modules", "src/frontend"].forEach(d => patchDirectory(d));
+            ["node_modules", "src/frontend", "src/frontend/ios/Pods"].forEach(d => patchDirectory(d));
           '
 
       - name: Instalar Pods iOS
@@ -174,18 +214,58 @@ jobs:
                   if (entry.name !== ".git" && entry.name !== ".build" && entry.name !== "build") {
                     patchDirectory(full);
                   }
-                } else if (entry.name === "Package.swift" || entry.name.endsWith(".swift")) {
+                } else if (entry.name === "Package.swift") {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    let modified = false;
+
+                    if (/swift-tools-version:\s*6\.[12]/i.test(content)) {
+                      content = content.replace(/swift-tools-version:\s*6\.[12]/gi, "swift-tools-version: 6.0");
+                      modified = true;
+                    }
+
+                    if (content.includes("NonisolatedNonsendingByDefault")) {
+                      content = content.replace(/.*NonisolatedNonsendingByDefault.*\n?/g, "");
+                      modified = true;
+                    }
+                    if (content.includes("InferIsolatedConformances")) {
+                      content = content.replace(/.*InferIsolatedConformances.*\n?/g, "");
+                      modified = true;
+                    }
+
+                    if (content.includes("targets: [\"ExpoModulesJSI\"],")) {
+                      content = content.replace("targets: [\"ExpoModulesJSI\"],", "targets: [\"ExpoModulesJSI\"]");
+                      modified = true;
+                    }
+                    if (content.includes("path: \"Tests\",")) {
+                      content = content.replace("path: \"Tests\",", "path: \"Tests\"");
+                      modified = true;
+                    }
+                    if (content.includes("path: \"Benchmarks\",")) {
+                      content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
+                      modified = true;
+                    }
+                    if (/],\s*\n\s*swiftLanguageModes/.test(content)) {
+                      content = content.replace(/],\s*\n\s*swiftLanguageModes/g, "]\n  swiftLanguageModes");
+                      modified = true;
+                    }
+                    if (/],\s*\n\s*cxxLanguageStandard/.test(content)) {
+                      content = content.replace(/],\s*\n\s*cxxLanguageStandard/g, "]\n  cxxLanguageStandard");
+                      modified = true;
+                    }
+
+                    if (modified) {
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched Package.swift in:", full);
+                    }
+                  } catch (err) {}
+                } else if (entry.name.endsWith(".swift")) {
                   try {
                     let content = fs.readFileSync(full, "utf8");
                     let modified = false;
 
                     if (/\bweak\s+let\b/.test(content)) {
                       content = content.replace(/\bweak\s+let\b/g, "weak var");
-                      modified = true;
-                    }
-
-                    if (/,(\s*\))/.test(content)) {
-                      content = content.replace(/,(\s*\))/g, "$1");
                       modified = true;
                     }
 
@@ -207,7 +287,7 @@ jobs:
               }
             }
 
-            ["node_modules", "src/frontend"].forEach(d => patchDirectory(d));
+            ["node_modules", "src/frontend", "src/frontend/ios/Pods"].forEach(d => patchDirectory(d));
           '
 
       - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)

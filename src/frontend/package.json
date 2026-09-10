@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "main": "expo-router/entry",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "scripts": {
     "dev": "expo start",
     "dev:tunnel": "expo start --tunnel",
@@ -63,6 +63,10 @@
     "typescript": "~6.0.3"
   },
   "private": true,
+  "overrides": {
+    "expo-modules-core": "57.0.16",
+    "expo-modules-jsi": "57.0.8"
+  },
   "allowScripts": {
     "unrs-resolver@1.11.1": true
   }
