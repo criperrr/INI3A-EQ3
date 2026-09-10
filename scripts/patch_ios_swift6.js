@@ -120,16 +120,28 @@ function patchDirectory(dir) {
           }
 
           // Expose appendPropName static helper for HostObjectCallbacks to handle move-only PropNameID
-          if (full.endsWith("HostObjectCallbacks.h") && !content.includes("appendPropName")) {
-            content = content.replace(
-              "inline PropNameIds getPropertyNames() const {",
-              `static inline void appendPropName(PropNameIds &vector, facebook::jsi::Runtime &runtime, const std::string &name) {
+          if (full.endsWith("HostObjectCallbacks.h")) {
+            if (!content.includes('"IRuntimeCompat.h"')) {
+              content = content.replace('#include <jsi/jsi.h>', '#include <jsi/jsi.h>\n#include "IRuntimeCompat.h"');
+              modified = true;
+            }
+            if (!content.includes("appendPropName")) {
+              content = content.replace(
+                "inline PropNameIds getPropertyNames() const {",
+                `static inline void appendPropName(PropNameIds &vector, facebook::jsi::IRuntime &runtime, const std::string &name) {
     vector.push_back(facebook::jsi::PropNameID::forUtf8(runtime, name));
   }
 
   inline PropNameIds getPropertyNames() const {`
-            );
-            modified = true;
+              );
+              modified = true;
+            } else if (content.includes("appendPropName(PropNameIds &vector, facebook::jsi::Runtime &runtime")) {
+              content = content.replace(
+                "appendPropName(PropNameIds &vector, facebook::jsi::Runtime &runtime",
+                "appendPropName(PropNameIds &vector, facebook::jsi::IRuntime &runtime"
+              );
+              modified = true;
+            }
           }
 
           // Expose static factory initializers for SWIFT_SHARED_REFERENCE RuntimeScheduler
