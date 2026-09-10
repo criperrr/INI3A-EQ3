@@ -3198,3 +3198,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - scripts/patch_ios_swift6.js
   - .agents/CURRENT.md
 - **Impact / Next Steps:** ExpoRouter e ExpoHaptics compilam sem erros no Xcode 16.4.
+
+## 2026-09-10 20:30 - ix(ios): Compatibilizar expo-ui com sdk ios 18 no xcode 16.4
+
+- **Description:** Diagnosticados erros de compilacao no target ExpoUI no Xcode 16.4 (iPhoneOS18.5.sdk): DrawOnSymbolEffect, DrawOffSymbolEffect em SymbolEffectModifier.swift e lineHeight(.exact(...)) em ViewModifierRegistry.swift sem guard de compilador. Adicionado saneamento automatizado no scripts/patch_ios_swift6.js com diretivas #if compiler(>=6.2) protegendo essas definicoes para suportar o compilador Swift 6.1.2 do Xcode 16.4.
+- **Files Modified:**
+  - scripts/patch_ios_swift6.js
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** ExpoUI compila sem erros no Xcode 16.4.

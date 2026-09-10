@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Compatibilidade de `@expo/ui` com SDK iOS 18 (Build iOS):**
+  1. Diagnosticado o erro de compilação no target `ExpoUI`: `cannot find type 'DrawOnSymbolEffect' in scope`, `cannot find type 'DrawOffSymbolEffect' in scope` em `SymbolEffectModifier.swift` e `value of type 'LineHeight.Content' has no member 'lineHeight'` em `ViewModifierRegistry.swift`.
+  2. As propriedades de efeitos de símbolos e altura de linha exata foram implementadas pelo Expo para iOS 26+ sem envolver as declarações com a diretiva de pré-processador `#if compiler(>=6.2)` (diferente do restante do módulo que usava esse guard).
+  3. Adicionado saneamento automatizado no [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js) envolvendo as funções `buildDrawOnEffect`, `buildDrawOffEffect`, os cases `.drawOn`/`.drawOff` e a chamada `content.lineHeight(...)` em guards `#if compiler(>=6.2)`, permitindo compilação nativa perfeita no Xcode 16.4.
 - **Compatibilidade de Toolbar do Expo Router com SDK iOS 18 (Build iOS):**
   1. Diagnosticado o erro de compilação no target `ExpoRouter`: `value of type 'UIBarButtonItem' has no member 'hidesSharedBackground'`, `searchBarPlacementBarButtonItem`, `Badge`, `badge` e `UIBarButtonItem.Style.prominent`.
   2. O código de Toolbar do `expo-router` tentava utilizar símbolos novos de versões futuras do iOS guardados por `if #available(iOS 26.0, *)`. No entanto, como o SDK de compilação do Xcode 16.4 é o `iPhoneOS18.5.sdk`, esses símbolos não existem nos cabeçalhos do UIKit, causando erro em tempo de compilação.
