@@ -3164,3 +3164,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Exact parameter type match between Swift and C++. Tag ios-v1.0.4 updated and pushed.
+
+## `2026-09-10 19:03` - `fix(ci)`: bridge raw pointers via UInt bitPattern to prevent sending data races in Swift 6.1 (v1.0.4)
+
+- **Description:** Fixed concurrency errors in JavaScriptRuntime.swift:771, 772, 814, 815 where capturing nonisolated(unsafe) pointer variables into @JavaScriptActor-isolated closures triggered "error: sending thisPtr risks causing data races". Replaced local nonisolated(unsafe) pointer variables with immutable scalar UInt(bitPattern:) values and reconstructed UnsafePointer(bitPattern:) inside the actor-isolated closures.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Eliminates data race diagnostic on pointer captures in Swift 6.1. Tag ios-v1.0.4 updated and pushed.

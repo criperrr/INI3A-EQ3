@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Ponte de Endereço de Ponteiro com `UInt(bitPattern:)` contra Erros de Concorrência (Build iOS):**
+  1. Diagnosticado o erro `error: sending 'thisPtr' risks causing data races` e `error: sending 'argumentsPtr' risks causing data races` em `JavaScriptRuntime.swift:771, 772, 814, 815`.
+  2. O código do Expo tentava contornar verificações com `nonisolated(unsafe) let thisPtr = thisPtr` no escopo da função chamadora; no entanto, no Swift 6.1, capturar uma variável local `nonisolated(unsafe)` dentro do closure `@JavaScriptActor` isolado ao ator global é estritamente proibido pelo verificador de concorrência por risco de corrida com usos não isolados.
+  3. Implementada a conversão de ponteiros para inteiros escalares primitivos `let thisBits = UInt(bitPattern: thisPtr)`, `argumentsBits` e `resultBits`, reconstruindo os ponteiros com tipagem estrita `UnsafePointer(bitPattern:)` dentro do closure isolado. Por serem inteiros `Sendable` escalares primitivos, elimina-se 100% de qualquer diagnóstico de data race ou escape de isolamento em qualquer versão do compilador Swift.
 - **Ponte C++ `HostObjectCallbacks.appendPropName` para Inserção de `PropNameID` Move-Only (Build iOS):**
   1. Diagnosticado o duplo conflito de interoperabilidade Swift 6.1 / C++:
      - Quando `vector.push_back(consuming: propNameId)` era mantido, o compilador Swift 6.1 rejeitava com `error: extraneous argument label 'consuming:' in call`, pois na sua tabela de símbolos o `std::vector::push_back` é importado sem rótulos.
