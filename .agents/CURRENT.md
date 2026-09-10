@@ -7,6 +7,7 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Remoção de Produtos Sem Preço na Tela Inicial:** Implementada filtragem estrita com `hasValidPrice` no carregamento e renderização do grid da tela inicial (`index.tsx`). Itens sem preço ou com status "Preço não informado" / "sob consulta" são completamente excluídos do grid de produtos da Home.
 - **Limpeza de Produtos Remotos:** Executado drop/limpeza transacional estritamente da tabela `product` e suas dependências de ocorrências (`ocurrency`, `cart_product`, `cured`) no banco PostgreSQL remoto da equipe (`26-presco` em `projetoscti.com.br:54432`). Todos os 115 mercados (incluindo Trigal ID 1), usuários, papéis e itens de gamificação foram 100% preservados.
 - **Carregamento & Fallback de Mercados (Trigal):** Corrigido fluxo de busca de mercados em `registerProduct.tsx` e `index.tsx`. Adicionado fallback automático para carregar todos os mercados cadastrados caso o usuário esteja sem GPS, com permissão negada, ou fora do raio local de 15km, garantindo que o mercado "Trigal" e demais opções estejam sempre acessíveis para seleção e no botão "Ver todos".
 - **Usabilidade de Teclado & Auto-Scroll:** Implementado `KeyboardAwareScrollView` e `FocusedInputWrapper` para prevenir sobreposição do teclado sobre inputs de texto, adicionando rolagem automática suave e realce visual (Monet accent) no container focado.

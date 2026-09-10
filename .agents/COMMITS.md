@@ -2940,3 +2940,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Banco remoto limpo de produtos com sucesso; seleção de mercados agora é resiliente a localização e sempre disponibiliza Trigal.
+
+## `2026-09-10 12:36` - `fix(ui)`: Filter out products without price on home screen
+
+- **Description:** Adiciona função `hasValidPrice` e filtragem no grid da tela inicial (`index.tsx`) para descartar qualquer produto cujo preço não esteja informado ou esteja sob consulta, garantindo que apenas ofertas e produtos com preço real e válido sejam exibidos.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** A tela inicial do app agora só renderiza produtos que possuem preço real válido.
