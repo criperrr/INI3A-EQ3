@@ -3031,3 +3031,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Workflow YAML parses and executes cleanly. Ready for commit and push.
+
+## `2026-09-10 17:24` - `fix(ci)`: select Xcode 16.4+ with Swift 6.2 and remove global SWIFT_VERSION override
+
+- **Description:** Updated build-ios.yml to prioritize Xcode 16.4+ (default on macos-15 with Swift 6.2), removed global SWIFT_VERSION=5.0 and DEVELOPER_DIR overrides that forced Swift 5/Xcode 16.2 on Swift 6 packages, added universal weak let to weak var sanitization, and preserved native Swift 6.2 features for Expo SDK 57.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** ExpoModulesJSI can compile natively with Swift 6.2 toolchain on Xcode 16.4+. Ready for commit and push.
