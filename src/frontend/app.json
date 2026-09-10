@@ -58,6 +58,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "owner": "presco.tcc.projetoscti",
+    "extra": {
+      "eas": {
+        "projectId": "83e64f4c-dc9b-4531-9963-18ad4da776db"
+      }
+    }
   }
 }

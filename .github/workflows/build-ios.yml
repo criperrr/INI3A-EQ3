@@ -1,0 +1,98 @@
+name: Build iOS IPA (Manual Dispatch)
+
+# Compilação estritamente manual sob demanda (workflow_dispatch)
+# Evita consumo dos minutos gratuitos de runners macOS do GitHub.
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Nome da Release / Tag para anexar o IPA (opcional, ex: v1.0.4)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-ios-ipa
+  cancel-in-progress: false
+
+jobs:
+  build_ios:
+    name: Build iOS IPA (Unsigned / Sideloadly)
+    runs-on: macos-14
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Configurar Variáveis de Ambiente do Frontend
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir -p src/frontend
+          cat << EOF > src/frontend/.env
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          EOF
+
+      - name: Gerar Projeto Nativo iOS (Expo Prebuild)
+        working-directory: src/frontend
+        run: npx expo prebuild --platform ios --clean
+
+      - name: Instalar CocoaPods
+        working-directory: src/frontend/ios
+        run: pod install
+
+      - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
+        working-directory: src/frontend/ios
+        run: |
+          xcodebuild \
+            -workspace Presco.xcworkspace \
+            -scheme Presco \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            PROVISIONING_PROFILE_SPECIFIER=""
+
+      - name: Empacotar Payload em Arquivo .IPA
+        working-directory: src/frontend/ios
+        run: |
+          mkdir -p Payload
+          cp -r build/Build/Products/Release-iphoneos/Presco.app Payload/
+          zip -qr Presco.ipa Payload
+          echo "IPA gerado com sucesso: src/frontend/ios/Presco.ipa"
+
+      - name: Publicar Artefato da Action
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presco-iOS-IPA
+          path: src/frontend/ios/Presco.ipa
+          retention-days: 14
+
+      - name: Anexar IPA ao GitHub Release (se informado)
+        if: github.event.inputs.tag_name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: src/frontend/ios/Presco.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
