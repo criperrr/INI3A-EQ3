@@ -1,0 +1,93 @@
+name: Build iOS IPA (Sideloadly)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch para compilar (ex: tests ou main)"
+        required: false
+        default: "tests"
+
+concurrency:
+  group: build-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Selecionar Versão Compatível do Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer || true
+          xcodebuild -version
+
+      - name: Instalar Dependências Raiz
+        run: npm install --prefer-offline --no-audit
+
+      - name: Instalar Dependências do Frontend
+        working-directory: src/frontend
+        run: npm install --prefer-offline --no-audit
+
+      - name: Limpar Cache do CocoaPods e DerivedData
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          rm -rf ~/Library/Caches/CocoaPods
+          pod repo update
+
+      - name: Instalar Pods iOS
+        working-directory: src/frontend/ios
+        run: pod install
+
+      - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
+        working-directory: src/frontend/ios
+        run: |
+          xcodebuild \
+            -workspace Presco.xcworkspace \
+            -scheme Presco \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ENTITLEMENTS="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            SKIP_INSTALL=YES \
+            EXCLUDED_ARCHS="arm64e"
+
+      - name: Empacotar Payload e Gerar .ipa
+        working-directory: src/frontend/ios
+        run: |
+          mkdir -p build/ipa/Payload
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Erro: Arquivo .app não encontrado!"
+            exit 1
+          fi
+          echo "Copiando $APP_PATH para Payload..."
+          cp -r "$APP_PATH" build/ipa/Payload/
+          cd build/ipa
+          zip -r ../Presco.ipa Payload
+          echo "IPA gerado com sucesso em src/frontend/ios/build/Presco.ipa"
+
+      - name: Publicar IPA como Artefato do Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presco-iOS-IPA
+          path: src/frontend/ios/build/Presco.ipa
+          retention-days: 7
