@@ -36,12 +36,16 @@ function writeFrontendEnv(apiUrl: string): void {
   const cleanUrl = apiUrl.trim().replace(/\/+$/, "");
   let hereKey = "";
 
-  // Preservar chave do HERE se já existia
+  let googleMapsKey = "";
+
+  // Preservar chave do HERE e Google Maps se já existiam
   if (fs.existsSync(FRONTEND_ENV_PATH)) {
     try {
       const existing = fs.readFileSync(FRONTEND_ENV_PATH, "utf8");
-      const match = existing.match(/EXPO_PUBLIC_HERE_API_KEY=["']?([^"'\r\n]*)["']?/);
-      if (match && match[1]) hereKey = match[1];
+      const matchHere = existing.match(/EXPO_PUBLIC_HERE_API_KEY=["']?([^"'\r\n]*)["']?/);
+      if (matchHere && matchHere[1]) hereKey = matchHere[1];
+      const matchGoogle = existing.match(/GOOGLE_MAPS_API_KEY=["']?([^"'\r\n]*)["']?/);
+      if (matchGoogle && matchGoogle[1]) googleMapsKey = matchGoogle[1];
     } catch {}
   }
 
@@ -67,6 +71,9 @@ function writeFrontendEnv(apiUrl: string): void {
   ];
   if (hereKey) {
     lines.push(`EXPO_PUBLIC_HERE_API_KEY=${hereKey}`);
+  }
+  if (googleMapsKey) {
+    lines.push(`GOOGLE_MAPS_API_KEY=${googleMapsKey}`);
   }
 
   fs.writeFileSync(FRONTEND_ENV_PATH, lines.join("\n") + "\n", "utf8");
