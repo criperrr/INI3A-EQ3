@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Compatibilidade de Toolbar do Expo Router com SDK iOS 18 (Build iOS):**
+  1. Diagnosticado o erro de compilação no target `ExpoRouter`: `value of type 'UIBarButtonItem' has no member 'hidesSharedBackground'`, `searchBarPlacementBarButtonItem`, `Badge`, `badge` e `UIBarButtonItem.Style.prominent`.
+  2. O código de Toolbar do `expo-router` tentava utilizar símbolos novos de versões futuras do iOS guardados por `if #available(iOS 26.0, *)`. No entanto, como o SDK de compilação do Xcode 16.4 é o `iPhoneOS18.5.sdk`, esses símbolos não existem nos cabeçalhos do UIKit, causando erro em tempo de compilação.
+  3. Adicionado saneamento automatizado no [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js) nos arquivos de Toolbar do `expo-router` (`RouterToolbarHostView.swift`, `RouterToolbarItemView.swift` e `RouterToolbarModule.swift`), omitindo propriedades inexistentes no SDK 18 e mapeando `.prominent` diretamente para o fallback `.done`.
 - **Saneamento Universal de `.swiftinterface` e Tarballs XCFramework Pré-compilados (Build iOS):**
   1. Diagnosticado o erro `error: unknown attribute '_Concurrency.MainActor'` e `error: failed to build module 'ExpoModulesCore'; this SDK is not supported by the compiler (the SDK is built with 'Apple Swift version 6.3.1', while this compiler is 'Apple Swift version 6.1.2')` durante a compilação de módulos consumidores (`ExpoSystemUI`, `ExpoSplashScreen`, etc.).
   2. Mapeados e escaneados preventivamente TODOS os módulos com tarballs pré-compilados no projeto (`expo-modules-core`, `expo-camera`, `expo-file-system`, `expo-font`, `expo-image`, `expo-location`, `expo-modules-core/worklets`). Comprovado que todos eles foram gerados com Swift 6.3.1 e continham exclusivamente anotações `@_Concurrency.MainActor`, as quais não são reconhecidas pelo compilador Swift 6.1.2 do Xcode 16.4.

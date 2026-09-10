@@ -3190,3 +3190,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `scripts/patch_ios_swift6.js`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Elimina o erro de sintaxe unknown attribute MainActor na linha 1667 do arm64-apple-ios.private.swiftinterface.
+
+## 2026-09-10 20:08 - ix(ios): Compatibilizar toolbar do expo-router com sdk ios 18
+
+- **Description:** Diagnosticado erro de compilacao em ExpoRouter no Xcode 16.4 (iPhoneOS18.5.sdk): referencias a APIs experimentais de Toolbar do iOS 26 (item.hidesSharedBackground, item.sharesBackground, controller.navigationItem.searchBarPlacementBarButtonItem, UIBarButtonItem.Badge e .prominent). Adicionado saneamento automatizado no scripts/patch_ios_swift6.js para omitir as propriedades inexistentes no SDK 18 e mapear o estilo .prominent diretamente para o fallback .done.
+- **Files Modified:**
+  - scripts/patch_ios_swift6.js
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** ExpoRouter e ExpoHaptics compilam sem erros no Xcode 16.4.
