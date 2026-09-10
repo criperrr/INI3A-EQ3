@@ -2880,12 +2880,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/backend/tests/cache.test.ts
 - **Impact / Next Steps:** O projeto agora dispõe de automação de ponta a ponta para geração de APK de produção no GitHub Actions e publicação direta nos Releases do repositório, garantido por testes e typecheck com 0 falhas.
 
-## 2026-09-10 11:55 - docs(agents): Instruções explícitas para incremento de versão semântica pós-modificação pelos agentes
+## 2026-09-10 12:03 - sec(ci): Sanitize hardcoded API tokens from workflow and inject via GitHub secrets
 
-- **Description:** Atualizados AGENTS.md, code-rules.md e .github/workflows/release.yml para orientar modelos agenticos a incrementarem a versão do projeto após qualquer modificação de código segundo a skill semantic-versioning. Removido qualquer script ou renomeação artificial do APK na pipeline de release, garantindo que o nome do artefato reflita diretamente a build gerada pelo Gradle.
+- **Description:** Removed all hardcoded fallback API keys from .github/workflows/release.yml, injected GOOGLE_MAPS_API_KEY into GitHub Secrets via gh CLI, synchronized with HERE_API_KEY and PUBLIC_URL secrets, and bumped version to 1.0.1 (versionCode 2) to trigger autonomous GitHub Actions release build.
 - **Files Modified:**
-  - .agents/AGENTS.md
-  - .agents/rules/code-rules.md
   - .github/workflows/release.yml
-- **Impact / Next Steps:** Modelos agenticos possuem regras canônicas para manter a versão sincronizada nos 4 manifestos após qualquer código modificado.
-
+  - package.json
+  - src/backend/package.json
+  - src/frontend/package.json
+  - src/frontend/app.json
+  - .agents/CURRENT.md
+  - .agents/COMMITS.md
+- **Impact / Next Steps:** GitHub Actions workflow compiles the Android APK securely using repository secrets with zero credential exposure in code or logs.

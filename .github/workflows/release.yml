@@ -55,12 +55,16 @@ jobs:
         run: npm test
 
       - name: Configurar Variáveis de Build do Frontend
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
           mkdir -p src/frontend
-          cat << 'EOF' > src/frontend/.env
-          EXPO_PUBLIC_API_URL=${{ secrets.PUBLIC_URL || 'https://eq.projetoscti.com.br/26-presco' }}
-          EXPO_PUBLIC_HERE_API_KEY=${{ secrets.HERE_API_KEY || '4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4' }}
-          GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY || 'AIzaSyAAK_y1iiS6uYUPai5nK_Weue_B8Aaluvc' }}
+          cat << EOF > src/frontend/.env
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
           EOF
 
       - name: Gerar Projeto Nativo Android (Expo Prebuild)
@@ -90,7 +94,7 @@ jobs:
       - name: Publicar Artefato da Action
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.locate_apk.outputs.apk_path }}
+          name: Presco-Release-APK
           path: ${{ steps.locate_apk.outputs.apk_path }}
           retention-days: 14
 
