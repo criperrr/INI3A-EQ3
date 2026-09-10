@@ -3015,3 +3015,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** build-xcframework.sh agora compila a fatia iphoneos com sucesso usando o SDK instalado sem falhar na resolucao de destinos.
+
+## `2026-09-10 17:02` - `fix(ci)`: download iOS platform and preserve -destination in build-xcframework.sh
+
+- **Description:** Fixed Xcode 16.2 SPM build error where omitting -destination broke Swift package compilation. Added automated iOS platform download step (sudo xcodebuild -downloadPlatform iOS) so that generic/platform=iOS matches an eligible Any iOS Device destination, and forwarded DEVELOPER_DIR inside build-xcframework.sh clean environment.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Xcodebuild can now build the ExpoModulesJSI slice for iphoneos cleanly using the installed platform. Ready for commit and push to tests.

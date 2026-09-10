@@ -37,6 +37,11 @@ jobs:
           sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.1.app/Contents/Developer || true
           xcodebuild -version
 
+      - name: Baixar Plataforma iOS para Xcode 16.2
+        run: |
+          xcrun simctl list > /dev/null || true
+          sudo xcodebuild -downloadPlatform iOS || sudo xcodebuild -downloadPlatform iOS -buildVersion 18.2 || true
+
       - name: Instalar Dependências Raiz
         run: npm install --prefer-offline --no-audit
 
@@ -141,11 +146,10 @@ jobs:
                 } else if (entry.name === "build-xcframework.sh") {
                   try {
                     let content = fs.readFileSync(full, "utf8");
-                    const target = "-destination \"generic/platform=${destination}\"";
-                    if (content.includes(target)) {
-                      content = content.replace(target, "$([ \"$platform\" = \"iphoneos\" ] || echo \"-destination generic/platform=${destination}\")");
+                    if (content.includes('env -i PATH="$PATH"')) {
+                      content = content.replace('env -i PATH="$PATH"', 'env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode_16.2.app/Contents/Developer}"');
                       fs.writeFileSync(full, content, "utf8");
-                      console.log("Patched destination in build-xcframework.sh:", full);
+                      console.log("Forwarded DEVELOPER_DIR in build-xcframework.sh:", full);
                     }
                   } catch (err) {}
                 }
@@ -214,11 +218,10 @@ jobs:
                 } else if (entry.name === "build-xcframework.sh") {
                   try {
                     let content = fs.readFileSync(full, "utf8");
-                    const target = "-destination \"generic/platform=${destination}\"";
-                    if (content.includes(target)) {
-                      content = content.replace(target, "$([ \"$platform\" = \"iphoneos\" ] || echo \"-destination generic/platform=${destination}\")");
+                    if (content.includes('env -i PATH="$PATH"')) {
+                      content = content.replace('env -i PATH="$PATH"', 'env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode_16.2.app/Contents/Developer}"');
                       fs.writeFileSync(full, content, "utf8");
-                      console.log("Patched destination in build-xcframework.sh:", full);
+                      console.log("Forwarded DEVELOPER_DIR in build-xcframework.sh:", full);
                     }
                   } catch (err) {}
                 }
