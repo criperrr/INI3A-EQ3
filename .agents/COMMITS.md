@@ -3007,3 +3007,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Modulo C++ ExpoModulesJSI-Cxx agora compila com sucesso no Xcode 16.2.
+
+## 2026-09-10 16:50 - fix(ci): Remocao de -destination em build-xcframework.sh para compatibilidade com Xcode 16 headless CI
+
+- **Description:** Diagnosticado erro no xcodebuild do script build-xcframework.sh ('Unable to find a destination matching the provided destination specifier: { generic:1, platform:iOS } - iOS 18.2 is not installed'). No runner headless macos-15, o placeholder Any iOS Device exige download do runtime de simulador caso especificado via generic/platform=iOS. Atualizado o script de correcao no workflow para omitir -destination quando platform=iphoneos, permitindo que o xcodebuild compile diretamente contra o SDK iphoneos instalado sem acionar verificacao de dispositivo.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** build-xcframework.sh agora compila a fatia iphoneos com sucesso usando o SDK instalado sem falhar na resolucao de destinos.

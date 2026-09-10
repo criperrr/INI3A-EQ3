@@ -138,6 +138,16 @@ jobs:
                       console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
                     }
                   } catch (err) {}
+                } else if (entry.name === "build-xcframework.sh") {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    const target = "-destination \"generic/platform=${destination}\"";
+                    if (content.includes(target)) {
+                      content = content.replace(target, "$([ \"$platform\" = \"iphoneos\" ] || echo \"-destination generic/platform=${destination}\")");
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched destination in build-xcframework.sh:", full);
+                    }
+                  } catch (err) {}
                 }
               }
             }
@@ -199,6 +209,16 @@ jobs:
                       content = content.replace(/SWIFT_RETURNS_RETAINED\s+/g, "");
                       fs.writeFileSync(full, content, "utf8");
                       console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
+                    }
+                  } catch (err) {}
+                } else if (entry.name === "build-xcframework.sh") {
+                  try {
+                    let content = fs.readFileSync(full, "utf8");
+                    const target = "-destination \"generic/platform=${destination}\"";
+                    if (content.includes(target)) {
+                      content = content.replace(target, "$([ \"$platform\" = \"iphoneos\" ] || echo \"-destination generic/platform=${destination}\")");
+                      fs.writeFileSync(full, content, "utf8");
+                      console.log("Patched destination in build-xcframework.sh:", full);
                     }
                   } catch (err) {}
                 }
