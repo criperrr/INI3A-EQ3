@@ -583,15 +583,28 @@ export default function MapScreen() {
                             lon >= -180 &&
                             lon <= 180
                         ) {
+                            // Rejeitar unidade extinta do Oba no Jardim América vinda de bases legadas
+                            if (
+                                /\boba\b/i.test(m.name || "") &&
+                                Math.abs(lat - (-22.34598)) < 0.005 && Math.abs(lon - (-49.05957)) < 0.005
+                            ) {
+                                continue;
+                            }
+
+                            let title = m.name || "Supermercado";
+                            if (/^\s*oba\s+hortifruti\s*$/i.test(title)) {
+                                title = "Oba Hortifruti";
+                            }
+
                             const straightDist = calculateDistanceInKm(userLocation.latitude, userLocation.longitude, lat, lon);
                             const safeDist = isNaN(straightDist) ? 0 : straightDist;
                             // Enforce strict proximity bounds: only include backend markets within 25km of the user
                             if (safeDist <= 25) {
-                                const backendShopType = classifyEstablishment(m.name || "");
+                                const backendShopType = classifyEstablishment(title);
 
                                 mapped.push({
                                     id: `backend_${m.id}`,
-                                    title: m.name || "Supermercado",
+                                    title: title,
                                     coordinate: { latitude: lat, longitude: lon },
                                     straightDistance: safeDist,
                                     routeDistance: safeDist,
@@ -735,8 +748,19 @@ export default function MapScreen() {
                 const brand2 = name2.split(/[\s\-]/)[0];
                 if (brand1 && brand1.length >= 4 && brand1 === brand2 && dist < 0.5) return true;
 
-                // Oba Hortifruti: mesma rede em até 2.5km (evita duplicatas de lojas únicas migradas)
-                if (/\boba\b/i.test(name1) && /\boba\b/i.test(name2) && dist < 2.5) return true;
+                // Oba Hortifruti: assegurar que a loja real na Av. Getúlio Vargas (lat ~ -22.3545, lon ~ -49.0493) prevaleça
+                if (/\boba\b/i.test(name1) && /\boba\b/i.test(name2)) {
+                    const isM1Real = Math.abs(existing.coordinate.latitude - (-22.3545)) < 0.005 && Math.abs(existing.coordinate.longitude - (-49.0493)) < 0.005;
+                    const isM2Real = Math.abs(marker.coordinate.latitude - (-22.3545)) < 0.005 && Math.abs(marker.coordinate.longitude - (-49.0493)) < 0.005;
+                    if (isM1Real && !isM2Real) return true; // Descarta M2, pois já temos a unidade oficial
+                    if (isM2Real && !isM1Real) {
+                        // Substitui existing pela unidade real oficial
+                        existing.coordinate = marker.coordinate;
+                        existing.title = "Oba Hortifruti";
+                        return true;
+                    }
+                    if (dist < 2.5) return true;
+                }
 
                 return false;
             });
