@@ -45,6 +45,18 @@ type GridItemType = {
   nearestMarketName?: string | null;
 };
 
+function hasValidPrice(price?: string | null): boolean {
+  if (!price) return false;
+  const clean = price.toLowerCase().trim();
+  return !(
+    clean === "" ||
+    clean.includes("não informado") ||
+    clean.includes("no occurrences") ||
+    clean.includes("sob consulta") ||
+    clean.includes("preço não")
+  );
+}
+
 // --- Mocks ---
 const MOCK_PRODUCTS: GridItemType[] = [
   {
@@ -155,11 +167,16 @@ export default function HomeScreen() {
         latitude: loc?.latitude,
         longitude: loc?.longitude,
         radius: 15000,
-        limit: 6,
+        limit: 12,
       });
 
-      if (res.items && res.items.length > 0) {
-        const mapped: GridItemType[] = res.items.map((p) => ({
+      // Filtra estritamente apenas produtos com preço informado
+      const validItems = (res.items || []).filter((p) =>
+        hasValidPrice(p.bestPrice || p.lastPrice)
+      );
+
+      if (validItems.length > 0) {
+        const mapped: GridItemType[] = validItems.slice(0, 6).map((p) => ({
           id: p.id || Math.random(),
           name: p.name,
           category: p.category,
@@ -174,11 +191,10 @@ export default function HomeScreen() {
         }));
         setRealProducts(mapped);
       } else {
-        setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+        setRealProducts([]);
       }
     } catch {
-      // Graceful fallback: load mock products only if network request fails
-      setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+      setRealProducts([]);
     }
 
     try {
@@ -587,6 +603,15 @@ const ItemsGrid = memo(function ItemsGrid({
   const { semantic } = tokens;
   const { t } = useI18n();
 
+  const itemsToRender = useMemo(() => {
+    if (!isProductView) return data;
+    return data.filter((item) => hasValidPrice(item.price));
+  }, [data, isProductView]);
+
+  if (itemsToRender.length === 0) {
+    return null;
+  }
+
   return (
     <View style={[styles.productsSection, { paddingHorizontal: semantic.spacing.itemGap }]}>
       <View style={styles.sectionHeaderRow}>
@@ -609,7 +634,7 @@ const ItemsGrid = memo(function ItemsGrid({
         )}
       </View>
       <View style={styles.productGrid}>
-        {data.map((item) => (
+        {itemsToRender.map((item) => (
           <TouchableOpacity
             key={item.id}
             style={[
@@ -657,13 +682,13 @@ const ItemsGrid = memo(function ItemsGrid({
               {item.name}
             </Text>
 
-            {isProductView && item.price && item.price !== "Preço não informado" && (
+            {isProductView && item.price ? (
               <View style={styles.priceRow}>
                 <Text style={[styles.productPrice, { color: accent }]}>
                   {item.price}
                 </Text>
               </View>
-            )}
+            ) : null}
 
             {isProductView && item.formattedDistance && (
               <View style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}>
