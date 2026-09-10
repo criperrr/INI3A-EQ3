@@ -3173,3 +3173,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Eliminates data race diagnostic on pointer captures in Swift 6.1. Tag ios-v1.0.4 updated and pushed.
+
+## `2026-09-10 19:26` - `fix(ios)`: Sanitizar swiftinterface e tarballs xcframework para compatibilidade swift 6.1
+
+- **Description:** Implementado saneamento universal nos tarballs pré-compilados de xcframeworks e arquivos .swiftinterface em scripts/patch_ios_swift6.js. Converte anotações @_Concurrency.MainActor para @MainActor e normaliza cabeçalhos de versão do compilador para Swift 6.1.2 em todos os pacotes pré-compilados (expo-modules-core, expo-camera, expo-file-system, expo-font, expo-image, expo-location). Adicionada limpeza do diretório src/frontend/ios/build no workflow build-ios.yml.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Elimina completamente o erro de módulo ExpoModulesCore rejeitado por compilação do swiftinterface e previne falhas em cascata em todos os demais módulos Expo no GitHub Actions.
