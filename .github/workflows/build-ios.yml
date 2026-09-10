@@ -148,16 +148,16 @@ jobs:
                       content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
                       modified = true;
                     }
-                    if (content.includes("      ],\n      linkerSettings:")) {
-                      content = content.replace("      ],\n      linkerSettings:", "      ]\n      linkerSettings:");
-                      modified = true;
-                    }
                     if (content.includes("      ],\n    ),")) {
                       content = content.replace("      ],\n    ),", "      ]\n    ),");
                       modified = true;
                     }
                     if (/swiftLanguageModes:\s*\[\.v6\](?!,)/.test(content)) {
                       content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
+                      modified = true;
+                    }
+                    if (content.includes("      ]\n      linkerSettings:")) {
+                      content = content.replace("      ]\n      linkerSettings:", "      ],\n      linkerSettings:");
                       modified = true;
                     }
 
@@ -249,16 +249,16 @@ jobs:
                       content = content.replace("path: \"Benchmarks\",", "path: \"Benchmarks\"");
                       modified = true;
                     }
-                    if (content.includes("      ],\n      linkerSettings:")) {
-                      content = content.replace("      ],\n      linkerSettings:", "      ]\n      linkerSettings:");
-                      modified = true;
-                    }
                     if (content.includes("      ],\n    ),")) {
                       content = content.replace("      ],\n    ),", "      ]\n    ),");
                       modified = true;
                     }
                     if (/swiftLanguageModes:\s*\[\.v6\](?!,)/.test(content)) {
                       content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
+                      modified = true;
+                    }
+                    if (content.includes("      ]\n      linkerSettings:")) {
+                      content = content.replace("      ]\n      linkerSettings:", "      ],\n      linkerSettings:");
                       modified = true;
                     }
 
