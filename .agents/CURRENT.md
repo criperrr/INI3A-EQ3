@@ -7,6 +7,11 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Extração do Script de Patch iOS (`scripts/patch_ios_swift6.js`) & Correção de Sintaxe YAML no Workflow (`v1.0.4`):**
+  1. Diagnosticado e comprovado o motivo da falha instantânea na execução da action do iOS (`build-ios.yml`): a presença de scripts inline multiline em `node -e '...'` que continham trechos com indentação reduzida e colons (`init(_:_:)`), gerando erro de chave implícita multilinear no analisador YAML.
+  2. Extraída toda a rotina de saneamento para o script autocontido [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js), reduzindo mais de 300 linhas duplicadas de scripts inline no YAML para chamadas limpas `run: node scripts/patch_ios_swift6.js`.
+  3. Validados todos os 3 workflows com o parser oficial (`yaml.parse`), garantindo 100% de conformidade com a especificação YAML.
+  4. Realinhada a versão do projeto para `v1.0.4` (`versionCode: 5`), consolidando as iterações anteriores de teste da compilação iOS.
 - **Resolução de Construtores C++, `vector.push_back` e Polyfill de `Task` no Swift 6.1 (Build iOS):** Diagnosticadas e corrigidas as incompatibilidades remanescentes entre o SDK Swift 6.1 do Xcode 16.4 e o código gerado para Swift 6.2 no `expo-modules-jsi`:
   1. `Task+immediate.swift`: Removida a chamada inválida `Task.immediate` (exclusiva de propostas futuras) e simplificado o polyfill para o inicializador estável `Task(priority: .high, operation: operation)`.
   2. `vector.push_back(consuming: propNameId)`: Removido o argumento nomeado `consuming:` rejeitado pela ponte C++ do Swift 6.1 (`vector.push_back(propNameId)`).
@@ -133,6 +138,7 @@ Direct relative paths from project root.
 | `scripts/dev_launcher.ts` | Unified cross-platform dev launcher: interactive network mode selector (LAN, Corporate Tunnel, Localhost, Remote CTI), process tree lifecycle manager |
 | `scripts/configure_env.ts` | Interactive & CLI frontend environment manager (`npm run env`, `env:remote`, `env:local`, `env:localhost`) |
 | `scripts/bump_version.ts` | CLI & programmatic SemVer manager: synchronized multi-package version bumping (`npm run version:bump[:minor|:major]`) |
+| `scripts/patch_ios_swift6.js` | Swift 6.1 & Xcode 16.4 compatibility patcher: sanitizes SPM package manifests, trailing commas, weak let/var, Task polyfills, and C++ init bridges |
 | `.github/workflows/release.yml` | GitHub Actions workflow: autonomous test, typecheck, Expo prebuild, Gradle release APK compilation and GitHub Releases publication |
 | `scripts/deploy_remote.sh` | Remote deployment automation script for pushing and orchestrating release on CTI server |
 | `deploy/deploy.sh` | Production deployment lifecycle script running on `/var/www/equipes/26-presco` (migrations, seed, PM2, health check) |

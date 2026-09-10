@@ -3122,3 +3122,18 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unblocks native compilation of ExpoModulesJSI xcframework and finishes IPA generation.
+
+## `2026-09-10 18:31` - `fix(ci)`: extract iOS patch routine to scripts/patch_ios_swift6.js and fix YAML syntax (v1.0.4)
+
+- **Description:** Diagnosed and resolved the root cause of instantaneous GitHub Actions build failures on build-ios.yml. The previous inline node scripts in YAML contained low indentation and colons that broke YAML block scalar parsing (implicit keys need to be on a single line). Extracted all Swift 6.1 and C++ compatibility patches into a standalone, tested script (scripts/patch_ios_swift6.js). Replaced inline blocks in build-ios.yml with clean script execution. Realigned project SemVer to v1.0.4 (versionCode: 5) per user request to discard failed iterative tags.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `package-lock.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** iOS workflow passes full YAML validation. Pushing with tag ios-v1.0.4 will trigger the build cleanly without YAML syntax errors.
