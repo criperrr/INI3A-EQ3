@@ -24,10 +24,13 @@ concurrency:
 jobs:
   build_ios:
     name: Build iOS IPA (Unsigned / Sideloadly)
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 40
 
     steps:
+      - name: Selecionar Xcode 16
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer || true
+
       - name: Checkout Repositório
         uses: actions/checkout@v4
         with:
