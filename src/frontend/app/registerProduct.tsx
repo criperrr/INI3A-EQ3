@@ -80,18 +80,40 @@ export default function RegisterProduct() {
           setMarkets(list);
           setSelectedMarketId(list[0]!.id);
         } else {
-          setMarkets([]);
-          setSelectedMarketId(0);
+          // Fallback: se nenhum mercado estiver no raio de 15km, carrega todos os mercados cadastrados (ex: Trigal)
+          const allList = await fetchMarkets();
+          if (allList && allList.length > 0) {
+            setMarkets(allList);
+            setSelectedMarketId(allList[0]!.id);
+          } else {
+            setMarkets([]);
+            setSelectedMarketId(0);
+          }
         }
       } else {
         setHasLocation(false);
-        setMarkets([]);
-        setSelectedMarketId(0);
+        // Fallback: sem GPS/permissão, lista todos os mercados cadastrados no sistema
+        const allList = await fetchMarkets();
+        if (allList && allList.length > 0) {
+          setMarkets(allList);
+          setSelectedMarketId(allList[0]!.id);
+        } else {
+          setMarkets([]);
+          setSelectedMarketId(0);
+        }
       }
     } catch (err) {
       console.warn("[registerProduct] Erro ao carregar mercados:", err);
-      setMarkets([]);
-      setSelectedMarketId(0);
+      try {
+        const allList = await fetchMarkets();
+        setMarkets(allList || []);
+        if (allList && allList.length > 0) {
+          setSelectedMarketId(allList[0]!.id);
+        }
+      } catch {
+        setMarkets([]);
+        setSelectedMarketId(0);
+      }
     } finally {
       setIsLocatingMarkets(false);
     }
@@ -953,17 +975,10 @@ export default function RegisterProduct() {
                       onPress={async () => {
                         setIsLocatingMarkets(true);
                         try {
-                          const coords = await getUserLocation();
-                          if (coords) {
-                            const expanded = await fetchMarkets({
-                              latitude: coords.latitude,
-                              longitude: coords.longitude,
-                              radius: 35000,
-                            });
-                            if (expanded && expanded.length > 0) {
-                              setMarkets(expanded);
-                              setSelectedMarketId(expanded[0]!.id);
-                            }
+                          const allMarkets = await fetchMarkets();
+                          if (allMarkets && allMarkets.length > 0) {
+                            setMarkets(allMarkets);
+                            setSelectedMarketId(allMarkets[0]!.id);
                           }
                         } finally {
                           setIsLocatingMarkets(false);

@@ -182,7 +182,7 @@ export default function HomeScreen() {
     }
 
     try {
-      const markets = await fetchMarkets(
+      let markets = await fetchMarkets(
         loc
           ? {
               latitude: loc.latitude,
@@ -191,6 +191,10 @@ export default function HomeScreen() {
             }
           : undefined
       );
+      if (!markets || markets.length === 0) {
+        // Fallback: busca todos os mercados cadastrados no sistema se não houver no raio imediato
+        markets = await fetchMarkets();
+      }
       if (markets && markets.length > 0) {
         const marketImages = [
           "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
