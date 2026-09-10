@@ -3206,3 +3206,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - scripts/patch_ios_swift6.js
   - .agents/CURRENT.md
 - **Impact / Next Steps:** ExpoUI compila sem erros no Xcode 16.4.
+
+## 2026-09-10 20:55 - ix(ios): Normalizar _LocationEssentials para CoreLocation no ExpoLocation
+
+- **Description:** Diagnosticado erro de compilacao no target principal Presco (ExpoModulesProvider.swift): cannot find type _LocationEssentials in scope ao tentar importar ExpoLocation.framework. No Xcode 16.4 / iOS 18 SDK, CLLocation reside em CoreLocation. Adicionada normalizacao de _LocationEssentials. para CoreLocation. na rotina patchSwiftInterfaceContent em scripts/patch_ios_swift6.js, corrigindo todos os .swiftinterface dos prebuilds.
+- **Files Modified:**
+  - scripts/patch_ios_swift6.js
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** ExpoLocation importa com sucesso no target Presco no Xcode 16.4.

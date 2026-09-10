@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Normalização de `_LocationEssentials` para `CoreLocation` no `ExpoLocation` (Build iOS):**
+  1. Diagnosticado o erro de compilação durante a geração do target final `Presco` (`ExpoModulesProvider.swift`): `error: cannot find type '_LocationEssentials' in scope` e `failed to build module 'ExpoLocation'`.
+  2. No Xcode 16.4 (`iPhoneOS18.5.sdk`), o tipo `CLLocation` reside exclusivamente no módulo público `CoreLocation`, enquanto no SDK gerador do prebuild do Expo foi emitido `extension _LocationEssentials.CLLocation : ExpoModulesCore.Convertible`.
+  3. Adicionada a normalização automática de `_LocationEssentials.` para `CoreLocation.` na rotina universal `patchSwiftInterfaceContent` do [`scripts/patch_ios_swift6.js`](file:///c:/Users/leona/Desktop/INI3A-EQ3/scripts/patch_ios_swift6.js), corrigindo todos os `.swiftinterface` nos tarballs e no sistema de arquivos para compatibilidade total com o SDK 18.
 - **Compatibilidade de `@expo/ui` com SDK iOS 18 (Build iOS):**
   1. Diagnosticado o erro de compilação no target `ExpoUI`: `cannot find type 'DrawOnSymbolEffect' in scope`, `cannot find type 'DrawOffSymbolEffect' in scope` em `SymbolEffectModifier.swift` e `value of type 'LineHeight.Content' has no member 'lineHeight'` em `ViewModifierRegistry.swift`.
   2. As propriedades de efeitos de símbolos e altura de linha exata foram implementadas pelo Expo para iOS 26+ sem envolver as declarações com a diretiva de pré-processador `#if compiler(>=6.2)` (diferente do restante do módulo que usava esse guard).
