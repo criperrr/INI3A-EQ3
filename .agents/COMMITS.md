@@ -3039,3 +3039,13 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** ExpoModulesJSI can compile natively with Swift 6.2 toolchain on Xcode 16.4+. Ready for commit and push.
+
+## `2026-09-10 17:34` - `fix(ci)`: Resolve Swift tools 6.2.0 mismatch in iOS IPA build
+
+- **Description:** Diagnosed and fixed `package "apple" is using Swift tools version 6.2.0 but the installed version is 6.1.0` failure in GitHub Actions. Pinned `expo-modules-core: 57.0.16` and `expo-modules-jsi: 57.0.8` via npm overrides in root and frontend package.json. Implemented full Package.swift downgrade (swift-tools-version 6.0, removal of Swift 6.2 upcoming features and trailing commas) in .github/workflows/build-ios.yml.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `src/frontend/package.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Ensures seamless compilation of ExpoModulesJSI and complete iOS IPA generation on macOS 15 runners.
