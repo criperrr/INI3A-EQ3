@@ -3155,3 +3155,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Clean Swift and C++ compilation with no extraneous argument labels and zero copy construction on non-copyable types. Tag ios-v1.0.4 updated and pushed.
+
+## `2026-09-10 18:54` - `fix(ci)`: align appendPropName runtime parameter type with facebook::jsi::IRuntime (v1.0.4)
+
+- **Description:** Fixed type mismatch error in JavaScriptRuntime.swift:240:58 where Swift rejected passing iRuntime (of type facebook.jsi.IRuntime) to appendPropName which expected facebook.jsi.Runtime. In React Native 0.86, JSI split the interface into IRuntime base and Runtime. Updated HostObjectCallbacks.h to include IRuntimeCompat.h and declare appendPropName with facebook::jsi::IRuntime &runtime.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Exact parameter type match between Swift and C++. Tag ios-v1.0.4 updated and pushed.
