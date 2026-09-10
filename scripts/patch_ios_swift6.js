@@ -6,6 +6,13 @@ const { execSync } = require("child_process");
 function patchSwiftInterfaceContent(content) {
   let modified = false;
 
+  // 1. Remove isolated conformance attributes in type inheritance clauses (e.g. `: @MainActor Protocol` or `: @_Concurrency.MainActor Protocol`), which Swift < 6.2 rejects
+  if (/:\s*@(_Concurrency\.)?MainActor\s+/.test(content)) {
+    content = content.replace(/:\s*@(_Concurrency\.)?MainActor\s+/g, ": ");
+    modified = true;
+  }
+
+  // 2. Normalize any remaining @_Concurrency.MainActor declarations to @MainActor
   if (content.includes("_Concurrency.MainActor")) {
     content = content.replace(/@_Concurrency\.MainActor/g, "@MainActor");
     modified = true;
