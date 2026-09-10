@@ -93,9 +93,9 @@ function patchDirectory(dir) {
             modified = true;
           }
 
-          // 4. vector.push_back consuming label fix
-          if (content.includes("vector.push_back(consuming: propNameId)")) {
-            content = content.replace("vector.push_back(consuming: propNameId)", "vector.push_back(propNameId)");
+          // 4. Ensure vector.push_back retains consuming: label for move-only PropNameID (C++ rvalue move)
+          if (content.includes("vector.push_back(propNameId)")) {
+            content = content.replace("vector.push_back(propNameId)", "vector.push_back(consuming: propNameId)");
             modified = true;
           }
 
