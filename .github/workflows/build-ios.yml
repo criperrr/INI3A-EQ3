@@ -44,6 +44,23 @@ jobs:
         working-directory: src/frontend
         run: npm install --prefer-offline --no-audit
 
+      - name: Configurar Variáveis de Ambiente do Frontend
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir -p src/frontend
+          cat << EOF > src/frontend/.env
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          EOF
+
+      - name: Gerar Projeto Nativo iOS (Expo Prebuild)
+        working-directory: src/frontend
+        run: npx expo prebuild --platform ios --clean
+
       - name: Limpar Cache do CocoaPods e DerivedData
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
