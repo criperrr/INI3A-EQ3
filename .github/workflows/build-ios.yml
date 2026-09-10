@@ -95,9 +95,10 @@ jobs:
         run: |
           rm -rf ~/Library/Developer/Xcode/DerivedData/*
           rm -rf ~/Library/Caches/CocoaPods
+          rm -rf src/frontend/ios/build
           pod repo update
 
-      - name: Corrigir Compatibilidade de Swift Package Manager e ExpoModulesJSI
+      - name: Corrigir Compatibilidade de Toolchain, Swift Package Manager e XCFrameworks
         run: node scripts/patch_ios_swift6.js
 
       - name: Instalar Pods iOS
@@ -105,7 +106,7 @@ jobs:
         run: |
           pod install
 
-      - name: Corrigir Build Scripts e Toolchain nos Pods
+      - name: Corrigir Build Scripts, Toolchain e Swiftinterfaces nos Pods
         run: node scripts/patch_ios_swift6.js
 
       - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
