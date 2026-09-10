@@ -59,7 +59,7 @@ jobs:
 
       - name: Gerar Projeto Nativo iOS (Expo Prebuild)
         working-directory: src/frontend
-        run: npx expo prebuild --platform ios --clean
+        run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Limpar Cache do CocoaPods e DerivedData
         run: |
@@ -67,16 +67,17 @@ jobs:
           rm -rf ~/Library/Caches/CocoaPods
           pod repo update
 
+      - name: Corrigir Compatibilidade de Swift Package Manager
+        run: |
+          # Patch global de ferramentas Swift em todo o repositório
+          find . -name "Package.swift" -exec sed -i '' -e 's/swift-tools-version:[ ]*6\.[1-9]/swift-tools-version: 6.0/g' {} + 2>/dev/null || true
+
       - name: Instalar Pods iOS
         working-directory: src/frontend/ios
-        run: pod install
-
-      - name: Corrigir Compatibilidade de Swift Package Manager no ExpoModulesJSI
-        working-directory: src/frontend
         run: |
-          # Corrige manifestos Package.swift tanto em node_modules quanto em Pods
-          find node_modules Pods ios/Pods -name "Package.swift" -exec sed -i '' 's/swift-tools-version: 6.2/swift-tools-version: 6.0/g' {} + 2>/dev/null || true
-          find node_modules Pods ios/Pods -name "Package.swift" -exec sed -i '' 's/swift-tools-version:6.2/swift-tools-version:6.0/g' {} + 2>/dev/null || true
+          pod install
+          # Corrige manifestos após a criação do Pods
+          find . -name "Package.swift" -exec sed -i '' -e 's/swift-tools-version:[ ]*6\.[1-9]/swift-tools-version: 6.0/g' {} + 2>/dev/null || true
 
       - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
         working-directory: src/frontend/ios
