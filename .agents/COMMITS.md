@@ -2948,3 +2948,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Developers have clear, deterministic visibility into compilation progress without verbose Gradle log spam.
 
+
+## `2026-09-10 13:21` - `fix(markets)`: Correct Oba Hortifruti coordinates and sanitize market locations
+
+- **Description:** Executada auditoria detalhada de discrepância geográfica nos mercados cadastrados. Identificado que o Oba Hortifruti continha um registro legado/extinto indexado pela HERE API e pelo banco no Jardim América (Rua Dr. José Maria Rodrigues Costa, lat -22.34598, lng -49.05957), a mais de 1.4 km de distância da loja real na Avenida Getúlio Vargas, 23-2 (esquina com Rua Aviador Marquês de Pinedo, Vila Aviação, lat -22.35451, lng -49.04929). Adicionada rejeição explícita da unidade fantasma no `HereMarketDiscovery`, padronização da nomenclatura ("Oba Hortifruti"), priorização estrita nas regras de deduplicação do mapa (`map.native.tsx`), script de realocação/saneamento de estabelecimentos espúrios e endpoints administrativos (`PUT /markets/:id`, `DELETE /markets/:id`, `POST /markets/reallocate`).
+- **Files Modified:**
+  - `src/backend/src/shared/services/hereMarketDiscovery.service.ts`
+  - `src/backend/src/shared/database/reallocateMarkets.ts`
+  - `src/backend/src/modules/market/market.routes.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/frontend/app/map.native.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Localização do Oba Hortifruti corrigida com precisão na Av. Getúlio Vargas; mapa e formulários passam a exibir distâncias reais e sem unidades fantasmas.
