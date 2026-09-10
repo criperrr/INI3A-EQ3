@@ -33,6 +33,9 @@ export interface ProductData {
   formattedDistance?: string | null;
   isPromotion?: boolean;
   discountPercentage?: number | null;
+  matchScore?: number | null;
+  isExactMatch?: boolean | null;
+  scannedEan?: string | null;
 }
 
 export interface ProductDetailData extends ProductData {

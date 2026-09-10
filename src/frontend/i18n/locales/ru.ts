@@ -307,6 +307,11 @@ export const ru: TranslationSchema = {
     manualSearchSubtitle: "Введите штрихкод товара ниже.",
     manualSearchPlaceholder: "Напр.: 7891010101010",
     searchProductBtn: "Найти товар",
+    approximateMatchTitle: "Предлагаемый товар ({percent}% совпадения)",
+    checkBarcodeNumberPrompt: "Пожалуйста, сверьте номер, напечатанный под штрихкодом на упаковке:",
+    scannedBarcodeLabel: "Номер, считанный камерой:",
+    productBarcodeLabel: "Номер предлагаемого товара:",
+    isBarcodeNumberCorrect: "Совпадают ли номер и товар с вашим физическим предметом?",
   },
   products: {
     title: "Цены и магазины",

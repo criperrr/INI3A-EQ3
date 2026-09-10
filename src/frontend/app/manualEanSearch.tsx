@@ -73,9 +73,11 @@ export default function ManualEanSearch() {
           category: product?.category || t("common.uncategorized"),
           name: product?.name || t("scanner.productNotFoundTitle"),
           imageUri: product?.imageUri || product?.icon || undefined,
-          lastPrice: product?.lastPrice || t("productDetails.noOccurrences"),
           barcode: product?.barcode || trimmedEan,
           ean: product?.ean || trimmedEan,
+          matchScore: product.matchScore !== undefined && product.matchScore !== null ? String(product.matchScore) : undefined,
+          isExactMatch: product.isExactMatch !== undefined && product.isExactMatch !== null ? String(product.isExactMatch) : undefined,
+          scannedEan: product.scannedEan || trimmedEan,
         },
       });
     } catch (error: any) {

@@ -156,9 +156,11 @@ export default function ScannerProduct() {
           category: product.category || t("scanner.category"),
           name: product.name || t("scanner.productName"),
           imageUri: product.imageUri || product.icon || undefined,
-          lastPrice: product.lastPrice || t("products.pricePlaceholder"),
           barcode: product.barcode || data,
           ean: product.ean || data,
+          matchScore: product.matchScore !== undefined && product.matchScore !== null ? String(product.matchScore) : undefined,
+          isExactMatch: product.isExactMatch !== undefined && product.isExactMatch !== null ? String(product.isExactMatch) : undefined,
+          scannedEan: product.scannedEan || data,
         },
       });
     } catch (error: any) {

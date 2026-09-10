@@ -305,6 +305,11 @@ export interface TranslationSchema {
     manualSearchSubtitle: string;
     manualSearchPlaceholder: string;
     searchProductBtn: string;
+    approximateMatchTitle: string;
+    checkBarcodeNumberPrompt: string;
+    scannedBarcodeLabel: string;
+    productBarcodeLabel: string;
+    isBarcodeNumberCorrect: string;
   };
   products: {
     title: string;
