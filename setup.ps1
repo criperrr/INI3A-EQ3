@@ -21,7 +21,12 @@ Set-Location $ScriptDir
 function Refresh-Path {
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
                 [Environment]::GetEnvironmentVariable("Path", "User")
+    $dockerBin = "$env:ProgramFiles\Docker\Docker\resources\bin"
+    if ((Test-Path $dockerBin) -and ($env:Path -notlike "*$dockerBin*")) {
+        $env:Path = "$dockerBin;" + $env:Path
+    }
 }
+Refresh-Path
 
 # --- 1. Windows ---
 Write-Step "1. Ambiente Windows"

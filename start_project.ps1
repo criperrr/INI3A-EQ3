@@ -19,6 +19,11 @@ param(
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ScriptDir
 
+$dockerBin = "$env:ProgramFiles\Docker\Docker\resources\bin"
+if ((Test-Path $dockerBin) -and ($env:Path -notlike "*$dockerBin*")) {
+    $env:Path = "$dockerBin;" + $env:Path
+}
+
 # Normalizar flags de conveniencia
 if ($Local) { $Mode = "lan" }
 if ($Tunnel) { $Mode = "corp" }

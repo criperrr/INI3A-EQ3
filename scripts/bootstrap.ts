@@ -40,6 +40,13 @@ import {
   type PkgManager,
 } from "./lib/system.ts";
 import {
+  ensureDockerCliInPath,
+  isDockerDaemonRunning,
+  ensureDockerDaemonRunning,
+  startComposeInfrastructure,
+  getDockerComposeCmd,
+} from "./lib/docker.ts";
+import {
   TOOLS,
   SERVICES,
   ENV_DEFAULTS,
@@ -122,10 +129,16 @@ async function main() {
 
 function toolVersionOk(tool: ToolRequirement): boolean {
   if (!has(tool.bin)) return false;
-  if (!tool.versionArgs || tool.minMajor == null) return true;
-  const out = run(tool.bin, tool.versionArgs).stdout;
-  const m = out.match(/(\d+)\.\d+/);
-  return m ? Number(m[1]) >= tool.minMajor : true;
+  if (!tool.versionArgs || (tool.minMajor == null && tool.maxMajor == null)) return true;
+  const res = run(tool.bin, tool.versionArgs);
+  // javac e afins escrevem a versão em stderr
+  const out = `${res.stdout} ${res.stderr}`;
+  const m = out.match(/(\d+)(?:\.\d+)?/);
+  if (!m) return true;
+  const major = Number(m[1]);
+  if (tool.minMajor != null && major < tool.minMajor) return false;
+  if (tool.maxMajor != null && major > tool.maxMajor) return false;
+  return true;
 }
 
 async function ensureTool(tool: ToolRequirement) {
@@ -153,7 +166,14 @@ async function ensureTool(tool: ToolRequirement) {
   }
 
   const done = await installTool(tool);
-  if (done && toolVersionOk(tool)) ok(`${tool.label} instalado.`);
+  if (done) {
+    if (tool.postInstall) {
+      await tool.postInstall(OS);
+    } else if (tool.id === "docker") {
+      await ensureDockerDaemonRunning();
+    }
+  }
+  if (done && (toolVersionOk(tool) || has(tool.bin))) ok(`${tool.label} instalado.`);
   else warn(`Não consegui confirmar a instalação de ${tool.label}. ${tool.docs || ""}`);
 }
 
@@ -183,8 +203,7 @@ async function installPackages(pkgs: string[]): Promise<boolean> {
 }
 
 function dockerAvailable(): boolean {
-  if (!has("docker")) return false;
-  return run("docker", ["info"]).status === 0;
+  return ensureDockerCliInPath();
 }
 
 // ---------------------------------------------------------------------------
@@ -197,6 +216,13 @@ async function resolveService(
 ): Promise<Resolved> {
   const base = { id: svc.id, label: svc.label, envVar: svc.envVar };
 
+  // (0) already usable in Docker?
+  const doc = await dockerUsable(svc);
+  if (doc.usable) {
+    ok(`${svc.label}: Docker pronto (${doc.reason})`);
+    return { ...base, mode: "docker", url: dockerUrl(svc), note: doc.reason };
+  }
+
   // (1) already usable natively?
   const nat = await nativeUsable(svc);
   if (nat.usable) {
@@ -204,14 +230,14 @@ async function resolveService(
     return { ...base, mode: "native", url: nativeUrl(svc), note: nat.reason };
   }
 
-  // (2) choose a strategy — native-first: default to native when it's installed
+  // (2) choose a strategy — prefer Docker for isolated development
   let strategy: "docker" | "native" | "skip";
   const installedNatively = has(svc.bin);
   if (OPT.forceDocker) strategy = "docker";
   else if (OPT.forceNative) strategy = "native";
   else {
     const choices: Array<{ label: string; value: "docker" | "native" | "skip" }> = [];
-    if (dockerReady) choices.push({ label: "Subir via Docker", value: "docker" });
+    if (dockerReady) choices.push({ label: "Subir via Docker (recomendado)", value: "docker" });
     choices.push({
       label: installedNatively
         ? `Usar o ${svc.label} nativo (configurar agora)`
@@ -222,13 +248,11 @@ async function resolveService(
       choices.push({ label: "Instalar Docker e subir por lá", value: "docker" });
     choices.push({ label: "Pular por enquanto", value: "skip" });
 
-    const def = installedNatively
-      ? choices.findIndex((c) => c.value === "native")
-      : 0;
+    const def = 0;
 
     info(
       `${svc.label}: ${
-        installedNatively ? "instalado, mas não configurado para o projeto" : "não encontrado"
+        installedNatively ? "instalado nativamente, mas não configurado para o projeto" : "não encontrado"
       } (${nat.reason}).`,
     );
     const pick = await promptChoice("Como quer prosseguir?", choices.map((c) => c.label), def);
@@ -253,6 +277,29 @@ function nativeUrl(svc: ServiceRequirement) {
 }
 function dockerUrl(svc: ServiceRequirement) {
   return fillTemplate(svc.url.docker, { host: HOST });
+}
+
+async function dockerUsable(
+  svc: ServiceRequirement,
+): Promise<{ usable: boolean; reason: string }> {
+  const up = await testTcpPort(HOST, svc.dockerPort, 700);
+  if (!up) return { usable: false, reason: `nada escutando em :${svc.dockerPort}` };
+
+  if (svc.kind === "redis") {
+    if (!has("redis-cli"))
+      return { usable: true, reason: `porta :${svc.dockerPort} aberta` };
+    const ping = run("redis-cli", ["-h", HOST, "-p", String(svc.dockerPort), "ping"]);
+    if (/PONG/i.test(ping.stdout)) return { usable: true, reason: "PING ok" };
+    return { usable: false, reason: "Redis não respondeu" };
+  }
+
+  // postgres
+  if (!has("psql"))
+    return { usable: true, reason: `porta :${svc.dockerPort} aberta` };
+  const url = dockerUrl(svc);
+  if (psql(url, "select 1").status !== 0)
+    return { usable: false, reason: "container Postgres não respondeu" };
+  return { usable: true, reason: "container pronto" };
 }
 
 async function nativeUsable(
@@ -287,26 +334,34 @@ async function startViaDocker(
   svc: ServiceRequirement,
   base: { id: string; label: string; envVar: string },
 ): Promise<Resolved> {
-  if (!has("docker")) {
+  if (!ensureDockerCliInPath()) {
     const dockerTool = TOOLS.find((t) => t.id === "docker")!;
     await ensureTool({ ...dockerTool, optional: false });
   }
-  if (!dockerAvailable()) {
-    warn(`${svc.label}: Docker não está pronto. Pulado — inicie o Docker e rode 'npm run db:up'.`);
+  const daemonRunning = await ensureDockerDaemonRunning();
+  if (!daemonRunning) {
+    warn(`${svc.label}: Docker daemon não está pronto. Pulado — inicie o Docker e rode 'npm run db:up'.`);
     return { ...base, mode: "skipped", url: dockerUrl(svc), note: "docker indisponível" };
   }
-  info(`${svc.label}: docker compose up -d ${svc.dockerService}`);
-  const code = await runLive("docker", ["compose", "up", "-d", svc.dockerService], { cwd: ROOT });
-  if (code !== 0) {
-    warn(`${svc.label}: 'docker compose up' falhou.`);
+  info(`${svc.label}: subindo container via docker compose...`);
+  const started = await startComposeInfrastructure({ cwd: ROOT, service: svc.dockerService });
+  if (!started) {
+    warn(`${svc.label}: falha ao subir infraestrutura via docker compose.`);
     return { ...base, mode: "skipped", url: dockerUrl(svc), note: "falha no compose" };
   }
   const healthy = await waitFor(() => testTcpPort(HOST, svc.dockerPort, 1000), {
-    tries: 40,
+    tries: 30,
     delayMs: 1000,
   });
-  if (healthy) ok(`${svc.label}: container pronto em :${svc.dockerPort}`);
-  else warn(`${svc.label}: container subiu mas :${svc.dockerPort} não respondeu a tempo.`);
+  if (healthy) {
+    ok(`${svc.label}: container pronto em :${svc.dockerPort}`);
+  } else {
+    warn(`${svc.label}: container subiu mas :${svc.dockerPort} não respondeu a tempo.`);
+    const logs = run("docker", ["logs", "--tail", "25", `presco_${svc.dockerService}`]);
+    if (logs.stdout || logs.stderr) {
+      console.log(dim(`Logs de presco_${svc.dockerService}:\n${logs.stdout}\n${logs.stderr}`));
+    }
+  }
   return { ...base, mode: "docker", url: dockerUrl(svc), note: `container :${svc.dockerPort}` };
 }
 

@@ -16,9 +16,11 @@ export interface ToolRequirement {
   label: string;
   /** command that must exist on PATH once installed */
   bin: string;
-  /** optional: `<bin> <versionArgs>` output must satisfy minMajor */
+  /** optional: `<bin> <versionArgs>` output must satisfy minMajor/maxMajor */
   versionArgs?: string[];
   minMajor?: number;
+  /** upper bound: ferramentas novas demais também quebram (ex.: JDK 26 vs AGP) */
+  maxMajor?: number;
   /** if true: missing → warn and continue (never blocks) */
   optional?: boolean;
   /** package names per manager; `script` is a shell one-liner fallback */
@@ -27,6 +29,8 @@ export interface ToolRequirement {
   docs?: string;
   /** shown when it can't be auto-installed */
   note?: string;
+  /** optional post-installation hook */
+  postInstall?: (os: string) => Promise<void> | void;
 }
 
 export interface ServiceRequirement {
@@ -76,6 +80,10 @@ export const TOOLS: ToolRequirement[] = [
     bin: "docker",
     optional: true,
     packages: {
+      pacman: ["docker", "docker-compose"],
+      apt: ["docker.io", "docker-compose-v2"],
+      dnf: ["docker-ce", "docker-compose-plugin"],
+      zypper: ["docker", "docker-compose"],
       brew: ["docker"], // cask; brew handles it
       winget: ["Docker.DockerDesktop"],
       choco: ["docker-desktop"],
@@ -83,8 +91,28 @@ export const TOOLS: ToolRequirement[] = [
     script: {
       linux: "curl -fsSL https://get.docker.com | sh",
     },
-    note: "No Linux o script oficial precisa de sudo e um relogin para o grupo docker.",
+    note: "No Linux o Docker precisa do serviço ativo (systemctl) e do usuário no grupo docker.",
     docs: "https://docs.docker.com/get-docker/",
+  },
+  {
+    // Só é exigido para compilar o app Android. `npm run android` resolve isso
+    // sozinho (inclusive baixando o Temurin), então aqui é apenas informativo.
+    id: "jdk",
+    label: "JDK 17–21 (build Android)",
+    bin: "javac",
+    versionArgs: ["-version"],
+    minMajor: 17,
+    maxMajor: 21,
+    optional: true,
+    script: {
+      linux: "npx tsx scripts/lib/jdk.ts --install",
+      macos: "npx tsx scripts/lib/jdk.ts --install",
+      windows: "npx tsx scripts/lib/jdk.ts --install",
+    },
+    note:
+      "Um JRE (sem javac) ou um JDK acima de 21 fazem o Gradle falhar em 'No Java compiler found' " +
+      "ou em 'jlink/JdkImageTransform'. 'npm run android' detecta e provisiona automaticamente.",
+    docs: "https://adoptium.net/temurin/releases/?version=17",
   },
 ];
 
@@ -147,7 +175,9 @@ export const ENV_DEFAULTS: Record<string, string> = {
   SERVER_PORT: "3333",
   SERVER_HOST: "0.0.0.0",
   NODE_ENV: "development",
-  HERE_API_KEY: "4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4",
+  // Chave da HERE: nunca hardcoded (o repositório é público). Vem do ambiente do
+  // desenvolvedor ou é preenchida à mão em src/backend/.env após o bootstrap.
+  HERE_API_KEY: process.env.HERE_API_KEY ?? "",
   // JWT_SECRET is generated in bootstrap if absent
 };
 

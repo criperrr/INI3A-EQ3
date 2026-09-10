@@ -13,6 +13,12 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# Homebrew / Docker Desktop no PATH (macOS / Linux)
+for bin_dir in "$HOME/.docker/bin" "/Applications/Docker.app/Contents/Resources/bin" \
+               "/usr/local/bin" "/opt/homebrew/bin" "$HOME/.local/share/fnm"; do
+  [ -d "$bin_dir" ] && [[ ":$PATH:" != *":$bin_dir:"* ]] && export PATH="$bin_dir:$PATH" || true
+done
+
 # Verificar se Node.js está instalado
 if ! command -v node &>/dev/null; then
   echo "❌ Node.js não foi encontrado. Execute primeiro: ./setup.sh"
