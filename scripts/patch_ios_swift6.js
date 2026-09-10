@@ -104,6 +104,52 @@ function patchDirectory(dir) {
             modified = true;
           }
 
+          // 5. Fix Swift 6.1 concurrency data-race error on capturing raw pointers into actor-isolated closures
+          if (full.endsWith("JavaScriptRuntime.swift") && content.includes("nonisolated(unsafe) let thisPtr = thisPtr")) {
+            content = content.replace(
+              /nonisolated\(unsafe\) let thisPtr = thisPtr\s*\n\s*nonisolated\(unsafe\) let argumentsPtr = argumentsPtr\s*\n\s*nonisolated\(unsafe\) let resultPtr = resultPtr[\s\S]*?return try context\.call\(thisValue, consume arguments\)\.asJSIValue\(\)\s*\}\s*\}\s*\}/g,
+              (match) => {
+                if (match.includes("UnsafeMutablePointer(mutating: thisPtr).move()")) {
+                  return `let thisBits = UInt(bitPattern: thisPtr)
+    let argumentsBits = UInt(bitPattern: argumentsPtr)
+    let resultBits = UInt(bitPattern: resultPtr)
+
+    withGuaranteedContext(context) { (context: HostFunctionContext, runtime) in
+      let targetResultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultBits)!
+      targetResultPtr.pointee = JavaScriptActor.assumeIsolated {
+        return forwardingSwiftErrorsToJS(runtime: runtime) {
+          let targetThisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisBits)!
+          let targetArgsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsBits)!
+          let this = UnsafeMutablePointer(mutating: targetThisPtr).move()
+          let arguments = JavaScriptValuesBuffer(runtime, start: targetArgsPtr, count: argumentsCount)
+          let thisValue = JavaScriptValue(runtime, this)
+          return try context.call(thisValue, consume arguments).asJSIValue()
+        }
+      }
+    }`;
+                } else {
+                  return `let thisBits = UInt(bitPattern: thisPtr)
+    let argumentsBits = UInt(bitPattern: argumentsPtr)
+    let resultBits = UInt(bitPattern: resultPtr)
+
+    withGuaranteedContext(context) { (context: UnownedThisHostFunctionContext, runtime) in
+      let targetResultPtr = UnsafeMutablePointer<facebook.jsi.Value>(bitPattern: resultBits)!
+      targetResultPtr.pointee = JavaScriptActor.assumeIsolated {
+        return forwardingSwiftErrorsToJS(runtime: runtime) {
+          let targetThisPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: thisBits)!
+          let targetArgsPtr = UnsafePointer<facebook.jsi.Value>(bitPattern: argumentsBits)!
+          let arguments = JavaScriptValuesBuffer(runtime, start: targetArgsPtr, count: argumentsCount)
+          let thisValue = JavaScriptUnownedValue(runtime.pointee, targetThisPtr)
+          return try context.call(thisValue, consume arguments).asJSIValue()
+        }
+      }
+    }`;
+                }
+              }
+            );
+            modified = true;
+          }
+
           if (modified) {
             fs.writeFileSync(full, content, "utf8");
             console.log("Patched Swift syntax in:", full);
