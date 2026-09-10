@@ -896,28 +896,7 @@ export default function MapScreen() {
                                     anchor={{ x: 0.5, y: 1 }}
                                     zIndex={isSelected ? 999 : 1}
                                     onPress={() => setSelectedMarket(marker)}
-                                >
-                                    <View style={[
-                                        styles.customMarkerContainer,
-                                        isSelected && styles.customMarkerContainerSelected
-                                    ]}>
-                                        <View style={[
-                                            styles.customMarkerBubble,
-                                            { backgroundColor: markerColor },
-                                            isSelected && styles.customMarkerBubbleSelected
-                                        ]}>
-                                            <Ionicons
-                                                name={config.icon}
-                                                size={isSelected ? 16 : 14}
-                                                color="#FFFFFF"
-                                            />
-                                        </View>
-                                        <View style={[
-                                            styles.customMarkerArrow,
-                                            { borderTopColor: markerColor }
-                                        ]} />
-                                    </View>
-                                </Marker>
+                                />
                             );
                         })}
                 </MapView>
@@ -1267,7 +1246,15 @@ const styles = StyleSheet.create({
     retryButton: { backgroundColor: THEME_COLORS.accent, paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
     retryButtonText: { color: '#fff', fontWeight: 'bold' },
     mapContainer: { flex: 1 },
-    map: { ...StyleSheet.absoluteFill },
+    map: {
+        ...StyleSheet.absoluteFill,
+        // Fabric (Nova Arquitetura) mede a MapView com altura 0 quando ela é
+        // posicionada apenas por top/bottom. As dimensões explícitas dão ao
+        // layout nativo um valor concreto, mantendo o mapa como camada de fundo
+        // absoluta com os filtros fluindo por cima.
+        width: "100%",
+        height: "100%",
+    },
     filtersWrapper: {
         flexDirection: "row",
         justifyContent: "space-between",

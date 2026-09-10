@@ -1155,7 +1155,7 @@ const SettingsScreen: React.FC = () => {
               activeOpacity={0.7}
               onPress={() => {
                 triggerHaptic();
-                router.push("/adminModeration");
+                router.push("/adminModeration" as any);
               }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>

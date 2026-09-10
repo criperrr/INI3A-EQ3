@@ -2,8 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
 function resolveBaseUrl(): string {
-  const envUrl = process.env.EXPO_PUBLIC_API_URL;
+  const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   const hostUri = Constants.expoConfig?.hostUri;
+
+  // Se uma URL remota explícita for configurada (ex: https://eq.projetoscti.com.br/26-presco ou túnel),
+  // respeita-a sempre, garantindo acesso em qualquer rede (Wi-Fi, 4G, etc).
+  if (envUrl && (envUrl.startsWith("https://") || process.env.EXPO_PUBLIC_FORCE_API_URL === "true")) {
+    return envUrl.replace(/\/+$/, "");
+  }
 
   // Se o dispositivo estiver conectado a um Metro bundler via LAN (hostUri ativo)
   if (hostUri) {
@@ -18,7 +24,7 @@ function resolveBaseUrl(): string {
   }
 
   if (envUrl) {
-    return envUrl;
+    return envUrl.replace(/\/+$/, "");
   }
 
   return "http://localhost:3333";
