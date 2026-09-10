@@ -3182,3 +3182,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Elimina completamente o erro de módulo ExpoModulesCore rejeitado por compilação do swiftinterface e previne falhas em cascata em todos os demais módulos Expo no GitHub Actions.
+
+## `2026-09-10 19:46` - `fix(ios)`: Remover atributo de conformidade isolada @MainActor em herancas de swiftinterface
+
+- **Description:** Ajustada regex em scripts/patch_ios_swift6.js para remover atributos de conformidade isolada (: @MainActor ou : @_Concurrency.MainActor) em clausulas de heranca de .swiftinterface. O compilador Swift 6.1 rejeita atributos no tipo de conformidade (extension UIKit.UIView : @MainActor ExpoModulesCore.AnyArgument), aceitando estritamente a sintaxe canonica extension UIKit.UIView : ExpoModulesCore.AnyArgument.
+- **Files Modified:**
+  - `scripts/patch_ios_swift6.js`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Elimina o erro de sintaxe unknown attribute MainActor na linha 1667 do arm64-apple-ios.private.swiftinterface.
