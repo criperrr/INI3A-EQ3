@@ -27,6 +27,10 @@ export default function AboutScreen() {
     Linking.openURL("https://github.com/criperrr/INI3A-EQ3");
   };
 
+  const handleOpenReleases = () => {
+    Linking.openURL("https://github.com/criperrr/INI3A-EQ3/releases");
+  };
+
   const handleOpenPrivacy = () => {
     Linking.openURL("https://presco.app/privacy");
   };
@@ -229,6 +233,28 @@ export default function AboutScreen() {
             themeStyles.border,
           ]}
         >
+          <TouchableOpacity
+            style={[styles.linkRow, themeStyles.border]}
+            activeOpacity={0.7}
+            onPress={handleOpenReleases}
+          >
+            <View style={styles.linkLeft}>
+              <Ionicons
+                name="cloud-download-outline"
+                size={22}
+                color={accent}
+              />
+              <Text style={[styles.linkText, themeStyles.text]}>
+                {t("about.releasesLink")}
+              </Text>
+            </View>
+            <Ionicons
+              name="open-outline"
+              size={18}
+              color={themeStyles.subText.color}
+            />
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.linkRow, themeStyles.border]}
             activeOpacity={0.7}

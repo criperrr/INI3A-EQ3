@@ -580,6 +580,7 @@ export const ja: TranslationSchema = {
     scanStep: "スキャン",
     saveStep: "節約",
     githubRepo: "GitHub リポジトリ",
+    releasesLink: "リリースと APK ダウンロード",
   },
   errors: {
     networkError: "インターネット接続に失敗しました。通信環境をご確認ください。",

@@ -580,6 +580,7 @@ export const pt: TranslationSchema = {
     scanStep: "Escanear",
     saveStep: "Economizar",
     githubRepo: "Repositório no GitHub",
+    releasesLink: "Versões & Download do APK",
   },
   errors: {
     networkError: "Falha de conexão com a internet. Verifique sua rede.",

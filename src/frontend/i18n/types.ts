@@ -578,6 +578,7 @@ export interface TranslationSchema {
     scanStep: string;
     saveStep: string;
     githubRepo: string;
+    releasesLink: string;
   };
   errors: {
     networkError: string;
