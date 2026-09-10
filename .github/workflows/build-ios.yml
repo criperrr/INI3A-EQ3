@@ -72,13 +72,16 @@ jobs:
         run: pod install
 
       - name: Corrigir Compatibilidade de Swift Package Manager no ExpoModulesJSI
-        working-directory: src/frontend/ios
+        working-directory: src/frontend
         run: |
-          # Corrige se algum pacote SPM do ExpoModulesJSI exigir versão de ferramentas Swift maior que a instalada
-          find Pods -name "Package.swift" -exec sed -i '' 's/swift-tools-version: 6.2/swift-tools-version: 6.0/g' {} + || true
+          # Corrige manifestos Package.swift tanto em node_modules quanto em Pods
+          find node_modules Pods ios/Pods -name "Package.swift" -exec sed -i '' 's/swift-tools-version: 6.2/swift-tools-version: 6.0/g' {} + 2>/dev/null || true
+          find node_modules Pods ios/Pods -name "Package.swift" -exec sed -i '' 's/swift-tools-version:6.2/swift-tools-version:6.0/g' {} + 2>/dev/null || true
 
       - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
         working-directory: src/frontend/ios
+        env:
+          DEVELOPER_DIR: /Applications/Xcode_16.2.app/Contents/Developer
         run: |
           xcodebuild \
             -workspace Presco.xcworkspace \
@@ -95,7 +98,9 @@ jobs:
             ONLY_ACTIVE_ARCH=NO \
             SKIP_INSTALL=YES \
             EXCLUDED_ARCHS="arm64e" \
-            SWIFT_VERSION=5.0
+            SWIFT_VERSION=5.0 \
+            -skipPackagePluginValidation \
+            -skipMacroValidation
 
       - name: Empacotar Payload e Gerar .ipa
         working-directory: src/frontend/ios
