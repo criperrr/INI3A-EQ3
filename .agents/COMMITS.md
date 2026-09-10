@@ -3090,3 +3090,18 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Clean iOS build on CI and automatic IPA artifact generation for Sideloadly.
+
+## `2026-09-10 18:09` - `fix(ci)`: Apply nonisolated(unsafe) weak var runtime to reconcile ARC and Swift 6 Sendable (v1.0.10)
+
+- **Description:** Resolved the compiler conflict in Xcode 16.4 where Swift rejected `weak let` (demanding mutable `var`) while Swift 6 Sendable concurrency rejected mutable stored properties in Sendable classes:
+  1. Applied `nonisolated(unsafe) weak var runtime` to bridge the ARC mutable pointer requirement while satisfying Swift 6 Sendable data isolation.
+  2. Updated both prebuild and post-pod-install sanitization steps in `.github/workflows/build-ios.yml`.
+  3. Bumped version to v1.0.10 (versionCode 11).
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unblocks compilation of ExpoModulesJSI xcframework on Xcode 16.4.
