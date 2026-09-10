@@ -3061,3 +3061,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unblocks Xcodebuild SPM dependency resolution and completes iOS IPA packaging.
+
+## `2026-09-10 17:47` - `fix(ci)`: Preserve linkerSettings comma separator in Package.swift (v1.0.8)
+
+- **Description:** Fixed syntax error on line 110 of Package.swift where the comma separating `swiftSettings` and `linkerSettings` was previously removed. Corrected patch to preserve required parameter separators.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unblocks iOS IPA build pipeline on GitHub Actions.
