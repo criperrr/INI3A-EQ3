@@ -99,6 +99,8 @@ echo "🗄️  [Database] Migrações Drizzle..."
 npm run db:migrate || echo "⚠️  [Database] Aviso nas migrações; continuando."
 echo "🌱 [Database] Seed idempotente..."
 npm run db:seed || echo "⚠️  [Database] Aviso no seed; continuando."
+echo "🔄 [Database] Realocação de mercados..."
+npm run db:reallocate || echo "⚠️  [Database] Aviso na realocação; continuando."
 
 # 6. PM2
 echo "⚡ [PM2] Reiniciando $APP_NAME..."
