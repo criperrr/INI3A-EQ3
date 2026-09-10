@@ -3023,3 +3023,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.github/workflows/build-ios.yml`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Xcodebuild can now build the ExpoModulesJSI slice for iphoneos cleanly using the installed platform. Ready for commit and push to tests.
+
+## `2026-09-10 17:10` - `fix(ci)`: remove nested single-quotes in bash inline node scripts
+
+- **Description:** Fixed bash syntax error where nested single quotes in node -e arguments broke the command string and caused MODULE_NOT_FOUND. Retained valid syntax-only patches for Swift 6.0 and C++ constructors while letting Xcode 16.2 compile ExpoModulesJSI directly with the downloaded iOS platform.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Workflow YAML parses and executes cleanly. Ready for commit and push.

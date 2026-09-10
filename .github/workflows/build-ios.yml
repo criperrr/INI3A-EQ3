@@ -143,15 +143,6 @@ jobs:
                       console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
                     }
                   } catch (err) {}
-                } else if (entry.name === "build-xcframework.sh") {
-                  try {
-                    let content = fs.readFileSync(full, "utf8");
-                    if (content.includes('env -i PATH="$PATH"')) {
-                      content = content.replace('env -i PATH="$PATH"', 'env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode_16.2.app/Contents/Developer}"');
-                      fs.writeFileSync(full, content, "utf8");
-                      console.log("Forwarded DEVELOPER_DIR in build-xcframework.sh:", full);
-                    }
-                  } catch (err) {}
                 }
               }
             }
@@ -213,15 +204,6 @@ jobs:
                       content = content.replace(/SWIFT_RETURNS_RETAINED\s+/g, "");
                       fs.writeFileSync(full, content, "utf8");
                       console.log("Patched SWIFT_RETURNS_RETAINED in:", full);
-                    }
-                  } catch (err) {}
-                } else if (entry.name === "build-xcframework.sh") {
-                  try {
-                    let content = fs.readFileSync(full, "utf8");
-                    if (content.includes('env -i PATH="$PATH"')) {
-                      content = content.replace('env -i PATH="$PATH"', 'env -i PATH="$PATH" DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode_16.2.app/Contents/Developer}"');
-                      fs.writeFileSync(full, content, "utf8");
-                      console.log("Forwarded DEVELOPER_DIR in build-xcframework.sh:", full);
                     }
                   } catch (err) {}
                 }
