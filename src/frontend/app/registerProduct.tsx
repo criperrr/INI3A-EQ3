@@ -23,6 +23,8 @@ import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence, fetchProductOccurrences } from "../services/ocurrencyService";
 import { getUserLocation } from "../utils/userLocation";
 import { formatLongDateWithWeekday, parseDateSafeMs } from "../utils/dateUtils";
+import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 
 const FALLBACK_PRODUCT = {
   category: "Produto",
@@ -411,13 +413,13 @@ export default function RegisterProduct() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
-        <ScrollView
+        <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.content,
             { paddingHorizontal: semantic.spacing.itemGap },
           ]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={100}
         >
           {!isAuthenticated && !user && (
             <View
@@ -606,50 +608,52 @@ export default function RegisterProduct() {
               >
                 {`${t("products.enterPrice")} *`}
               </Text>
-              <View
-                style={[
-                  styles.inputWrapper,
-                  {
-                    backgroundColor: semantic.colors.surface.input,
-                    borderColor: semantic.colors.border.input,
-                    borderRadius: semantic.radius.input,
-                    height: semantic.spacing.inputHeight,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="cash-outline"
-                  size={20}
-                  color={accent}
-                  style={styles.inputIcon}
-                />
-                <Text
+              <FocusedInputWrapper borderRadius={semantic.radius.input} extraOffset={110}>
+                <View
                   style={[
-                    styles.currencyPrefix,
+                    styles.inputWrapper,
                     {
-                      color: price ? semantic.colors.text.primary : semantic.colors.text.tertiary,
-                      ...semantic.typography.bodyBold,
+                      backgroundColor: semantic.colors.surface.input,
+                      borderColor: semantic.colors.border.input,
+                      borderRadius: semantic.radius.input,
+                      height: semantic.spacing.inputHeight,
                     },
                   ]}
                 >
-                  {"R$ "}
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: semantic.colors.text.primary,
-                      ...semantic.typography.input,
-                    },
-                  ]}
-                  placeholder="0,00"
-                  placeholderTextColor={semantic.colors.text.tertiary}
-                  keyboardType="numeric"
-                  value={price}
-                  onChangeText={handlePriceChange}
-                  editable={!isSubmitting}
-                />
-              </View>
+                  <Ionicons
+                    name="cash-outline"
+                    size={20}
+                    color={accent}
+                    style={styles.inputIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.currencyPrefix,
+                      {
+                        color: price ? semantic.colors.text.primary : semantic.colors.text.tertiary,
+                        ...semantic.typography.bodyBold,
+                      },
+                    ]}
+                  >
+                    {"R$ "}
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        color: semantic.colors.text.primary,
+                        ...semantic.typography.input,
+                      },
+                    ]}
+                    placeholder="0,00"
+                    placeholderTextColor={semantic.colors.text.tertiary}
+                    keyboardType="numeric"
+                    value={price}
+                    onChangeText={handlePriceChange}
+                    editable={!isSubmitting}
+                  />
+                </View>
+              </FocusedInputWrapper>
             </View>
 
             {/* Record Date (Data do Dia) */}
@@ -1162,7 +1166,7 @@ export default function RegisterProduct() {
               </View>
             )}
           </View>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
     </TouchableWithoutFeedback>
   );

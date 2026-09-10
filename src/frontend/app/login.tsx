@@ -18,6 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
+import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -70,11 +72,8 @@ export default function LoginScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <KeyboardAvoidingView
-        style={[styles.container, themeStyles.bg]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
+      <View style={[styles.container, themeStyles.bg]}>
+        <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
@@ -83,7 +82,7 @@ export default function LoginScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={100}
         >
           {isDevBuild && (
             <View style={[styles.devBox, themeStyles.card, themeStyles.border]}>
@@ -203,8 +202,8 @@ export default function LoginScreen() {
             accent={accent}
             t={t}
           />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </TouchableWithoutFeedback>
   );
 }
@@ -222,27 +221,29 @@ const InputField = ({
   isDark,
   editable = true,
 }: any) => (
-  <View style={[styles.inputContainer, themeStyles.inputBg]}>
-    <Ionicons
-      name={icon}
-      size={20}
-      color={isDark ? "#9CA3AF" : "#8E8E93"}
-      style={styles.inputIcon}
-    />
-    <TextInput
-      style={[styles.input, themeStyles.text]}
-      placeholder={placeholder}
-      placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-      autoCapitalize="none"
-      editable={editable}
-      accessible={true}
-      accessibilityLabel={placeholder}
-      maxFontSizeMultiplier={2}
-    />
-  </View>
+  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <View style={[styles.inputContainer, themeStyles.inputBg]}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={isDark ? "#9CA3AF" : "#8E8E93"}
+        style={styles.inputIcon}
+      />
+      <TextInput
+        style={[styles.input, themeStyles.text]}
+        placeholder={placeholder}
+        placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        autoCapitalize="none"
+        editable={editable}
+        accessible={true}
+        accessibilityLabel={placeholder}
+        maxFontSizeMultiplier={2}
+      />
+    </View>
+  </FocusedInputWrapper>
 );
 
 const PasswordField = ({
@@ -254,39 +255,41 @@ const PasswordField = ({
   isDark,
   editable = true,
 }: any) => (
-  <View style={[styles.inputContainer, themeStyles.inputBg]}>
-    <Ionicons
-      name="lock-closed-outline"
-      size={20}
-      color={isDark ? "#9CA3AF" : "#8E8E93"}
-      style={styles.inputIcon}
-    />
-    <TextInput
-      style={[styles.input, themeStyles.text]}
-      placeholder="••••••••"
-      placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
-      value={value}
-      onChangeText={onChangeText}
-      secureTextEntry={!showPassword}
-      editable={editable}
-      accessible={true}
-      accessibilityLabel="Password"
-      maxFontSizeMultiplier={2}
-    />
-    <TouchableOpacity
-      onPress={toggleShowPassword}
-      style={styles.eyeIcon}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel="Toggle password visibility"
-    >
+  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <View style={[styles.inputContainer, themeStyles.inputBg]}>
       <Ionicons
-        name={showPassword ? "eye-off-outline" : "eye-outline"}
+        name="lock-closed-outline"
         size={20}
         color={isDark ? "#9CA3AF" : "#8E8E93"}
+        style={styles.inputIcon}
       />
-    </TouchableOpacity>
-  </View>
+      <TextInput
+        style={[styles.input, themeStyles.text]}
+        placeholder="••••••••"
+        placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!showPassword}
+        editable={editable}
+        accessible={true}
+        accessibilityLabel="Password"
+        maxFontSizeMultiplier={2}
+      />
+      <TouchableOpacity
+        onPress={toggleShowPassword}
+        style={styles.eyeIcon}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Toggle password visibility"
+      >
+        <Ionicons
+          name={showPassword ? "eye-off-outline" : "eye-outline"}
+          size={20}
+          color={isDark ? "#9CA3AF" : "#8E8E93"}
+        />
+      </TouchableOpacity>
+    </View>
+  </FocusedInputWrapper>
 );
 
 const FooterLinks = ({

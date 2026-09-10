@@ -9,7 +9,12 @@ import {
   Alert,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -941,171 +946,187 @@ export default function ProductDetails() {
 
       {/* Edit Product Modal */}
       <Modal visible={isEditModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.editProductModalTitle")}</Text>
-              <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
-                <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
-              </TouchableOpacity>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.editProductModalTitle")}</Text>
+                <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.productName")} *</Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder={t("products.productNamePlaceholder")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                />
+              </FocusedInputWrapper>
+
+              <View style={{ marginVertical: 4 }}>
+                <CategorySelector
+                  isMultiSelect={true}
+                  selectedCategories={editCategories}
+                  onSelectCategories={(cats) => {
+                    setEditCategories(cats);
+                    setEditCategory(cats.join(", "));
+                  }}
+                  selectedCategory={editCategory}
+                  onSelectCategory={(cat) => {
+                    setEditCategory(cat);
+                    setEditCategories(cat ? [cat] : []);
+                  }}
+                  label={t("productDetails.category")}
+                  showCustomOption={true}
+                />
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={editEan}
+                  onChangeText={setEditEan}
+                  placeholder={t("scanner.barcode")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                  keyboardType="numeric"
+                />
+              </FocusedInputWrapper>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, themeStyles.border]}
+                  onPress={() => setIsEditModalVisible(false)}
+                >
+                  <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, { backgroundColor: accent }]}
+                  onPress={handleSaveEdit}
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? (
+                    <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
+                  ) : (
+                    <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.productName")} *</Text>
-            <TextInput
-              style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
-              value={editName}
-              onChangeText={setEditName}
-              placeholder={t("products.productNamePlaceholder")}
-              placeholderTextColor={semantic.colors.text.tertiary}
-            />
-
-            <View style={{ marginVertical: 4 }}>
-              <CategorySelector
-                isMultiSelect={true}
-                selectedCategories={editCategories}
-                onSelectCategories={(cats) => {
-                  setEditCategories(cats);
-                  setEditCategory(cats.join(", "));
-                }}
-                selectedCategory={editCategory}
-                onSelectCategory={(cat) => {
-                  setEditCategory(cat);
-                  setEditCategories(cat ? [cat] : []);
-                }}
-                label={t("productDetails.category")}
-                showCustomOption={true}
-              />
-            </View>
-
-            <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
-            <TextInput
-              style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
-              value={editEan}
-              onChangeText={setEditEan}
-              placeholder={t("scanner.barcode")}
-              placeholderTextColor={semantic.colors.text.tertiary}
-              keyboardType="numeric"
-            />
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalCancelBtn, themeStyles.border]}
-                onPress={() => setIsEditModalVisible(false)}
-              >
-                <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalSaveBtn, { backgroundColor: accent }]}
-                onPress={handleSaveEdit}
-                disabled={savingEdit}
-              >
-                {savingEdit ? (
-                  <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
-                ) : (
-                  <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>{t("common.save")}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Report Product Modal */}
       <Modal visible={isReportModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
-            <View style={styles.modalHeader}>
-              <View style={styles.reportModalHeaderLeft}>
-                <Ionicons name="flag" size={18} color={semantic.colors.feedback.error} />
-                <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.reportModalTitle")}</Text>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.reportModalHeaderLeft}>
+                  <Ionicons name="flag" size={18} color={semantic.colors.feedback.error} />
+                  <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.reportModalTitle")}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsReportModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setIsReportModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
-              </TouchableOpacity>
-            </View>
 
-            <Text style={[styles.inputLabel, themeStyles.subText]}>
-              {t("productDetails.reportReasonLabel")}
-            </Text>
+              <Text style={[styles.inputLabel, themeStyles.subText]}>
+                {t("productDetails.reportReasonLabel")}
+              </Text>
 
-            <View style={styles.reportReasonsList}>
-              {reportReasons.map((item) => {
-                const isSelected = selectedReportReason === item.key;
-                return (
-                  <TouchableOpacity
-                    key={item.key}
-                    style={[
-                      styles.reportReasonOption,
-                      themeStyles.inputBg,
-                      themeStyles.border,
-                      isSelected && { borderColor: accent, backgroundColor: `${accent}15` },
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => handleSelectReason(item.key)}
-                  >
-                    <Ionicons
-                      name={isSelected ? "radio-button-on" : "radio-button-off"}
-                      size={18}
-                      color={isSelected ? accent : semantic.colors.text.tertiary}
-                    />
-                    <Text
+              <View style={styles.reportReasonsList}>
+                {reportReasons.map((item) => {
+                  const isSelected = selectedReportReason === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
                       style={[
-                        styles.reportReasonText,
-                        isSelected ? { color: accent, fontWeight: "bold" } : themeStyles.text,
+                        styles.reportReasonOption,
+                        themeStyles.inputBg,
+                        themeStyles.border,
+                        isSelected && { borderColor: accent, backgroundColor: `${accent}15` },
                       ]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
+                      activeOpacity={0.7}
+                      onPress={() => handleSelectReason(item.key)}
                     >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+                      <Ionicons
+                        name={isSelected ? "radio-button-on" : "radio-button-off"}
+                        size={18}
+                        color={isSelected ? accent : semantic.colors.text.tertiary}
+                      />
+                      <Text
+                        style={[
+                          styles.reportReasonText,
+                          isSelected ? { color: accent, fontWeight: "bold" } : themeStyles.text,
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText, { marginTop: 8 }]}>
+                {t("products.description")} ({t("common.optional")})
+              </Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.reportTextInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={reportDescription}
+                  onChangeText={setReportDescription}
+                  placeholder={t("productDetails.reportDescriptionPlaceholder")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                  multiline
+                  maxLength={300}
+                  numberOfLines={3}
+                />
+              </FocusedInputWrapper>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, themeStyles.border]}
+                  onPress={() => setIsReportModalVisible(false)}
+                  disabled={submittingReport}
+                >
+                  <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, { backgroundColor: semantic.colors.feedback.error }]}
+                  onPress={handleSendReport}
+                  disabled={submittingReport}
+                >
+                  {submittingReport ? (
+                    <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
+                  ) : (
+                    <View style={styles.sendReportBtnContent}>
+                      <Ionicons name="send" size={15} color={semantic.colors.text.inverse} style={{ marginRight: 6 }} />
+                      <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>
+                        {t("productDetails.reportSubmit")}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-
-            <Text style={[styles.inputLabel, themeStyles.subText, { marginTop: 8 }]}>
-              {t("products.description")} ({t("common.optional")})
-            </Text>
-            <TextInput
-              style={[styles.reportTextInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
-              value={reportDescription}
-              onChangeText={setReportDescription}
-              placeholder={t("productDetails.reportDescriptionPlaceholder")}
-              placeholderTextColor={semantic.colors.text.tertiary}
-              multiline
-              maxLength={300}
-              numberOfLines={3}
-            />
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={[styles.modalCancelBtn, themeStyles.border]}
-                onPress={() => setIsReportModalVisible(false)}
-                disabled={submittingReport}
-              >
-                <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.modalSaveBtn, { backgroundColor: semantic.colors.feedback.error }]}
-                onPress={handleSendReport}
-                disabled={submittingReport}
-              >
-                {submittingReport ? (
-                  <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
-                ) : (
-                  <View style={styles.sendReportBtnContent}>
-                    <Ionicons name="send" size={15} color={semantic.colors.text.inverse} style={{ marginRight: 6 }} />
-                    <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>
-                      {t("productDetails.reportSubmit")}
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );

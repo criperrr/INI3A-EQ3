@@ -21,6 +21,8 @@ import { useAuth } from "../content/authContext";
 import { createCustomProduct } from "../services/productService";
 import CategorySelector from "../components/CategorySelector";
 import { formatLongDateWithWeekday } from "../utils/dateUtils";
+import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -144,9 +146,9 @@ export default function CustomRegisterProduct() {
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.container, themeStyles.bg]}>
-        <ScrollView 
+        <KeyboardAwareScrollView 
           contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={100}
         >
         <Ionicons name="cube-outline" size={70} color={accent} style={styles.icon} />
         <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>{t("products.customProductTitle")}</Text>
@@ -177,57 +179,65 @@ export default function CustomRegisterProduct() {
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.ean")} ({t("common.optional")})</Text>
-          <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
-            <TextInput
-              style={[styles.input, themeStyles.text]}
-              placeholder={t("scanner.barcode")}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-              keyboardType="numeric"
-              value={ean}
-              onChangeText={setEan}
-            />
-          </View>
+          <FocusedInputWrapper borderRadius={12}>
+            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+              <TextInput
+                style={[styles.input, themeStyles.text]}
+                placeholder={t("scanner.barcode")}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                keyboardType="numeric"
+                value={ean}
+                onChangeText={setEan}
+              />
+            </View>
+          </FocusedInputWrapper>
         </View>
 
         <View style={styles.inputGroup}>
           <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.productName")} *</Text>
-          <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
-            <TextInput
-              style={[styles.input, themeStyles.text]}
-              placeholder={t("products.productNamePlaceholder")}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
+          <FocusedInputWrapper borderRadius={12}>
+            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+              <TextInput
+                style={[styles.input, themeStyles.text]}
+                placeholder={t("products.productNamePlaceholder")}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                value={name}
+                onChangeText={setName}
+              />
+            </View>
+          </FocusedInputWrapper>
         </View>
 
         {/* Informações Complementares (Marca & Unidade) */}
         <View style={styles.rowInputs}>
           <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
             <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>Marca</Text>
-            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
-              <TextInput
-                style={[styles.input, themeStyles.text]}
-                placeholder={t("products.brandPlaceholder")}
-                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-                value={brand}
-                onChangeText={setBrand}
-              />
-            </View>
+            <FocusedInputWrapper borderRadius={12}>
+              <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+                <TextInput
+                  style={[styles.input, themeStyles.text]}
+                  placeholder={t("products.brandPlaceholder")}
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                  value={brand}
+                  onChangeText={setBrand}
+                />
+              </View>
+            </FocusedInputWrapper>
           </View>
 
           <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
             <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>Peso / Unidade</Text>
-            <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
-              <TextInput
-                style={[styles.input, themeStyles.text]}
-                placeholder={t("products.unitPlaceholder")}
-                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-                value={unitInfo}
-                onChangeText={setUnitInfo}
-              />
-            </View>
+            <FocusedInputWrapper borderRadius={12}>
+              <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+                <TextInput
+                  style={[styles.input, themeStyles.text]}
+                  placeholder={t("products.unitPlaceholder")}
+                  placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                  value={unitInfo}
+                  onChangeText={setUnitInfo}
+                />
+              </View>
+            </FocusedInputWrapper>
           </View>
         </View>
 
@@ -311,7 +321,7 @@ export default function CustomRegisterProduct() {
             </Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
     </TouchableWithoutFeedback>
   );

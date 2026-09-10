@@ -11,6 +11,7 @@ import {
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
+import { FocusedInputWrapper } from "./FocusedInputWrapper";
 import {
   PREDEFINED_PRODUCT_CATEGORIES,
   ProductCategoryItem,
@@ -284,39 +285,41 @@ const CategorySelector = memo(function CategorySelector({
       {/* Input for custom category when in custom mode */}
       {isCustomMode && (
         <View style={styles.customInputWrapper}>
-          <View
-            style={[
-              styles.inputContainer,
-              themeStyles.inputBg,
-              { borderColor: accent },
-            ]}
-          >
-            <Ionicons
-              name="pricetags-outline"
-              size={18}
-              color={accent}
-              style={styles.inputLeadingIcon}
-            />
-            <TextInput
-              style={[styles.input, themeStyles.text]}
-              placeholder={t("productCategories.customCategoryPlaceholder")}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
-              value={customText}
-              onChangeText={setCustomText}
-              autoCapitalize="words"
-              maxLength={50}
-              onSubmitEditing={handleAddCustomCategory}
-              returnKeyType="done"
-            />
-            {customText.length > 0 && (
-              <TouchableOpacity
-                onPress={handleAddCustomCategory}
-                style={[styles.addBtn, { backgroundColor: accent }]}
-              >
-                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <FocusedInputWrapper borderRadius={10} extraOffset={100}>
+            <View
+              style={[
+                styles.inputContainer,
+                themeStyles.inputBg,
+                { borderColor: accent },
+              ]}
+            >
+              <Ionicons
+                name="pricetags-outline"
+                size={18}
+                color={accent}
+                style={styles.inputLeadingIcon}
+              />
+              <TextInput
+                style={[styles.input, themeStyles.text]}
+                placeholder={t("productCategories.customCategoryPlaceholder")}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+                value={customText}
+                onChangeText={setCustomText}
+                autoCapitalize="words"
+                maxLength={50}
+                onSubmitEditing={handleAddCustomCategory}
+                returnKeyType="done"
+              />
+              {customText.length > 0 && (
+                <TouchableOpacity
+                  onPress={handleAddCustomCategory}
+                  style={[styles.addBtn, { backgroundColor: accent }]}
+                >
+                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </FocusedInputWrapper>
         </View>
       )}
     </View>

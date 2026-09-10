@@ -14,7 +14,9 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
+  KeyboardAvoidingView,
 } from "react-native";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -1351,7 +1353,10 @@ const SettingsScreen: React.FC = () => {
       {/* Import Code Modal */}
       <Modal transparent visible={importModalOpen} animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
             <View style={[styles.modalContent, themeStyles.card]}>
               <Text style={[styles.modalTitle, themeStyles.text]}>
                 {t("settings.importModalTitle")}
@@ -1360,20 +1365,22 @@ const SettingsScreen: React.FC = () => {
                 {t("settings.importPlaceholder")}
               </Text>
 
-              <TextInput
-                multiline
-                numberOfLines={4}
-                placeholder="PRESCO-CONFIG-..."
-                placeholderTextColor="#9CA3AF"
-                value={importCodeText}
-                onChangeText={setImportCodeText}
-                style={[
-                  styles.input,
-                  styles.textArea,
-                  themeStyles.inputBg,
-                  themeStyles.text,
-                ]}
-              />
+              <FocusedInputWrapper borderRadius={10} style={{ marginBottom: 12 }}>
+                <TextInput
+                  multiline
+                  numberOfLines={4}
+                  placeholder="PRESCO-CONFIG-..."
+                  placeholderTextColor="#9CA3AF"
+                  value={importCodeText}
+                  onChangeText={setImportCodeText}
+                  style={[
+                    styles.input,
+                    styles.textArea,
+                    themeStyles.inputBg,
+                    themeStyles.text,
+                  ]}
+                />
+              </FocusedInputWrapper>
 
               {importError ? (
                 <View style={styles.errorContainer}>
@@ -1401,45 +1408,54 @@ const SettingsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
 
       {/* Change Password Modal */}
       <Modal transparent visible={changePasswordOpen} animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
             <View style={[styles.modalContent, themeStyles.card]}>
               <Text style={[styles.modalTitle, themeStyles.text]}>
                 {t("auth.changePassword")}
               </Text>
 
-              <TextInput
-                secureTextEntry
-                placeholder={t("auth.currentPassword")}
-                placeholderTextColor="#9CA3AF"
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                style={[styles.input, themeStyles.inputBg, themeStyles.text]}
-              />
+              <FocusedInputWrapper borderRadius={10} style={{ marginBottom: 10 }}>
+                <TextInput
+                  secureTextEntry
+                  placeholder={t("auth.currentPassword")}
+                  placeholderTextColor="#9CA3AF"
+                  value={currentPassword}
+                  onChangeText={setCurrentPassword}
+                  style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                />
+              </FocusedInputWrapper>
 
-              <TextInput
-                secureTextEntry
-                placeholder={t("auth.newPassword")}
-                placeholderTextColor="#9CA3AF"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                style={[styles.input, themeStyles.inputBg, themeStyles.text]}
-              />
+              <FocusedInputWrapper borderRadius={10} style={{ marginBottom: 10 }}>
+                <TextInput
+                  secureTextEntry
+                  placeholder={t("auth.newPassword")}
+                  placeholderTextColor="#9CA3AF"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                />
+              </FocusedInputWrapper>
 
-              <TextInput
-                secureTextEntry
-                placeholder={t("auth.confirmNewPassword")}
-                placeholderTextColor="#9CA3AF"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                style={[styles.input, themeStyles.inputBg, themeStyles.text]}
-              />
+              <FocusedInputWrapper borderRadius={10} style={{ marginBottom: 10 }}>
+                <TextInput
+                  secureTextEntry
+                  placeholder={t("auth.confirmNewPassword")}
+                  placeholderTextColor="#9CA3AF"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  style={[styles.input, themeStyles.inputBg, themeStyles.text]}
+                />
+              </FocusedInputWrapper>
 
               {passwordError ? (
                 <View style={styles.errorContainer}>
@@ -1473,7 +1489,7 @@ const SettingsScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
+          </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
 

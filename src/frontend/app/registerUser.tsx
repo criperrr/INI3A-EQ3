@@ -5,9 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
@@ -19,6 +16,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
+import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 
 const DEFAULT_AVATAR =
   "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
@@ -79,11 +78,8 @@ export default function RegisterUser() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <KeyboardAvoidingView
-        style={[styles.container, themeStyles.bg]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        <ScrollView
+      <View style={[styles.container, themeStyles.bg]}>
+        <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
@@ -92,7 +88,7 @@ export default function RegisterUser() {
             },
           ]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={100}
         >
           <View
             style={[styles.formContainer, themeStyles.card, themeStyles.border]}
@@ -198,8 +194,8 @@ export default function RegisterUser() {
           </View>
 
           <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} t={t} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
+      </View>
     </TouchableWithoutFeedback>
   );
 }
@@ -249,29 +245,31 @@ const InputField = ({
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
   return (
-    <View
-      style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
-    >
-      <Ionicons
-        name={icon}
-        size={20}
-        color={placeholderColor}
-        style={styles.inputIcon}
-      />
-      <TextInput
-        style={[styles.input, themeStyles.text]}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        autoCapitalize="none"
-        editable={editable}
-        accessible={true}
-        accessibilityLabel={placeholder}
-        maxFontSizeMultiplier={2}
-      />
-    </View>
+    <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+      <View
+        style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
+      >
+        <Ionicons
+          name={icon}
+          size={20}
+          color={placeholderColor}
+          style={styles.inputIcon}
+        />
+        <TextInput
+          style={[styles.input, themeStyles.text]}
+          placeholder={placeholder}
+          placeholderTextColor={placeholderColor}
+          value={value}
+          onChangeText={onChangeText}
+          keyboardType={keyboardType}
+          autoCapitalize="none"
+          editable={editable}
+          accessible={true}
+          accessibilityLabel={placeholder}
+          maxFontSizeMultiplier={2}
+        />
+      </View>
+    </FocusedInputWrapper>
   );
 };
 
@@ -286,41 +284,43 @@ const PasswordField = ({
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
   return (
-    <View
-      style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
-    >
-      <Ionicons
-        name="lock-closed-outline"
-        size={20}
-        color={placeholderColor}
-        style={styles.inputIcon}
-      />
-      <TextInput
-        style={[styles.input, themeStyles.text]}
-        placeholder={placeholder}
-        placeholderTextColor={placeholderColor}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={!showPassword}
-        editable={editable}
-        accessible={true}
-        accessibilityLabel={placeholder}
-        maxFontSizeMultiplier={2}
-      />
-      <TouchableOpacity
-        onPress={toggleShowPassword}
-        style={styles.eyeIcon}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+    <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+      <View
+        style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
       >
         <Ionicons
-          name={showPassword ? "eye-off-outline" : "eye-outline"}
+          name="lock-closed-outline"
           size={20}
           color={placeholderColor}
+          style={styles.inputIcon}
         />
-      </TouchableOpacity>
-    </View>
+        <TextInput
+          style={[styles.input, themeStyles.text]}
+          placeholder={placeholder}
+          placeholderTextColor={placeholderColor}
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={!showPassword}
+          editable={editable}
+          accessible={true}
+          accessibilityLabel={placeholder}
+          maxFontSizeMultiplier={2}
+        />
+        <TouchableOpacity
+          onPress={toggleShowPassword}
+          style={styles.eyeIcon}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+        >
+          <Ionicons
+            name={showPassword ? "eye-off-outline" : "eye-outline"}
+            size={20}
+            color={placeholderColor}
+          />
+        </TouchableOpacity>
+      </View>
+    </FocusedInputWrapper>
   );
 };
 
