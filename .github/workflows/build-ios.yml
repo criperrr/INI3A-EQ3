@@ -156,8 +156,8 @@ jobs:
                       content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
                       modified = true;
                     }
-                    if (content.includes("      ]\n      linkerSettings:")) {
-                      content = content.replace("      ]\n      linkerSettings:", "      ],\n      linkerSettings:");
+                    if (/]\r?\n\s*linkerSettings:/.test(content)) {
+                      content = content.replace(/]\r?\n(\s*linkerSettings:)/g, "],\n$1");
                       modified = true;
                     }
 
@@ -171,8 +171,9 @@ jobs:
                     let content = fs.readFileSync(full, "utf8");
                     let modified = false;
 
-                    if (/\bweak\s+let\b/.test(content)) {
-                      content = content.replace(/\bweak\s+let\b/g, "weak var");
+                    // Remove trailing commas before closing parenthesis or brackets in Swift functions/closures
+                    if (/,(\s*[)>])/.test(content)) {
+                      content = content.replace(/,(\s*[)>])/g, "$1");
                       modified = true;
                     }
 
@@ -257,8 +258,8 @@ jobs:
                       content = content.replace(/swiftLanguageModes:\s*\[\.v6\](?!,)/g, "swiftLanguageModes: [.v6],");
                       modified = true;
                     }
-                    if (content.includes("      ]\n      linkerSettings:")) {
-                      content = content.replace("      ]\n      linkerSettings:", "      ],\n      linkerSettings:");
+                    if (/]\r?\n\s*linkerSettings:/.test(content)) {
+                      content = content.replace(/]\r?\n(\s*linkerSettings:)/g, "],\n$1");
                       modified = true;
                     }
 
@@ -272,8 +273,9 @@ jobs:
                     let content = fs.readFileSync(full, "utf8");
                     let modified = false;
 
-                    if (/\bweak\s+let\b/.test(content)) {
-                      content = content.replace(/\bweak\s+let\b/g, "weak var");
+                    // Remove trailing commas before closing parenthesis or brackets in Swift functions/closures
+                    if (/,(\s*[)>])/.test(content)) {
+                      content = content.replace(/,(\s*[)>])/g, "$1");
                       modified = true;
                     }
 

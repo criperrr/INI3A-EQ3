@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "main": "expo-router/entry",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "scripts": {
     "dev": "expo start",
     "dev:tunnel": "expo start --tunnel",
@@ -31,6 +31,8 @@
     "expo-constants": "~57.0.17",
     "expo-dev-client": "~57.0.18",
     "expo-font": "~57.0.3",
+    "expo-modules-core": "57.0.16",
+    "expo-modules-jsi": "57.0.8",
     "expo-haptics": "~57.0.2",
     "expo-image": "~57.0.4",
     "expo-linking": "~57.0.9",
