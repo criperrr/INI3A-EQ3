@@ -2965,3 +2965,29 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** LocalizaÃ§Ã£o do Oba Hortifruti corrigida com precisÃ£o na Av. GetÃºlio Vargas; mapa e formulÃ¡rios passam a exibir distÃ¢ncias reais e sem unidades fantasmas.
+
+## 2026-09-10 13:59 - feat(scanner): barcode similarity match (>=65%) and printed digits confirmation
+
+- **Description:** Implementado algoritmo de similaridade de código de barras no backend com limiar de 65% (0.65), priorizando produtos com imagem quando não houver correspondência 100% exata. Atualizada a tela de confirmação do scanner (scannerConfirmation.tsx) para exibir card de compatibilidade com porcentagem calculada e bloco de conferência dos dígitos lidos pela câmera vs número oficial do produto físico impresso abaixo das barras. Atualizados dicionários de i18n em 7 idiomas. Bump de versão para 1.0.4 (versionCode 5).
+- **Files Modified:**
+  - src/backend/src/shared/types/product.ts
+  - src/backend/src/shared/database/repositories/product.repository.ts
+  - src/backend/src/modules/product/product.service.ts
+  - src/frontend/services/productService.ts
+  - src/frontend/i18n/types.ts
+  - src/frontend/i18n/locales/pt.ts
+  - src/frontend/i18n/locales/en.ts
+  - src/frontend/i18n/locales/es.ts
+  - src/frontend/i18n/locales/de.ts
+  - src/frontend/i18n/locales/ru.ts
+  - src/frontend/i18n/locales/zh.ts
+  - src/frontend/i18n/locales/ja.ts
+  - src/frontend/app/scannerProduct.tsx
+  - src/frontend/app/manualEanSearch.tsx
+  - src/frontend/app/scannerConfirmation.tsx
+  - package.json
+  - src/backend/package.json
+  - src/frontend/package.json
+  - src/frontend/app.json
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** O usuário tem segurança contra erros de leitura óptica de código de barras ou variações menores de dígitos, podendo conferir visualmente a imagem e os números impressos na embalagem antes de submeter o preço.
