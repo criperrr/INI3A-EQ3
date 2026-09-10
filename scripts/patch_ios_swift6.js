@@ -93,9 +93,14 @@ function patchDirectory(dir) {
             modified = true;
           }
 
-          // 4. Ensure vector.push_back retains consuming: label for move-only PropNameID (C++ rvalue move)
-          if (content.includes("vector.push_back(propNameId)")) {
-            content = content.replace("vector.push_back(propNameId)", "vector.push_back(consuming: propNameId)");
+          // 4. Delegate PropNameID push_back to C++ appendPropName helper to avoid move-only Swift C++ interop template issues
+          if (full.endsWith("JavaScriptRuntime.swift") && content.includes("vector.push_back")) {
+            content = content.replace(
+              /for propertyName in propertyNames\s*\{[\s\S]*?vector\.push_back\([^\)]*\)\s*\}/,
+              `for propertyName in propertyNames {
+        expo.HostObjectCallbacks.appendPropName(&vector, iRuntime, std.string(propertyName))
+      }`
+            );
             modified = true;
           }
 
@@ -111,6 +116,19 @@ function patchDirectory(dir) {
 
           if (content.includes("SWIFT_RETURNS_RETAINED")) {
             content = content.replace(/SWIFT_RETURNS_RETAINED\s+/g, "");
+            modified = true;
+          }
+
+          // Expose appendPropName static helper for HostObjectCallbacks to handle move-only PropNameID
+          if (full.endsWith("HostObjectCallbacks.h") && !content.includes("appendPropName")) {
+            content = content.replace(
+              "inline PropNameIds getPropertyNames() const {",
+              `static inline void appendPropName(PropNameIds &vector, facebook::jsi::Runtime &runtime, const std::string &name) {
+    vector.push_back(facebook::jsi::PropNameID::forUtf8(runtime, name));
+  }
+
+  inline PropNameIds getPropertyNames() const {`
+            );
             modified = true;
           }
 
