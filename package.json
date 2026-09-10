@@ -1,6 +1,6 @@
 {
   "name": "presco",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -20,8 +20,13 @@
     "ios": "npm run --prefix src/frontend ios",
     "prebuild": "npm run --prefix src/frontend prebuild",
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
+    "lint": "npm run --prefix src/frontend lint",
+    "typecheck": "npm run --prefix src/backend typecheck && npm run --prefix src/frontend typecheck",
+    "test": "npm run --prefix src/backend test && tsx --test tests/*.test.ts",
+    "test:backend": "npm run --prefix src/backend test",
+    "version:bump": "tsx scripts/bump_version.ts patch",
+    "version:bump:minor": "tsx scripts/bump_version.ts minor",
+    "version:bump:major": "tsx scripts/bump_version.ts major",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d",

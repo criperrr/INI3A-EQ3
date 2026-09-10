@@ -18,6 +18,7 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 INI3A-EQ3 (Presco) is a full-stack mobile price comparison and EAN barcode scanner app. Users scan a barcode, the backend queries a local DB then falls back to OpenFoodFacts (with auto-caching to PostgreSQL), and price reports (`ocurrency`) are submitted against a `market` and `product`. A complete role-based permission system differentiates **Administrators** (full delete/edit access across all products and price occurrences) and **Regular Users** (product analysis, market price suggestions, and community price auditing). Gamification tracks user points, unlocks badges, and levels up contributor ranks.
 
 **Backend** runs on port 3333 (Express 5, TypeScript, Drizzle ORM, Redis, PostGIS).
+Active Remote Deployment: `https://eq.projetoscti.com.br/26-presco` (PostgreSQL and Upstash Redis connected, fresh seed applied).
 Routes:
 - `POST /auth/register` — create user, returns tokens
 - `POST /auth/login` — authenticate, returns tokens
@@ -58,6 +59,7 @@ Routes:
 - `registerProduct.tsx` connects to `/markets` and `/ocurrency` to persist price reports and award +15 XP.
 - `settings.tsx` manages themes, system Monet color palettes, encoded config backup/import, cache clearing, account security, dynamic app environment (Expo SDK 57 / RN 0.86), and About navigation.
 - `SwipeTabNavigator.tsx` provides 1:1 real-time finger-tracking horizontal swipe navigation between main tabs using Reanimated spring physics.
+- **Standalone Production APK:** Compiled via `assembleRelease` with embedded bundle and production keys (`GOOGLE_MAPS_API_KEY`, `EXPO_PUBLIC_HERE_API_KEY`), pushed directly to connected device storage at `/sdcard/Download/presco-app-release.apk`.
 
 ---
 
@@ -120,6 +122,8 @@ Direct relative paths from project root.
 | `package.json` | Root monorepo: workspaces (`src/backend`, `src/frontend`), turbo build/lint/typecheck, dev network launchers |
 | `scripts/dev_launcher.ts` | Unified cross-platform dev launcher: interactive network mode selector (LAN, Corporate Tunnel, Localhost, Remote CTI), process tree lifecycle manager |
 | `scripts/configure_env.ts` | Interactive & CLI frontend environment manager (`npm run env`, `env:remote`, `env:local`, `env:localhost`) |
+| `scripts/bump_version.ts` | CLI & programmatic SemVer manager: synchronized multi-package version bumping (`npm run version:bump[:minor|:major]`) |
+| `.github/workflows/release.yml` | GitHub Actions workflow: autonomous test, typecheck, Expo prebuild, Gradle release APK compilation and GitHub Releases publication |
 | `scripts/deploy_remote.sh` | Remote deployment automation script for pushing and orchestrating release on CTI server |
 | `deploy/deploy.sh` | Production deployment lifecycle script running on `/var/www/equipes/26-presco` (migrations, seed, PM2, health check) |
 | `ecosystem.config.cjs` | PM2 process manager configuration with cluster/fork resilience and log streams |
@@ -284,6 +288,8 @@ Direct relative paths from project root.
 - [x] Configuração da Chave da API do Google Maps para Android (`src/frontend/.env`, `scripts/configure_env.ts`: configurada `GOOGLE_MAPS_API_KEY` para injeção dinâmica no `app.config.js` e `AndroidManifest.xml` via prebuild, evitando crash de `MapView.onCreate` em builds Android, e garantida preservação contínua da chave no script `scripts/configure_env.ts`).
 - [x] Instalação e Configuração Autônoma do Android SDK no macOS (`cmdline-tools`, `platform-tools`, `platforms;android-35`, `build-tools;35.0.0` instalados em `~/Library/Android/sdk`, licenças aceitas, variáveis `ANDROID_HOME` e `PATH` configuradas no `~/.zshrc`, e verificação bem-sucedida do script `scripts/android.ts`).
 - [x] Publicação Oficial da Release v1.0.0 e Distribuição do APK no GitHub (`dist/Presco.apk` publicado como release oficial `v1.0.0` em `https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.0.0` com assets `Presco-v1.0.0.apk` e `Presco.apk` de 134 MB cada; script autônomo `scripts/upload_release.ts` com comando `npm run release`; documentação técnica completa de instalação, arquitetura e permissões em `apk-release-distribution.md`; atualização da tela Sobre `about.tsx`, `README.md` e traduções nos 7 idiomas com links diretos).
+- [x] Automação de Build e Release no GitHub Actions com Política de Versionamento SemVer (`.github/workflows/release.yml`, `.agents/skills/semantic-versioning/`, `scripts/bump_version.ts`, `.agents/AGENTS.md`, `tests/semver.test.ts`, `tests/theme.test.ts`, `src/backend/tests/jwt.test.ts`, `src/backend/tests/cache.test.ts`: pipeline completa de build autônoma no GitHub Actions para geração de APK de release Android em ambiente Ubuntu/Temurin Java 17/Android SDK; publicação automatizada no GitHub Releases com changelog; script CLI e programático de versionamento semântico sincronizado entre todos os pacotes e app.json; suíte completa de testes automatizados com Node.js test runner e tsx; 0 erros em typecheck e testes).
+- [x] Higienização de Secrets no Remoto e Injeção Dinâmica via GitHub Actions (`.github/workflows/release.yml`: remoção de qualquer token ou API key hardcoded nos workflows remotos; configuração de `GOOGLE_MAPS_API_KEY` e validação de `HERE_API_KEY` e `PUBLIC_URL` diretamente no GitHub Secrets via GitHub CLI `gh secret set`; acionamento da build e release remota via tag v1.0.1).
 - [ ] Monitoramento e Notificação de Preços para Produto Individual e Grupos/Listas de Compras (especificação técnica completa salva em `.agents/PLANO_SISTEMA_DESVIO_PADRAO_E_MONITORAMENTO.md`: listas customizadas no perfil como "Compras do Mês" ou "Compras da Semana", tabelas `user_shopping_list` e `shopping_list_item`, botão de notificação/sino em `productDetails.tsx`, cálculo do preço total somado mais barato da região e alertas de variação).
 
 ---

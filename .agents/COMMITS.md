@@ -2817,6 +2817,23 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** `npm run android` can now compile Android builds and install directly to devices/emulators without missing SDK errors.
 
+## 2026-09-10 09:35 - feat(deploy): Configure remote backend, clean DB and restart
+
+- **Description:** Recovered SSH key from downloaded CTI emails, configured deploy/.env.deploy with remote credentials and Upstash Redis URL, dropped pre-existing database tables and stale enum types on remote PostgreSQL, ran fresh Drizzle migrations and seed, and restarted the remote backend process via PM2/npm run.
+- **Files Modified:**
+  - deploy/.env.deploy
+  - .agents/CURRENT.md
+- **Impact / Next Steps:** Remote backend at https://eq.projetoscti.com.br/26-presco/health is fully operational with connected PostgreSQL and Redis.
+
+## 2026-09-10 10:28 - build(android): Standalone Release APK with Google Maps and HERE API
+
+- **Description:** Generated standalone production release APK (assembleRelease) with embedded JavaScript bundle, native C++ libraries for ARM64/ARMv7/x86, and injected production keys (EXPO_PUBLIC_HERE_API_KEY and GOOGLE_MAPS_API_KEY) pointing to remote production backend at https://eq.projetoscti.com.br/26-presco. Successfully pushed via USB ADB to /sdcard/Download/presco-app-release.apk on Xiaomi M2101K7BI.
+- **Files Modified:**
+  - src/frontend/.env
+  - src/frontend/android/app/src/main/AndroidManifest.xml
+  - src/frontend/android/local.properties
+- **Impact / Next Steps:** Production standalone app is ready on phone internal storage for manual install or deployment.
+
 ## `2026-09-10 10:41` - `build(android)`: Compilação do APK de Release para Android
 
 - **Description:** Compilação do APK release com Hermes, autolinking e New Architecture para instalação direta em celulares.
@@ -2845,6 +2862,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Usuários e avaliadores agora podem baixar o APK oficial diretamente pela página de Releases do GitHub ou através da tela Sobre dentro do próprio app.
 
+<<<<<<< HEAD
 ## `2026-09-10 11:00` - `feat(ui)`: Usabilidade de teclado e auto-scroll para containers de texto
 
 - **Description:** Implementação do componente inteligente `KeyboardAwareScrollView` e wrapper `FocusedInputWrapper` para prevenir sobreposição do teclado virtual sobre campos de texto. Ao focar em qualquer container de input, a tela rola suavemente para deixá-lo visível e aplica realce visual (borda ativa na cor Monet accent). Modais de edição e alteração de senha foram protegidos com `KeyboardAvoidingView` e `android:softwareKeyboardLayoutMode` configurado como `resize`.
@@ -2877,3 +2895,35 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/settings.tsx`
   - `src/frontend/app.json`
 - **Impact / Next Steps:** Inputs smoothly scroll above the on-screen keyboard on iOS and Android.
+=======
+## 2026-09-10 11:49 - ci(release): Adicionar pipeline GitHub Actions para build autônoma de APK, publicação em Releases e política SemVer
+
+- **Description:** Implementada pipeline autônoma no GitHub Actions (.github/workflows/release.yml) para compilação de APK Android release via Expo Prebuild + Gradle e publicação direta no GitHub Releases em disparos de tags v*.*.* ou workflow_dispatch. Instalada e integrada skill semantic-versioning em .agents/skills/semantic-versioning/, criada política SemVer e release em AGENTS.md, criado script de versionamento atômico sincronizado scripts/bump_version.ts, e estruturada suíte completa de testes automatizados com Node.js test runner e tsx.
+- **Files Modified:**
+  - .github/workflows/release.yml
+  - .agents/AGENTS.md
+  - .agents/CURRENT.md
+  - .agents/COMMITS.md
+  - package.json
+  - src/backend/package.json
+  - src/backend/tsconfig.json
+  - scripts/bump_version.ts
+  - tests/semver.test.ts
+  - tests/theme.test.ts
+  - src/backend/tests/jwt.test.ts
+  - src/backend/tests/cache.test.ts
+- **Impact / Next Steps:** O projeto agora dispõe de automação de ponta a ponta para geração de APK de produção no GitHub Actions e publicação direta nos Releases do repositório, garantido por testes e typecheck com 0 falhas.
+
+## 2026-09-10 12:03 - sec(ci): Sanitize hardcoded API tokens from workflow and inject via GitHub secrets
+
+- **Description:** Removed all hardcoded fallback API keys from .github/workflows/release.yml, injected GOOGLE_MAPS_API_KEY into GitHub Secrets via gh CLI, synchronized with HERE_API_KEY and PUBLIC_URL secrets, and bumped version to 1.0.1 (versionCode 2) to trigger autonomous GitHub Actions release build.
+- **Files Modified:**
+  - .github/workflows/release.yml
+  - package.json
+  - src/backend/package.json
+  - src/frontend/package.json
+  - src/frontend/app.json
+  - .agents/CURRENT.md
+  - .agents/COMMITS.md
+- **Impact / Next Steps:** GitHub Actions workflow compiles the Android APK securely using repository secrets with zero credential exposure in code or logs.
+>>>>>>> c5215b58d682fce93608e1f5e587f05315af34e7

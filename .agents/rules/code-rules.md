@@ -121,3 +121,13 @@ Antes de modificar ou criar código, defina de forma ultra-concisa:
      - `chore:` / `build:` dependências, configs de ambiente e scripts.
      - `docs:` / `test:` documentação, guias e testes.
   4. Use o padrão Conventional Commits com mensagens claras e objetivas.
+
+### 5. Incremento de Versão Semântica pelo Agente (Obrigatório após Alterações)
+- **Modificou código? Atualize a versão:** Após realizar alterações (fixes, features, refactors), o modelo agentico **DEVE atualizar a versão do monorepo** seguindo a skill `@[skills/semantic-versioning]`.
+- **Proibido script dinâmico no nome do APK:** O nome do artefato de APK nos pipelines deve refletir a saída nativa de build; nenhuma regra deve injetar versão dinamicamente via script no nome de arquivos sem que a versão oficial tenha sido atualizada nos manifestos.
+- **Sincronização Obrigatória dos 4 Manifestos:**
+  - `package.json` (raiz)
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json` (`version` e incremento de `versionCode`)
+- Aplique diretamente nos arquivos ou use o comando unificado `npm run version:bump` (`:minor` / `:major`).
