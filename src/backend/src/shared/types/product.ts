@@ -56,6 +56,9 @@ export interface ProductDTO {
   formattedDistance?: string | null | undefined;
   isPromotion?: boolean | undefined;
   discountPercentage?: number | null | undefined;
+  matchScore?: number | undefined;
+  isExactMatch?: boolean | undefined;
+  scannedEan?: string | null | undefined;
 }
 
 export interface ProductDetailDTO extends ProductDTO {
