@@ -71,7 +71,8 @@ class HereMarketDiscoveryClass {
 
     // Parallel multi-strategy fetch using HERE Discover (text query) and HERE Browse (categories)
     const fetchPromises = [
-      this.fetchFromHereDiscover(latitude, longitude, apiKey),
+      this.fetchFromHereDiscover(latitude, longitude, apiKey, "supermercado"),
+      this.fetchFromHereDiscover(latitude, longitude, apiKey, "hortifruti"),
       this.fetchFromHereBrowse(latitude, longitude, apiKey),
     ];
 
@@ -106,14 +107,15 @@ class HereMarketDiscoveryClass {
   }
 
   /**
-   * Queries HERE Discover API with query 'supermercado'
+   * Queries HERE Discover API with text query ('supermercado', 'hortifruti')
    */
   private async fetchFromHereDiscover(
     lat: number,
     lng: number,
-    apiKey: string
+    apiKey: string,
+    query: string = "supermercado"
   ): Promise<DiscoveredMarket[]> {
-    const url = `https://discover.search.hereapi.com/v1/discover?at=${lat},${lng}&q=supermercado&limit=50&apiKey=${apiKey}`;
+    const url = `https://discover.search.hereapi.com/v1/discover?at=${lat},${lng}&q=${encodeURIComponent(query)}&limit=50&apiKey=${apiKey}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
 
@@ -215,6 +217,17 @@ class HereMarketDiscoveryClass {
         continue;
       }
 
+      // Rejeitar unidade extinta do Oba no Jardim América (mudou-se para Av. Getúlio Vargas 23-2)
+      if (
+        /\boba\b/i.test(title) &&
+        (
+          /jos[eé]\s+maria\s+rodrigues/i.test(item.address?.label || "") ||
+          (Math.abs(pos.lat - (-22.34598)) < 0.005 && Math.abs(pos.lng - (-49.05957)) < 0.005)
+        )
+      ) {
+        continue;
+      }
+
       // Address label
       const address = item.address?.label;
 
@@ -252,6 +265,14 @@ class HereMarketDiscoveryClass {
   private async syncWithDatabase(discovered: DiscoveredMarket[]): Promise<void> {
     try {
       for (const item of discovered) {
+        // Rejeitar unidade extinta do Oba no Jardim América
+        if (
+          /\boba\b/i.test(item.name) &&
+          (Math.abs(item.lat - (-22.34598)) < 0.005 && Math.abs(item.lng - (-49.05957)) < 0.005)
+        ) {
+          continue;
+        }
+
         const wktPoint = `POINT(${item.lng} ${item.lat})`;
 
         const brand = (item.name.trim().split(/[\s\-]/)[0] || "").toLowerCase();
@@ -322,6 +343,11 @@ class HereMarketDiscoveryClass {
     clean = clean.replace(/^(supermercado|mercado|hipermercado)\s+/i, (match) => {
       return match.charAt(0).toUpperCase() + match.slice(1).toLowerCase();
     });
+
+    // Standardize Oba Hortifruti capitalization
+    if (/^\s*oba\s+hortifruti\s*$/i.test(clean)) {
+      return "Oba Hortifruti";
+    }
 
     // If it's just "Supermercado" or "Mercado" without any identifier, reject
     if (/^(supermercado|mercado|loja|mercearia)$/i.test(clean)) {
