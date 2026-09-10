@@ -33,3 +33,9 @@ src/frontend/.notes
 .tunnel_url
 *.vsix
 DEPLOY-BACK-PLAN.md
+
+# Deploy: configuração local com credenciais do servidor (NUNCA versionar)
+deploy/.env.deploy
+deploy/*.key
+deploy/*.pem
+logs/

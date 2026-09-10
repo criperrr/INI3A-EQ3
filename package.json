@@ -16,7 +16,7 @@
     "dev:localhost": "tsx scripts/dev_launcher.ts --localhost",
     "dev:turbo": "turbo run dev",
     "dev:check": "tsx scripts/verify_connection.ts",
-    "android": "npm run --prefix src/frontend android",
+    "android": "tsx scripts/android.ts",
     "ios": "npm run --prefix src/frontend ios",
     "prebuild": "npm run --prefix src/frontend prebuild",
     "build": "turbo run build",
@@ -29,7 +29,22 @@
     "db:seed": "turbo run db:seed --filter=backend",
     "db:migrate": "turbo run db:migrate --filter=backend",
     "db:check": "turbo run db:check --filter=backend",
-    "install:all": "npm install"
+    "install:all": "npm install",
+    "deploy": "bash scripts/deploy_remote.sh",
+    "env": "tsx scripts/configure_env.ts",
+    "env:remote": "tsx scripts/configure_env.ts remote",
+    "env:local": "tsx scripts/configure_env.ts local",
+    "env:localhost": "tsx scripts/configure_env.ts localhost",
+    "remote:status": "bash scripts/remote.sh status",
+    "remote:logs": "bash scripts/remote.sh logs",
+    "remote:logs:stream": "bash scripts/remote.sh logs:stream",
+    "remote:restart": "bash scripts/remote.sh restart",
+    "remote:crashlog": "bash scripts/remote.sh crashlog",
+    "deploy:only": "bash scripts/deploy_remote.sh --no-sync",
+    "remote:shell": "bash scripts/remote.sh shell",
+    "android:debug": "tsx scripts/android.ts --debug",
+    "android:apk": "tsx scripts/android.ts --no-install",
+    "doctor:jdk": "tsx scripts/lib/jdk.ts --install"
   },
   "devDependencies": {
     "@types/localtunnel": "^2.0.4",
@@ -42,5 +57,9 @@
     "esbuild@0.18.20": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true
+  },
+  "engines": {
+    "node": ">=20.11.0",
+    "npm": ">=10"
   }
 }

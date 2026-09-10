@@ -1,0 +1,82 @@
+# Deploy do backend Presco no servidor CTI.
+#
+# Nenhum dado do servidor vive neste arquivo: host, usuário, porta, caminho e
+# todas as credenciais vêm de GitHub Actions Secrets (Settings → Secrets and
+# variables → Actions). O job roda por dispatch manual ou push na branch main.
+name: Deploy Backend
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch a implantar no servidor"
+        required: false
+        default: ""
+  push:
+    branches: [main]
+    paths:
+      - "src/backend/**"
+      - "deploy/**"
+      - "ecosystem.config.cjs"
+      - ".github/workflows/deploy.yml"
+
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Typecheck do backend
+        working-directory: src/backend
+        run: |
+          npm install --omit=optional --no-audit --fund=false
+          npm run typecheck
+
+      - name: Preparar chave SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_KEY_FILE: ~/.ssh/deploy_key
+          REMOTE_TARGET_DIR: ${{ secrets.REMOTE_TARGET_DIR }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          NODE_ENV: production
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          REWRITE_BASE: ${{ secrets.REWRITE_BASE }}
+          DEPLOY_CONFIG: /dev/null
+        run: bash scripts/deploy_remote.sh
+
+      - name: Limpar credenciais
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

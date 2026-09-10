@@ -5,6 +5,7 @@ import os from "node:os";
 import readline from "node:readline";
 import { getLocalLanIp, testTcpPort, testHttpHealth } from "./verify_connection.ts";
 import { startApiTunnel } from "./start_api_tunnel.ts";
+import { ensureDockerCliInPath, startComposeInfrastructure } from "./lib/docker.ts";
 
 // ANSI Colors
 const colors = {
@@ -110,16 +111,31 @@ async function checkDatabaseInfrastructure() {
     return; // DB is up
   }
 
-  // Check if docker is available
-  try {
-    execSync("docker info", { stdio: "ignore" });
-    console.log(`${colors.cyan}[Docker] Iniciando containers do PostgreSQL e Redis (docker compose up -d)...${colors.reset}`);
-    execSync("docker compose up -d", { cwd: ROOT_DIR, stdio: "inherit" });
-  } catch {
-    console.log(`${colors.yellow}⚠️  Aviso: Docker ou PostgreSQL não estão ativos no momento.${colors.reset}`);
+  if (!ensureDockerCliInPath()) {
+    console.log(`${colors.yellow}⚠️  Aviso: Docker CLI não encontrado no sistema.${colors.reset}`);
     console.log(`${colors.gray}   O backend subirá em modo resiliente (sessões em cache de memória).${colors.reset}`);
-    console.log(`${colors.gray}   Para subir o banco: 'npm run db:up'${colors.reset}\n`);
+    console.log(`${colors.gray}   Para configurar o banco/Docker completamente, execute: ./setup.sh${colors.reset}\n`);
+    return;
   }
+
+  console.log(`${colors.cyan}[Docker] Verificando infraestrutura do banco de dados e cache...${colors.reset}`);
+  const started = await startComposeInfrastructure({ cwd: ROOT_DIR });
+  if (started) {
+    // Wait for postgres port 5433 to become ready
+    let attempts = 0;
+    while (attempts < 25) {
+      if (await testTcpPort("127.0.0.1", 5433, 800)) {
+        console.log(`${colors.green}✓ [Docker] PostgreSQL (5433) e Redis (6380) ativos e prontos!${colors.reset}\n`);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+      attempts++;
+    }
+  }
+
+  console.log(`${colors.yellow}⚠️  Aviso: Não foi possível conectar ao banco de dados na porta 5433.${colors.reset}`);
+  console.log(`${colors.gray}   O backend subirá em modo resiliente (sessões em cache de memória).${colors.reset}`);
+  console.log(`${colors.gray}   Para ver logs ou reiniciar: 'npm run db:logs' ou 'npm run db:reset'${colors.reset}\n`);
 }
 
 async function main() {
@@ -128,7 +144,7 @@ async function main() {
 
   const args = process.argv.slice(2);
 
-  let mode: "lan" | "corp" | "localhost" | null = null;
+  let mode: "lan" | "corp" | "localhost" | "remote" | null = null;
   let customUrl: string | undefined;
   let customIp: string | undefined;
 
@@ -141,6 +157,8 @@ async function main() {
       mode = "corp";
     } else if (arg === "--localhost" || arg === "--web") {
       mode = "localhost";
+    } else if (arg === "--remote" || arg === "--prod") {
+      mode = "remote";
     } else if (arg === "--url" && args[i + 1]) {
       customUrl = args[++i];
       mode = "corp";
@@ -184,14 +202,20 @@ async function main() {
     console.log(`      • ${colors.bold}Tempo de Resposta:${colors.reset} ${colors.cyan}0ms (Local)${colors.reset}`);
     console.log(`      • ${colors.bold}Indicado para:${colors.reset} Desenvolvimento no mesmo computador (sem celular físico).\n`);
 
+    console.log(`  ${colors.bold}${colors.green}[4] 🌐 SERVIDOR REMOTO (CTI Produção)${colors.reset}`);
+    console.log(`      • ${colors.bold}URL:${colors.reset} ${colors.cyan}https://eq.projetoscti.com.br/26-presco${colors.reset}`);
+    console.log(`      • ${colors.bold}Indicado para:${colors.reset} Testar app diretamente contra o servidor oficial remoto.\n`);
+
     const defaultChoice = isClassA ? "2" : "1";
-    const answer = await askQuestion(`${colors.bold}Opção desejada [1, 2 ou 3] (Padrão: ${defaultChoice}): ${colors.reset}`);
+    const answer = await askQuestion(`${colors.bold}Opção desejada [1, 2, 3 ou 4] (Padrão: ${defaultChoice}): ${colors.reset}`);
     const choice = answer.trim() || defaultChoice;
 
     if (choice === "2") {
       mode = "corp";
     } else if (choice === "3") {
       mode = "localhost";
+    } else if (choice === "4") {
+      mode = "remote";
     } else {
       mode = "lan";
     }
@@ -207,7 +231,13 @@ async function main() {
   let expoFlags: string[] = ["--lan", "--clear"];
   let packagerHostname = detectedLanIp;
 
-  if (mode === "localhost") {
+  if (mode === "remote") {
+    backendApiUrl = "https://eq.projetoscti.com.br/26-presco";
+    expoFlags = ["--lan", "--clear"];
+    console.log(`\n🚀 ${colors.bold}Modo SERVIDOR REMOTO (CTI) ativado!${colors.reset}`);
+    console.log(`🌐 ${colors.green}${colors.bold}API de Produção:${colors.reset} ${colors.cyan}${backendApiUrl}${colors.reset}`);
+    console.log(`📱 O app consumirá diretamente o backend no servidor remoto CTI.\n`);
+  } else if (mode === "localhost") {
     backendApiUrl = "http://localhost:3333";
     packagerHostname = "localhost";
     expoFlags = ["--localhost", "--clear"];
@@ -227,8 +257,9 @@ async function main() {
     expoFlags = ["--tunnel", "--clear"];
   }
 
-  // 1. Launch Backend Server in background (deve subir antes do túnel para validação de saúde)
-  console.log(`\n${colors.cyan}[1/2] Iniciando Backend API Presco na porta 3333...${colors.reset}`);
+  if (mode !== "remote") {
+    // 1. Launch Backend Server in background (deve subir antes do túnel para validação de saúde)
+    console.log(`\n${colors.cyan}[1/2] Iniciando Backend API Presco na porta 3333...${colors.reset}`);
 
   backendProcess = spawn(
     IS_WINDOWS ? "npx.cmd" : "npx",
@@ -298,6 +329,7 @@ async function main() {
       backendApiUrl = `http://${detectedLanIp}:3333`;
       expoFlags = ["--lan", "--clear"];
     }
+  }
   }
 
   // 2. Launch Expo in foreground with full interactive terminal (QR Code + key commands)
