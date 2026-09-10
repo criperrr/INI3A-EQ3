@@ -2991,3 +2991,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/frontend/app.json
   - .agents/CURRENT.md
 - **Impact / Next Steps:** O usuário tem segurança contra erros de leitura óptica de código de barras ou variações menores de dígitos, podendo conferir visualmente a imagem e os números impressos na embalagem antes de submeter o preço.
+
+## 2026-09-10 16:30 - fix(ci): Resolucao de erro de sintaxe Swift 6.0 no ExpoModulesJSI da build iOS
+
+- **Description:** Diagnosticado erro de compilacao no Xcode 16.2 (unexpected ',' separator) provocado pelo uso de virgulas trailing em listas de argumentos de inicializadores e tuplas (proposta SE-0437 do Swift 6.2) em Package.swift e JavaScriptRuntime.swift do expo-modules-jsi. Adicionado script automatizado em Node.js no workflow de build para higienizar a sintaxe de virgulas trailing antes de ), ajustar swift-tools-version: 6.0 e remover flags experimentais incompativeis (NonisolatedNonsendingByDefault, InferIsolatedConformances).
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** build-xcframework.sh do expo-modules-jsi agora compila limpo no toolchain Swift 6.0 do Xcode 16.2 sem erros de sintaxe.
