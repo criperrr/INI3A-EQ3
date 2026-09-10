@@ -2776,3 +2776,26 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/i18n/locales/ja.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Legenda 100% legível e completa sem reticências, com categorização precisa de comércios locais (padarias, açougues e mercearias). 0 erros de compilação no TypeScript.
+
+## `2026-09-09 17:27` - `feat(deploy)`: Automated Remote Backend Deployment, PM2 & Git Sync Pipeline
+
+- **Description:** Implementação completa do pipeline de deploy em produção no servidor remoto CTI (`projetoscti.com.br:4026`) no diretório `/var/www/equipes/26-presco`. Banco de dados PostgreSQL 14 com PostGIS 3.2.0 configurado na porta 54432 com credenciais dedicadas, migrações e seed executados. Proxy reverso do Apache via `.htaccess` roteando tráfego público HTTPS para a porta 3333. Gestão de processos PM2 com `ecosystem.config.cjs` e auto-reinicialização. Captura de falhas catastróficas em disco com `crashLogger.ts`. Automação Git bidirecional via hook `post-receive` no servidor e hook `post-commit` local para sincronização em background. Criado `scripts/configure_env.ts` e scripts npm (`npm run env`, `env:remote`, `env:local`, `deploy`, `remote:status`, `remote:logs`). Ajustado `resolveBaseUrl()` no frontend para priorizar URLs HTTPS remotas com sanitização de barras.
+- **Files Modified:**
+  - `deploy/deploy.sh`
+  - `ecosystem.config.cjs`
+  - `scripts/deploy_remote.sh`
+  - `scripts/configure_env.ts`
+  - `scripts/dev_launcher.ts`
+  - `package.json`
+  - `src/backend/src/server.ts`
+  - `src/backend/src/app.ts`
+  - `src/backend/src/shared/database/migrate.ts`
+  - `src/backend/src/shared/util/crashLogger.ts`
+  - `src/backend/src/@types/declarations.d.ts`
+  - `src/frontend/services/api.ts`
+  - `src/frontend/.env.example`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Backend Presco 100% operacional no servidor remoto CTI com resposta 200 OK em `https://eq.projetoscti.com.br/26-presco/health`. Frontend pode chavear com 1 comando entre CTI remoto, LAN Wi-Fi e Localhost. Commits locais sincronizam automaticamente com o servidor.
