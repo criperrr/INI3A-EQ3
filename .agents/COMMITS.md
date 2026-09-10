@@ -3105,3 +3105,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unblocks compilation of ExpoModulesJSI xcframework on Xcode 16.4.
+
+## `2026-09-10 18:18` - `fix(ci)`: Bridge C++ initializers, fix vector.push_back and Task polyfill for Swift 6.1 (v1.0.11)
+
+- **Description:** Fixed 4 Swift 6.1 toolchain incompatibilities in Xcode 16.4:
+  1. Added SWIFT_NAME(init(...)) factory initializers for SWIFT_SHARED_REFERENCE (RuntimeScheduler) and SWIFT_IMMORTAL_REFERENCE (HostFunctionClosure) in C++ headers.
+  2. Replaced Task.immediate call in Task+immediate.swift polyfill with standard Task(priority: .high, operation: operation).
+  3. Removed extraneous consuming: label from vector.push_back in JavaScriptRuntime.swift.
+  4. Succeeded local simulation of all replacements on fresh package source.
+  5. Bumped SemVer version to v1.0.11 (versionCode 12).
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unblocks native compilation of ExpoModulesJSI xcframework and finishes IPA generation.
