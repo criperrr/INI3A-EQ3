@@ -7,6 +7,8 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Usabilidade de Teclado & Auto-Scroll:** Implementado `KeyboardAwareScrollView` e `FocusedInputWrapper` para prevenir sobreposição do teclado sobre inputs de texto, adicionando rolagem automática suave e realce visual (Monet accent) no container focado.
+- Otimização em formulários (`customRegisterProduct.tsx`, `registerProduct.tsx`, `login.tsx`, `registerUser.tsx`) e modais (`settings.tsx`, `productDetails.tsx`, `CategorySelector.tsx`).
 - Publicação Oficial do APK no GitHub Releases (`v1.0.0`) em `https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.0.0`.
 - Assets publicados com sucesso: `Presco-v1.0.0.apk` e `Presco.apk` (134 MB cada, SHA-256: `b84db6ffaaabf514e581c09a30c281c1282de2ca5186251a8e9beb4d7cf81018`).
 - Documentação completa da release, guia de instalação e arquitetura criada em `apk-release-distribution.md`.
@@ -177,6 +179,8 @@ Direct relative paths from project root.
 | `src/frontend/components/OnboardingTutorialModal.tsx` | Hand-drawn / sketch doodle onboarding carousel modal with 6 pedagogical steps, Reanimated swipe gestures, Haptics, and useTheme integration |
 | `src/frontend/components/CategorySelector.tsx` | Reusable category selector with preset chips, emoji/icon badges, custom category option, and theme accent highlighting |
 | `src/frontend/components/SwipeTabNavigator.tsx` | 1:1 real-time finger-tracking Reanimated gesture navigator |
+| `src/frontend/components/KeyboardAwareScrollView.tsx` | Smart scroll container with dynamic keyboard listeners, safe insets, and auto-scroll |
+| `src/frontend/components/FocusedInputWrapper.tsx` | Usability wrapper highlighting focused input container (Monet accent) and triggering scroll |
 
 ---
 

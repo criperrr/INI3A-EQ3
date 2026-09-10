@@ -2844,3 +2844,36 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/i18n/locales/ja.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Usuários e avaliadores agora podem baixar o APK oficial diretamente pela página de Releases do GitHub ou através da tela Sobre dentro do próprio app.
+
+## `2026-09-10 11:00` - `feat(ui)`: Usabilidade de teclado e auto-scroll para containers de texto
+
+- **Description:** Implementação do componente inteligente `KeyboardAwareScrollView` e wrapper `FocusedInputWrapper` para prevenir sobreposição do teclado virtual sobre campos de texto. Ao focar em qualquer container de input, a tela rola suavemente para deixá-lo visível e aplica realce visual (borda ativa na cor Monet accent). Modais de edição e alteração de senha foram protegidos com `KeyboardAvoidingView` e `android:softwareKeyboardLayoutMode` configurado como `resize`.
+- **Files Modified:**
+  - `src/frontend/components/KeyboardAwareScrollView.tsx`
+  - `src/frontend/components/FocusedInputWrapper.tsx`
+  - `src/frontend/app.json`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Experiência de preenchimento de formulários fluida e ergonômica em dispositivos Android e iOS, eliminando inputs ocultos sob o teclado.
+
+## 2026-09-10 12:08 - `feat(ui)`: improve keyboard avoiding and auto-scroll behavior on all input screens
+
+- **Description:** Implement focused input wrappers and keyboard-aware scroll handling to guarantee smooth typing experiences without layout clipping or hidden buttons.
+- **Files Modified:**
+  - `src/frontend/components/FocusedInputWrapper.tsx`
+  - `src/frontend/components/KeyboardAwareScrollView.tsx`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Inputs smoothly scroll above the on-screen keyboard on iOS and Android.
