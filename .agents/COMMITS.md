@@ -3214,3 +3214,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - scripts/patch_ios_swift6.js
   - .agents/CURRENT.md
 - **Impact / Next Steps:** ExpoLocation importa com sucesso no target Presco no Xcode 16.4.
+
+## `2026-09-19 13:04` - `ci(deploy)`: Isolamento cirúrgico de artefatos essenciais do backend e pipeline de deploy autônomo
+
+- **Description:** Restruturação do script de deploy (`scripts/deploy_remote.sh`) e orquestrador remoto (`deploy/deploy.sh`) para enviar e manter exclusivamente os arquivos essenciais de execução do backend (`src/backend`, `deploy/deploy.sh`, `ecosystem.config.cjs`, `.htaccess`, `logs` e um único `README.md` explicativo com link para o GitHub). Purgados resíduos no servidor remoto (`.agents`, `docs`, `gestao`, `sprints`, `scripts`, `tests`, múltiplos markdowns e `node_modules` legado da raiz). Movido `tsx` para dependência de runtime e adicionado suporte a `cli.mjs` no PM2 para compatibilidade ESM no Node 22. Adicionado gatilho de push no GitHub Actions e documentada a política de deploy autônomo e higiene estrita para agentes.
+- **Files Modified:**
+  - `scripts/deploy_remote.sh`
+  - `deploy/deploy.sh`
+  - `ecosystem.config.cjs`
+  - `src/backend/package.json`
+  - `.github/workflows/deploy.yml`
+  - `.agents/AGENTS.md`
+  - `.agents/skills/presco-backend/SKILL.md`
+  - `.agents/CURRENT.md`
+  - `package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Servidor remoto 100% limpo e higienizado com apenas 1 arquivo markdown e apenas arquivos essenciais do backend. Deploy testado com sucesso com retorno HTTP 200 na API e healthcheck.

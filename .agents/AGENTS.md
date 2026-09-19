@@ -246,6 +246,20 @@ After any file modification or addition:
   - Releases e builds autônomas do APK Android são acionadas via GitHub Actions (`.github/workflows/release.yml`).
   - Todo push de tag `v*.*.*` ou disparo manual via `workflow_dispatch` executa a suíte de testes (`npm test`, `npm run typecheck`), gera o APK release nativo e publica automaticamente o artefato no **GitHub Releases** com changelog gerado dinamicamente.
 
+### 6.3. Autonomous Backend Deployment Policy (CI/CD & Server Hygiene)
+
+- **Deploy Autônomo por Push no GitHub Actions:** Todo commit pushado para as branches `main` ou `tests` contendo alterações em `src/backend/**`, `deploy/**`, `ecosystem.config.cjs`, `scripts/deploy_remote.sh` ou `.github/workflows/deploy.yml` aciona automaticamente o workflow `Deploy Backend` (`.github/workflows/deploy.yml`). Ele valida a tipagem com `typecheck`, sincroniza cirurgicamente os arquivos essenciais e reexecuta migrações, seed e reinício limpo do PM2 no servidor remoto.
+- **Diretriz para Modelos e Agentes:** Sempre que realizar alterações importantes no backend (novos endpoints, correções de regras de negócio, migrações Drizzle, etc.) e o usuário solicitar o push/commit, o agente deve orientar ou confirmar que o deploy será executado automaticamente pelo GitHub Actions. Caso o usuário solicite o deploy imediato via terminal ou sem push, o agente pode invocar `npm run deploy` ou disparar manualmente o workflow com `gh workflow run deploy.yml --ref <branch>`.
+- **Higiene Estrita do Servidor de Produção:**
+  - O servidor remoto em `/var/www/equipes/26-presco` hospeda **estritamente o runtime essencial do backend**:
+    - `src/backend/` (código-fonte compilado/executado via `tsx`, migrações, `package.json` isolado e `node_modules`).
+    - `deploy/deploy.sh` (orquestrador local do servidor).
+    - `ecosystem.config.cjs` (declaração PM2).
+    - `.htaccess` (proxy reverso Apache para `127.0.0.1:3333`).
+    - `logs/` (streams de logs do PM2 e histórico de deploys).
+    - `README.md` (o **ÚNICO** arquivo markdown permitido no servidor remoto, explicando que se trata do backend e apontando para o GitHub).
+  - É **ESTRITAMENTE PROIBIDO** subir ou manter no servidor: `.agents/`, `docs/`, `sprints/`, `gestao/`, `src/frontend/`, scripts de dev (`scripts/`), ou quaisquer outros markdowns (`.md`). O script de deploy higieniza e expurga automaticamente qualquer resíduo não essencial.
+
 ---
 
 ## 7. Code Style & Conventions
