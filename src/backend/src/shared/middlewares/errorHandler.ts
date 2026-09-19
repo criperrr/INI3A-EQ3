@@ -1,42 +1,39 @@
-import {
-  ApiError,
-  MultipleApiError,
-  InternalSystemError,
-} from "@/shared/errors/errors";
-import type { ErrorRequestHandler } from "express";
-import { multipleErrors, failure } from "@/shared/util/response.helper";
+import type { NextFunction, Request, Response } from "express";
+import { AppError, MultipleApiError, ValidationError } from "../errors/errors";
 
-export const globalErrorHandling: ErrorRequestHandler = function (
-  err,
-  _,
-  res,
-  __,
+export function errorHandler(
+  error: Error,
+  _: Request,
+  res: Response,
+  __: NextFunction,
 ) {
-  if (err instanceof MultipleApiError) {
-    return res
-      .status(err.httpCode)
-      .json(multipleErrors(err.fields, err.httpCode));
+  console.error("[ErrorHandler]", error);
+
+  if (error instanceof AppError) {
+    const statusCode = error.httpCode || 400;
+    const responsePayload: Record<string, any> = {
+      success: false,
+      code: error.internalCode,
+      message: error.customMessage || error.message,
+    };
+
+    if (error instanceof MultipleApiError && error.errors) {
+      responsePayload.errors = error.errors;
+    }
+
+    if (error instanceof ValidationError && error.errors) {
+      responsePayload.errors = error.errors;
+    }
+
+    return res.status(statusCode).json(responsePayload);
   }
 
-  if (err instanceof ApiError) {
-    return res
-      .status(err.httpCode)
-      .json(failure(err.message, err.textCode, err.field, err.httpCode));
-  }
-
-  if (err instanceof InternalSystemError) {
-    return res
-      .status(500)
-      .json(
-        failure(err.internalMessage, "INTERNAL_SERVER_ERROR", undefined, 500),
-      );
-  }
-  
-  console.log(err)
-
-  return res
-    .status(500)
-    .json(
-      failure(err?.message ?? "Unexpected error", "INTERNAL", undefined, 500),
-    );
-};
+  const isProduction = process.env.NODE_ENV === "production";
+  return res.status(500).json({
+    success: false,
+    code: "INTERNAL_SERVER_ERROR",
+    message: isProduction
+      ? "Ocorreu um erro interno no servidor."
+      : (error.message || "An unexpected error occurred."),
+  });
+}

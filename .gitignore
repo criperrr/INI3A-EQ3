@@ -1,15 +1,23 @@
 # MacOS file that should be ignored by git
 .DS_Store
 
+# Turborepo cache
+.turbo/
+
 **/node_modules/
 
 src/frontend/.expo/
 src/frontend/dist/
+dist/
+*.apk
 src/frontend/web-build/
 src/frontend/.metro/
 
 .env
 .env*.local
+
+# Bootstrap: estado local descoberto pelo setup (scripts/bootstrap.ts)
+.dev/
 
 # TypeScript
 *.tsbuildinfo
@@ -18,3 +26,18 @@ src/frontend/expo-env.d.ts
 # Native folders
 src/frontend/android/
 src/frontend/ios/
+
+
+# personal annotations
+.notes/
+src/backend/.notes
+src/frontend/.notes
+.tunnel_url
+*.vsix
+DEPLOY-BACK-PLAN.md
+
+# Deploy: configuração local com credenciais do servidor (NUNCA versionar)
+deploy/.env.deploy
+deploy/*.key
+deploy/*.pem
+logs/

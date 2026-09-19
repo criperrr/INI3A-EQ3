@@ -1,98 +1,29 @@
 import React from "react";
-import { View, StyleSheet, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import MapView, { Marker, Callout } from "react-native-maps";
-import { useTheme } from "../content/themeContent";
-
-const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
-};
-
-const INITIAL_REGION = {
-  latitude: -23.55052,
-  longitude: -46.633308,
-  latitudeDelta: 0.015,
-  longitudeDelta: 0.0124,
-};
-
-const MOCK_MARKERS = [
-  {
-    id: 1,
-    title: "Union Market",
-    coordinate: { latitude: -23.55052, longitude: -46.633308 },
-  },
-  {
-    id: 2,
-    title: "Mercado Central",
-    coordinate: { latitude: -23.555, longitude: -46.635 },
-  },
-  {
-    id: 3,
-    title: "Hortifruti",
-    coordinate: { latitude: -23.548, longitude: -46.63 },
-  },
-];
-
-const FILTER_OPTIONS = [
-  { id: "type", label: "Tipo de Loja", icon: "storefront-outline" },
-  { id: "distance", label: "Distância", icon: "navigate-outline" },
-  { id: "hours", label: "Horário", icon: "time-outline" },
-] as const;
+import { View, StyleSheet, Text } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { Stack } from "expo-router";
+import { useTheme } from "../theme";
+import { useI18n } from "../content/i18nContext";
 
 export default function MapScreen() {
   const { themeStyles, isDark } = useTheme();
+  const { t } = useI18n();
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
-      <View style={styles.mapContainer}>
-        <MapView
-          style={styles.map}
-          initialRegion={INITIAL_REGION}
-          showsUserLocation
-        >
-          {MOCK_MARKERS.map((marker) => (
-            <Marker
-              key={marker.id}
-              coordinate={marker.coordinate}
-
-              pinColor={isDark ? COLORS.vibrantBlue : COLORS.darkBlue}
-            >
-              <Callout tooltip>
-                <View
-                  style={[
-                    styles.calloutContainer,
-                    themeStyles.card,
-                    themeStyles.border,
-                  ]}
-                >
-                  <Text style={[styles.calloutText, themeStyles.text]}>
-                    {marker.title}
-                  </Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-        </MapView>
-
-        <View style={styles.filtersWrapper}>
-          {FILTER_OPTIONS.map((filter) => (
-            <TouchableOpacity
-              key={filter.id}
-              style={[styles.filterCard, themeStyles.card, themeStyles.border]}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={filter.icon}
-                size={24}
-                color={isDark ? "#FFFFFF" : COLORS.darkBlue}
-              />
-              <Text style={[styles.filterText, themeStyles.text]}>
-                {filter.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      <Stack.Screen options={{ gestureEnabled: false }} />
+      <View style={styles.content}>
+        <Ionicons
+          name="map-outline"
+          size={64}
+          color={isDark ? "#F0E6D3" : "#1A2E1A"}
+        />
+        <Text style={[styles.title, themeStyles.text]}>
+          {t("map.unavailableOnWeb")}
+        </Text>
+        <Text style={[styles.subtitle, themeStyles.text]}>
+          {t("map.mobileOnlyNotice")}
+        </Text>
       </View>
     </View>
   );
@@ -101,53 +32,24 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  mapContainer: {
-    flex: 1,
-  },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  filtersWrapper: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    marginTop: 16,
-    zIndex: 10,
-  },
-  filterCard: {
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    alignItems: "center",
     justifyContent: "center",
-    width: "30%",
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    alignItems: "center",
   },
-  filterText: {
-    fontSize: 12,
-    marginTop: 6,
-    textAlign: "center",
-    fontWeight: "500",
+  content: {
+    alignItems: "center",
+    paddingHorizontal: 32,
   },
-  calloutContainer: {
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  calloutText: {
-    fontSize: 14,
+  title: {
+    fontSize: 20,
     fontWeight: "bold",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  subtitle: {
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: "center",
+    opacity: 0.7,
+    lineHeight: 20,
   },
 });

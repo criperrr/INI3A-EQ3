@@ -1,0 +1,1 @@
+const { Client } = require('pg'); const c = new Client({ connectionString: process.env.DATABASE_URL }); c.connect().then(()=>c.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;')).then(()=>console.log('? Banco zerado com sucesso!')).then(()=>process.exit(0));

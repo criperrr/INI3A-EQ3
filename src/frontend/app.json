@@ -1,50 +1,69 @@
 {
   "expo": {
-    "name": "src",
-    "slug": "src",
-    "version": "1.0.0",
+    "name": "Presco",
+    "slug": "presco",
+    "version": "1.0.5",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "src",
+    "scheme": "presco",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.presco.app",
+      "icon": "./assets/icon.png"
     },
     "android": {
+      "package": "com.presco.app",
+      "predictiveBackGestureEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "versionCode": 6
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "static"
     },
     "plugins": [
+      "expo-dev-client",
       "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "O Presco precisa da sua localização para encontrar mercados próximos a você.",
+          "locationWhenInUsePermission": "O Presco precisa da sua localização para encontrar mercados próximos a você.",
+          "locationAlwaysPermission": "O Presco precisa da sua localização para encontrar mercados próximos a você."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O Presco precisa de acesso à câmera para escanear códigos de barras de produtos."
+        }
+      ],
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
+          "backgroundColor": "#FFFFFF"
         }
-      ],
-      "expo-font",
-      "expo-web-browser"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "icon": "./assets/icon.png",
+    "owner": "presco.tcc.projetoscti",
+    "extra": {
+      "eas": {
+        "projectId": "83e64f4c-dc9b-4531-9963-18ad4da776db"
+      }
     }
   }
 }

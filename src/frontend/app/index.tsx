@@ -1,131 +1,401 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo, useMemo } from "react";
 import {
   View,
   StyleSheet,
   Text,
   TouchableOpacity,
   ScrollView,
-  Image,
   FlatList,
   Dimensions,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
+import { Image } from "expo-image";
+import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useTheme } from "../theme";
+import { useI18n } from "../content/i18nContext";
+import { useTabNavigation } from "../content/tabNavigationContext";
+import { fetchProducts } from "../services/productService";
+import { fetchMarkets } from "../services/marketService";
+import { getUserLocation } from "../utils/userLocation";
+import { hasSeenTutorial } from "../utils/tutorialStorage";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
+import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
 
-const COLORS = {
-  darkBlue: "#273462",
-  vibrantBlue: "#0062CC",
-  white: "#FFFFFF",
+// --- Tipagens (TypeScript) ---
+type TabType = {
+  id: string;
+  label: string;
+  icon: string;
+  actionType: string;
+  actionValue: string;
+};
+
+type GridItemType = {
+  id: number;
+  name: string;
+  image: string;
+  price?: string;
+  category?: string;
+  isPromotion?: boolean;
+  discountPercentage?: number | null;
+  formattedDistance?: string | null;
+  nearestMarketName?: string | null;
 };
 
 // --- Mocks ---
-const MOCK_PRODUCTS = [
-  { id: 1, name: "Pão Artesanal" },
-  { id: 2, name: "Leite Fresco" },
-  { id: 3, name: "Frutas Orgânicas" },
-  { id: 4, name: "Arroz Integral" },
-  { id: 5, name: "Frutas Tropicais" },
-  { id: 6, name: "Legumes Selecionados" },
-];
-
-const MOCK_BANNERS = [
+const MOCK_PRODUCTS: GridItemType[] = [
   {
-    id: "1",
-    title: "Legumes da Horta",
-    subtitle: "Desconto em itens selecionados",
-    linkText: "Ver Ofertas",
+    id: 1,
+    name: "Café Especial Torrado 500g",
+    image:
+      "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 14,90",
+    isPromotion: true,
+    discountPercentage: 40,
   },
   {
-    id: "2",
-    title: "Frutas Frescas",
-    subtitle: "Chegaram hoje do produtor",
-    linkText: "Aproveitar",
+    id: 2,
+    name: "Azeite de Oliva Extra Virgem",
+    image:
+      "https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 26,90",
+    isPromotion: true,
+    discountPercentage: 32,
   },
   {
-    id: "3",
-    title: "Padaria Artesanal",
-    subtitle: "Pães quentinhos saindo agora",
-    linkText: "Comprar",
+    id: 3,
+    name: "Leite Integral Orgânico",
+    image:
+      "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 4,29",
+    isPromotion: true,
+    discountPercentage: 34,
+  },
+  {
+    id: 4,
+    name: "Arroz Nobre Tipo 1 5kg",
+    image:
+      "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 22,90",
+  },
+  {
+    id: 5,
+    name: "Pão Artesanal 500g",
+    image:
+      "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 7,90",
+  },
+  {
+    id: 6,
+    name: "Chocolate Meio Amargo 70%",
+    image:
+      "https://images.unsplash.com/photo-1548907040-4baa42d10919?w=280&h=280&fit=crop&q=70&auto=format",
+    price: "R$ 5,99",
+    isPromotion: true,
+    discountPercentage: 33,
   },
 ];
 
-const MENU_ICONS = [
-  "cart-outline",
-  "nutrition-outline",
-  "book-outline",
-  "custom-logo",
-];
-
-export default function Index() {
+export default function HomeScreen() {
   const router = useRouter();
-  const { themeStyles } = useTheme();
+  const pathname = usePathname();
+  const isFocused = !pathname || pathname === "/";
+  const { tokens } = useTheme();
+  const { semantic } = tokens;
+  const { t } = useI18n();
+  const { resetHomeTrigger } = useTabNavigation();
+  const { view } = useLocalSearchParams<{ view?: string }>();
+  const [activeView, setActiveView] = useState<string>("products");
+  const [realProducts, setRealProducts] = useState<GridItemType[]>([]);
+  const [realMarkets, setRealMarkets] = useState<GridItemType[]>([]);
+  const [hasLocation, setHasLocation] = useState<boolean>(false);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  const handleProductPress = () => {
-    router.push("/productDetails");
-  };
+  const actionTabs: TabType[] = [
+    {
+      id: "1",
+      label: t("navigation.map"),
+      icon: "location-outline",
+      actionType: "route",
+      actionValue: "/map",
+    },
+    {
+      id: "2",
+      label: t("navigation.products"),
+      icon: "cube-outline",
+      actionType: "route",
+      actionValue: "/search",
+    },
+    {
+      id: "3",
+      label: t("navigation.help"),
+      icon: "help-circle-outline",
+      actionType: "route",
+      actionValue: "/help",
+    },
+    {
+      id: "4",
+      label: t("navigation.about"),
+      icon: "information-circle-outline",
+      actionType: "route",
+      actionValue: "/about",
+    },
+  ];
 
-  const handleAboutUsPress = () => {
-    router.push("/aboutUs");
-  };
+  const loadProductsAndMarkets = useCallback(async () => {
+    let loc = null;
+    try {
+      loc = await getUserLocation();
+      if (loc) setHasLocation(true);
+
+      const res = await fetchProducts({
+        latitude: loc?.latitude,
+        longitude: loc?.longitude,
+        radius: 15000,
+        limit: 6,
+      });
+
+      if (res.items && res.items.length > 0) {
+        const mapped: GridItemType[] = res.items.map((p) => ({
+          id: p.id || Math.random(),
+          name: p.name,
+          category: p.category,
+          price: p.bestPrice || p.lastPrice,
+          image:
+            getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) ||
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
+          isPromotion: p.isPromotion,
+          discountPercentage: p.discountPercentage,
+          formattedDistance: p.formattedDistance,
+          nearestMarketName: p.nearestMarketName,
+        }));
+        setRealProducts(mapped);
+      } else {
+        setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+      }
+    } catch {
+      // Graceful fallback: load mock products only if network request fails
+      setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+    }
+
+    try {
+      let markets = await fetchMarkets(
+        loc
+          ? {
+              latitude: loc.latitude,
+              longitude: loc.longitude,
+              radius: 15000,
+            }
+          : undefined
+      );
+      if (!markets || markets.length === 0) {
+        // Fallback: busca todos os mercados cadastrados no sistema se não houver no raio imediato
+        markets = await fetchMarkets();
+      }
+      if (markets && markets.length > 0) {
+        const marketImages = [
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=280&h=280&fit=crop&q=70&auto=format",
+          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=280&h=280&fit=crop&q=70&auto=format",
+        ];
+        // Limita a prévia da Home estritamente aos 6 mercados mais próximos, evitando renderizar dezenas de cards na ScrollView
+        const mapped: GridItemType[] = markets.slice(0, 6).map((m, idx) => ({
+          id: m.id,
+          name: m.name,
+          image: marketImages[idx % marketImages.length]!,
+        }));
+        setRealMarkets(mapped);
+      } else {
+        setRealMarkets([]);
+      }
+    } catch {
+      setRealMarkets([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProductsAndMarkets();
+  }, [loadProductsAndMarkets]);
+
+  useEffect(() => {
+    if (view === "markets" || view === "products") {
+      setActiveView(view);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (resetHomeTrigger > 0) {
+      setActiveView("products");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    }
+  }, [resetHomeTrigger]);
+
+  const handleItemPress = useCallback((item: GridItemType) => {
+    if (activeView === "products") {
+      router.push({
+        pathname: "/productDetails",
+        params: {
+          id: String(item.id),
+          name: item.name,
+          imageUri: item.image,
+          lastPrice: item.price,
+        },
+      });
+    } else {
+      router.push("/map");
+    }
+  }, [activeView, router]);
+
+  const handleTabAction = useCallback((tab: TabType) => {
+    if (tab.actionType === "view") {
+      setActiveView(tab.actionValue);
+    } else if (tab.actionType === "route") {
+      router.push(tab.actionValue as any);
+    }
+  }, [router]);
+
+  const [showTutorialModal, setShowTutorialModal] = useState<boolean>(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    hasSeenTutorial().then((seen) => {
+      if (isMounted && !seen) {
+        setShowTutorialModal(true);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const gridData = activeView === "products" ? realProducts : realMarkets;
+  const gridTitle =
+    activeView === "products"
+      ? (hasLocation ? t("home.nearbyOffers") : t("products.title"))
+      : t("map.nearbyMarketsTitle");
+  const gridSubtitle = activeView === "products" ? t("home.radiusFilter15km") : undefined;
 
   return (
-    <ScrollView
-      contentContainerStyle={[styles.content, themeStyles.bg]}
-      showsVerticalScrollIndicator={false}
-    >
-      <Banner />
-      <ActionMenu onAboutUsPress={handleAboutUsPress} />
-      <ProductGrid onProductPress={handleProductPress} />
-    </ScrollView>
+    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={[styles.scrollView, { backgroundColor: semantic.colors.surface.background }]}
+        contentContainerStyle={[
+          styles.content,
+          { backgroundColor: semantic.colors.surface.background },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        bounces={true}
+        overScrollMode="always"
+      >
+        <Banner isFocused={isFocused} />
+        <ActionMenu
+          onTabPress={handleTabAction}
+          tabs={actionTabs}
+          activeView={activeView}
+        />
+        <ItemsGrid
+          title={gridTitle}
+          subtitle={gridSubtitle}
+          data={gridData}
+          isProductView={activeView === "products"}
+          onItemPress={handleItemPress}
+        />
+      </ScrollView>
+
+      {showTutorialModal && (
+        <OnboardingTutorialModal
+          visible={showTutorialModal}
+          onClose={() => setShowTutorialModal(false)}
+        />
+      )}
+    </View>
   );
 }
 
-// --- Componentes Internos com Temas Dinâmicos ---
-const Banner = () => {
-  const { themeStyles } = useTheme();
+const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
+  const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      let nextIndex = activeIndex + 1;
-      let shouldAnimate = true;
-      if (nextIndex >= MOCK_BANNERS.length) {
-        nextIndex = 0;
-        shouldAnimate = false;
-      }
+  const banners = useMemo(
+    () => [
+      {
+        id: "1",
+        title: t("home.banner1Title"),
+        subtitle: t("home.banner1Subtitle"),
+        linkText: t("home.banner1Action"),
+        image:
+          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=180&fit=crop&q=70&auto=format",
+      },
+      {
+        id: "2",
+        title: t("home.banner2Title"),
+        subtitle: t("home.banner2Subtitle"),
+        linkText: t("home.banner2Action"),
+        image:
+          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=180&fit=crop&q=70&auto=format",
+      },
+      {
+        id: "3",
+        title: t("home.banner3Title"),
+        subtitle: t("home.banner3Subtitle"),
+        linkText: t("home.banner3Action"),
+        image:
+          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=180&fit=crop&q=70&auto=format",
+      },
+    ],
+    [t]
+  );
 
+  const activeIndexRef = useRef(0);
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+  }, [activeIndex]);
+
+  // Pausa o carrossel quando a Home perde o foco ou entra em segundo plano, evitando re-renderizações e consumo de CPU/RAM
+  useEffect(() => {
+    if (!isFocused) return;
+
+    const timer = setInterval(() => {
+      const nextIndex = activeIndexRef.current + 1 >= banners.length ? 0 : activeIndexRef.current + 1;
       flatListRef.current?.scrollToIndex({
         index: nextIndex,
-        animated: shouldAnimate,
+        animated: nextIndex !== 0,
       });
       setActiveIndex(nextIndex);
     }, 4000);
 
     return () => clearInterval(timer);
-  }, [activeIndex]);
+  }, [isFocused, banners.length]);
 
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
     const index = Math.round(scrollPosition / CARD_WIDTH);
     if (index !== activeIndex) {
       setActiveIndex(index);
     }
-  };
+  }, [activeIndex]);
 
   return (
     <View style={styles.bannerSection}>
       <FlatList
         ref={flatListRef}
-        data={MOCK_BANNERS}
+        data={banners}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        initialNumToRender={3}
+        maxToRenderPerBatch={3}
+        windowSize={3}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         getItemLayout={(_, index) => ({
@@ -138,140 +408,300 @@ const Banner = () => {
             <View
               style={[
                 styles.bannerCardFull,
-                themeStyles.card,
-                themeStyles.border,
+                {
+                  backgroundColor: semantic.colors.surface.card,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.button,
+                  padding: semantic.spacing.elementGap,
+                },
               ]}
             >
-              <View
-                style={[styles.imagePlaceholderLarge, themeStyles.inputBg]}
+              <Image
+                source={{ uri: item.image }}
+                style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={item.id}
+                transition={150}
               />
-              <Text style={[styles.bannerTitle, themeStyles.text]}>
+              <Text
+                style={[
+                  styles.bannerTitle,
+                  {
+                    color: semantic.colors.text.primary,
+                    ...semantic.typography.bodyBold,
+                  },
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
                 {item.title}
               </Text>
-              <Text style={[styles.bannerSubtitle, themeStyles.subText]}>
+              <Text
+                style={[
+                  styles.bannerSubtitle,
+                  {
+                    color: semantic.colors.text.secondary,
+                    ...semantic.typography.caption,
+                  },
+                ]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {item.subtitle}
               </Text>
-              <Text style={styles.bannerLink}>{item.linkText}</Text>
+              <Text
+                style={[
+                  styles.bannerLink,
+                  {
+                    color: accent,
+                    ...semantic.typography.caption,
+                    fontWeight: "600",
+                  },
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {item.linkText}
+              </Text>
             </View>
           </View>
         )}
       />
 
       <View style={styles.paginationContainer}>
-        {MOCK_BANNERS.map((_, index) => (
+        {banners.map((_: any, index: number) => (
           <View
             key={index}
-            style={[styles.dot, activeIndex === index && styles.activeDot]}
+            style={[
+              styles.dot,
+              { backgroundColor: semantic.colors.border.subtle },
+              activeIndex === index && [
+                styles.activeDot,
+                { backgroundColor: accent },
+              ],
+            ]}
           />
         ))}
       </View>
     </View>
   );
-};
+});
 
-const ActionMenu = ({ onAboutUsPress }: { onAboutUsPress: () => void }) => {
-  const { themeStyles, isDark } = useTheme();
-  return (
-    <View style={[styles.centralMenuBar, themeStyles.card, themeStyles.border]}>
-      {MENU_ICONS.map((icon, index) => (
-        <TouchableOpacity
-          key={index}
-          style={[styles.centralButton, themeStyles.inputBg]}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (icon === "custom-logo") {
-              onAboutUsPress();
-            }
-          }}
-        >
-          {icon === "custom-logo" ? (
-            <Image
-              source={
-                isDark
-                  ? require("../components/images/logo-darkmode.png")
-                  : require("../components/images/logo-preta.png")
-              }
-              style={styles.logoIcon}
-              resizeMode="contain"
-            />
-          ) : (
-            <Ionicons
-              name={icon as any}
-              size={24}
-              color={isDark ? "#FFFFFF" : COLORS.darkBlue}
-            />
-          )}
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-};
+const ActionMenu = memo(function ActionMenu({
+  onTabPress,
+  tabs,
+  activeView,
+}: {
+  onTabPress: (tab: TabType) => void;
+  tabs: TabType[];
+  activeView: string;
+}) {
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
 
-const ProductGrid = ({ onProductPress }: { onProductPress: () => void }) => {
-  const { themeStyles } = useTheme();
   return (
-    <View style={styles.productsSection}>
-      <Text style={[styles.sectionTitle, themeStyles.text]}>Produtos</Text>
-      <View style={styles.productGrid}>
-        {MOCK_PRODUCTS.map((product) => (
+    <View
+      style={[
+        styles.centralMenuBar,
+        {
+          backgroundColor: semantic.colors.surface.card,
+          borderColor: semantic.colors.border.default,
+          borderRadius: semantic.radius.card,
+          paddingVertical: semantic.spacing.elementGap,
+          paddingHorizontal: semantic.spacing.microGap,
+          marginBottom: semantic.spacing.sectionGap,
+          ...semantic.elevation.card,
+        },
+      ]}
+    >
+      {tabs.map((tab) => {
+        const isSelected =
+          tab.actionType === "view" && tab.actionValue === activeView;
+
+        return (
           <TouchableOpacity
-            key={product.id}
-            style={[styles.productItem, themeStyles.card, themeStyles.border]}
-            activeOpacity={0.8}
-            onPress={onProductPress}
+            key={tab.id}
+            style={[
+              styles.tabButton,
+              { borderRadius: semantic.radius.chip },
+              isSelected && styles.tabButtonActive,
+            ]}
+            activeOpacity={0.7}
+            onPress={() => onTabPress(tab)}
           >
             <View
-              style={[styles.imagePlaceholderSquare, themeStyles.inputBg]}
-            />
+              style={[
+                styles.iconContainer,
+                {
+                  backgroundColor: semantic.colors.surface.input,
+                  borderRadius: semantic.radius.chip,
+                },
+                isSelected && {
+                  backgroundColor: accent + "25",
+                  borderColor: accent,
+                  borderWidth: 1.5,
+                },
+              ]}
+            >
+              <Ionicons
+                name={tab.icon as any}
+                size={22}
+                color={isSelected ? accent : semantic.colors.icon.primary}
+              />
+            </View>
             <Text
-              style={[styles.productName, themeStyles.text]}
+              style={[
+                styles.tabLabel,
+                {
+                  color: isSelected ? accent : semantic.colors.text.primary,
+                  fontWeight: isSelected ? "700" : "600",
+                },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+});
+
+const ItemsGrid = memo(function ItemsGrid({
+  title,
+  subtitle,
+  data,
+  isProductView = false,
+  onItemPress,
+}: {
+  title: string;
+  subtitle?: string;
+  data: GridItemType[];
+  isProductView?: boolean;
+  onItemPress: (item: GridItemType) => void;
+}) {
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
+  const { t } = useI18n();
+
+  return (
+    <View style={[styles.productsSection, { paddingHorizontal: semantic.spacing.itemGap }]}>
+      <View style={styles.sectionHeaderRow}>
+        <Text
+          style={[
+            styles.sectionTitle,
+            {
+              color: semantic.colors.text.primary,
+              ...semantic.typography.sectionTitle,
+            },
+          ]}
+        >
+          {title}
+        </Text>
+        {subtitle && (
+          <View style={[styles.radiusTag, { backgroundColor: accent + "18", borderColor: accent + "40" }]}>
+            <Ionicons name="navigate-circle-outline" size={13} color={accent} />
+            <Text style={[styles.radiusTagText, { color: accent }]}>{subtitle}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.productGrid}>
+        {data.map((item) => (
+          <TouchableOpacity
+            key={item.id}
+            style={[
+              styles.productItem,
+              {
+                backgroundColor: semantic.colors.surface.card,
+                borderColor: item.isPromotion ? accent + "60" : semantic.colors.border.default,
+                borderRadius: semantic.radius.chip,
+                padding: semantic.spacing.elementGap,
+              },
+            ]}
+            activeOpacity={0.8}
+            onPress={() => onItemPress(item)}
+          >
+            <View style={styles.imageWrapper}>
+              <Image
+                source={{ uri: item.image }}
+                style={[
+                  styles.productImage,
+                  { borderRadius: semantic.radius.badge },
+                ]}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={item.image || String(item.id)}
+                transition={150}
+              />
+              {isProductView && item.isPromotion && (
+                <View style={styles.promoBadge}>
+                  <Text style={styles.promoBadgeText}>
+                    🔥 {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text
+              style={[
+                styles.productName,
+                {
+                  color: semantic.colors.text.primary,
+                  ...semantic.typography.bodyMedium,
+                },
+              ]}
               numberOfLines={2}
             >
-              {product.name}
+              {item.name}
             </Text>
+
+            {isProductView && item.price && item.price !== "Preço não informado" && (
+              <View style={styles.priceRow}>
+                <Text style={[styles.productPrice, { color: accent }]}>
+                  {item.price}
+                </Text>
+              </View>
+            )}
+
+            {isProductView && item.formattedDistance && (
+              <View style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}>
+                <Ionicons name="location" size={11} color={accent} />
+                <Text
+                  style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </View>
     </View>
   );
-};
+});
 
-// --- Estilos ---
+// --- Estilos Estruturais ---
 const styles = StyleSheet.create({
-  content: {
-    flexGrow: 1,
-    paddingVertical: 16,
-  },
-  bannerSection: {
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  content: { flexGrow: 1, paddingVertical: 16, paddingBottom: 32 },
+  bannerSection: { paddingHorizontal: 16, marginBottom: 20 },
   bannerCardFull: {
     width: "100%",
-    borderRadius: 16,
-    padding: 12,
     borderWidth: 1,
   },
-  imagePlaceholderLarge: {
+  bannerImage: {
     width: "100%",
-    height: 100,
-    borderRadius: 12,
+    height: 120,
     marginBottom: 8,
   },
-  bannerTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-  },
-  bannerSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  bannerLink: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.vibrantBlue,
-    marginTop: 6,
-  },
+  bannerTitle: {},
+  bannerSubtitle: { marginTop: 2 },
+  bannerLink: { marginTop: 6 },
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -279,46 +709,58 @@ const styles = StyleSheet.create({
     marginTop: 12,
     gap: 8,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#D9D9D9",
-  },
-  activeDot: {
-    backgroundColor: COLORS.vibrantBlue,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  activeDot: { width: 18, height: 8, borderRadius: 4 },
   centralMenuBar: {
     flexDirection: "row",
     marginHorizontal: 16,
-    borderRadius: 16,
-    padding: 12,
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
     borderWidth: 1,
   },
-  centralButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
+  tabButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  tabButtonActive: {
+    transform: [{ scale: 1.02 }],
+  },
+  iconContainer: {
+    width: 46,
+    height: 46,
     alignItems: "center",
     justifyContent: "center",
   },
-  logoIcon: {
-    width: 24,
-    height: 24,
+  tabLabel: {
+    fontSize: 11,
+    textAlign: "center",
   },
-  productsSection: {
-    paddingHorizontal: 16,
+  productsSection: { marginBottom: 24 },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 14,
+  sectionTitle: {},
+  radiusTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  radiusTagText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   productGrid: {
     flexDirection: "row",
@@ -328,21 +770,59 @@ const styles = StyleSheet.create({
   },
   productItem: {
     width: "48%",
-    borderRadius: 14,
-    padding: 12,
-    alignItems: "center",
+    alignItems: "flex-start",
     borderWidth: 1,
     marginBottom: 4,
   },
-  imagePlaceholderSquare: {
+  imageWrapper: {
     width: "100%",
-    aspectRatio: 1,
-    borderRadius: 10,
+    aspectRatio: 1.15,
     marginBottom: 8,
+    position: "relative",
+  },
+  productImage: {
+    width: "100%",
+    height: "100%",
+  },
+  promoBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#E53935",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  promoBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
   productName: {
-    fontSize: 14,
+    minHeight: 34,
+    marginBottom: 4,
+  },
+  priceRow: {
+    marginBottom: 4,
+  },
+  productPrice: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  distancePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
+    width: "100%",
+    marginTop: 2,
+  },
+  distanceText: {
+    fontSize: 10,
     fontWeight: "600",
-    textAlign: "center",
+    flex: 1,
   },
 });

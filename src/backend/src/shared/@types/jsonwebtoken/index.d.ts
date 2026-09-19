@@ -11,12 +11,6 @@ declare global {
     type RefreshRecharge = RefreshInfo & {
       oldRefreshToken: string;
     };
-
-    namespace Handlers {
-      interface RefreshInfo {
-        refreshToken: string;
-      }
-    }
   }
 
   namespace Jwt {
@@ -31,5 +25,24 @@ declare global {
       jti: string;
       ex: number;
     }
+  }
+
+  namespace Api {
+    export type Request<
+      Body = any,
+      Params = {},
+      ResBody = any,
+      Query = {},
+      Locals extends Record<string, any> = {},
+    > = Express.Request<Params, ResBody, Body, Query, Locals> & {
+      user: {
+        id: number;
+        email: string;
+        name: string;
+        roleId: number;
+        jti: string;
+        exp: number;
+      };
+    };
   }
 }

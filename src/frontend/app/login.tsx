@@ -8,26 +8,62 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useTheme } from "../content/themeContent";
-
-const COLORS = {
-  vibrantBlue: "#0062CC",
-  white: "#FFFFFF",
-};
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme } from "../theme";
+import { useI18n } from "../content/i18nContext";
+import { useAuth, ApiError } from "../content/authContext";
+import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 
 export default function LoginScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { themeStyles, isDark } = useTheme();
+  const { themeStyles, isDark, accent } = useTheme();
+  const { t } = useI18n();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = () => {
-    console.log("Mock Login efetuado com sucesso!");
-    router.replace("/");
+  const isDevBuild = __DEV__;
+
+  const handleLogin = async (overrideEmail?: string, overridePass?: string) => {
+    const targetEmail = overrideEmail || email;
+    const targetPassword = overridePass || password;
+    setErrorMessage("");
+
+    if (!targetEmail.trim() || !targetPassword) {
+      setErrorMessage(t("auth.nameRequired") || "Preencha todos os campos.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await login(targetEmail.trim(), targetPassword);
+      router.replace("/");
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage(t("errors.networkError"));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickLogin = (quickEmail: string, quickPass: string) => {
+    setEmail(quickEmail);
+    setPassword(quickPass);
+    handleLogin(quickEmail, quickPass);
   };
 
   const handleGoToRegister = () => {
@@ -35,64 +71,143 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, themeStyles.bg]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View
-          style={[styles.formContainer, themeStyles.card, themeStyles.border]}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, themeStyles.bg]}>
+        <KeyboardAwareScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: Math.max(insets.top + 16, 24),
+              paddingBottom: Math.max(insets.bottom + 24, 32),
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          extraScrollHeight={100}
         >
-          <Text style={[styles.welcomeText, themeStyles.text]}>
-            Bem-vindo de volta!
-          </Text>
-          <Text style={[styles.subtitleText, themeStyles.subText]}>
-            Faça login para continuar no PResco.
-          </Text>
+          {isDevBuild && (
+            <View style={[styles.devBox, themeStyles.card, themeStyles.border]}>
+              <View style={styles.devHeader}>
+                <Ionicons name="flash" size={16} color={accent} />
+                <Text style={[styles.devTitle, { color: accent }]}>{t("auth.devMode")}</Text>
+              </View>
+              <Text style={[styles.devDesc, themeStyles.subText]}>
+                {t("auth.devModeDesc")}
+              </Text>
+              <View style={styles.devButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.quickLoginBtn, { backgroundColor: accent }]}
+                  activeOpacity={0.8}
+                  onPress={() => handleQuickLogin("admin@admin.org", "admin")}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="shield-checkmark" size={16} color="#FFF" />
+                  <Text style={styles.quickLoginBtnText}>{t("auth.adminUser")} (admin@admin.org)</Text>
+                </TouchableOpacity>
 
-          <InputField
-            icon="mail-outline"
-            placeholder="Seu e-mail"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            themeStyles={themeStyles}
-            isDark={isDark}
-          />
+                <TouchableOpacity
+                  style={[styles.quickLoginBtnSecondary, themeStyles.inputBg, themeStyles.border]}
+                  activeOpacity={0.8}
+                  onPress={() => handleQuickLogin("usuario@presco.com", "user123")}
+                  disabled={isLoading}
+                >
+                  <Ionicons name="person-outline" size={16} color={themeStyles.text.color} />
+                  <Text style={[styles.quickLoginBtnTextSecondary, themeStyles.text]}>{t("auth.regularUser")}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
-          <PasswordField
-            value={password}
-            onChangeText={setPassword}
-            showPassword={showPassword}
-            toggleShowPassword={() => setShowPassword(!showPassword)}
-            themeStyles={themeStyles}
-            isDark={isDark}
-          />
-
-          <TouchableOpacity style={styles.forgotPassword} activeOpacity={0.7}>
-            <Text style={styles.forgotPasswordText}>Esqueceu a senha?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.loginButton}
-            activeOpacity={0.8}
-            onPress={handleLogin}
+          <View
+            style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
-            <Text style={styles.loginButtonText}>Entrar</Text>
-          </TouchableOpacity>
-        </View>
+            <Text style={[styles.welcomeText, themeStyles.text]}>
+              {t("auth.loginTitle")}
+            </Text>
+            <Text style={[styles.subtitleText, themeStyles.subText]}>
+              {t("auth.loginSubtitle")}
+            </Text>
 
-        <FooterLinks
-          onGoToRegister={handleGoToRegister}
-          themeStyles={themeStyles}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+            {errorMessage !== "" && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color="#D32F2F" />
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            )}
+
+            <InputField
+              icon="mail-outline"
+              placeholder={t("auth.email")}
+              value={email}
+              onChangeText={(text: string) => {
+                setEmail(text);
+                setErrorMessage("");
+              }}
+              keyboardType="email-address"
+              themeStyles={themeStyles}
+              isDark={isDark}
+              editable={!isLoading}
+            />
+
+            <PasswordField
+              placeholder={t("auth.password")}
+              value={password}
+              onChangeText={(text: string) => {
+                setPassword(text);
+                setErrorMessage("");
+              }}
+              showPassword={showPassword}
+              toggleShowPassword={() => setShowPassword(!showPassword)}
+              themeStyles={themeStyles}
+              isDark={isDark}
+              editable={!isLoading}
+            />
+
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              activeOpacity={0.7}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.forgotPassword")}
+            >
+              <Text style={[styles.forgotPasswordText, { color: accent }]} maxFontSizeMultiplier={2}>
+                {t("auth.forgotPassword")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                { backgroundColor: accent, shadowColor: accent },
+                isLoading && styles.loginButtonDisabled,
+              ]}
+              activeOpacity={0.8}
+              onPress={() => handleLogin()}
+              disabled={isLoading}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("auth.loginButton")}
+              accessibilityState={{ disabled: isLoading }}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.loginButtonText}>{t("auth.loginButton")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <FooterLinks
+            onGoToRegister={handleGoToRegister}
+            themeStyles={themeStyles}
+            accent={accent}
+            t={t}
+          />
+        </KeyboardAwareScrollView>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
+
 
 // --- Componentes Internos ---
 
@@ -104,24 +219,31 @@ const InputField = ({
   keyboardType = "default",
   themeStyles,
   isDark,
+  editable = true,
 }: any) => (
-  <View style={[styles.inputContainer, themeStyles.inputBg]}>
-    <Ionicons
-      name={icon}
-      size={20}
-      color={isDark ? "#9CA3AF" : "#8E8E93"}
-      style={styles.inputIcon}
-    />
-    <TextInput
-      style={[styles.input, themeStyles.text]}
-      placeholder={placeholder}
-      placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
-      value={value}
-      onChangeText={onChangeText}
-      keyboardType={keyboardType}
-      autoCapitalize="none"
-    />
-  </View>
+  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <View style={[styles.inputContainer, themeStyles.inputBg]}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={isDark ? "#9CA3AF" : "#8E8E93"}
+        style={styles.inputIcon}
+      />
+      <TextInput
+        style={[styles.input, themeStyles.text]}
+        placeholder={placeholder}
+        placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        autoCapitalize="none"
+        editable={editable}
+        accessible={true}
+        accessibilityLabel={placeholder}
+        maxFontSizeMultiplier={2}
+      />
+    </View>
+  </FocusedInputWrapper>
 );
 
 const PasswordField = ({
@@ -131,45 +253,62 @@ const PasswordField = ({
   toggleShowPassword,
   themeStyles,
   isDark,
+  editable = true,
 }: any) => (
-  <View style={[styles.inputContainer, themeStyles.inputBg]}>
-    <Ionicons
-      name="lock-closed-outline"
-      size={20}
-      color={isDark ? "#9CA3AF" : "#8E8E93"}
-      style={styles.inputIcon}
-    />
-    <TextInput
-      style={[styles.input, themeStyles.text]}
-      placeholder="Sua senha"
-      placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
-      value={value}
-      onChangeText={onChangeText}
-      secureTextEntry={!showPassword}
-    />
-    <TouchableOpacity onPress={toggleShowPassword} style={styles.eyeIcon}>
+  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <View style={[styles.inputContainer, themeStyles.inputBg]}>
       <Ionicons
-        name={showPassword ? "eye-off-outline" : "eye-outline"}
+        name="lock-closed-outline"
         size={20}
         color={isDark ? "#9CA3AF" : "#8E8E93"}
+        style={styles.inputIcon}
       />
-    </TouchableOpacity>
-  </View>
+      <TextInput
+        style={[styles.input, themeStyles.text]}
+        placeholder="••••••••"
+        placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!showPassword}
+        editable={editable}
+        accessible={true}
+        accessibilityLabel="Password"
+        maxFontSizeMultiplier={2}
+      />
+      <TouchableOpacity
+        onPress={toggleShowPassword}
+        style={styles.eyeIcon}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Toggle password visibility"
+      >
+        <Ionicons
+          name={showPassword ? "eye-off-outline" : "eye-outline"}
+          size={20}
+          color={isDark ? "#9CA3AF" : "#8E8E93"}
+        />
+      </TouchableOpacity>
+    </View>
+  </FocusedInputWrapper>
 );
 
 const FooterLinks = ({
   onGoToRegister,
   themeStyles,
+  accent,
+  t,
 }: {
   onGoToRegister: () => void;
   themeStyles: any;
+  accent: string;
+  t: (key: any) => string;
 }) => (
   <View style={styles.footerContainer}>
     <Text style={[styles.footerText, themeStyles.subText]}>
-      Não tem uma conta?{" "}
+      {t("auth.noAccount")}{" "}
     </Text>
     <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
-      <Text style={styles.registerText}>Cadastre-se</Text>
+      <Text style={[styles.registerText, { color: accent }]}>{t("auth.signUp")}</Text>
     </TouchableOpacity>
   </View>
 );
@@ -206,6 +345,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 24,
   },
+  errorContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFEBEE",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 8,
+  },
+  errorText: {
+    color: "#D32F2F",
+    fontSize: 14,
+    flex: 1,
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -231,39 +384,102 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: COLORS.vibrantBlue,
     fontSize: 14,
     fontWeight: "600",
   },
   loginButton: {
-    backgroundColor: COLORS.vibrantBlue,
     height: 56,
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: COLORS.vibrantBlue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
   loginButtonText: {
-    color: COLORS.white,
+    color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "bold",
     letterSpacing: 0.5,
   },
   footerContainer: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
     justifyContent: "center",
     marginTop: 32,
+    gap: 4,
   },
   footerText: {
     fontSize: 15,
   },
   registerText: {
-    color: COLORS.vibrantBlue,
     fontSize: 15,
     fontWeight: "bold",
   },
+  devBox: {
+    width: "100%",
+    padding: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  devHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  devTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  devDesc: {
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  devButtonsRow: {
+    flexDirection: "column",
+    gap: 8,
+  },
+  quickLoginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  quickLoginBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "bold",
+    flexShrink: 1,
+  },
+  quickLoginBtnSecondary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  quickLoginBtnTextSecondary: {
+    fontSize: 13,
+    fontWeight: "600",
+    flexShrink: 1,
+  },
 });
+

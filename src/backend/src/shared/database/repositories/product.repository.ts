@@ -1,0 +1,892 @@
+import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
+import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
+import { db } from "../database";
+import { market, ocurrency, product, productReport } from "../schema";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql, isNotNull } from "drizzle-orm";
+
+export function calculateBarcodeSimilarity(codeA: string, codeB: string): number {
+  if (!codeA || !codeB) return 0;
+  const a = codeA.replace(/\D/g, "");
+  const b = codeB.replace(/\D/g, "");
+  if (!a || !b) return 0;
+  if (a === b) return 1.0;
+
+  const lenA = a.length;
+  const lenB = b.length;
+  const maxLen = Math.max(lenA, lenB);
+  if (maxLen === 0) return 1.0;
+
+  // Normalized prefix/suffix matching (e.g., zero padding variations)
+  const aNoZero = a.replace(/^0+/, "");
+  const bNoZero = b.replace(/^0+/, "");
+  if (aNoZero && bNoZero && aNoZero === bNoZero) {
+    return 0.95;
+  }
+
+  // Levenshtein distance calculation
+  const matrix: number[][] = [];
+  for (let i = 0; i <= lenA; i++) {
+    matrix[i] = [];
+    for (let j = 0; j <= lenB; j++) {
+      if (i === 0) matrix[i]![j] = j;
+      else if (j === 0) matrix[i]![j] = i;
+      else {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        const prevRow = matrix[i - 1]!;
+        const currRow = matrix[i]!;
+        currRow[j] = Math.min(
+          prevRow[j]! + 1, // deletion
+          currRow[j - 1]! + 1, // insertion
+          prevRow[j - 1]! + cost // substitution
+        );
+      }
+    }
+  }
+
+  const distance = matrix[lenA]![lenB]!;
+  const editSimilarity = 1 - distance / maxLen;
+
+  // Longest common substring / subsequence bonus
+  let matches = 0;
+  const minLen = Math.min(lenA, lenB);
+  for (let i = 0; i < minLen; i++) {
+    if (a[i] === b[i]) matches++;
+  }
+  const positionalSimilarity = matches / maxLen;
+
+  return Math.max(0, Math.min(1, Math.max(editSimilarity, positionalSimilarity * 0.9)));
+}
+
+class ProductRepositoryClass {
+  private categoryCache: { data: string[]; expiry: number } | null = null;
+
+  async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
+    if (!barcode) return null;
+    const cleanBarcode = barcode.trim();
+    if (!cleanBarcode) return null;
+
+    const digitsOnly = cleanBarcode.replace(/\D/g, "");
+    const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, cleanBarcode].filter(Boolean)));
+
+    const fetchUrl = async (url: string, timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "PrescoApp - Mobile/Backend - Version 1.0 (contato@presco.app)",
+            "Accept": "application/json",
+          },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) return null;
+
+        const data = (await response.json()) as OpenFoodFactsResponse;
+        if (data && (data.status === 1 || (data as any).status_verbose === "product found") && data.product) {
+          return data;
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    };
+
+    // Helper: race multiple URLs and resolve as soon as the first one returns a valid product
+    const fetchFastest = (urls: string[], timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
+      return new Promise((resolve) => {
+        let completed = 0;
+        let hasResolved = false;
+        if (urls.length === 0) return resolve(null);
+
+        urls.forEach((u) => {
+          fetchUrl(u, timeoutMs).then((res) => {
+            if (hasResolved) return;
+            if (res) {
+              hasResolved = true;
+              resolve(res);
+            } else {
+              completed++;
+              if (completed >= urls.length) {
+                resolve(null);
+              }
+            }
+          });
+        });
+      });
+    };
+
+    // Phase 1: High priority primary food databases (world & br openfoodfacts) - resolves in ~800ms
+    const primaryUrls: string[] = [];
+    for (const code of codesToTry) {
+      primaryUrls.push(
+        `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
+      );
+    }
+    const primaryResult = await fetchFastest(Array.from(new Set(primaryUrls)), 2200);
+    if (primaryResult) return primaryResult;
+
+    // Phase 2: Secondary niche databases (beauty, pet food, products) with fast 1600ms timeout
+    const secondaryUrls: string[] = [];
+    for (const code of codesToTry) {
+      secondaryUrls.push(
+        `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
+        `https://world.openpetfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
+      );
+    }
+    return await fetchFastest(Array.from(new Set(secondaryUrls)), 1600);
+  }
+
+  async getProductByEan(ean: string) {
+    if (!ean) return null;
+    const cleanRaw = ean.trim();
+    if (!cleanRaw) return null;
+
+    const digitsOnly = cleanRaw.replace(/\D/g, "");
+    const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+    const pad12 = digitsWithoutZero ? digitsWithoutZero.padStart(12, "0") : "";
+    const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+    const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
+
+    const candidateValues = Array.from(
+      new Set([cleanRaw, digitsOnly, digitsWithoutZero, pad12, pad13, pad14].filter(Boolean))
+    );
+
+    const conditions = candidateValues.map((val) => eq(product.ean, val));
+
+    const result = await db
+      .select()
+      .from(product)
+      .where(or(...conditions))
+      .limit(1);
+
+    return result[0] || null;
+  }
+
+  async findSimilarProductByBarcode(
+    scannedBarcode: string,
+    minScore = 0.65
+  ): Promise<{ product: typeof product.$inferSelect; matchScore: number } | null> {
+    if (!scannedBarcode) return null;
+    const cleanRaw = scannedBarcode.trim();
+    if (!cleanRaw) return null;
+
+    // Fetch all products that have an EAN defined
+    const candidates = await db
+      .select()
+      .from(product)
+      .where(isNotNull(product.ean))
+      .limit(300);
+
+    if (!candidates || candidates.length === 0) return null;
+
+    let bestCandidate: typeof product.$inferSelect | null = null;
+    let highestScore = 0;
+
+    for (const item of candidates) {
+      if (!item.ean) continue;
+      const score = calculateBarcodeSimilarity(cleanRaw, item.ean);
+
+      // We only consider items with score >= minScore (e.g. 0.65)
+      if (score >= minScore) {
+        // Tie-breaker: prioritize items that actually have an image (icon)
+        const currentHasImage = Boolean(item.icon && item.icon.trim().length > 0);
+        const bestHasImage = Boolean(bestCandidate?.icon && bestCandidate.icon.trim().length > 0);
+
+        if (
+          score > highestScore ||
+          (Math.abs(score - highestScore) < 0.03 && currentHasImage && !bestHasImage)
+        ) {
+          highestScore = score;
+          bestCandidate = item;
+        }
+      }
+    }
+
+    if (bestCandidate && highestScore >= minScore) {
+      return {
+        product: bestCandidate,
+        matchScore: Number(highestScore.toFixed(2)),
+      };
+    }
+
+    return null;
+  }
+
+  async getProductById(id: number) {
+    const result = await db.select().from(product).where(eq(product.id, id)).limit(1);
+    return result[0] || null;
+  }
+
+  async searchProducts(params: {
+    search?: string | undefined;
+    category?: string | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+    sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+    radius?: number | undefined;
+    onlyPromotions?: boolean | undefined;
+  }) {
+    const {
+      search,
+      category,
+      limit = 20,
+      offset = 0,
+      sortBy = "id",
+      sortOrder = "desc",
+      latitude,
+      longitude,
+      radius = 15000,
+      onlyPromotions = false,
+    } = params;
+
+    // 1. Spatial Proximity Query when coordinates are provided
+    if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+      const nearbyResults = await this.searchProductsNearby({
+        latitude,
+        longitude,
+        radius,
+        search,
+        category,
+        limit,
+        offset,
+        sortBy,
+        sortOrder,
+        onlyPromotions,
+      });
+
+      // If nearby items found, return them directly
+      if (nearbyResults && nearbyResults.length > 0) {
+        return nearbyResults;
+      }
+    }
+
+    // 2. Standard Catalog Query Fallback (when no coordinates or no nearby occurrences found)
+    const conditions = [];
+
+    if (search && search.trim().length > 0) {
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      const digitsOnly = cleanSearch.replace(/\D/g, "");
+      const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+      const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+      const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
+
+      const searchConditions = [
+        ilike(product.name, term),
+        ilike(product.ean, term),
+        eq(product.ean, cleanSearch),
+      ];
+
+      if (digitsOnly) searchConditions.push(eq(product.ean, digitsOnly), ilike(product.ean, `%${digitsOnly}%`));
+      if (digitsWithoutZero) searchConditions.push(eq(product.ean, digitsWithoutZero));
+      if (pad13) searchConditions.push(eq(product.ean, pad13));
+      if (pad14) searchConditions.push(eq(product.ean, pad14));
+
+      conditions.push(or(...searchConditions));
+    }
+
+    if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        const matchConditions = [
+          ilike(product.description, `%${matched.name}%`),
+          ilike(product.description, `%${matched.id}%`),
+          ilike(product.description, `%${cleanCat}%`),
+        ];
+        if (matched.aliases) {
+          for (const alias of matched.aliases) {
+            matchConditions.push(ilike(product.description, `%${alias}%`));
+          }
+        }
+        conditions.push(or(...matchConditions));
+      } else {
+        conditions.push(ilike(product.description, `%${cleanCat}%`));
+      }
+    }
+
+    let query = db.select().from(product);
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    const sortCol = sortBy === "name" ? product.name : sortBy === "createdAt" ? product.createdAt : product.id;
+    const orderFn = sortOrder === "asc" ? asc : desc;
+
+    const items = await query.orderBy(orderFn(sortCol)).limit(limit).offset(offset);
+    return items;
+  }
+
+  async searchProductsNearby(params: {
+    latitude: number;
+    longitude: number;
+    radius?: number;
+    search?: string | undefined;
+    category?: string | undefined;
+    limit?: number | undefined;
+    offset?: number | undefined;
+    sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
+    sortOrder?: "asc" | "desc" | undefined;
+    onlyPromotions?: boolean | undefined;
+  }) {
+    const {
+      latitude,
+      longitude,
+      radius = 15000,
+      search,
+      category,
+      limit = 20,
+      offset = 0,
+      sortBy = "id",
+      sortOrder = "desc",
+      onlyPromotions = false,
+    } = params;
+
+    const wktPoint = `POINT(${longitude} ${latitude})`;
+
+    // Construct search & category SQL fragments safely
+    const filterClauses: any[] = [sql`1=1`];
+
+    if (search && search.trim().length > 0) {
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      filterClauses.push(sql`(p.name ILIKE ${term} OR p.ean ILIKE ${term} OR p.ean = ${cleanSearch})`);
+    }
+
+    if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        const matchTerms = [matched.name, matched.id, cleanCat, ...(matched.aliases || [])];
+        const subConditions = matchTerms.map(
+          (t) => sql`p.description ILIKE ${`%${t}%`}`
+        );
+        filterClauses.push(sql`(${sql.join(subConditions, sql` OR `)})`);
+      } else {
+        filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
+      }
+    }
+
+    if (onlyPromotions) {
+      filterClauses.push(sql`ps.is_promotion = TRUE`);
+    }
+
+    // Determine ordering clause
+    let orderSql = sql`
+      ps.is_promotion DESC,
+      (ps.min_distance_meters IS NULL) ASC,
+      ps.min_distance_meters ASC,
+      p.id DESC
+    `;
+
+    if (sortBy === "distance") {
+      orderSql = sortOrder === "asc"
+        ? sql`(ps.min_distance_meters IS NULL) ASC, ps.min_distance_meters ASC, ps.min_price ASC`
+        : sql`(ps.min_distance_meters IS NULL) ASC, ps.min_distance_meters DESC, ps.min_price ASC`;
+    } else if (sortBy === "price") {
+      orderSql = sortOrder === "asc"
+        ? sql`(ps.min_price IS NULL) ASC, ps.min_price ASC, ps.min_distance_meters ASC`
+        : sql`(ps.min_price IS NULL) ASC, ps.min_price DESC, ps.min_distance_meters ASC`;
+    } else if (sortBy === "discount") {
+      orderSql = sql`ps.discount_percentage DESC, ps.min_price ASC`;
+    } else if (sortBy === "name") {
+      orderSql = sortOrder === "asc" ? sql`p.name ASC` : sql`p.name DESC`;
+    } else if (sortBy === "createdAt") {
+      orderSql = sortOrder === "asc" ? sql`p.created_at ASC` : sql`p.created_at DESC`;
+    }
+
+    const query = sql`
+      WITH product_stats AS (
+        SELECT 
+          p.id AS product_id,
+          MIN(loc_occ.value::numeric) AS min_price,
+          MAX(loc_occ.value::numeric) AS max_price,
+          AVG(loc_occ.value::numeric) AS avg_price,
+          COUNT(loc_occ.id)::int AS occurrences_count,
+          MIN(ST_Distance(loc_occ.location, ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
+          (
+            SELECT m2.name 
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_name,
+          (
+            SELECT m3.name
+            FROM ocurrency o3
+            JOIN market m3 ON o3.market_id = m3.id
+            WHERE o3.product_id = p.id
+              AND o3.is_suspended = false
+              AND ST_DWithin(m3.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY o3.value::numeric ASC, ST_Distance(m3.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS best_market_name,
+          CASE 
+            WHEN AVG(loc_occ.value::numeric) > MIN(loc_occ.value::numeric) * 1.04 THEN ROUND(((AVG(loc_occ.value::numeric) - MIN(loc_occ.value::numeric)) / AVG(loc_occ.value::numeric)) * 100)::int
+            ELSE 0 
+          END AS discount_percentage,
+          CASE 
+            WHEN (AVG(loc_occ.value::numeric) >= MIN(loc_occ.value::numeric) * 1.05 AND COUNT(loc_occ.id) >= 1) THEN TRUE
+            ELSE FALSE
+          END AS is_promotion
+        FROM product p
+        LEFT JOIN (
+          SELECT o.id, o.product_id, o.value, m.location
+          FROM ocurrency o
+          JOIN market m ON o.market_id = m.id
+          WHERE o.is_suspended = false
+            AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+        ) loc_occ ON loc_occ.product_id = p.id
+        GROUP BY p.id
+      )
+      SELECT 
+        p.id,
+        p.ean,
+        p.ncm,
+        p.name,
+        p.description,
+        p.icon,
+        p.created_at AS "createdAt",
+        ps.min_price AS "minPriceNumeric",
+        ps.max_price AS "maxPriceNumeric",
+        ps.avg_price AS "avgPriceNumeric",
+        ps.occurrences_count AS "occurrencesCount",
+        ps.min_distance_meters AS "nearestMarketDistance",
+        COALESCE(ps.best_market_name, ps.nearest_market_name) AS "nearestMarketName",
+        ps.discount_percentage AS "discountPercentage",
+        ps.is_promotion AS "isPromotion"
+      FROM product p
+      LEFT JOIN product_stats ps ON ps.product_id = p.id
+      WHERE ${sql.join(filterClauses, sql` AND `)}
+      ORDER BY ${orderSql}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    try {
+      const result = await db.execute(query);
+      const rows = (result.rows || result) as any[];
+      return rows.map((row) => ({
+        id: Number(row.id),
+        ean: row.ean || null,
+        ncm: row.ncm || null,
+        name: String(row.name),
+        description: row.description || null,
+        icon: row.icon || null,
+        createdAt: row.createdAt || new Date().toISOString(),
+        minPriceNumeric: row.minPriceNumeric ? Number(row.minPriceNumeric) : null,
+        maxPriceNumeric: row.maxPriceNumeric ? Number(row.maxPriceNumeric) : null,
+        avgPriceNumeric: row.avgPriceNumeric ? Number(row.avgPriceNumeric) : null,
+        occurrencesCount: Number(row.occurrencesCount || 0),
+        nearestMarketDistance: row.nearestMarketDistance !== null && row.nearestMarketDistance !== undefined ? Math.round(Number(row.nearestMarketDistance)) : null,
+        nearestMarketName: row.nearestMarketName ? String(row.nearestMarketName) : null,
+        discountPercentage: row.discountPercentage ? Number(row.discountPercentage) : 0,
+        isPromotion: Boolean(row.isPromotion),
+      }));
+    } catch (err) {
+      console.warn("[ProductRepository] Erro ao executar busca espacial por proximidade:", err);
+      return [];
+    }
+  }
+
+  async countProducts(params: {
+    search?: string | undefined;
+    category?: string | undefined;
+    latitude?: number | undefined;
+    longitude?: number | undefined;
+    radius?: number | undefined;
+    onlyPromotions?: boolean | undefined;
+  }): Promise<number> {
+    const { search, category, latitude, longitude, radius = 15000, onlyPromotions = false } = params;
+
+    // If coordinates provided, count nearby matching products
+    if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
+      const wktPoint = `POINT(${longitude} ${latitude})`;
+      const filterClauses: any[] = [sql`1=1`];
+
+      if (search && search.trim().length > 0) {
+        const cleanSearch = search.trim();
+        const term = `%${cleanSearch}%`;
+        filterClauses.push(sql`(p.name ILIKE ${term} OR p.ean ILIKE ${term} OR p.ean = ${cleanSearch})`);
+      }
+
+      if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+        const cleanCat = category.trim();
+        const matched = findPredefinedCategory(cleanCat);
+        if (matched) {
+          const matchTerms = [matched.name, matched.id, cleanCat, ...(matched.aliases || [])];
+          const subConditions = matchTerms.map(
+            (t) => sql`p.description ILIKE ${`%${t}%`}`
+          );
+          filterClauses.push(sql`(${sql.join(subConditions, sql` OR `)})`);
+        } else {
+          filterClauses.push(sql`p.description ILIKE ${`%${cleanCat}%`}`);
+        }
+      }
+
+      if (onlyPromotions) {
+        filterClauses.push(sql`ps.is_promotion = TRUE`);
+      }
+
+      const countQuery = sql`
+        WITH product_stats AS (
+          SELECT 
+            p.id AS product_id,
+            MIN(loc_occ.value::numeric) AS min_price,
+            AVG(loc_occ.value::numeric) AS avg_price,
+            COUNT(loc_occ.id)::int AS occurrences_count,
+            CASE 
+              WHEN (AVG(loc_occ.value::numeric) >= MIN(loc_occ.value::numeric) * 1.05 AND COUNT(loc_occ.id) >= 1) THEN TRUE
+              ELSE FALSE
+            END AS is_promotion
+          FROM product p
+          LEFT JOIN (
+            SELECT o.id, o.product_id, o.value, m.location
+            FROM ocurrency o
+            JOIN market m ON o.market_id = m.id
+            WHERE o.is_suspended = false
+              AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+          ) loc_occ ON loc_occ.product_id = p.id
+          GROUP BY p.id
+        )
+        SELECT COUNT(DISTINCT p.id)::int AS count
+        FROM product p
+        LEFT JOIN product_stats ps ON ps.product_id = p.id
+        WHERE ${sql.join(filterClauses, sql` AND `)}
+      `;
+
+      try {
+        const res = await db.execute(countQuery);
+        const rows = (res.rows || res) as any[];
+        const count = Number(rows[0]?.count || 0);
+        if (count > 0) return count;
+      } catch (err) {
+        console.warn("[ProductRepository] Erro ao contar produtos por proximidade:", err);
+      }
+    }
+
+    // Standard count fallback
+    const conditions = [];
+
+    if (search && search.trim().length > 0) {
+      const cleanSearch = search.trim();
+      const term = `%${cleanSearch}%`;
+      const digitsOnly = cleanSearch.replace(/\D/g, "");
+      const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
+      const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+      const pad14 = digitsWithoutZero ? digitsWithoutZero.padStart(14, "0") : "";
+
+      const searchConditions = [
+        ilike(product.name, term),
+        ilike(product.ean, term),
+        eq(product.ean, cleanSearch),
+      ];
+
+      if (digitsOnly) searchConditions.push(eq(product.ean, digitsOnly), ilike(product.ean, `%${digitsOnly}%`));
+      if (digitsWithoutZero) searchConditions.push(eq(product.ean, digitsWithoutZero));
+      if (pad13) searchConditions.push(eq(product.ean, pad13));
+      if (pad14) searchConditions.push(eq(product.ean, pad14));
+
+      conditions.push(or(...searchConditions));
+    }
+
+    if (category && category.trim().length > 0 && category.toLowerCase() !== "todos") {
+      const cleanCat = category.trim();
+      const matched = findPredefinedCategory(cleanCat);
+      if (matched) {
+        const matchConditions = [
+          ilike(product.description, `%${matched.name}%`),
+          ilike(product.description, `%${matched.id}%`),
+          ilike(product.description, `%${cleanCat}%`),
+        ];
+        if (matched.aliases) {
+          for (const alias of matched.aliases) {
+            matchConditions.push(ilike(product.description, `%${alias}%`));
+          }
+        }
+        conditions.push(or(...matchConditions));
+      } else {
+        conditions.push(ilike(product.description, `%${cleanCat}%`));
+      }
+    }
+
+    let query = db.select({ count: sql<number>`count(*)::int` }).from(product);
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
+
+    const res = await query;
+    return Number(res[0]?.count || 0);
+  }
+
+  async createProduct(data: CreateProductDTO) {
+    this.categoryCache = null;
+    const safeName = data.name.trim().slice(0, 195);
+    const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
+      ? data.categories.join(", ")
+      : (data.description || data.category || "");
+    const safeDescription = categoryStr.trim().slice(0, 250);
+
+    const payload: any = {
+      ean: data.ean?.trim() || null,
+      ncm: data.ncm?.trim() || null,
+      name: safeName,
+      description: safeDescription,
+      icon: data.icon?.trim() || "",
+    };
+
+    if (data.createdAt) {
+      const parsedDate = new Date(data.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        payload.createdAt = parsedDate.toISOString();
+      }
+    }
+
+    const result = await db.insert(product).values(payload).returning();
+    return result[0];
+  }
+
+  async updateProduct(id: number, data: UpdateProductDTO) {
+    this.categoryCache = null;
+    const updatePayload: Record<string, any> = {};
+    if (data.name !== undefined) updatePayload.name = data.name;
+    if (data.ean !== undefined) updatePayload.ean = data.ean;
+    if (data.ncm !== undefined) updatePayload.ncm = data.ncm;
+    if (data.categories !== undefined) {
+      updatePayload.description = Array.isArray(data.categories) ? data.categories.join(", ") : data.categories;
+    } else if (data.description !== undefined || data.category !== undefined) {
+      updatePayload.description = data.description ?? data.category;
+    }
+    if (data.icon !== undefined) updatePayload.icon = data.icon;
+    if (data.createdAt !== undefined) {
+      const parsedDate = new Date(data.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        updatePayload.createdAt = parsedDate.toISOString();
+      }
+    }
+
+    const result = await db
+      .update(product)
+      .set(updatePayload)
+      .where(eq(product.id, id))
+      .returning();
+
+    return result[0] || null;
+  }
+
+  async deleteProduct(id: number) {
+    this.categoryCache = null;
+    const res = await db.delete(product).where(eq(product.id, id));
+    return (res.rowCount ?? 0) > 0;
+  }
+
+  async getPredefinedCategories() {
+    return PREDEFINED_PRODUCT_CATEGORIES;
+  }
+
+  async getCategories(): Promise<string[]> {
+    const now = Date.now();
+    if (this.categoryCache && this.categoryCache.expiry > now) {
+      return this.categoryCache.data;
+    }
+
+    const rows = await db
+      .select({ category: product.description })
+      .from(product)
+      .where(sql`${product.description} IS NOT NULL AND ${product.description} != ''`)
+      .groupBy(product.description);
+
+    const categoriesSet = new Set<string>(PREDEFINED_CATEGORY_NAMES);
+    for (const r of rows) {
+      if (r.category) {
+        const parts = r.category.split(",");
+        for (const p of parts) {
+          const trimmed = p.trim();
+          if (
+            trimmed &&
+            trimmed !== "Categoria Indisponível" &&
+            trimmed !== "Sem Categoria" &&
+            trimmed !== "Geral"
+          ) {
+            const matched = findPredefinedCategory(trimmed);
+            if (matched) {
+              categoriesSet.add(matched.name);
+            }
+          }
+        }
+      }
+    }
+    const resultList = Array.from(categoriesSet);
+    this.categoryCache = { data: resultList, expiry: now + 5 * 60 * 1000 };
+    return resultList;
+  }
+
+  async getLatestPriceForProduct(productId: number): Promise<string | null> {
+    const result = await db
+      .select({ value: ocurrency.value })
+      .from(ocurrency)
+      .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)))
+      .orderBy(desc(ocurrency.createdAt))
+      .limit(1);
+
+    if (!result[0]?.value) return null;
+    return `R$ ${Number(result[0].value).toFixed(2).replace(".", ",")}`;
+  }
+
+  async getLatestPricesForProductIds(productIds: number[]): Promise<Map<number, string>> {
+    if (!productIds || productIds.length === 0) return new Map();
+
+    const rows = await db
+      .select({
+        productId: ocurrency.productId,
+        value: ocurrency.value,
+      })
+      .from(ocurrency)
+      .where(
+        and(
+          inArray(ocurrency.productId, productIds),
+          eq(ocurrency.isSuspended, false)
+        )
+      )
+      .orderBy(desc(ocurrency.createdAt));
+
+    const priceMap = new Map<number, string>();
+    for (const row of rows) {
+      if (row.productId && !priceMap.has(row.productId) && row.value) {
+        const num = Number(row.value);
+        priceMap.set(row.productId, `R$ ${num.toFixed(2).replace(".", ",")}`);
+      }
+    }
+
+    return priceMap;
+  }
+
+  async getPriceStats(productId: number) {
+    // 1. Fetch 5 most recent active price records for calculating 5-last average
+    const recentOccurrences = await db
+      .select({
+        value: ocurrency.value,
+      })
+      .from(ocurrency)
+      .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)))
+      .orderBy(desc(ocurrency.createdAt))
+      .limit(5);
+
+    // 2. Fetch min, max and total count for the product
+    const globalRes = await db
+      .select({
+        minPrice: sql<string | null>`min(${ocurrency.value})`,
+        maxPrice: sql<string | null>`max(${ocurrency.value})`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(ocurrency)
+      .where(and(eq(ocurrency.productId, productId), eq(ocurrency.isSuspended, false)));
+
+    const globalRow = globalRes[0];
+    if (!globalRow || !globalRow.count || recentOccurrences.length === 0) {
+      return {
+        minPrice: null,
+        maxPrice: null,
+        avgPrice: null,
+        count: 0,
+      };
+    }
+
+    const recentValues = recentOccurrences
+      .map((r) => Number(r.value))
+      .filter((v) => !isNaN(v) && v > 0);
+
+    const avg5Recent =
+      recentValues.length > 0
+        ? recentValues.reduce((sum, val) => sum + val, 0) / recentValues.length
+        : null;
+
+    return {
+      minPrice: globalRow.minPrice ? `R$ ${Number(globalRow.minPrice).toFixed(2).replace(".", ",")}` : null,
+      maxPrice: globalRow.maxPrice ? `R$ ${Number(globalRow.maxPrice).toFixed(2).replace(".", ",")}` : null,
+      avgPrice: avg5Recent !== null ? `R$ ${avg5Recent.toFixed(2).replace(".", ",")}` : null,
+      count: Number(globalRow.count),
+    };
+  }
+
+  async getPriceHistory(productId: number, limit: number = 15, since?: Date): Promise<PriceHistoryItem[]> {
+    const conditions = [
+      eq(ocurrency.productId, productId),
+      eq(ocurrency.isSuspended, false),
+    ];
+
+    if (since) {
+      conditions.push(gte(ocurrency.createdAt, since.toISOString()));
+    }
+
+    const res = await db
+      .select({
+        id: ocurrency.id,
+        value: ocurrency.value,
+        marketId: ocurrency.marketId,
+        marketName: market.name,
+        createdAt: ocurrency.createdAt,
+      })
+      .from(ocurrency)
+      .leftJoin(market, eq(ocurrency.marketId, market.id))
+      .where(and(...conditions))
+      .orderBy(desc(ocurrency.createdAt))
+      .limit(limit);
+
+    // Sort ascending chronologically so the timeline flows left-to-right (past to present)
+    const sorted = [...res].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+
+    return sorted.map((r) => {
+      const numVal = Number(r.value);
+      let isoCreatedAt = new Date().toISOString();
+      if (r.createdAt) {
+        const parsed = new Date(r.createdAt);
+        if (!isNaN(parsed.getTime())) {
+          isoCreatedAt = parsed.toISOString();
+        }
+      }
+      return {
+        id: r.id,
+        value: numVal,
+        formattedValue: `R$ ${numVal.toFixed(2).replace(".", ",")}`,
+        marketId: r.marketId,
+        marketName: r.marketName || "Mercado não identificado",
+        createdAt: isoCreatedAt,
+      };
+    });
+  }
+
+  async createReport(userId: number, productId: number, reason: string, description?: string) {
+    const [created] = await db
+      .insert(productReport)
+      .values({
+        userId,
+        productId,
+        reason,
+        description: description || null,
+      })
+      .returning();
+
+    return created;
+  }
+}
+
+export const ProductRepository = new ProductRepositoryClass();
+
+

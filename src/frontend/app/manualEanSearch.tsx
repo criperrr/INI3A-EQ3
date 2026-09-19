@@ -1,0 +1,184 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  TouchableWithoutFeedback
+} from "react-native";
+import { useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useTheme } from "../theme";
+import { useI18n } from "../content/i18nContext";
+import { fetchProductByEan } from "../services/productService";
+
+export default function ManualEanSearch() {
+  const [ean, setEan] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { themeStyles, accent, isDark } = useTheme();
+  const { t } = useI18n();
+
+  const handleSearch = async () => {
+    const trimmedEan = ean.trim();
+    if (!trimmedEan) {
+      Alert.alert(t("common.warning"), t("scanner.alignBarcode"));
+      return;
+    }
+
+    setLoading(true);
+
+    const showNotFoundAlert = () => {
+      Alert.alert(
+        t("scanner.productNotFoundTitle"),
+        t("scanner.productNotFoundManualMessage"),
+        [
+          { text: t("scanner.actionTypeBarcode"), style: "cancel" },
+          {
+            text: t("scanner.actionScanCamera"),
+            onPress: () => {
+              router.push("/scannerProduct");
+            },
+          },
+          {
+            text: t("scanner.actionRegisterProduct"),
+            onPress: () => {
+              router.push({
+                pathname: "/customRegisterProduct",
+                params: { ean: trimmedEan },
+              });
+            },
+          },
+        ]
+      );
+    };
+
+    try {
+      const product = await fetchProductByEan(trimmedEan);
+      setLoading(false);
+
+      if (!product) {
+        showNotFoundAlert();
+        return;
+      }
+
+      router.push({
+        pathname: "/scannerConfirmation",
+        params: {
+          id: product.id ? String(product.id) : undefined,
+          category: product?.category || t("common.uncategorized"),
+          name: product?.name || t("scanner.productNotFoundTitle"),
+          imageUri: product?.imageUri || product?.icon || undefined,
+          barcode: product?.barcode || trimmedEan,
+          ean: product?.ean || trimmedEan,
+          matchScore: product.matchScore !== undefined && product.matchScore !== null ? String(product.matchScore) : undefined,
+          isExactMatch: product.isExactMatch !== undefined && product.isExactMatch !== null ? String(product.isExactMatch) : undefined,
+          scannedEan: product.scannedEan || trimmedEan,
+        },
+      });
+    } catch (error: any) {
+      setLoading(false);
+
+      const isNotFound =
+        error?.status === 404 ||
+        error?.code === "PRODUCT_NOT_FOUND" ||
+        error?.code === "NOT_FOUND" ||
+        String(error?.message).toLowerCase().includes("não encontrado");
+
+      if (isNotFound) {
+        showNotFoundAlert();
+        return;
+      }
+
+      Alert.alert(t("common.error"), error.message || t("errors.networkError"));
+    }
+  };
+
+  return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, themeStyles.bg]}>
+        <View style={styles.content}>
+        <Ionicons name="barcode-outline" size={80} color={accent} style={styles.icon} />
+        <Text style={[styles.title, themeStyles.text]} numberOfLines={2}>{t("scanner.manualSearchTitle")}</Text>
+        <Text style={[styles.subtitle, themeStyles.subText]} numberOfLines={3}>
+          {t("scanner.manualSearchSubtitle")}
+        </Text>
+
+        <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
+          <TextInput
+            style={[styles.input, themeStyles.text]}
+            placeholder={t("scanner.manualSearchPlaceholder")}
+            placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
+            keyboardType="numeric"
+            value={ean}
+            onChangeText={setEan}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: accent }]}
+          activeOpacity={0.8}
+          onPress={handleSearch}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#FFF" />
+          ) : (
+            <Text style={styles.buttonText} numberOfLines={1} ellipsizeMode="tail">
+              {t("scanner.searchProductBtn")}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+    </TouchableWithoutFeedback>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  icon: { marginBottom: 16 },
+  title: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+  },
+  inputContainer: {
+    width: "100%",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  input: {
+    height: 56,
+    fontSize: 18,
+  },
+  button: {
+    width: "100%",
+    height: 56,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#FFF",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});

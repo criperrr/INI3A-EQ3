@@ -1,0 +1,8 @@
+{
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.value": 4,
+  "workbench.editor.limit.perEditorGroup": true,
+  "workbench.editor.limit.excludeDirty": true,
+  "workbench.editor.enablePreview": true,
+  "workbench.editor.closeOnFileDelete": true
+}

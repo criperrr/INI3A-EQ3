@@ -1,165 +1,2083 @@
-import React from "react";
-import { View, StyleSheet, Text, ScrollView } from "react-native";
-import ProductCard from "../components/productCard";
-import { useTheme } from "../content/themeContent";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  StyleSheet,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
+import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import { Image } from "expo-image";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Haptics from "expo-haptics";
+import { useTheme } from "../theme";
+import { useAuth } from "../content/authContext";
+import { useI18n } from "../content/i18nContext";
+import {
+  fetchProductById,
+  fetchProductByEan,
+  fetchPriceHistory,
+  updateProduct,
+  deleteProduct,
+  reportProduct,
+  ProductDetailData,
+  PriceHistoryItem,
+} from "../services/productService";
+import {
+  fetchProductOccurrences,
+  voteOccurrence,
+  deleteOccurrence,
+  PriceOccurrence,
+} from "../services/ocurrencyService";
+import { getUserLocation } from "../utils/userLocation";
+import CategorySelector from "../components/CategorySelector";
+import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import {
+  formatDisplayDate,
+  formatFullDisplayDate,
+  formatShortDate,
+  parseDateSafeMs,
+} from "../utils/dateUtils";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
-const COLORS = {
-  chartGreen: "#3E6B42",
-};
 
-const MOCK_PRODUCT = {
-  category: "Produto",
-  name: "Cebola Granel 1kg",
-  imageUrl:
-    "https://www.confianca.com.br/ccstore/v1/images/?source=/file/v484523792576810974/products/1144880.1.jpg&height=940&width=940",
-  lastPrice: "R$ 7,75",
-  pricePerUnit: "R$ 7,75 kg",
-};
-
-const MOCK_PRICE_HISTORY = [45, 30, 55, 40, 35, 42, 48, 65, 50, 32, 40, 52];
+const EMPTY_HISTORY: PriceHistoryItem[] = [];
 
 export default function ProductDetails() {
-  const { themeStyles, isDark } = useTheme();
+  const params = useLocalSearchParams<{
+    id?: string;
+    barcode?: string;
+    ean?: string;
+    name?: string;
+    category?: string;
+    imageUri?: string;
+    lastPrice?: string;
+  }>();
+
+  const router = useRouter();
+  const { themeStyles, accent, tokens } = useTheme();
+  const { semantic } = tokens;
+  const { isAdmin, user, isAuthenticated, loginAsTestUser, refreshProfile } = useAuth();
+  const { t, language } = useI18n();
+
+  const [product, setProduct] = useState<ProductDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [occurrences, setOccurrences] = useState<PriceOccurrence[]>([]);
+  const [loadingOccurrences, setLoadingOccurrences] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editCategories, setEditCategories] = useState<string[]>([]);
+  const [editEan, setEditEan] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [selectedReportReason, setSelectedReportReason] = useState<string>("price");
+  const [reportDescription, setReportDescription] = useState("");
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
+
+  const targetId = params.id ? Number(params.id) : null;
+  const targetBarcode = params.barcode || params.ean;
+
+  const productCategories: string[] = React.useMemo(() => {
+    if (product?.categories && product.categories.length > 0) {
+      return product.categories;
+    }
+    if (product?.category) {
+      return product.category.split(",").map((c) => c.trim()).filter(Boolean);
+    }
+    return [];
+  }, [product]);
+
+  const loadOccurrences = useCallback(async (productId: number) => {
+    setLoadingOccurrences(true);
+    try {
+      const list = await fetchProductOccurrences(productId);
+      setOccurrences(list);
+    } catch {
+      // Occurrences error handled gracefully
+    } finally {
+      setLoadingOccurrences(false);
+    }
+  }, []);
+
+  const loadProductData = useCallback(async () => {
+    // Immediate pre-population from route params for zero-latency initial paint
+    if (params.name) {
+      setProduct((prev) => {
+        if (prev) return prev;
+        return {
+          id: targetId || undefined,
+          barcode: targetBarcode || "",
+          name: params.name || "",
+          category: params.category || t("common.uncategorized"),
+          imageUri: params.imageUri || null,
+          lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
+          priceHistory: [],
+        };
+      });
+      setEditName((prev) => prev || params.name || "");
+      setEditCategory((prev) => prev || params.category || "");
+      setEditEan((prev) => prev || targetBarcode || "");
+    }
+
+    setLoading(true);
+    try {
+      let data: ProductDetailData | null = null;
+
+      const coords = await getUserLocation().catch(() => null);
+      const coordParams = coords ? { latitude: coords.latitude, longitude: coords.longitude } : undefined;
+
+      if (targetId && !isNaN(targetId) && targetId > 0) {
+        // Parallel fetch for product details and occurrences
+        setLoadingOccurrences(true);
+        const [productData, occurrencesList] = await Promise.all([
+          fetchProductById(targetId),
+          fetchProductOccurrences(targetId, coordParams).catch(() => []),
+        ]);
+        data = productData;
+        setOccurrences(occurrencesList);
+        setLoadingOccurrences(false);
+      } else if (targetBarcode) {
+        const byBarcode = await fetchProductByEan(targetBarcode);
+        if (byBarcode) {
+          data = {
+            ...byBarcode,
+            priceHistory: [],
+          };
+          if (byBarcode.id) {
+            setLoadingOccurrences(true);
+            const [fullDetails, occurrencesList] = await Promise.all([
+              fetchProductById(byBarcode.id).catch(() => byBarcode),
+              fetchProductOccurrences(byBarcode.id, coordParams).catch(() => []),
+            ]);
+            if (fullDetails) data = fullDetails;
+            setOccurrences(occurrencesList);
+            setLoadingOccurrences(false);
+          }
+        }
+      }
+
+      if (data) {
+        setProduct(data);
+        setEditName(data.name || "");
+        setEditCategory(data.category || "");
+        setEditEan(data.barcode || data.ean || "");
+      } else if (params.name) {
+        const fallbackData: ProductDetailData = {
+          id: targetId || undefined,
+          barcode: targetBarcode || "",
+          name: params.name,
+          category: params.category || "Sem Categoria",
+          imageUri: params.imageUri || null,
+          lastPrice: params.lastPrice || "Preço não informado",
+          priceHistory: [],
+        };
+        setProduct(fallbackData);
+        setEditName(params.name);
+        setEditCategory(params.category || "");
+        setEditEan(targetBarcode || "");
+      }
+    } catch (err) {
+      console.error("[ProductDetails] Error loading details:", err);
+    } finally {
+      setLoading(false);
+      setLoadingOccurrences(false);
+    }
+  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, t]);
+
+  useEffect(() => {
+    loadProductData();
+  }, [loadProductData]);
+
+  useEffect(() => {
+    if (!user?.id || occurrences.length === 0) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    const checkCooldown = () => {
+      const currentUserId = Number(user.id);
+      const userRecentOcc = occurrences.find((occ) => {
+        if (Number(occ.userId) !== currentUserId) return false;
+        const createdMs = parseDateSafeMs(occ.createdAt);
+        if (!createdMs) return false;
+        const diff = Date.now() - createdMs;
+        return diff >= 0 && diff < 5 * 60 * 1000;
+      });
+
+      if (userRecentOcc) {
+        const createdMs = parseDateSafeMs(userRecentOcc.createdAt);
+        const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
+        setCooldownRemainingSeconds(remaining);
+      } else {
+        setCooldownRemainingSeconds(0);
+      }
+    };
+
+    checkCooldown();
+    const interval = setInterval(checkCooldown, 1000);
+    return () => clearInterval(interval);
+  }, [user?.id, occurrences]);
+
+  const isCooldownActive = cooldownRemainingSeconds > 0;
+
+  const formatCooldownTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  const handleRegisterPrice = () => {
+    if (isCooldownActive) {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } catch {}
+      Alert.alert(
+        t("common.warning"),
+        t("products.cooldownError") || "Você já enviou um preço para este produto recentemente. Aguarde 5 minutos antes de enviar novamente.",
+      );
+      return;
+    }
+
+    router.push({
+      pathname: "/registerProduct",
+      params: {
+        id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
+        barcode: product?.barcode || targetBarcode,
+        ean: product?.ean || product?.barcode || targetBarcode,
+        name: product?.name || params.name,
+        category: product?.category || params.category,
+        imageUri: product?.imageUri || params.imageUri,
+        lastPrice: product?.lastPrice || params.lastPrice,
+      },
+    });
+  };
+
+  const handleVote = async (occId: number, verdict: boolean) => {
+    if (!isAuthenticated && !user) {
+      Alert.alert(
+        t("auth.loginRequired"),
+        t("auth.loginToVote"),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("auth.quickConnect"),
+            onPress: async () => {
+              try {
+                await loginAsTestUser("user");
+                await handleVote(occId, verdict);
+              } catch (err: any) {
+                Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              }
+            },
+          },
+          {
+            text: t("navigation.login"),
+            onPress: () => router.push("/login"),
+          },
+        ]
+      );
+      return;
+    }
+
+    const occ = occurrences.find((o) => o.id === occId);
+
+    // Prevent voting on user's own price occurrence
+    if (occ && user?.id && occ.userId === user.id) {
+      Alert.alert(
+        t("common.warning"),
+        t("productDetails.cannotVoteOwnPrice"),
+      );
+      return;
+    }
+
+    try {
+      const result = await voteOccurrence(occId, verdict);
+
+      // Display appropriate feedback based on vote action
+      if (result.removed) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.voteRemoved"),
+        );
+      } else if (result.isNewVote) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.votedSuccess"),
+        );
+      } else if (result.changed) {
+        Alert.alert(
+          t("common.success"),
+          t("productDetails.voteUpdated"),
+        );
+      }
+
+      if (product?.id) loadOccurrences(product.id);
+      refreshProfile();
+    } catch (err: any) {
+      const isAuthError =
+        err?.status === 401 ||
+        err?.code === "UNAUTHORIZED" ||
+        String(err?.message).toLowerCase().includes("token") ||
+        String(err?.message).toLowerCase().includes("autentica");
+
+      if (isAuthError) {
+        Alert.alert(
+          t("auth.loginRequired"),
+          t("auth.loginToVote"),
+          [
+            { text: t("common.cancel"), style: "cancel" },
+            {
+              text: t("auth.quickConnect"),
+              onPress: async () => {
+                try {
+                  await loginAsTestUser("user");
+                  await handleVote(occId, verdict);
+                } catch (e: any) {
+                  Alert.alert(t("common.error"), e?.message || t("errors.genericError"));
+                }
+              },
+            },
+            {
+              text: t("navigation.login"),
+              onPress: () => router.push("/login"),
+            },
+          ]
+        );
+        return;
+      }
+
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+    }
+  };
+
+  const handleDeleteOccurrence = (occId: number) => {
+    Alert.alert(
+      t("common.delete"),
+      t("productDetails.deleteOccurrenceConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteOccurrence(occId);
+              Alert.alert(t("common.success"), t("common.success"));
+              if (product?.id) {
+                loadOccurrences(product.id);
+                loadProductData();
+              }
+            } catch (err: any) {
+              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleOpenEdit = () => {
+    if (!product) return;
+    setEditName(product.name || "");
+    const cats = product.categories && product.categories.length > 0
+      ? product.categories
+      : product.category
+      ? product.category.split(",").map((c) => c.trim()).filter(Boolean)
+      : [];
+    setEditCategories(cats);
+    setEditCategory(product.category || (cats.length > 0 ? cats.join(", ") : ""));
+    setEditEan(product.barcode || product.ean || "");
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim()) {
+      Alert.alert(t("common.warning"), t("auth.nameRequired"));
+      return;
+    }
+
+    if (!product?.id) {
+      Alert.alert(t("common.error"), t("errors.notFound"));
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const selectedCats = editCategories.length > 0
+        ? editCategories
+        : editCategory.trim()
+        ? [editCategory.trim()]
+        : [];
+
+      const updated = await updateProduct(product.id, {
+        name: editName.trim(),
+        category: selectedCats.join(", "),
+        categories: selectedCats,
+        ean: editEan.trim() || undefined,
+      });
+
+      setProduct((prev) => (prev ? { ...prev, ...updated } : updated));
+      setIsEditModalVisible(false);
+      Alert.alert(t("common.success"), t("common.success"));
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeleteProduct = () => {
+    if (!product?.id) {
+      Alert.alert(t("common.warning"), t("errors.notFound"));
+      return;
+    }
+
+    Alert.alert(
+      t("productDetails.deleteProduct"),
+      t("productDetails.deleteProductConfirm"),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("common.delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteProduct(product.id!);
+              Alert.alert(t("common.success"), t("common.success"), [
+                {
+                  text: t("common.ok"),
+                  onPress: () => router.back(),
+                },
+              ]);
+            } catch (err: any) {
+              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const reportReasons = [
+    { key: "price", label: t("productDetails.reportReasonPrice") },
+    { key: "info", label: t("productDetails.reportReasonInfo") },
+    { key: "duplicate", label: t("productDetails.reportReasonDuplicate") },
+    { key: "inappropriate", label: t("productDetails.reportReasonInappropriate") },
+    { key: "other", label: t("productDetails.reportReasonOther") },
+  ];
+
+  const handleOpenReport = () => {
+    if (!product?.id) {
+      Alert.alert(t("common.warning"), t("errors.notFound"));
+      return;
+    }
+    setSelectedReportReason("price");
+    setReportDescription("");
+    setIsReportModalVisible(true);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  };
+
+  const handleSelectReason = (key: string) => {
+    setSelectedReportReason(key);
+    try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {}
+  };
+
+  const submitReportExecution = async () => {
+    if (!product?.id) return;
+    setSubmittingReport(true);
+    try {
+      const selectedReasonObj = reportReasons.find((r) => r.key === selectedReportReason);
+      const reasonLabel = selectedReasonObj ? selectedReasonObj.label : selectedReportReason;
+
+      await reportProduct(product.id, {
+        reason: reasonLabel,
+        description: reportDescription.trim() || undefined,
+      });
+
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+
+      setIsReportModalVisible(false);
+      Alert.alert(t("common.success"), t("productDetails.reportSuccess"));
+    } catch (err: any) {
+      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+    } finally {
+      setSubmittingReport(false);
+    }
+  };
+
+  const handleSendReport = async () => {
+    if (!product?.id) return;
+
+    if (!isAuthenticated) {
+      Alert.alert(
+        t("auth.loginRequired"),
+        t("auth.loginToVote") || "Você precisa estar conectado para realizar esta ação.",
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("auth.quickConnect") || "Entrar como Teste",
+            onPress: async () => {
+              setSubmittingReport(true);
+              try {
+                await loginAsTestUser("user");
+                await submitReportExecution();
+              } catch (err: any) {
+                Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+              } finally {
+                setSubmittingReport(false);
+              }
+            },
+          },
+          {
+            text: t("navigation.login"),
+            onPress: () => router.push("/login"),
+          },
+        ],
+      );
+      return;
+    }
+
+    await submitReportExecution();
+  };
+
+
+  if (loading && !product) {
+    return (
+      <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
+        <ActivityIndicator size="large" color={accent} />
+        <Text style={[styles.loadingText, themeStyles.subText]}>{t("common.loading")}</Text>
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
+        <Ionicons name="alert-circle-outline" size={64} color={accent} />
+        <Text style={[styles.errorTitle, themeStyles.text]}>{t("search.noResults")}</Text>
+        <TouchableOpacity
+          style={[styles.backBtn, { backgroundColor: accent }]}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backBtnText}>{t("common.back")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const imageUri = getOptimizedImageUrl(product.imageUri || product.icon, 400);
+  const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.cardWrapper}>
-          <ProductCard
-            category={MOCK_PRODUCT.category}
-            name={MOCK_PRODUCT.name}
-            imageUri={MOCK_PRODUCT.imageUrl}
-          >
-            <PriceDetails themeStyles={themeStyles} />
-            <PriceChart themeStyles={themeStyles} isDark={isDark} />
-          </ProductCard>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Main Card Header */}
+        <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
+          <View style={styles.topHeaderControlsRow}>
+            {isAdmin ? (
+              <View style={styles.adminTagBadge}>
+                <Ionicons name="shield-checkmark" size={14} color={semantic.colors.text.inverse} />
+                <Text style={styles.adminTagText} numberOfLines={1} ellipsizeMode="tail">
+                  {t("productDetails.adminActions").toUpperCase()}
+                </Text>
+              </View>
+            ) : (
+              <View />
+            )}
+
+            {Boolean(product.id) && (
+              <TouchableOpacity
+                style={[styles.reportHeaderBtn, themeStyles.inputBg, themeStyles.border]}
+                activeOpacity={0.75}
+                onPress={handleOpenReport}
+              >
+                <Ionicons name="flag-outline" size={13} color={semantic.colors.feedback.error} />
+                <Text style={[styles.reportHeaderBtnText, { color: semantic.colors.feedback.error }]}>
+                  {t("productDetails.reportProduct") || "Reportar"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={[styles.imageWrapper, themeStyles.inputBg]}>
+            {imageUri ? (
+              <Image
+                source={{ uri: imageUri }}
+                style={styles.productImage}
+                contentFit="contain"
+                cachePolicy="memory-disk"
+                recyclingKey={imageUri}
+                transition={150}
+              />
+            ) : (
+              <Ionicons name="cube-outline" size={60} color={accent} />
+            )}
+            {productCategories.length > 0 ? (
+              <View style={styles.categoriesBadgeContainer}>
+                {productCategories.slice(0, 2).map((cat, idx) => (
+                  <View key={`${cat}-${idx}`} style={[styles.categoryBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(cat)}</Text>
+                    <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
+                      {getLocalizedCategoryName(cat, t).toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+                {productCategories.length > 2 && (
+                  <View style={[styles.categoryBadge, styles.moreCategoryBadge, themeStyles.card, themeStyles.border]}>
+                    <Text style={[styles.moreCategoryBadgeText, themeStyles.text]}>
+                      +{productCategories.length - 2}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={[styles.productName, themeStyles.text]}>{product.name}</Text>
+
+          {/* Product Meta Row: Brand, Barcode, Creation Date */}
+          <View style={styles.metaRow}>
+            {Boolean(product.brand) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="pricetag-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>{product.brand}</Text>
+              </View>
+            )}
+
+            {Boolean(product.barcode) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="barcode-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>{product.barcode}</Text>
+              </View>
+            )}
+
+            {Boolean(product.createdAt) && (
+              <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="calendar-outline" size={12} color={semantic.colors.text.secondary} />
+                <Text style={[styles.metaChipText, themeStyles.subText]}>
+                  {`${t("productDetails.registeredAt") || "Cadastrado em"}: ${formatDisplayDate(product.createdAt, language)}`}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={[styles.divider, { backgroundColor: semantic.colors.border.divider || semantic.colors.border.default }]} />
+
+          {/* Last Price Highlight */}
+          <View style={styles.priceHighlightBox}>
+            <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
+            <Text style={[styles.lastPriceValue, { color: accent }]}>
+              {product.lastPrice || t("productDetails.noOccurrences")}
+            </Text>
+          </View>
+
+          {/* Price Statistics Grid */}
+          {Boolean(product.minPrice || product.maxPrice || product.avgPrice) ? (
+            <View style={styles.statsRow}>
+              {Boolean(product.minPrice) ? (
+                <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
+                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.lowestPrice")}</Text>
+                  <Text style={[styles.statValue, themeStyles.text]}>{product.minPrice}</Text>
+                </View>
+              ) : null}
+              {Boolean(product.avgPrice) ? (
+                <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
+                  <View style={styles.statLabelHeader}>
+                    <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>
+                      {t("productDetails.avgPriceLast5") || t("productDetails.averagePrice")}
+                    </Text>
+                  </View>
+                  <Text style={[styles.statValue, themeStyles.text]}>{product.avgPrice}</Text>
+                </View>
+              ) : null}
+              {Boolean(product.maxPrice) ? (
+                <View style={[styles.statItem, themeStyles.inputBg, themeStyles.border]}>
+                  <Text style={[styles.statLabel, themeStyles.subText]} numberOfLines={2}>{t("productDetails.highestPrice")}</Text>
+                  <Text style={[styles.statValue, themeStyles.text]}>{product.maxPrice}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* Price History Chart */}
+          <PriceHistorySection
+            productId={product.id || (targetId ? targetId : undefined)}
+            history={history}
+            accent={accent}
+            themeStyles={themeStyles}
+            t={t}
+            language={language}
+          />
+
+          {/* Market Occurrences List */}
+          <View style={[styles.occurrencesSection, themeStyles.card, themeStyles.border]}>
+            <View style={styles.occurrencesHeaderRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1, marginRight: 8 }}>
+                <Ionicons name="storefront-outline" size={18} color={accent} />
+                <Text style={[styles.occurrencesTitle, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                  {t("productDetails.marketPrices")}
+                </Text>
+              </View>
+              <Text style={[styles.occurrencesCountText, { color: accent }]} numberOfLines={1}>
+                {occurrences.length} {t("common.details").toLowerCase()}
+              </Text>
+            </View>
+
+            {loadingOccurrences ? (
+              <ActivityIndicator size="small" color={accent} style={{ marginVertical: 12 }} />
+            ) : occurrences.length === 0 ? (
+              <View style={styles.noOccurrencesBox}>
+                <Text style={[styles.noOccurrencesText, themeStyles.subText]}>
+                  {t("productDetails.noOccurrences")}
+                </Text>
+                <Text style={[styles.noOccurrencesSub, themeStyles.subText]}>
+                  {t("productDetails.noOccurrencesSubtitle")}
+                </Text>
+              </View>
+            ) : (
+              occurrences.map((occ) => {
+                const isOwnOccurrence = Boolean(user?.id && occ.userId === user.id);
+                const isUpvoted = occ.userVote === true;
+                const isDownvoted = occ.userVote === false;
+
+                return (
+                  <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
+                    <View style={styles.occurrenceMainCol}>
+                      <View style={styles.occurrenceMarketTitleRow}>
+                        <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                          {occ.marketName || t("products.selectMarket")}
+                        </Text>
+                        {Boolean(occ.isPromotion) && (
+                          <View style={[styles.promoOccurrenceBadge, { backgroundColor: accent }]}>
+                            <Ionicons name="pricetag" size={10} color="#FFFFFF" />
+                            <Text style={styles.promoOccurrenceText}>
+                              {t("productDetails.promotionTag")}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[styles.occurrenceValue, { color: accent }]}>
+                        R$ {occ.value}
+                      </Text>
+                      <Text style={[styles.occurrenceMeta, themeStyles.subText]} numberOfLines={1} ellipsizeMode="tail">
+                        {t("productDetails.reportedBy")} {occ.userName || t("profile.title")} • {formatDisplayDate(occ.createdAt, language)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.occurrenceActionsCol}>
+                      <View style={styles.voteRow}>
+                        <TouchableOpacity
+                          style={[
+                            styles.voteBtn,
+                            themeStyles.card,
+                            themeStyles.border,
+                            isUpvoted && { backgroundColor: `${semantic.colors.feedback.success}22`, borderColor: semantic.colors.feedback.success },
+                            isOwnOccurrence && { opacity: 0.45 },
+                          ]}
+                          onPress={() => handleVote(occ.id, true)}
+                          disabled={isOwnOccurrence}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={isUpvoted ? "thumbs-up" : "thumbs-up-outline"}
+                            size={12}
+                            color={semantic.colors.feedback.success}
+                          />
+                          <Text
+                            style={[
+                              styles.voteCount,
+                              {
+                                color: semantic.colors.feedback.success,
+                                fontWeight: isUpvoted ? "700" : "500",
+                              },
+                            ]}
+                          >
+                            {occ.upvoteCount}
+                          </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[
+                            styles.voteBtn,
+                            themeStyles.card,
+                            themeStyles.border,
+                            isDownvoted && { backgroundColor: `${semantic.colors.feedback.error}22`, borderColor: semantic.colors.feedback.error },
+                            isOwnOccurrence && { opacity: 0.45 },
+                          ]}
+                          onPress={() => handleVote(occ.id, false)}
+                          disabled={isOwnOccurrence}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={isDownvoted ? "thumbs-down" : "thumbs-down-outline"}
+                            size={12}
+                            color={semantic.colors.feedback.error}
+                          />
+                          <Text
+                            style={[
+                              styles.voteCount,
+                              {
+                                color: semantic.colors.feedback.error,
+                                fontWeight: isDownvoted ? "700" : "500",
+                              },
+                            ]}
+                          >
+                            {occ.downvoteCount}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {(isAdmin || user?.id === occ.userId) && (
+                        <TouchableOpacity
+                          style={styles.deleteOccBtn}
+                          onPress={() => handleDeleteOccurrence(occ.id)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={semantic.colors.feedback.error} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.primaryActionBtn,
+                isCooldownActive
+                  ? [styles.disabledActionBtn, themeStyles.inputBg, themeStyles.border]
+                  : { backgroundColor: accent },
+              ]}
+              activeOpacity={isCooldownActive ? 1 : 0.85}
+              onPress={handleRegisterPrice}
+              disabled={isCooldownActive}
+            >
+              <Ionicons
+                name={isCooldownActive ? "time-outline" : "pricetag-outline"}
+                size={20}
+                color={isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse}
+                style={styles.btnIcon}
+              />
+              <Text
+                style={[
+                  styles.primaryActionText,
+                  isCooldownActive
+                    ? { color: semantic.colors.text.tertiary }
+                    : { color: semantic.colors.text.inverse },
+                ]}
+                numberOfLines={1}
+              >
+                {isCooldownActive
+                  ? `${t("productDetails.addPrice")} (${formatCooldownTime(cooldownRemainingSeconds)})`
+                  : t("productDetails.addPrice")}
+              </Text>
+            </TouchableOpacity>
+
+            {isCooldownActive && (
+              <View style={[styles.cooldownNoticeBox, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="hourglass-outline" size={15} color="#E6A100" />
+                <Text style={[styles.cooldownNoticeText, themeStyles.subText]}>
+                  {t("products.cooldownNotice")} ({formatCooldownTime(cooldownRemainingSeconds)})
+                </Text>
+              </View>
+            )}
+
+            {isAdmin ? (
+              <View style={styles.secondaryActionsRow}>
+                {Boolean(product.id) ? (
+                  <TouchableOpacity
+                    style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
+                    activeOpacity={0.8}
+                    onPress={handleOpenEdit}
+                  >
+                    <Ionicons name="create-outline" size={18} color={semantic.colors.text.primary} style={styles.btnIcon} />
+                    <Text style={[styles.secondaryActionText, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                      {t("productDetails.editProduct")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+
+                {Boolean(product.id) ? (
+                  <TouchableOpacity
+                    style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
+                    activeOpacity={0.8}
+                    onPress={handleDeleteProduct}
+                  >
+                    <Ionicons name="trash-outline" size={18} color={semantic.colors.feedback.error} style={styles.btnIcon} />
+                    <Text style={[styles.secondaryActionText, { color: semantic.colors.feedback.error }]} numberOfLines={1} ellipsizeMode="tail">
+                      {t("productDetails.deleteProduct")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : (
+              <View style={[styles.contributorInfoBox, themeStyles.inputBg, themeStyles.border]}>
+                <Ionicons name="sparkles" size={16} color={accent} />
+                <Text style={[styles.contributorInfoText, themeStyles.subText]}>
+                  {t("productDetails.noOccurrencesSubtitle")}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
+
+      {/* Edit Product Modal */}
+      <Modal visible={isEditModalVisible} animationType="slide" transparent>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.editProductModalTitle")}</Text>
+                <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                  <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.productName")} *</Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder={t("products.productNamePlaceholder")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                />
+              </FocusedInputWrapper>
+
+              <View style={{ marginVertical: 4 }}>
+                <CategorySelector
+                  isMultiSelect={true}
+                  selectedCategories={editCategories}
+                  onSelectCategories={(cats) => {
+                    setEditCategories(cats);
+                    setEditCategory(cats.join(", "));
+                  }}
+                  selectedCategory={editCategory}
+                  onSelectCategory={(cat) => {
+                    setEditCategory(cat);
+                    setEditCategories(cat ? [cat] : []);
+                  }}
+                  label={t("productDetails.category")}
+                  showCustomOption={true}
+                />
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText]}>{t("productDetails.ean")}</Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.modalInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={editEan}
+                  onChangeText={setEditEan}
+                  placeholder={t("scanner.barcode")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                  keyboardType="numeric"
+                />
+              </FocusedInputWrapper>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, themeStyles.border]}
+                  onPress={() => setIsEditModalVisible(false)}
+                >
+                  <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, { backgroundColor: accent }]}
+                  onPress={handleSaveEdit}
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? (
+                    <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
+                  ) : (
+                    <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Report Product Modal */}
+      <Modal visible={isReportModalVisible} animationType="slide" transparent>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={styles.modalOverlay}
+          >
+            <View style={[styles.modalCard, themeStyles.card, themeStyles.border]}>
+              <View style={styles.modalHeader}>
+                <View style={styles.reportModalHeaderLeft}>
+                  <Ionicons name="flag" size={18} color={semantic.colors.feedback.error} />
+                  <Text style={[styles.modalTitle, themeStyles.text]}>{t("productDetails.reportModalTitle")}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setIsReportModalVisible(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={24} color={semantic.colors.text.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText]}>
+                {t("productDetails.reportReasonLabel")}
+              </Text>
+
+              <View style={styles.reportReasonsList}>
+                {reportReasons.map((item) => {
+                  const isSelected = selectedReportReason === item.key;
+                  return (
+                    <TouchableOpacity
+                      key={item.key}
+                      style={[
+                        styles.reportReasonOption,
+                        themeStyles.inputBg,
+                        themeStyles.border,
+                        isSelected && { borderColor: accent, backgroundColor: `${accent}15` },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => handleSelectReason(item.key)}
+                    >
+                      <Ionicons
+                        name={isSelected ? "radio-button-on" : "radio-button-off"}
+                        size={18}
+                        color={isSelected ? accent : semantic.colors.text.tertiary}
+                      />
+                      <Text
+                        style={[
+                          styles.reportReasonText,
+                          isSelected ? { color: accent, fontWeight: "bold" } : themeStyles.text,
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.inputLabel, themeStyles.subText, { marginTop: 8 }]}>
+                {t("products.description")} ({t("common.optional")})
+              </Text>
+              <FocusedInputWrapper borderRadius={8} style={{ marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.reportTextInput, themeStyles.inputBg, themeStyles.border, themeStyles.text]}
+                  value={reportDescription}
+                  onChangeText={setReportDescription}
+                  placeholder={t("productDetails.reportDescriptionPlaceholder")}
+                  placeholderTextColor={semantic.colors.text.tertiary}
+                  multiline
+                  maxLength={300}
+                  numberOfLines={3}
+                />
+              </FocusedInputWrapper>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={[styles.modalCancelBtn, themeStyles.border]}
+                  onPress={() => setIsReportModalVisible(false)}
+                  disabled={submittingReport}
+                >
+                  <Text style={[styles.modalBtnText, themeStyles.text]}>{t("common.cancel")}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.modalSaveBtn, { backgroundColor: semantic.colors.feedback.error }]}
+                  onPress={handleSendReport}
+                  disabled={submittingReport}
+                >
+                  {submittingReport ? (
+                    <ActivityIndicator color={semantic.colors.text.inverse} size="small" />
+                  ) : (
+                    <View style={styles.sendReportBtnContent}>
+                      <Ionicons name="send" size={15} color={semantic.colors.text.inverse} style={{ marginRight: 6 }} />
+                      <Text style={[styles.modalBtnText, { color: semantic.colors.text.inverse }]}>
+                        {t("productDetails.reportSubmit")}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
 
-// --- Componentes Internos ---
+// --- Componente de Histórico de Preços ---
 
-const PriceDetails = ({ themeStyles }: { themeStyles: any }) => (
-  <View style={styles.detailsContainer}>
-    <Text style={[styles.priceLabel, themeStyles.subText]}>Último preço:</Text>
-    <Text style={[styles.priceValue, themeStyles.text]}>
-      {MOCK_PRODUCT.lastPrice}
-    </Text>
-    <Text style={[styles.priceSubValue, themeStyles.subText]}>
-      {MOCK_PRODUCT.pricePerUnit}
-    </Text>
-  </View>
-);
+type PeriodType = "7d" | "1m" | "6m" | "1y" | "all";
 
-const PriceChart = ({
-  themeStyles,
-  isDark,
-}: {
+interface PriceHistorySectionProps {
+  productId?: number;
+  history: PriceHistoryItem[];
+  accent: string;
   themeStyles: any;
-  isDark: boolean;
-}) => (
-  <View style={styles.chartSection}>
-    <Text style={[styles.chartTitle, themeStyles.text]}>
-      Histórico de preço:
-    </Text>
-    <View
-      style={[styles.chartContainer, themeStyles.inputBg, themeStyles.border]}
-    >
-      <View style={styles.chartWrapperInner}>
-        {MOCK_PRICE_HISTORY.map((heightValue, index) => (
-          <View key={index} style={styles.barWrapper}>
-            <View
-              style={[
-                styles.chartBar,
-                {
-                  height: `${heightValue}%`,
-                  backgroundColor: isDark ? "#4ADE80" : COLORS.chartGreen,
-                },
-              ]}
-            />
-          </View>
-        ))}
+  t: (key: any) => string;
+  language?: string;
+}
+
+const PriceHistorySection = ({
+  productId,
+  history,
+  accent,
+  themeStyles,
+  t,
+  language = "pt-BR",
+}: PriceHistorySectionProps) => {
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>("1m");
+  const [periodHistory, setPeriodHistory] = useState<PriceHistoryItem[]>([]);
+  const [loadingPeriod, setLoadingPeriod] = useState(false);
+  const [selectedPointId, setSelectedPointId] = useState<number | null>(null);
+  const chartScrollRef = React.useRef<ScrollView>(null);
+
+  const periods: { id: PeriodType; label: string }[] = [
+    { id: "7d", label: t("productDetails.period7D") },
+    { id: "1m", label: t("productDetails.period1M") },
+    { id: "6m", label: t("productDetails.period6M") },
+    { id: "1y", label: t("productDetails.period1Y") },
+    { id: "all", label: t("productDetails.periodAll") },
+  ];
+
+  const filterByPeriod = useCallback((items: PriceHistoryItem[], period: PeriodType): PriceHistoryItem[] => {
+    if (!items || items.length === 0) return [];
+    if (period === "all") return items.slice(-15);
+
+    const now = Date.now();
+    let days = 30;
+    if (period === "7d") days = 7;
+    else if (period === "1m") days = 30;
+    else if (period === "6m") days = 180;
+    else if (period === "1y") days = 365;
+
+    const cutoff = now - days * 24 * 60 * 60 * 1000;
+    const filtered = items.filter((item) => {
+      const itemTime = parseDateSafeMs(item.createdAt);
+      return itemTime >= cutoff;
+    });
+
+    const sorted = [...filtered].sort(
+      (a, b) => parseDateSafeMs(a.createdAt) - parseDateSafeMs(b.createdAt)
+    );
+
+    return sorted.slice(-15);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (history && history.length > 0) {
+      const localFiltered = filterByPeriod(history, selectedPeriod);
+      setPeriodHistory(localFiltered);
+    }
+
+    if (productId && productId > 0) {
+      setLoadingPeriod(true);
+      fetchPriceHistory(productId, selectedPeriod, 15)
+        .then((data) => {
+          if (isMounted && data && data.length > 0) {
+            setPeriodHistory(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) setLoadingPeriod(false);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, selectedPeriod]);
+
+  const displayHistory = periodHistory.length > 0 ? periodHistory : filterByPeriod(history, selectedPeriod);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      chartScrollRef.current?.scrollToEnd({ animated: false });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [displayHistory.length, selectedPeriod]);
+
+  const values = displayHistory.map((h) => h.value);
+  const minVal = values.length > 0 ? Math.min(...values) : 0;
+  const maxVal = values.length > 0 ? Math.max(...values) : 0;
+  const range = maxVal - minVal || 1;
+
+  const selectedItem = displayHistory.find((item) => item.id === selectedPointId) || null;
+
+  const formatDate = (dateStr: string) => formatShortDate(dateStr, language);
+  const formatFullDate = (dateStr: string) => formatFullDisplayDate(dateStr, language);
+
+  return (
+    <View style={styles.historySection}>
+      {/* Header Aligned to Left */}
+      <View style={styles.historyHeaderRow}>
+        <View style={styles.historyHeaderLeft}>
+          <Ionicons name="stats-chart" size={18} color={accent} />
+          <Text style={[styles.sectionTitle, themeStyles.text]}>{t("productDetails.priceHistory")}</Text>
+        </View>
+        <View style={[styles.historyCountPill, themeStyles.inputBg, themeStyles.border]}>
+          <Text style={[styles.historyCountPillText, themeStyles.subText]}>
+            {t("productDetails.maxPricesInfo")}
+          </Text>
+        </View>
       </View>
+
+      {/* Time Period Filter Chips - Left Aligned */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.periodChipsContainer}
+        style={styles.periodScroll}
+      >
+        {periods.map((p) => {
+          const isActive = selectedPeriod === p.id;
+          return (
+            <TouchableOpacity
+              key={p.id}
+              style={[
+                styles.periodChip,
+                themeStyles.inputBg,
+                themeStyles.border,
+                isActive && { backgroundColor: accent, borderColor: accent },
+              ]}
+              onPress={() => {
+                setSelectedPeriod(p.id);
+                setSelectedPointId(null);
+              }}
+              activeOpacity={0.75}
+            >
+              <Text
+                style={[
+                  styles.periodChipText,
+                  themeStyles.subText,
+                  isActive && styles.periodChipTextActive,
+                ]}
+              >
+                {p.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Selected Point Tooltip */}
+      {selectedItem && (
+        <View style={[styles.selectedPointCard, themeStyles.inputBg, { borderColor: accent }]}>
+          <View style={styles.selectedPointLeft}>
+            <Text style={[styles.selectedPointMarket, themeStyles.text]} numberOfLines={1}>
+              {selectedItem.marketName}
+            </Text>
+            <Text style={[styles.selectedPointDate, themeStyles.subText]}>
+              {formatFullDate(selectedItem.createdAt)}
+            </Text>
+          </View>
+          <View style={styles.selectedPointRight}>
+            <Text style={[styles.selectedPointPrice, { color: accent }]}>
+              {selectedItem.formattedValue}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Chart Box or Empty State */}
+      {loadingPeriod && displayHistory.length === 0 ? (
+        <View style={[styles.chartBox, styles.chartBoxLoading, themeStyles.inputBg, themeStyles.border]}>
+          <ActivityIndicator size="small" color={accent} />
+        </View>
+      ) : displayHistory.length === 0 ? (
+        <View style={[styles.emptyHistoryBox, themeStyles.inputBg, themeStyles.border]}>
+          <Ionicons name="calendar-outline" size={24} color={accent} />
+          <Text style={[styles.emptyHistoryText, themeStyles.subText]}>
+            {t("productDetails.noHistoryForPeriod")}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.chartBox, themeStyles.inputBg, themeStyles.border]}>
+          <ScrollView
+            ref={chartScrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.barsScrollContent}
+            onContentSizeChange={() => {
+              chartScrollRef.current?.scrollToEnd({ animated: false });
+            }}
+            onLayout={() => {
+              chartScrollRef.current?.scrollToEnd({ animated: false });
+            }}
+          >
+            {displayHistory.slice(-15).map((item, idx) => {
+              const pct = Math.max(18, Math.round(((item.value - minVal) / range) * 70) + 20);
+              const isSelected = selectedPointId === item.id;
+              const dateLabel = formatDate(item.createdAt);
+
+              return (
+                <TouchableOpacity
+                  key={item.id || idx}
+                  style={styles.barColumn}
+                  onPress={() => setSelectedPointId(isSelected ? null : item.id)}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.barValueLabel,
+                      themeStyles.subText,
+                      isSelected && { color: accent, fontWeight: "bold" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.value.toFixed(1).replace(".", ",")}
+                  </Text>
+                  <View style={styles.barTrack}>
+                    <View
+                      style={[
+                        styles.barFill,
+                        {
+                          height: `${pct}%`,
+                          backgroundColor: isSelected ? accent : `${accent}CC`,
+                        },
+                        isSelected && styles.barFillSelected,
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.barMarketLabel,
+                      themeStyles.subText,
+                      isSelected && { color: accent, fontWeight: "600" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {dateLabel || item.marketName.split(" ")[0]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* History List - Max 15 Items, Left Aligned */}
+      {displayHistory.length > 0 && (
+        <View style={styles.historyList}>
+          {displayHistory
+            .slice(-15)
+            .reverse()
+            .map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={[
+                  styles.historyRow,
+                  themeStyles.inputBg,
+                  themeStyles.border,
+                  selectedPointId === item.id && { borderColor: accent, borderWidth: 1.5 },
+                ]}
+                onPress={() => setSelectedPointId(selectedPointId === item.id ? null : item.id)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.historyRowLeft}>
+                  <Ionicons name="storefront-outline" size={16} color={accent} />
+                  <View style={styles.historyRowDetails}>
+                    <Text style={[styles.historyMarketName, themeStyles.text]} numberOfLines={1}>
+                      {item.marketName}
+                    </Text>
+                    <Text style={[styles.historyDateText, themeStyles.subText]}>
+                      {formatFullDate(item.createdAt)}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.historyPriceText, { color: accent }]}>{item.formattedValue}</Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+      )}
     </View>
-  </View>
-);
+  );
+};
 
 // --- Estilos ---
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  content: {
-    flexGrow: 1,
-    paddingTop: 10,
-    paddingBottom: 100,
-    paddingHorizontal: 20,
-    justifyContent: "center",
-  },
-  cardWrapper: {
-    width: "100%",
-    alignItems: "center",
-  },
-  detailsContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-    width: "100%",
-  },
-  priceLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  priceValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  priceSubValue: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  chartSection: {
-    width: "100%",
-  },
-  chartTitle: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-  chartContainer: {
-    borderRadius: 16,
-    padding: 16,
-    height: 130,
-    justifyContent: "flex-end",
+  container: { flex: 1 },
+  centerContent: { justifyContent: "center", alignItems: "center", padding: 24 },
+  loadingText: { marginTop: 12, fontSize: 15 },
+  errorTitle: { fontSize: 18, fontWeight: "bold", marginTop: 12, marginBottom: 16 },
+  backBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
+  backBtnText: { color: "#FFF", fontWeight: "bold" },
+  content: { flexGrow: 1, padding: 16, paddingBottom: 40 },
+  mainCard: {
+    borderRadius: 24,
+    padding: 20,
     borderWidth: 1,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    overflow: "hidden",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  chartWrapperInner: {
+  imageWrapper: {
+    width: "100%",
+    aspectRatio: 1.5,
+    borderRadius: 16,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    position: "relative",
+  },
+  productImage: {
+    width: "85%",
+    height: "85%",
+  },
+  categoryBadge: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  categoryBadgeEmoji: {
+    fontSize: 12,
+  },
+  categoryBadgeText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "bold",
+    letterSpacing: 0.8,
+  },
+  productName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 8,
+    lineHeight: 26,
+  },
+  barcodeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  barcodeText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  divider: {
+    height: 1,
+    width: "100%",
+    marginBottom: 16,
+  },
+  priceHighlightBox: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  lastPriceLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  lastPriceValue: {
+    fontSize: 28,
+    fontWeight: "bold",
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 20,
+  },
+  statItem: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 10,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  statLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    marginBottom: 2,
+    textAlign: "center",
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  historySection: {
+    width: "100%",
+    marginBottom: 24,
+  },
+  historyHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  historyHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+    marginRight: 8,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  historyCountPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  historyCountPillText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  periodScroll: {
+    marginBottom: 12,
+  },
+  periodChipsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 1,
+  },
+  periodChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  periodChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  periodChipTextActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  selectedPointCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    marginBottom: 12,
+  },
+  selectedPointLeft: {
+    flex: 1,
+    marginRight: 8,
+  },
+  selectedPointMarket: {
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  selectedPointDate: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  selectedPointRight: {
+    alignItems: "flex-end",
+  },
+  selectedPointPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  emptyHistoryBox: {
+    borderRadius: 14,
+    padding: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+  },
+  emptyHistoryText: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  chartBox: {
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    height: 145,
+    marginBottom: 12,
+    justifyContent: "flex-end",
+  },
+  chartBoxLoading: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  barsScrollContent: {
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: "100%",
-    width: "100%",
+    justifyContent: "flex-start",
+    gap: 10,
+    minWidth: "100%",
+    paddingHorizontal: 4,
   },
-  barWrapper: {
-    flex: 1,
+  barColumn: {
+    width: 44,
+    alignItems: "center",
     height: "100%",
     justifyContent: "flex-end",
-    alignItems: "center",
-    marginHorizontal: 3,
   },
-  chartBar: {
+  barValueLabel: {
+    fontSize: 9,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  barTrack: {
+    flex: 1,
     width: "100%",
-    maxWidth: 10,
-    borderRadius: 4,
+    maxWidth: 18,
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  barFill: {
+    width: "100%",
+    borderRadius: 6,
+  },
+  barFillSelected: {
+    borderWidth: 1.5,
+    borderColor: "#FFFFFF",
+  },
+  barMarketLabel: {
+    fontSize: 9,
+    marginTop: 4,
+    textAlign: "center",
+  },
+  historyList: {
+    gap: 8,
+  },
+  historyRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  historyRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  historyRowDetails: {
+    flex: 1,
+  },
+  historyMarketName: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  historyDateText: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  historyPriceText: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  actionsContainer: {
+    gap: 12,
+  },
+  primaryActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  primaryActionText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  secondaryActionsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  secondaryActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  deleteActionBtn: {
+    borderColor: "#E53935",
+    backgroundColor: "transparent",
+  },
+  secondaryActionText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  btnIcon: {
+    marginRight: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalCard: {
+    width: "100%",
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 6,
+    marginTop: 8,
+  },
+  modalInput: {
+    height: 48,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    fontSize: 14,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 20,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSaveBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnText: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  adminTagBadge: {
+    maxWidth: "60%",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#E6A100",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+  },
+  adminTagText: {
+    color: "#FFF",
+    fontSize: 10,
+    fontWeight: "bold",
+    letterSpacing: 0.5,
+  },
+  topHeaderControlsRow: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  reportHeaderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 4,
+  },
+  reportHeaderBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  occurrencesSection: {
+    width: "100%",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  occurrencesHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  occurrencesTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  occurrencesCountText: {
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  noOccurrencesBox: {
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  noOccurrencesText: {
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  noOccurrencesSub: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  occurrenceItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  occurrenceMainCol: {
+    flex: 1,
+  },
+  occurrenceMarketName: {
+    fontSize: 14,
+    fontWeight: "bold",
+  },
+  occurrenceValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginVertical: 2,
+  },
+  occurrenceMeta: {
+    fontSize: 11,
+  },
+  occurrenceActionsCol: {
+    alignItems: "flex-end",
+    gap: 8,
+  },
+  voteRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  voteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4,
+  },
+  voteCount: {
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+  deleteOccBtn: {
+    padding: 4,
+  },
+  contributorInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    gap: 8,
+  },
+  contributorInfoText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16,
+  },
+  reportModalHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  reportReasonsList: {
+    gap: 8,
+    marginVertical: 8,
+  },
+  reportReasonOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 10,
+  },
+  reportReasonText: {
+    fontSize: 13,
+    flex: 1,
+  },
+  reportTextInput: {
+    minHeight: 70,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    textAlignVertical: "top",
+  },
+  sendReportBtnContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  disabledActionBtn: {
+    opacity: 0.65,
+  },
+  cooldownNoticeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+    gap: 8,
+  },
+  cooldownNoticeText: {
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16,
+  },
+  categoriesBadgeContainer: {
+    position: "absolute",
+    top: 10,
+    left: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    maxWidth: "85%",
+  },
+  moreCategoryBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  moreCategoryBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  metaRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    gap: 5,
+    borderWidth: 1,
+  },
+  metaChipText: {
+    fontSize: 11,
+    fontWeight: "500",
+  },
+  statLabelHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  occurrenceMarketTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexWrap: "wrap",
+  },
+  promoOccurrenceBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 3,
+  },
+  promoOccurrenceText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "bold",
+    letterSpacing: 0.3,
   },
 });
+
+
+

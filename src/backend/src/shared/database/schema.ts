@@ -18,7 +18,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { customType } from "drizzle-orm/pg-core";
-import type { Point } from "../types/database";
+
+
+export interface Point {
+  lat: number;
+  lng: number;
+}
 
 export const recoveryMessageStatus = pgEnum("recovery_message_status", [
   "Satisfatório",
@@ -27,8 +32,6 @@ export const recoveryMessageStatus = pgEnum("recovery_message_status", [
   "Não aconteceu",
 ]);
 export const statusRec = pgEnum("status_rec", ["SAT", "INS", "NC", "NAC"]);
-
-// !REFACTOR ****************************
 
 // Criei um tipo custom que permite a comunicação com o POSTGIS e burla o dizzle
 // Em geral isso pode funcionar MAS:
@@ -45,25 +48,6 @@ export const geography = customType<{ data: Point; driverData: string }>({
   },
 });
 
-// ****************************
-
-/*
-
-export const spatialRefSys = pgTable(
-  "spatial_ref_sys",
-  {
-    srid: integer().primaryKey().notNull(),
-    authName: varchar("auth_name", { length: 256 }),
-    authSrid: integer("auth_srid"),
-    srtext: varchar({ length: 2048 }),
-    proj4Text: varchar({ length: 2048 }),
-  },
-  (table) => [
-    check("spatial_ref_sys_srid_check", sql`(srid > 0) AND (srid <= 998999)`),
-  ],
-);
-
-*/
 
 export const role = pgTable(
   "role",
@@ -88,6 +72,29 @@ export const scope = pgTable(
   (table) => [unique("scope_scope_name_key").on(table.scopeName)],
 );
 
+export const customizationItem = pgTable(
+  "customization_item",
+  {
+    id: serial().primaryKey().notNull(),
+    name: varchar({ length: 100 }).notNull(),
+    category: varchar({ length: 30 }).notNull(), // "banner" | "avatar_frame" | "level_frame"
+    description: text(),
+    price: integer().default(0).notNull(),
+    minLevel: integer("min_level").default(1).notNull(),
+    previewValue: text("preview_value").notNull(),
+    config: text(), // JSON string with visual gradient/border/particle configs
+    isDefault: boolean("is_default").default(false).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    unique("customization_item_name_key").on(table.name),
+    check("customization_item_price_check", sql`price >= 0`),
+    check("customization_item_min_level_check", sql`min_level >= 1`),
+  ],
+);
+
 export const user = pgTable(
   "user",
   {
@@ -97,11 +104,14 @@ export const user = pgTable(
     passHash: varchar("pass_hash", { length: 255 }).notNull(),
     //refreshToken: text("refresh_token"),
     birthdate: date(),
-    points: integer().default(0).notNull().default(0),
-    dangerFlag: boolean("danger_flag").default(false).notNull().default(false),
-    // TODO: failed to parse database type 'geography'
+    points: integer().default(0).notNull(),
+    dangerFlag: boolean("danger_flag").default(false).notNull(),
     location: geography("location"),
     roleId: integer("role_id").notNull().default(1),
+    equippedBannerId: integer("equipped_banner_id"),
+    equippedAvatarFrameId: integer("equipped_avatar_frame_id"),
+    equippedLevelFrameId: integer("equipped_level_frame_id"),
+    equippedTitleId: integer("equipped_title_id"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -123,8 +133,55 @@ export const user = pgTable(
       foreignColumns: [role.id],
       name: "user_role_id_fkey",
     }),
+    foreignKey({
+      columns: [table.equippedBannerId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_banner_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedAvatarFrameId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_avatar_frame_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedLevelFrameId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_level_frame_id_fkey",
+    }).onDelete("set null"),
+    foreignKey({
+      columns: [table.equippedTitleId],
+      foreignColumns: [customizationItem.id],
+      name: "user_equipped_title_id_fkey",
+    }).onDelete("set null"),
     unique("user_email_key").on(table.email),
     check("user_points_check", sql`points >= 0`),
+  ],
+);
+
+export const userCustomization = pgTable(
+  "user_customization",
+  {
+    userId: integer("user_id").notNull(),
+    itemId: integer("item_id").notNull(),
+    purchasedAt: timestamp("purchased_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "user_customization_user_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.itemId],
+      foreignColumns: [customizationItem.id],
+      name: "user_customization_item_id_fkey",
+    }).onDelete("cascade"),
+    primaryKey({
+      columns: [table.userId, table.itemId],
+      name: "user_customization_pkey",
+    }),
   ],
 );
 
@@ -134,6 +191,7 @@ export const badge = pgTable(
     id: serial().primaryKey().notNull(),
     name: varchar({ length: 100 }).notNull(),
     icon: text(),
+    description: text(),
     minPoints: integer("min_points").default(0).notNull(),
   },
   (table) => [
@@ -160,6 +218,7 @@ export const ocurrency = pgTable(
     upvoteCount: integer("upvote_count").default(0).notNull(),
     downvoteCount: integer("downvote_count").default(0).notNull(),
     volate: boolean().default(false).notNull(),
+    isPromotion: boolean("is_promotion").default(false).notNull(),
   },
   (table) => [
     index("idx_ocurrency_market_id_created_at_desc").using(
@@ -377,3 +436,30 @@ export const cured = pgTable(
     }),
   ],
 );
+
+export const productReport = pgTable(
+  "product_report",
+  {
+    id: serial().primaryKey().notNull(),
+    userId: integer("user_id").notNull(),
+    productId: integer("product_id").notNull(),
+    reason: varchar({ length: 100 }).notNull(),
+    description: text(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "product_report_user_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [product.id],
+      name: "product_report_product_id_fkey",
+    }).onDelete("cascade"),
+  ],
+);
+
