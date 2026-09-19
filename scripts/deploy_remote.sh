@@ -22,18 +22,35 @@ echo "🚀 [Deploy] $SSH_USER@$SSH_HOST:$SSH_PORT → $REMOTE_TARGET_DIR (branch
 echo "================================================================================"
 
 if [ "$SYNC" = "1" ]; then
-  echo "📤 Sincronizando a árvore de trabalho via rsync (node_modules e .env preservados)..."
-  rsync -rlvz --omit-dir-times --no-perms --no-owner --no-group \
-    --exclude='.git/' \
+  echo "📤 Sincronizando estritamente os arquivos essenciais do backend..."
+
+  # Garante a criação prévia dos diretórios essenciais no destino remoto
+  remote_exec "mkdir -p '$REMOTE_TARGET_DIR/src' '$REMOTE_TARGET_DIR/deploy' '$REMOTE_TARGET_DIR/logs'"
+
+  # 1. Sincroniza exclusivamente src/backend (excluindo node_modules, envs locais, builds e testes)
+  echo "   → src/backend/"
+  rsync -rlvz --omit-dir-times --no-perms --no-owner --no-group --delete \
     --exclude='node_modules/' \
-    --exclude='.env' --exclude='.env.*' \
-    --exclude='deploy/.env.deploy' \
-    --exclude='logs/' \
-    --exclude='.turbo/' --exclude='.dev/' \
-    --exclude='src/frontend/' \
-    --exclude='.idea/' --exclude='.vscode/' \
+    --exclude='.env' \
+    --exclude='.env.*' \
+    --exclude='dist/' \
+    --exclude='.turbo/' \
+    --exclude='tests/' \
+    --exclude='*.md' \
     -e "ssh ${SSH_OPTS[*]}" \
-    "$ROOT/" "$REMOTE:$REMOTE_TARGET_DIR/"
+    "$ROOT/src/backend/" "$REMOTE:$REMOTE_TARGET_DIR/src/backend/"
+
+  # 2. Sincroniza o script de deploy remoto
+  echo "   → deploy/deploy.sh"
+  rsync -rlvz --omit-dir-times --no-perms --no-owner --no-group \
+    -e "ssh ${SSH_OPTS[*]}" \
+    "$ROOT/deploy/deploy.sh" "$REMOTE:$REMOTE_TARGET_DIR/deploy/deploy.sh"
+
+  # 3. Sincroniza a configuração do PM2
+  echo "   → ecosystem.config.cjs"
+  rsync -rlvz --omit-dir-times --no-perms --no-owner --no-group \
+    -e "ssh ${SSH_OPTS[*]}" \
+    "$ROOT/ecosystem.config.cjs" "$REMOTE:$REMOTE_TARGET_DIR/ecosystem.config.cjs"
 fi
 
 echo "🔐 Entregando segredos ao servidor (arquivo temporário 600, apagado após uso)..."

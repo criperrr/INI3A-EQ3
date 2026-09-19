@@ -2,8 +2,10 @@ const path = require("path");
 const fs = require("fs");
 
 const tsxPath = [
-  path.resolve(__dirname, "node_modules/.bin/tsx"),
+  path.resolve(__dirname, "src/backend/node_modules/tsx/dist/cli.mjs"),
   path.resolve(__dirname, "src/backend/node_modules/.bin/tsx"),
+  path.resolve(__dirname, "node_modules/tsx/dist/cli.mjs"),
+  path.resolve(__dirname, "node_modules/.bin/tsx"),
   "/usr/local/bin/tsx",
   "/usr/bin/tsx",
 ].find((p) => fs.existsSync(p)) || "tsx";

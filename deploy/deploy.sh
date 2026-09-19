@@ -70,6 +70,51 @@ HTACCESS
   chmod 644 "$PROJECT_DIR/.htaccess"
 fi
 
+# 2.5 Higienização: Manter no servidor estritamente os arquivos essenciais do backend
+echo "🧹 [Sanitize] Removendo arquivos e diretórios não essenciais do servidor remoto..."
+rm -rf "$PROJECT_DIR/.agents" \
+       "$PROJECT_DIR/.github" \
+       "$PROJECT_DIR/docs" \
+       "$PROJECT_DIR/gestao" \
+       "$PROJECT_DIR/sprints" \
+       "$PROJECT_DIR/scripts" \
+       "$PROJECT_DIR/tests" \
+       "$PROJECT_DIR/.turbo" \
+       "$PROJECT_DIR/.idea" \
+       "$PROJECT_DIR/.vscode" \
+       "$PROJECT_DIR/src/frontend" \
+       "$BACKEND_DIR/tests"
+
+rm -f "$PROJECT_DIR/docker-compose.yml" \
+      "$PROJECT_DIR/turbo.json" \
+      "$PROJECT_DIR/eas.json" \
+      "$PROJECT_DIR/skills-lock.json" \
+      "$PROJECT_DIR/.gitignore" \
+      "$PROJECT_DIR/package.json" \
+      "$PROJECT_DIR/package-lock.json" \
+      "$PROJECT_DIR"/setup.* \
+      "$PROJECT_DIR"/start*
+
+# Remove todos os markdowns em qualquer pasta do servidor
+find "$PROJECT_DIR" -type f -name "*.md" -delete 2>/dev/null || true
+
+# Cria o ÚNICO README.md explicativo do backend no servidor remoto
+cat > "$PROJECT_DIR/README.md" << 'README_EOF'
+# Presco Backend (Produção)
+
+Ambiente de produção exclusivo da API REST do **Presco** (INI3A-EQ3).
+
+- 🔗 **Repositório oficial e documentação:** [github.com/criperrr/INI3A-EQ3](https://github.com/criperrr/INI3A-EQ3)
+- 🚀 **Gerenciador de Processos:** PM2 (`presco-backend`)
+- 🌐 **Proxy Reverso:** Apache (`.htaccess`)
+- 📡 **Healthcheck:** `GET /health`
+
+---
+*Nota: Este servidor armazena exclusivamente os arquivos essenciais de execução da API Node.js/Express, migrações Drizzle ORM e conexão com PostgreSQL/Redis. Todo o frontend, documentação de sprints, agentes (.agents) e utilitários de desenvolvimento residem no repositório GitHub.*
+README_EOF
+chmod 644 "$PROJECT_DIR/README.md"
+echo "✓ README.md de produção gerado como único documento do servidor."
+
 # 3. .env do backend gerado a partir do ambiente (nunca versionado)
 echo "🔒 [Config] Regravando $BACKEND_DIR/.env a partir dos segredos injetados..."
 mkdir -p "$BACKEND_DIR"
@@ -92,7 +137,15 @@ echo "✓ .env escrito (modo 600, $(wc -l < "$BACKEND_DIR/.env") linhas)."
 # 4. Dependências
 echo "📦 [NPM] Instalando dependências do backend..."
 cd "$BACKEND_DIR"
-npm install --omit=optional --no-audit --fund=false
+npm install --include=dev --omit=optional --no-audit --fund=false
+
+if [ -d "$PROJECT_DIR/node_modules" ] && [ -d "$BACKEND_DIR/node_modules" ]; then
+  echo "🧹 [Cleanup] Removendo node_modules legado da raiz do servidor..."
+  rm -rf "$PROJECT_DIR/node_modules"
+fi
+
+# Remove todos os markdowns remanescentes trazidos por dependências, preservando apenas o README.md da raiz
+find "$PROJECT_DIR" -type f -iname "*.md" ! -path "$PROJECT_DIR/README.md" -delete 2>/dev/null || true
 
 # 5. Migrações + seed (idempotentes)
 echo "🗄️  [Database] Migrações Drizzle..."
@@ -106,29 +159,13 @@ npm run db:reallocate || echo "⚠️  [Database] Aviso na realocação; continu
 echo "⚡ [PM2] Reiniciando $APP_NAME..."
 cd "$PROJECT_DIR"
 
-# `pm2 startOrRestart` NÃO troca o exec_mode de um processo já registrado: se o
-# ecosystem passou a pedir fork e o processo vivo está em cluster, ele continua
-# em cluster (e no cluster o stdout do tsx some, deixando os logs zerados).
-# Detectamos a divergência e recriamos o processo.
-DESIRED_MODE="$(grep -oE 'exec_mode:[[:space:]]*"[a-z_]+"' "$PROJECT_DIR/ecosystem.config.cjs" | grep -oE '"[a-z_]+"' | tr -d '"' || true)"
-DESIRED_MODE="${DESIRED_MODE:-fork}"
-CURRENT_MODE="$(pm2 jlist 2>/dev/null | node -e '
-  let raw = "";
-  process.stdin.on("data", (d) => (raw += d));
-  process.stdin.on("end", () => {
-    try {
-      const app = JSON.parse(raw).find((a) => a.name === process.argv[1]);
-      process.stdout.write(app ? String(app.pm2_env.exec_mode || "") : "");
-    } catch { process.stdout.write(""); }
-  });
-' "$APP_NAME" || true)"
-
-if [ -n "$CURRENT_MODE" ] && [ "$CURRENT_MODE" != "${DESIRED_MODE}_mode" ]; then
-  echo "♻️  [PM2] exec_mode diverge (atual: $CURRENT_MODE, desejado: ${DESIRED_MODE}_mode). Recriando o processo..."
+# Recria o processo para forçar recarregamento limpo de paths, tsx binário e variáveis
+if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+  echo "♻️  [PM2] Recarregando processo $APP_NAME com configuração atualizada..."
   pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 fi
 
-pm2 startOrRestart "$PROJECT_DIR/ecosystem.config.cjs" --update-env
+pm2 start "$PROJECT_DIR/ecosystem.config.cjs"
 pm2 save || true
 
 # 7. Healthcheck local
