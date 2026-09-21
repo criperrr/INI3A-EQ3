@@ -142,6 +142,34 @@ class AuthControllerClass {
       next(e);
     }
   }
+
+  async sendTwoFactorCode(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.user;
+      const result = await authService.sendTwoFactorCode(id);
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async verifyTwoFactorCode(req: Api.Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.user;
+      const { code } = req.body;
+
+      if (!code || typeof code !== "string") {
+        throw new ValidationError([
+          { field: "code", message: "O código de verificação é obrigatório." },
+        ]);
+      }
+
+      const result = await authService.verifyTwoFactorCode(id, code.trim());
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const authController = new AuthControllerClass();

@@ -11,7 +11,10 @@ import {
 import {
   UnauthorizedError,
   ConflictError,
+  ValidationError,
+  NotFoundError,
 } from "@/shared/errors/errors";
+import { emailService } from "@/shared/services/email.service";
 import type * as Services from "@/shared/types/services";
 import type * as Repositories from "@/shared/types/repositories";
 
@@ -309,9 +312,92 @@ class AuthServiceClass {
         badgesCount: badgesWithStatus.filter((b) => b.isUnlocked).length,
       },
       badges: badgesWithStatus,
+      twoFactorVerified: Boolean(user.twoFactorVerified || isSuperAdmin),
       contributionsGrid: contributionGrid,
       recentContributions,
       createdAt: user.createdAt,
+    };
+  }
+
+  /**
+   * Gera e despacha um código de segurança de 6 dígitos via e-mail (Resend)
+   */
+  async sendTwoFactorCode(userId: number | string) {
+    const user = await UserRepository.getUserById(userId);
+    if (!user) {
+      throw new NotFoundError("Usuário não encontrado.");
+    }
+
+    if (user.twoFactorVerified) {
+      return {
+        success: true,
+        alreadyVerified: true,
+        message: "Sua conta já possui verificação de duas etapas ativa.",
+        email: user.email,
+      };
+    }
+
+    const inCooldown = await AuthRepository.isTwoFactorCooldown(userId);
+    if (inCooldown) {
+      return {
+        success: false,
+        cooldown: true,
+        message: "Aguarde 60 segundos antes de solicitar um novo código.",
+        email: user.email,
+      };
+    }
+
+    // Código de 6 dígitos aleatório
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Armazena no Redis por 10 minutos (600s) e define cooldown de 60s
+    await AuthRepository.storeTwoFactorCode(userId, code, 600);
+    await AuthRepository.setTwoFactorCooldown(userId, 60);
+
+    // Envia o e-mail via Resend
+    await emailService.sendTwoFactorCode(user.email, user.name, code);
+
+    return {
+      success: true,
+      message: `Código de verificação enviado com sucesso para ${user.email}.`,
+      email: user.email,
+    };
+  }
+
+  /**
+   * Valida o código digitado pelo usuário e atualiza a verificação no banco
+   */
+  async verifyTwoFactorCode(userId: number | string, code: string) {
+    if (!code || typeof code !== "string" || code.trim().length !== 6) {
+      throw new ValidationError([
+        { field: "code", message: "O código deve conter exatamente 6 dígitos." },
+      ]);
+    }
+
+    const storedCode = await AuthRepository.getTwoFactorCode(userId);
+    if (!storedCode) {
+      throw new ValidationError([
+        { field: "code", message: "Código expirado ou inválido. Solicite um novo código." },
+      ]);
+    }
+
+    if (storedCode !== code.trim()) {
+      throw new ValidationError([
+        { field: "code", message: "Código de verificação incorreto." },
+      ]);
+    }
+
+    // Código correto: apaga do Redis e atualiza no PostgreSQL
+    await AuthRepository.deleteTwoFactorCode(userId);
+    await UserRepository.updateUser(userId, { twoFactorVerified: true });
+
+    const updatedUser = await UserRepository.getUserById(userId);
+
+    return {
+      success: true,
+      message: "Verificação de duas etapas realizada com sucesso! Agora você pode publicar e interagir com ofertas.",
+      twoFactorVerified: true,
+      user: updatedUser,
     };
   }
 }

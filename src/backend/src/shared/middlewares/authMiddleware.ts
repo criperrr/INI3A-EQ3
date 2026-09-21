@@ -1,7 +1,8 @@
 import type { NextFunction, Response } from "express";
 import { verifyAccessToken } from "@/shared/util/jwt";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
-import { UnauthorizedError, ForbiddenError } from "@/shared/errors/errors";
+import { UserRepository } from "@/shared/database/repositories/user.repository";
+import { UnauthorizedError, ForbiddenError, TwoFactorRequiredError } from "@/shared/errors/errors";
 
 export async function requireAuth(
   req: Api.Request,
@@ -131,5 +132,38 @@ export function requireMinAuthority(minAuthority: number) {
     });
   };
 }
+
+export async function requireTwoFactor(
+  req: Api.Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  return requireAuth(req, res, async (err) => {
+    if (err) return next(err);
+    if (!req.user) {
+      return next(new UnauthorizedError("Você precisa estar autenticado para realizar esta ação."));
+    }
+
+    // Role 5 (Administrador) has full authority and bypasses 2FA block
+    if (req.user.roleId >= 5) {
+      return next();
+    }
+
+    try {
+      const userObj = await UserRepository.getUserById(req.user.id);
+      if (!userObj || !userObj.twoFactorVerified) {
+        return next(
+          new TwoFactorRequiredError(
+            "Verificação de duas etapas por e-mail necessária para realizar publicações e interações.",
+          ),
+        );
+      }
+      next();
+    } catch (e) {
+      next(e);
+    }
+  });
+}
+
 
 

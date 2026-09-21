@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { productController } from "./product.controller";
-import { requireAuth, requireAdmin } from "@/shared/middlewares/authMiddleware";
+import { requireAuth, requireAdmin, requireTwoFactor } from "@/shared/middlewares/authMiddleware";
 import { searchRateLimiter } from "@/shared/middlewares/rateLimiter";
 import { cacheResponse } from "@/shared/middlewares/cacheMiddleware";
 
@@ -14,10 +14,10 @@ router.get("/barcode/:ean", searchRateLimiter, productController.getProductByBar
 router.get("/barcode", searchRateLimiter, productController.getProductByBarcode);
 router.get("/:id", cacheResponse({ ttlSeconds: 120, clientMaxAge: 60 }), productController.getProductById);
 router.get("/:id/history", cacheResponse({ ttlSeconds: 120, clientMaxAge: 60 }), productController.getPriceHistory);
-router.post("/:id/report", requireAuth as any, productController.reportProduct as any);
+router.post("/:id/report", requireTwoFactor as any, productController.reportProduct as any);
 router.post("/purge-all", requireAdmin as any, productController.purgeAllProducts);
-router.post("/custom", requireAuth as any, productController.createCustomProduct);
-router.post("/", requireAuth as any, productController.createCustomProduct);
+router.post("/custom", requireTwoFactor as any, productController.createCustomProduct);
+router.post("/", requireTwoFactor as any, productController.createCustomProduct);
 router.put("/:id", requireAdmin as any, productController.updateProduct);
 router.patch("/:id", requireAdmin as any, productController.updateProduct);
 router.delete("/:id", requireAdmin as any, productController.deleteProduct);
