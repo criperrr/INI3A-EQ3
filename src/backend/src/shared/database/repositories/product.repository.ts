@@ -67,7 +67,8 @@ class ProductRepositoryClass {
 
     const digitsOnly = cleanBarcode.replace(/\D/g, "");
     const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
-    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, cleanBarcode].filter(Boolean)));
+    const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, pad13, cleanBarcode].filter(Boolean)));
 
     const fetchUrl = async (url: string, timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
       try {

@@ -12,6 +12,21 @@ import type {
   UpdateProductDTO,
 } from "@/shared/types/product";
 
+function extractOpenFoodFactsImage(productData: any): string {
+  if (!productData) return "";
+  const uri =
+    productData.image_front_url ||
+    productData.image_url ||
+    productData.image_front_small_url ||
+    productData.image_small_url ||
+    productData.selected_images?.front?.display?.pt ||
+    productData.selected_images?.front?.display?.en ||
+    productData.selected_images?.front?.small?.pt ||
+    productData.selected_images?.front?.small?.en ||
+    "";
+  return typeof uri === "string" ? uri.trim() : "";
+}
+
 class ProductServiceClass {
   private formatProductDTO(raw: any, latestPrice?: string | null): ProductDTO {
     const rawDesc = (raw.description || "").trim();
@@ -96,6 +111,29 @@ class ProductServiceClass {
 
     const localProduct = await ProductRepository.getProductByEan(cleanBarcode);
     if (localProduct) {
+      // Whenever a scan occurs, query OpenFoodFacts to check if a new/updated photo is available
+      try {
+        const offData = await ProductRepository.getProductFromOpenFoodFacts(cleanBarcode);
+        const productData = offData?.product;
+        if (productData) {
+          const offImageUri = extractOpenFoodFactsImage(productData);
+          const currentIcon = (localProduct.icon || "").trim();
+
+          // If OpenFoodFacts has a photo and it differs from local icon (or if local icon was missing)
+          if (offImageUri && offImageUri !== currentIcon) {
+            const updated = await ProductRepository.updateProduct(localProduct.id, {
+              icon: offImageUri,
+            });
+            if (updated) {
+              localProduct.icon = updated.icon;
+              await invalidateCachePattern("products");
+            }
+          }
+        }
+      } catch (offErr) {
+        console.warn("[ProductService] Error checking/updating OpenFoodFacts photo on scan:", offErr);
+      }
+
       const latestPrice = await ProductRepository.getLatestPriceForProduct(localProduct.id);
       const stats = await ProductRepository.getPriceStats(localProduct.id);
       const dto = this.formatProductDTO(localProduct, latestPrice);
@@ -148,12 +186,7 @@ class ProductServiceClass {
         productData.categories?.split(",")[0]?.trim() ||
         "Outros";
       const category = normalizeCategoryName(rawCategory);
-      const imageUri =
-        productData.image_front_url ||
-        productData.image_front_small_url ||
-        productData.image_small_url ||
-        productData.image_url ||
-        "";
+      const imageUri = extractOpenFoodFactsImage(productData);
 
       let createdProduct = null;
       try {
@@ -172,7 +205,7 @@ class ProductServiceClass {
         return this.formatProductDTO(createdProduct, null);
       }
 
-      if (safeName && imageUri) {
+      if (safeName) {
         return {
           id: 0,
           barcode: cleanBarcode,
@@ -225,6 +258,28 @@ class ProductServiceClass {
     const localProduct = await ProductRepository.getProductById(id);
     if (!localProduct) {
       throw new NotFoundError("Produto não encontrado.");
+    }
+
+    // If product has an EAN and missing icon, attempt to fetch from OpenFoodFacts to populate missing image
+    if ((!localProduct.icon || !localProduct.icon.trim()) && localProduct.ean) {
+      try {
+        const offData = await ProductRepository.getProductFromOpenFoodFacts(localProduct.ean);
+        const productData = offData?.product;
+        if (productData) {
+          const offImageUri = extractOpenFoodFactsImage(productData);
+          if (offImageUri) {
+            const updated = await ProductRepository.updateProduct(localProduct.id, {
+              icon: offImageUri,
+            });
+            if (updated) {
+              localProduct.icon = updated.icon;
+              await invalidateCachePattern("products");
+            }
+          }
+        }
+      } catch (offErr) {
+        console.warn("[ProductService] Error updating product photo in getProductById:", offErr);
+      }
     }
 
     const [latestPrice, stats, priceHistory] = await Promise.all([
@@ -303,6 +358,19 @@ class ProductServiceClass {
       }
     }
 
+    let initialIcon = data.icon?.trim() || "";
+    if (!initialIcon && trimmedEan) {
+      try {
+        const offData = await ProductRepository.getProductFromOpenFoodFacts(trimmedEan);
+        const productData = offData?.product;
+        if (productData) {
+          initialIcon = extractOpenFoodFactsImage(productData);
+        }
+      } catch (err) {
+        console.warn("[ProductService] Error fetching OFF image in createCustomProduct:", err);
+      }
+    }
+
     const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
       ? data.categories.join(", ")
       : (data.description || data.category || "");
@@ -313,7 +381,7 @@ class ProductServiceClass {
       name: data.name.trim(),
       categories: data.categories,
       description: categoryStr.trim(),
-      icon: data.icon?.trim() || "",
+      icon: initialIcon,
       isPromotion: data.isPromotion,
       createdAt: data.createdAt,
     });
