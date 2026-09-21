@@ -7,9 +7,9 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
-- **Privilégios de Administrador para o Usuário `aventureiromax1`:**
-  1. Configurado no PostgreSQL local (`tcc`) o usuário `aventureiromax1` com `role_id = 5` (Admin), autoridade máxima (10) e 9999 pontos.
-  2. Adicionada garantia declarativa no método [`seedDatabase`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/seed.ts) para manter automaticamente o usuário `aventureiromax1` com `role_id = 5` e insígnias/título de administrador a cada execução do seed.
+- **Configuração de Administradores no Banco de Dados:**
+  1. Executado comando direto no PostgreSQL para atualizar `leonardomaxduda@gmail.com` para `role_id = 5` (Admin), mantendo seus pontos inalterados.
+  2. Executado comando direto no PostgreSQL para configurar `aventureiromax1` como `role_id = 5` (Admin) com `points = 0`.
 - **Aba de Status OpenFoodFacts Upptime para Administradores (`v1.0.9`):**
   1. Criado serviço [`upptimeService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/upptimeService.ts) que consome os dados em tempo real gerados pelo monitor [Open Food Facts Upptime](https://github.com/openfoodfacts/openfoodfacts-upptime) (`summary.json`), com cache em memória (TTL de 60 segundos), tratamento de falha/timeout e categorização inteligente dos serviços.
   2. Implementado componente [`OpenFoodFactsStatusTab.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OpenFoodFactsStatusTab.tsx) contendo hero card de status da infraestrutura global, destaque com métricas em tempo real dos serviços essenciais utilizados no Presco (**Consulta de EAN / Barcode `API v2 / v3`** e **Servidor CDN de Fotos `open-food-facts-images`**, além de **Busca** e **Portal Principal**), filtros de listagem, busca instantânea e links para o repositório GitHub e status page oficial.
