@@ -2984,7 +2984,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## 2026-09-10 13:59 - feat(scanner): barcode similarity match (>=65%) and printed digits confirmation
 
-- **Description:** Implementado algoritmo de similaridade de código de barras no backend com limiar de 65% (0.65), priorizando produtos com imagem quando não houver correspondência 100% exata. Atualizada a tela de confirmação do scanner (scannerConfirmation.tsx) para exibir card de compatibilidade com porcentagem calculada e bloco de conferência dos dígitos lidos pela câmera vs número oficial do produto físico impresso abaixo das barras. Atualizados dicionários de i18n em 7 idiomas. Bump de versão para 1.0.4 (versionCode 5).
+- **Description:** Implementado algoritmo de similaridade de cï¿½digo de barras no backend com limiar de 65% (0.65), priorizando produtos com imagem quando nï¿½o houver correspondï¿½ncia 100% exata. Atualizada a tela de confirmaï¿½ï¿½o do scanner (scannerConfirmation.tsx) para exibir card de compatibilidade com porcentagem calculada e bloco de conferï¿½ncia dos dï¿½gitos lidos pela cï¿½mera vs nï¿½mero oficial do produto fï¿½sico impresso abaixo das barras. Atualizados dicionï¿½rios de i18n em 7 idiomas. Bump de versï¿½o para 1.0.4 (versionCode 5).
 - **Files Modified:**
   - src/backend/src/shared/types/product.ts
   - src/backend/src/shared/database/repositories/product.repository.ts
@@ -3006,7 +3006,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/frontend/package.json
   - src/frontend/app.json
   - .agents/CURRENT.md
-- **Impact / Next Steps:** O usuário tem segurança contra erros de leitura óptica de código de barras ou variações menores de dígitos, podendo conferir visualmente a imagem e os números impressos na embalagem antes de submeter o preço.
+- **Impact / Next Steps:** O usuï¿½rio tem seguranï¿½a contra erros de leitura ï¿½ptica de cï¿½digo de barras ou variaï¿½ï¿½es menores de dï¿½gitos, podendo conferir visualmente a imagem e os nï¿½meros impressos na embalagem antes de submeter o preï¿½o.
 
 ## 2026-09-10 16:30 - fix(ci): Resolucao de erro de sintaxe Swift 6.0 no ExpoModulesJSI da build iOS
 
@@ -3277,3 +3277,20 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Pronta para receber a implementaÃ§Ã£o de layout, conteÃºdo, QR code para download do APK/app e informaÃ§Ãµes institucionais.
+
+## 2026-09-21 12:04 - feat(api): endpoint de purge de produtos e suspensao de catalogo pre-cadastrado no seed
+
+- **Description:** Implementada rota administrativa POST /products/purge-all com remocao em cascata das tabelas vinculadas (cart_product, product_report, ocurrency, product) e invalidacao de cache. Suspensao do loop de catalogo de produtos no seed.ts para evitar repopulacao automatica. Bump de versao para v1.0.7 (versionCode 8).
+- **Files Modified:**
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+- **Impact / Next Steps:** Disparar deploy via CI/CD no GitHub Actions e executar o comando de limpeza de produtos no servidor de producao.

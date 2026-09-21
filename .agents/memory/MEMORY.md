@@ -14,6 +14,10 @@
 
 - [project] Algoritmo de compatibilidade de código de barras (>= 65%) com confirmação na UI → tech-decisions.md
 - [project] Pipeline de compilação de IPA iOS sem assinatura via GitHub Actions e Sideloadly → tech-decisions.md
+- [project] Anti-spam de preços (cooldown 5 min) e sistema comunitário de denúncia de produtos → tech-decisions.md
+- [project] Onboarding educativo em 6 etapas com feedback háptico e Reanimated 4 → tech-decisions.md
+- [project] Busca de mercados por proximidade espacial PostGIS (15km) e fallback ordenado → tech-decisions.md
+- [project] Pipeline de release e distribuição oficial do APK standalone no GitHub Releases → tech-decisions.md
 
 ## User Preferences
 - [user] Prioridade para execucao cirurgica e conservacao de contexto de tokens → user-preferences.md

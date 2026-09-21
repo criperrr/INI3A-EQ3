@@ -38,3 +38,22 @@ Registro das decisões técnicas fundamentais tomadas na arquitetura do Presco.
 - **Workflow Manual (`build-ios.yml`):** Executa no runner `macos-15` via gatilho manual (`workflow_dispatch`) ou tag manual (`ios-v*`).
 - **Compatibilidade Xcode:** Utiliza Xcode 16.0/15.4 para evitar bug de runtime de simuladores ausentes no `expo-dev-menu` do Xcode 16.2.
 - **Sem Assinatura (Sideload):** Compilado com `CODE_SIGNING_ALLOWED=NO`, empacotado em `Payload/` e zipado como `Presco.ipa`, pronto para ser assinado e instalado via Sideloadly no Windows sem Mac físico.
+
+## 7. Anti-Spam de Preços & Sistema de Denúncias (Report)
+- **Cooldown de Ocorrências (5 minutos):** Prevenção de spam validada no `OcurrencyService` consultando `OcurrencyRepository.findRecentByUserAndProduct` num intervalo de 300 segundos. Dispara `429 TooManyRequestsError` com cálculo de tempo restante amigável.
+- **Denúncia Comunitária de Produtos (`product_report`):** Tabela relacional com chave estrangeira em cascata para `user` e `product`, motivos padronizados (`reason`), descrição opcional e endpoint autenticado `POST /products/:id/report`.
+
+## 8. Onboarding Didático & Gestos Hápticos
+- **Tutorial em 6 Etapas:** Apresentado no primeiro acesso com persistência via AsyncStorage (`@presco:hasSeenTutorial`).
+- **Navegação & Estética:** 6 passos com transições via Reanimated 4, física de mola suave e feedback háptico (`expo-haptics`). Ferramenta de reset e teste disponível para administradores em `settings.tsx`.
+
+## 9. Descoberta e Proximidade de Mercados (Raio de 15km)
+- **Cálculo Espacial PostGIS & Fallback:** Mercados físicos ordenados por proximidade via `ST_Distance` dentro de um raio de 15km. Se o GPS estiver desativado ou sem estabelecimentos próximos, o sistema aplica fallback gracioso carregando a lista completa com ordenação alfabética e destaque para Trigal (ID 1).
+
+## 10. Navegação por Gestos Horizontais (Swipe TikTok-Style)
+- **`SwipeTabNavigator` com Reanimated 4:** Alternância fluida entre as 5 telas principais via gestos horizontais de pan/swipe sem conflito com a rolagem vertical de `FlatList`/`ScrollView` nem com a manipulação de zoom do mapa (`react-native-maps`).
+
+## 11. Distribuição Oficial do APK Android
+- **Compilação Release Standalone:** Gerada via Gradle com New Architecture, engine Hermes e compatibilidade com processadores 64-bit (`arm64-v8a`) e 32-bit (`armeabi-v7a`).
+- **Publicação:** Distribuído no GitHub Releases com automação via GitHub Actions (`release.yml`), script `scripts/bump_version.ts` e binários oficiais `Presco-vX.X.X.apk` / `Presco.apk`.
+
