@@ -764,6 +764,32 @@ export async function seedDatabase() {
     }
   }
 
+  // 5.1 Ensure aventureiromax1 is always Admin
+  const targetAdmin = await db.query.user.findFirst({
+    where: (table, { or, eq }) => or(eq(table.name, "aventureiromax1"), eq(table.email, "aventureiromax1@test.com"), eq(table.email, "aventureiromax1@presco.com")),
+  });
+  if (targetAdmin) {
+    await db
+      .update(user)
+      .set({
+        roleId: 5,
+        points: targetAdmin.points > 0 ? targetAdmin.points : 9999,
+        equippedBannerId: targetAdmin.equippedBannerId || 6,
+        equippedAvatarFrameId: targetAdmin.equippedAvatarFrameId || 16,
+        equippedLevelFrameId: targetAdmin.equippedLevelFrameId || 25,
+        equippedTitleId: targetAdmin.equippedTitleId || 50,
+      })
+      .where(eq(user.id, targetAdmin.id));
+
+    for (const b of defaultBadges) {
+      await db.insert(userBadge).values({ userId: targetAdmin.id, badgeId: b.id }).onConflictDoNothing();
+    }
+    for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
+      await db.insert(userCustomization).values({ userId: targetAdmin.id, itemId }).onConflictDoNothing();
+    }
+    console.log("✅ [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
+  }
+
   // 6. Seed Regular Test User: usuario@presco.com / user123
   const userEmail = "usuario@presco.com";
   const existingUser = await db.query.user.findFirst({
