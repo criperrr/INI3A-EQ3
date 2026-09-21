@@ -112,6 +112,7 @@ export const user = pgTable(
     equippedAvatarFrameId: integer("equipped_avatar_frame_id"),
     equippedLevelFrameId: integer("equipped_level_frame_id"),
     equippedTitleId: integer("equipped_title_id"),
+    twoFactorVerified: boolean("two_factor_verified").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),

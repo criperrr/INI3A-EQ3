@@ -28,6 +28,7 @@ export async function seedDatabase() {
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_avatar_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_level_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_title_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
+    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS two_factor_verified BOOLEAN DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS user_customization (
       user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
@@ -729,6 +730,7 @@ export async function seedDatabase() {
         equippedAvatarFrameId: 16, // Coroa Mítica
         equippedLevelFrameId: 25, // Soberano Supremo
         equippedTitleId: 50, // Administrador Master
+        twoFactorVerified: true,
       })
       .returning();
 
