@@ -46,6 +46,7 @@ import {
   BookOpen,
   FlaskConical,
   ChevronRight,
+  Activity,
 } from "lucide-react-native";
 import Constants from "expo-constants";
 import { useTheme, MONET_PRESETS } from "../theme";
@@ -57,6 +58,7 @@ import { resetTutorialStatus } from "../utils/tutorialStorage";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 import { Image as ExpoImage } from "expo-image";
 import { fetchPendingOccurrences } from "../services/ocurrencyService";
+import OpenFoodFactsStatusTab from "../components/OpenFoodFactsStatusTab";
 
 interface SettingsState {
   theme: "light" | "dark";
@@ -142,6 +144,7 @@ const SettingsScreen: React.FC = () => {
   const { isAdmin } = useAuth();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [isSaved, setIsSaved] = useState(false);
+  const [activeTab, setActiveTab] = useState<"general" | "off_status">("general");
 
   // Modals state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -549,9 +552,88 @@ const SettingsScreen: React.FC = () => {
         )}
       </View>
 
+      {/* Exclusive Admin Navigation Tabs */}
+      {isAdmin && (
+        <View
+          style={[
+            styles.adminTabBar,
+            themeStyles.card,
+            { borderBottomColor: globalIsDark ? "#263238" : "#E2E8F0" },
+          ]}
+        >
+          <TouchableOpacity
+            style={[
+              styles.adminTabItem,
+              activeTab === "general" && [
+                styles.adminTabItemActive,
+                { borderBottomColor: accent },
+              ],
+            ]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab("general");
+            }}
+            activeOpacity={0.7}
+          >
+            <Settings
+              size={16}
+              color={activeTab === "general" ? accent : themeStyles.subText.color}
+            />
+            <Text
+              style={[
+                styles.adminTabText,
+                activeTab === "general"
+                  ? { color: accent, fontWeight: "700" }
+                  : themeStyles.subText,
+              ]}
+            >
+              {t("admin.tabGeneral") || "Geral"}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.adminTabItem,
+              activeTab === "off_status" && [
+                styles.adminTabItemActive,
+                { borderBottomColor: accent },
+              ],
+            ]}
+            onPress={() => {
+              triggerHaptic();
+              setActiveTab("off_status");
+            }}
+            activeOpacity={0.7}
+          >
+            <Activity
+              size={16}
+              color={activeTab === "off_status" ? accent : themeStyles.subText.color}
+            />
+            <Text
+              style={[
+                styles.adminTabText,
+                activeTab === "off_status"
+                  ? { color: accent, fontWeight: "700" }
+                  : themeStyles.subText,
+              ]}
+            >
+              {t("admin.tabOffStatus") || "Status OpenFoodFacts"}
+            </Text>
+            <View style={[styles.adminTabBadge, { backgroundColor: accent + "20" }]}>
+              <Text style={[styles.adminTabBadgeText, { color: accent }]}>ADMIN</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Content */}
       <View style={styles.content}>
-        {/* Appearance Section */}
+        {isAdmin && activeTab === "off_status" ? (
+          <OpenFoodFactsStatusTab onBackToGeneral={() => setActiveTab("general")} />
+        ) : (
+          <>
+            {/* Appearance Section */}
+
         <View style={[styles.section, themeStyles.card, themeStyles.border]}>
           <View style={styles.sectionHeader}>
             {isSettingsDark ? (
@@ -1144,6 +1226,38 @@ const SettingsScreen: React.FC = () => {
               Ferramentas exclusivas de depuração e validação de primeiro acesso.
             </Text>
 
+            {/* Status da API OpenFoodFacts (Upptime) */}
+            <TouchableOpacity
+              style={[
+                styles.adminActionCard,
+                {
+                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                  borderColor: accent + "30",
+                  marginBottom: 10,
+                },
+              ]}
+              activeOpacity={0.7}
+              onPress={() => {
+                triggerHaptic();
+                setActiveTab("off_status");
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+                  <Activity size={18} color={accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                    {t("admin.offDirectStatusCard") || "Status da API OpenFoodFacts"}
+                  </Text>
+                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                    {t("admin.offDirectStatusDesc") || "Consulte a disponibilidade de EAN e fotos em tempo real"}
+                  </Text>
+                </View>
+              </View>
+              <ChevronRight size={18} color={accent} />
+            </TouchableOpacity>
+
             {/* Moderação de Preços Pendentes */}
             <TouchableOpacity
               style={[
@@ -1285,6 +1399,8 @@ const SettingsScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
+        </>
+        )}
       </View>
 
       {/* Export Code Modal */}
@@ -1939,6 +2055,38 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  adminTabBar: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  adminTabItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  adminTabItemActive: {
+    borderBottomWidth: 2,
+  },
+  adminTabText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  adminTabBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    marginLeft: 2,
+  },
+  adminTabBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
   },
 });
 
