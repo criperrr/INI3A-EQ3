@@ -3248,3 +3248,32 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
 - **Impact / Next Steps:** Servidor remoto 100% limpo e higienizado com apenas 1 arquivo markdown e apenas arquivos essenciais do backend. Deploy testado com sucesso com retorno HTTP 200 na API e healthcheck.
 >>>>>>> 4d2edc36b06fc6f701d01ffc94fab54fb51764bf
+
+##  - : Initial scaffolding for product landing page
+
+- **Description:** Criada estrutura inicial de diretório e arquivos base da landing page institucional do aplicativo Presco em `src/landing` (`index.html`, `styles.css`, `script.js` e pasta `assets/`). Incrementada versão SemVer para 1.0.6.
+- **Files Modified:**
+  - `src/landing/index.html`
+  - `src/landing/styles.css`
+  - `src/landing/script.js`
+  - `src/landing/assets/`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Pronta para receber a implementação de layout, conteúdo, QR code para download do APK/app e informações institucionais.
+
+## `2026-09-21 11:46` - `feat(landing)`: Initial scaffolding for product landing page
+
+- **Description:** Criada estrutura inicial de diretório e arquivos base da landing page institucional do aplicativo Presco em \`src/landing\` (\`index.html\`, \`styles.css\`, \`script.js\` e pasta \`assets/\`). Incrementada versão SemVer para 1.0.6.
+- **Files Modified:**
+  - `src/landing/index.html`
+  - `src/landing/styles.css`
+  - `src/landing/script.js`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Pronta para receber a implementação de layout, conteúdo, QR code para download do APK/app e informações institucionais.

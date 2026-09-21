@@ -7,6 +7,7 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Criação da Estrutura da Landing Page (`src/landing`):** Criada pasta dedicada para a landing page institucional do aplicativo Presco em [`src/landing`](file:///Users/aventureiromax/INI3A-EQ3/src/landing) contendo os arquivos base em branco ([`index.html`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/index.html), [`styles.css`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/styles.css), [`script.js`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/script.js)) e subdiretório `assets/` para imagens e QR code.
 - **Remoção de Produtos Sem Preço na Tela Inicial:** Implementada filtragem estrita com `hasValidPrice` no carregamento e renderização do grid da tela inicial (`index.tsx`). Itens sem preço ou com status "Preço não informado" / "sob consulta" são completamente excluídos do grid de produtos da Home.
 - **Higienização do Servidor Remoto & Pipeline de Deploy Autônomo (`v1.0.5`):**
   1. Reestruturado [`scripts/deploy_remote.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/scripts/deploy_remote.sh) para sincronizar estritamente os arquivos essenciais de execução do backend (`src/backend/`, `deploy/deploy.sh`, `ecosystem.config.cjs`), impedindo o envio de `.agents/`, `docs/`, `sprints/`, scripts de desenvolvimento, código de frontend e múltiplos markdowns.
