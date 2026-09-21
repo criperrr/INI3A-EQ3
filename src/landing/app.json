@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "LandingPage",
+    "slug": "landing-page",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
