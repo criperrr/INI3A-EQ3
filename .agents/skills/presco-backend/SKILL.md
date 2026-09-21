@@ -86,3 +86,11 @@ Todas estendem `AppError(internalCode, customMessage, httpCode)`:
 4. [ ] Implementar ação do controller em `modules/[module]/[module].controller.ts` com validação e `success()`.
 5. [ ] Configurar rota e middlewares (`requireAuth`, `requireAdmin`) em `modules/[module]/[module].routes.ts`.
 6. [ ] Se for novo módulo, registrar rota em `src/backend/src/app.ts`.
+
+---
+
+## 6. Pipeline de CI/CD e Deploy Autônomo
+
+- **Gatilho Autônomo**: Todo push para `main` ou `tests` que altere arquivos em `src/backend/**`, `deploy/**`, `ecosystem.config.cjs`, `scripts/deploy_remote.sh` ou `.github/workflows/deploy.yml` dispara o GitHub Actions (`Deploy Backend`).
+- **Comando Manual**: Em sessões locais ou quando o usuário solicitar deploy imediato: `npm run deploy` (via SSH direto) ou `gh workflow run deploy.yml --ref <branch>` (via GitHub Actions).
+- **Higiene do Servidor de Produção**: O servidor remoto deve conter estritamente `src/backend/`, `deploy/deploy.sh`, `ecosystem.config.cjs`, `.htaccess`, `logs/` e um único `README.md`. Nenhum arquivo de `.agents/`, markdown de documentação ou frontend é enviado ou mantido no servidor.

@@ -12,8 +12,12 @@
 - [project] Sistema de Design com tokens semanticos, suporte AMOLED puro e cores Monet → tech-decisions.md
 - [project] Internacionalizacao completa com suporte sincronizado a 7 idiomas → tech-decisions.md
 
+- [project] Algoritmo de compatibilidade de código de barras (>= 65%) com confirmação na UI → tech-decisions.md
+- [project] Pipeline de compilação de IPA iOS sem assinatura via GitHub Actions e Sideloadly → tech-decisions.md
+
 ## User Preferences
 - [user] Prioridade para execucao cirurgica e conservacao de contexto de tokens → user-preferences.md
+- [user] Política estrita de Git: NUNCA dar git push ou commit automaticamente; somente sob solicitação explícita; manter trabalho em tests sem tocar na main → user-preferences.md
 
 ## Feedback
 - [feedback] Impedir auto-votacao de precos e corrigir consultas geograficas no backend → feedback-history.md

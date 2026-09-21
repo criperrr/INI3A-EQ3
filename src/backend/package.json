@@ -1,6 +1,10 @@
 {
   "name": "backend",
+<<<<<<< HEAD
   "version": "1.0.3",
+=======
+  "version": "1.0.5",
+>>>>>>> 4d2edc36b06fc6f701d01ffc94fab54fb51764bf
   "type": "module",
   "dependencies": {
     "@libsql/client": "^0.17.3",
@@ -15,6 +19,7 @@
     "pg": "^8.21.0",
     "redis": "^6.0.0",
     "sharp": "^0.35.4",
+    "tsx": "^4.21.0",
     "zod": "^4.4.3"
   },
   "scripts": {

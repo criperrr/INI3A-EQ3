@@ -79,6 +79,39 @@ class MarketServiceClass {
 
     return created;
   }
+
+  async updateMarket(id: number | string, data: { name?: string | undefined; latitude?: number | undefined; longitude?: number | undefined }) {
+    const updateData: any = {};
+    if (data.name !== undefined) {
+      updateData.name = data.name.trim();
+    }
+    if (data.latitude !== undefined && data.longitude !== undefined) {
+      updateData.location = {
+        lat: data.latitude,
+        lng: data.longitude,
+      };
+    }
+
+    const updated = await MarketRepository.updateMarket(id, updateData);
+    if (!updated || updated.length === 0) {
+      throw new NotFoundError("Mercado não encontrado.");
+    }
+    return updated[0];
+  }
+
+  async deleteMarket(id: number | string) {
+    const count = await MarketRepository.deleteMarket(id);
+    if (!count) {
+      throw new NotFoundError("Mercado não encontrado.");
+    }
+    return { deleted: true, id: Number(id) };
+  }
+
+  async reallocateMarkets() {
+    const { executeReallocation } = await import("@/shared/database/reallocateMarkets");
+    await executeReallocation();
+    return { success: true, message: "Mercados e ocorrências realocados com sucesso para os estabelecimentos oficiais." };
+  }
 }
 
 export const marketService = new MarketServiceClass();

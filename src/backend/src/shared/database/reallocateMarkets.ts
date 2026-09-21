@@ -8,13 +8,45 @@ export async function executeReallocation() {
 
   // 1. Ensure latest HERE API markets are populated for active areas (Bauru & São Paulo)
   console.log("📍 [Reallocation] Ensuring HERE API markets are discovered for Bauru and São Paulo...");
-  await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 20000); // Bauru
+  await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 20000); // Bauru Centro / Norte
+  await HereMarketDiscovery.discoverNearbyMarkets(-22.3545, -49.0493, 10000); // Bauru Sul (Vila Aviação / Getúlio Vargas)
   await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 15000); // São Paulo
 
-  // 2. Clean up non-retail noise in markets with 0 occurrences
+  // 1.1 Ensure real Oba Hortifruti at Av. Getúlio Vargas 23-2 is present and clean up extinct Jardim América unit
   await db.execute(sql`
     DELETE FROM market
-    WHERE id >= 125
+    WHERE name ILIKE '%oba%'
+      AND ST_DWithin(location, ST_GeographyFromText('POINT(-49.05957 -22.34598)'), 600)
+      AND id NOT IN (SELECT DISTINCT market_id FROM ocurrency)
+  `);
+
+  const realOba = await db.execute(sql`
+    SELECT id, name FROM market
+    WHERE name ILIKE '%oba%'
+      AND ST_DWithin(location, ST_GeographyFromText('POINT(-49.04929 -22.35451)'), 600)
+    LIMIT 1
+  `);
+  const realObaRow = realOba.rows[0];
+  if (realObaRow) {
+    await db.execute(sql`
+      UPDATE market
+      SET name = 'Oba Hortifruti',
+          location = ST_GeographyFromText('POINT(-49.04929 -22.35451)')
+      WHERE id = ${realObaRow.id}
+    `);
+    console.log(`✅ [Reallocation] Updated genuine Oba Hortifruti on Av. Getúlio Vargas 23-2 (ID ${realObaRow.id})`);
+  } else {
+    await db.execute(sql`
+      INSERT INTO market (name, location)
+      VALUES ('Oba Hortifruti', ST_GeographyFromText('POINT(-49.04929 -22.35451)'))
+    `);
+    console.log(`✅ [Reallocation] Inserted genuine Oba Hortifruti on Av. Getúlio Vargas 23-2`);
+  }
+
+  // 2. Clean up non-retail noise in markets with 0 occurrences (preserving Trigal ID 1)
+  await db.execute(sql`
+    DELETE FROM market
+    WHERE id != 1
       AND id NOT IN (SELECT DISTINCT market_id FROM ocurrency)
       AND (
         name ILIKE '%livraria%' OR
@@ -27,7 +59,18 @@ export async function executeReallocation() {
         name ILIKE '%pastelaria%' OR
         name ILIKE '%restaurante%' OR
         name ILIKE '%salão%' OR
-        name ILIKE '%culturista%'
+        name ILIKE '%culturista%' OR
+        name ILIKE '%posto%' OR
+        name ILIKE '%petrobras%' OR
+        name ILIKE '%ipiranga%' OR
+        name ILIKE '%shell select%' OR
+        name ILIKE '%cacau show%' OR
+        name ILIKE '%vila salt%' OR
+        name ILIKE '%fazenda do bolo%' OR
+        name ILIKE '%confeitaria%' OR
+        name ILIKE '%clean foods%' OR
+        name ILIKE '%marmitaria%' OR
+        name ILIKE '%papelaria%'
       )
   `);
 
@@ -160,14 +203,14 @@ export async function executeReallocation() {
 
   console.log(`🎉 [Reallocation] Successfully migrated ${totalReallocated} occurrences!`);
 
-  // 5. Delete all legacy / non-API markets (all IDs < 125)
+  // 5. Delete all legacy / non-API markets (all IDs < 125, preserving Trigal ID 1)
   const deletedOld = await db.execute(sql`
     DELETE FROM market
-    WHERE id < 125
+    WHERE id < 125 AND id != 1
     RETURNING id
   `);
 
-  console.log(`🗑️ [Reallocation] Purged ${deletedOld.rows.length} legacy/inexistent markets from database.`);
+  console.log(`🗑️ [Reallocation] Purged ${deletedOld.rows.length} legacy/inexistent markets from database (Trigal ID 1 preserved).`);
 
   // 6. Verify that 100% of remaining markets are HERE API markets (ID >= 125)
   const remainingMarkets = await db.execute(sql`

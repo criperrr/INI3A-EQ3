@@ -31,6 +31,9 @@ export default function ScannerConfirmation() {
     category?: string;
     imageUri?: string;
     lastPrice?: string;
+    matchScore?: string;
+    isExactMatch?: string;
+    scannedEan?: string;
   }>();
   const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
@@ -38,6 +41,11 @@ export default function ScannerConfirmation() {
   const { t } = useI18n();
 
   const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
+
+  const rawScore = params.matchScore ? parseFloat(params.matchScore) : 1.0;
+  const matchScore = isNaN(rawScore) ? 1.0 : rawScore;
+  const isApproximate = params.isExactMatch === "false" || matchScore < 1.0;
+  const scannedBarcode = params.scannedEan || params.barcode || params.ean || "";
 
   const product = {
     id: params.id,
@@ -47,6 +55,9 @@ export default function ScannerConfirmation() {
     lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
     barcode: params.barcode || params.ean || "",
     ean: params.ean || params.barcode || "",
+    matchScore,
+    isApproximate,
+    scannedBarcode,
   };
 
   useEffect(() => {
@@ -151,19 +162,26 @@ export default function ScannerConfirmation() {
           style={[
             styles.headerBadge,
             {
-              backgroundColor: `${accent}18`,
-              borderColor: `${accent}33`,
+              backgroundColor: isApproximate ? "rgba(245, 158, 11, 0.16)" : `${accent}18`,
+              borderColor: isApproximate ? "rgba(245, 158, 11, 0.38)" : `${accent}33`,
             },
           ]}
         >
           <Ionicons
-            name="scan-outline"
+            name={isApproximate ? "sparkles-outline" : "scan-outline"}
             size={13}
-            color={accent}
+            color={isApproximate ? "#F59E0B" : accent}
             style={styles.headerBadgeIcon}
           />
-          <Text style={[styles.headerBadgeText, { color: accent }]}>
-            {t("scanner.confirmProduct")}
+          <Text
+            style={[
+              styles.headerBadgeText,
+              { color: isApproximate ? "#F59E0B" : accent },
+            ]}
+          >
+            {isApproximate
+              ? t("scanner.approximateMatchTitle").replace("{percent}", String(Math.round(product.matchScore * 100)))
+              : t("scanner.confirmProduct")}
           </Text>
         </View>
         <Text
@@ -338,8 +356,10 @@ export default function ScannerConfirmation() {
             style={[
               styles.questionContainer,
               {
-                backgroundColor: semantic.colors.surface.input,
-                borderColor: `${accent}28`,
+                backgroundColor: isApproximate
+                  ? "rgba(245, 158, 11, 0.08)"
+                  : semantic.colors.surface.input,
+                borderColor: isApproximate ? "rgba(245, 158, 11, 0.35)" : `${accent}28`,
                 borderRadius: semantic.radius.input,
               },
             ]}
@@ -347,13 +367,17 @@ export default function ScannerConfirmation() {
             <View
               style={[
                 styles.questionIconBadge,
-                { backgroundColor: `${accent}1A` },
+                {
+                  backgroundColor: isApproximate
+                    ? "rgba(245, 158, 11, 0.2)"
+                    : `${accent}1A`,
+                },
               ]}
             >
               <Ionicons
-                name="help-circle-outline"
+                name={isApproximate ? "alert-circle-outline" : "help-circle-outline"}
                 size={18}
-                color={accent}
+                color={isApproximate ? "#F59E0B" : accent}
               />
             </View>
             <View style={styles.questionTextContainer}>
@@ -361,13 +385,15 @@ export default function ScannerConfirmation() {
                 style={[
                   styles.questionTitle,
                   {
-                    color: semantic.colors.text.primary,
+                    color: isApproximate ? "#D97706" : semantic.colors.text.primary,
                     ...semantic.typography.bodyBold,
                   },
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
-                {t("scanner.isThisScannedProduct")}
+                {isApproximate
+                  ? t("scanner.isBarcodeNumberCorrect")
+                  : t("scanner.isThisScannedProduct")}
               </Text>
               <Text
                 style={[
@@ -377,12 +403,72 @@ export default function ScannerConfirmation() {
                     ...semantic.typography.micro,
                   },
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
-                {t("scanner.confirmPromptSubtitle")}
+                {isApproximate
+                  ? t("scanner.checkBarcodeNumberPrompt")
+                  : t("scanner.confirmPromptSubtitle")}
               </Text>
             </View>
           </View>
+
+          {/* Quando compatibilidade aproximada: Bloco de conferência dos dígitos do código */}
+          {isApproximate && (
+            <View
+              style={[
+                styles.digitsVerificationCard,
+                {
+                  backgroundColor: semantic.colors.surface.input,
+                  borderColor: semantic.colors.border.default,
+                  borderRadius: semantic.radius.card,
+                },
+              ]}
+            >
+              <View style={styles.digitRow}>
+                <Ionicons
+                  name="camera-outline"
+                  size={14}
+                  color={semantic.colors.text.secondary}
+                  style={styles.digitRowIcon}
+                />
+                <Text
+                  style={[styles.digitLabel, { color: semantic.colors.text.secondary }]}
+                  numberOfLines={1}
+                >
+                  {t("scanner.scannedBarcodeLabel")}
+                </Text>
+                <Text
+                  style={[styles.digitValue, { color: semantic.colors.text.primary }]}
+                  numberOfLines={1}
+                >
+                  {product.scannedBarcode}
+                </Text>
+              </View>
+
+              <View style={styles.digitDivider} />
+
+              <View style={styles.digitRow}>
+                <Ionicons
+                  name="barcode-outline"
+                  size={14}
+                  color={accent}
+                  style={styles.digitRowIcon}
+                />
+                <Text
+                  style={[styles.digitLabel, { color: semantic.colors.text.secondary }]}
+                  numberOfLines={1}
+                >
+                  {t("scanner.productBarcodeLabel")}
+                </Text>
+                <Text
+                  style={[styles.digitValue, { color: accent, fontWeight: "700" }]}
+                  numberOfLines={1}
+                >
+                  {product.barcode}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* Botões de Ação */}
           <View style={styles.buttonRow}>
@@ -597,6 +683,36 @@ const styles = StyleSheet.create({
   questionSubtitle: {
     fontSize: 11,
     lineHeight: 14,
+  },
+  digitsVerificationCard: {
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 12,
+  },
+  digitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  digitRowIcon: {
+    marginRight: 6,
+  },
+  digitLabel: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  digitValue: {
+    fontSize: 13,
+    fontWeight: "600",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: 0.5,
+  },
+  digitDivider: {
+    height: 1,
+    backgroundColor: "rgba(150, 150, 150, 0.15)",
+    marginVertical: 4,
   },
   buttonRow: {
     flexDirection: "row",

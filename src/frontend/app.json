@@ -2,7 +2,11 @@
   "expo": {
     "name": "Presco",
     "slug": "presco",
+<<<<<<< HEAD
     "version": "1.0.3",
+=======
+    "version": "1.0.5",
+>>>>>>> 4d2edc36b06fc6f701d01ffc94fab54fb51764bf
     "orientation": "portrait",
     "scheme": "presco",
     "userInterfaceStyle": "automatic",
@@ -19,7 +23,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
+<<<<<<< HEAD
       "versionCode": 4
+=======
+      "versionCode": 6
+>>>>>>> 4d2edc36b06fc6f701d01ffc94fab54fb51764bf
     },
     "web": {
       "output": "static"
@@ -58,6 +66,12 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "icon": "./assets/icon.png"
+    "icon": "./assets/icon.png",
+    "owner": "presco.tcc.projetoscti",
+    "extra": {
+      "eas": {
+        "projectId": "83e64f4c-dc9b-4531-9963-18ad4da776db"
+      }
+    }
   }
 }

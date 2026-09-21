@@ -1,0 +1,160 @@
+name: Build iOS IPA (Sideloadly)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch para compilar (ex: tests ou main)"
+        required: false
+        default: "tests"
+  push:
+    tags:
+      - "ios-v*"
+
+concurrency:
+  group: build-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref }}
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Selecionar Versão Compatível do Xcode (Priorizar Xcode 16.4 / Swift 6.2)
+        run: |
+          if [ -d "/Applications/Xcode_16.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode_16.3.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer
+          elif [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          else
+            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer || true
+          fi
+          xcodebuild -version
+          xcrun swiftc --version
+
+      - name: Baixar Plataforma iOS para Xcode (se necessário)
+        run: |
+          xcrun simctl list > /dev/null || true
+          sudo xcodebuild -downloadPlatform iOS || true
+
+      - name: Instalar Dependências Raiz
+        run: npm install --prefer-offline --no-audit
+
+      - name: Instalar Dependências do Frontend
+        working-directory: src/frontend
+        run: npm install --prefer-offline --no-audit
+
+      - name: Configurar Variáveis de Ambiente do Frontend
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir -p src/frontend
+          cat << EOF > src/frontend/.env
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          EOF
+
+      - name: Preparar Frontend para Release (Remover expo-dev-client)
+        working-directory: src/frontend
+        run: |
+          # expo-dev-client e expo-dev-menu contêm assets de simulador incompatíveis com o actool do Xcode 16.2 em builds Release
+          node -e '
+            const fs = require("fs");
+            const appJson = JSON.parse(fs.readFileSync("app.json", "utf8"));
+            appJson.expo.plugins = (appJson.expo.plugins || []).filter(p => p !== "expo-dev-client");
+            fs.writeFileSync("app.json", JSON.stringify(appJson, null, 2));
+
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            delete pkg.dependencies["expo-dev-client"];
+            fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+          '
+          npm install --prefer-offline --no-audit
+
+      - name: Gerar Projeto Nativo iOS (Expo Prebuild)
+        working-directory: src/frontend
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Limpar Cache do CocoaPods e DerivedData
+        run: |
+          rm -rf ~/Library/Developer/Xcode/DerivedData/*
+          rm -rf ~/Library/Caches/CocoaPods
+          rm -rf src/frontend/ios/build
+          pod repo update
+
+      - name: Corrigir Compatibilidade de Toolchain, Swift Package Manager e XCFrameworks
+        run: node scripts/patch_ios_swift6.js
+
+      - name: Instalar Pods iOS
+        working-directory: src/frontend/ios
+        run: |
+          pod install
+
+      - name: Corrigir Build Scripts, Toolchain e Swiftinterfaces nos Pods
+        run: node scripts/patch_ios_swift6.js
+
+      - name: Compilar App iOS com Xcodebuild (Sem assinatura para Sideloadly)
+        working-directory: src/frontend/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace Presco.xcworkspace \
+            -scheme Presco \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_ENTITLEMENTS="" \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            SKIP_INSTALL=YES \
+            EXCLUDED_ARCHS="arm64e" \
+            -skipPackagePluginValidation \
+            -skipMacroValidation 2>&1 | tee xcodebuild.log | grep -E "(error:|fatal error:|BUILD FAILED|\*\* BUILD FAILED \*\*|The following build commands failed:)" -B 2 -A 5 || true
+
+          if grep -q "\*\* BUILD FAILED \*\*" xcodebuild.log; then
+            echo "::error::Xcodebuild falhou! Trecho com os erros:"
+            grep -E "(error:|fatal error:)" xcodebuild.log -A 4 -B 2 | head -n 40
+            exit 1
+          fi
+
+      - name: Empacotar Payload e Gerar .ipa
+        working-directory: src/frontend/ios
+        run: |
+          mkdir -p build/ipa/Payload
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "*.app" | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Erro: Arquivo .app não encontrado!"
+            exit 1
+          fi
+          echo "Copiando $APP_PATH para Payload..."
+          cp -r "$APP_PATH" build/ipa/Payload/
+          cd build/ipa
+          zip -r ../Presco.ipa Payload
+          echo "IPA gerado com sucesso em src/frontend/ios/build/Presco.ipa"
+
+      - name: Publicar IPA como Artefato do Workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presco-iOS-IPA
+          path: src/frontend/ios/build/Presco.ipa
+          retention-days: 7

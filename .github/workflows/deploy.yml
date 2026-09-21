@@ -13,11 +13,12 @@ on:
         required: false
         default: ""
   push:
-    branches: [main]
+    branches: [main, tests]
     paths:
       - "src/backend/**"
       - "deploy/**"
       - "ecosystem.config.cjs"
+      - "scripts/deploy_remote.sh"
       - ".github/workflows/deploy.yml"
 
 concurrency:

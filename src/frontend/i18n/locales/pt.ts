@@ -307,6 +307,11 @@ export const pt: TranslationSchema = {
     manualSearchSubtitle: "Digite o código de barras do produto abaixo.",
     manualSearchPlaceholder: "Ex: 7891010101010",
     searchProductBtn: "Buscar Produto",
+    approximateMatchTitle: "Produto Sugerido ({percent}% de compatibilidade)",
+    checkBarcodeNumberPrompt: "Por favor, confira o número impresso abaixo do código de barras da embalagem:",
+    scannedBarcodeLabel: "Número lido na câmera:",
+    productBarcodeLabel: "Número do produto sugerido:",
+    isBarcodeNumberCorrect: "O número e o item correspondem ao seu produto físico?",
   },
   products: {
     title: "Preços e Mercados",

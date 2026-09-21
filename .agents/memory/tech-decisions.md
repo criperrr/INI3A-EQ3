@@ -28,3 +28,13 @@ Registro das decisões técnicas fundamentais tomadas na arquitetura do Presco.
 ## 4. Internacionalização (i18n)
 - Suporte a 7 idiomas: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`.
 - Todas as chaves devem ser registradas em `src/frontend/constants/locales/` e consumidas via `useI18n()`.
+
+## 5. Algoritmo de Compatibilidade de Código de Barras (≥ 65%)
+- **Similaridade Ponderada:** Implementada em `calculateBarcodeSimilarity()` no `product.repository.ts` usando distância de edição Levenshtein com normalização de zeros à esquerda e bônus de subsequência comum.
+- **Fallback Automático:** Quando um EAN não tem correspondência exata, o backend busca itens no banco local com score $\ge 0.65$, priorizando produtos com imagem (`icon`).
+- **Verificação Lado a Lado na UI:** `scannerConfirmation.tsx` exibe badge de compatibilidade e card comparativo entre os dígitos escaneados e os impressos na embalagem antes de salvar ocorrências de preço.
+
+## 6. Build & Deploy iOS (GitHub Actions + Sideloadly)
+- **Workflow Manual (`build-ios.yml`):** Executa no runner `macos-15` via gatilho manual (`workflow_dispatch`) ou tag manual (`ios-v*`).
+- **Compatibilidade Xcode:** Utiliza Xcode 16.0/15.4 para evitar bug de runtime de simuladores ausentes no `expo-dev-menu` do Xcode 16.2.
+- **Sem Assinatura (Sideload):** Compilado com `CODE_SIGNING_ALLOWED=NO`, empacotado em `Payload/` e zipado como `Presco.ipa`, pronto para ser assinado e instalado via Sideloadly no Windows sem Mac físico.

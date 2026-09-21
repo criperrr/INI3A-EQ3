@@ -307,6 +307,11 @@ export const ja: TranslationSchema = {
     manualSearchSubtitle: "以下に商品のバーコードを入力してください。",
     manualSearchPlaceholder: "例: 7891010101010",
     searchProductBtn: "商品を検索",
+    approximateMatchTitle: "おすすめ商品（一致率 {percent}%）",
+    checkBarcodeNumberPrompt: "パッケージのバーコード下に印字されている数字をご確認ください：",
+    scannedBarcodeLabel: "カメラで読み取った番号：",
+    productBarcodeLabel: "おすすめ商品のバーコード番号：",
+    isBarcodeNumberCorrect: "この番号と商品は実際のお手元の品と一致していますか？",
   },
   products: {
     title: "価格と店舗",

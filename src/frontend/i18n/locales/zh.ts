@@ -307,6 +307,11 @@ export const zh: TranslationSchema = {
     manualSearchSubtitle: "在下方输入商品的条形码。",
     manualSearchPlaceholder: "例: 7891010101010",
     searchProductBtn: "查找商品",
+    approximateMatchTitle: "推荐商品（{percent}% 匹配度）",
+    checkBarcodeNumberPrompt: "请核对包装上条形码下方印刷的数字：",
+    scannedBarcodeLabel: "相机扫描的数字：",
+    productBarcodeLabel: "推荐商品的条码数字：",
+    isBarcodeNumberCorrect: "此数字和商品是否与您的实物一致？",
   },
   products: {
     title: "价格与超市",

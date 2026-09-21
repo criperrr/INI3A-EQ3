@@ -2,7 +2,60 @@ import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateP
 import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
 import { market, ocurrency, product, productReport } from "../schema";
-import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql, isNotNull } from "drizzle-orm";
+
+export function calculateBarcodeSimilarity(codeA: string, codeB: string): number {
+  if (!codeA || !codeB) return 0;
+  const a = codeA.replace(/\D/g, "");
+  const b = codeB.replace(/\D/g, "");
+  if (!a || !b) return 0;
+  if (a === b) return 1.0;
+
+  const lenA = a.length;
+  const lenB = b.length;
+  const maxLen = Math.max(lenA, lenB);
+  if (maxLen === 0) return 1.0;
+
+  // Normalized prefix/suffix matching (e.g., zero padding variations)
+  const aNoZero = a.replace(/^0+/, "");
+  const bNoZero = b.replace(/^0+/, "");
+  if (aNoZero && bNoZero && aNoZero === bNoZero) {
+    return 0.95;
+  }
+
+  // Levenshtein distance calculation
+  const matrix: number[][] = [];
+  for (let i = 0; i <= lenA; i++) {
+    matrix[i] = [];
+    for (let j = 0; j <= lenB; j++) {
+      if (i === 0) matrix[i]![j] = j;
+      else if (j === 0) matrix[i]![j] = i;
+      else {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        const prevRow = matrix[i - 1]!;
+        const currRow = matrix[i]!;
+        currRow[j] = Math.min(
+          prevRow[j]! + 1, // deletion
+          currRow[j - 1]! + 1, // insertion
+          prevRow[j - 1]! + cost // substitution
+        );
+      }
+    }
+  }
+
+  const distance = matrix[lenA]![lenB]!;
+  const editSimilarity = 1 - distance / maxLen;
+
+  // Longest common substring / subsequence bonus
+  let matches = 0;
+  const minLen = Math.min(lenA, lenB);
+  for (let i = 0; i < minLen; i++) {
+    if (a[i] === b[i]) matches++;
+  }
+  const positionalSimilarity = matches / maxLen;
+
+  return Math.max(0, Math.min(1, Math.max(editSimilarity, positionalSimilarity * 0.9)));
+}
 
 class ProductRepositoryClass {
   private categoryCache: { data: string[]; expiry: number } | null = null;
@@ -114,6 +167,56 @@ class ProductRepositoryClass {
       .limit(1);
 
     return result[0] || null;
+  }
+
+  async findSimilarProductByBarcode(
+    scannedBarcode: string,
+    minScore = 0.65
+  ): Promise<{ product: typeof product.$inferSelect; matchScore: number } | null> {
+    if (!scannedBarcode) return null;
+    const cleanRaw = scannedBarcode.trim();
+    if (!cleanRaw) return null;
+
+    // Fetch all products that have an EAN defined
+    const candidates = await db
+      .select()
+      .from(product)
+      .where(isNotNull(product.ean))
+      .limit(300);
+
+    if (!candidates || candidates.length === 0) return null;
+
+    let bestCandidate: typeof product.$inferSelect | null = null;
+    let highestScore = 0;
+
+    for (const item of candidates) {
+      if (!item.ean) continue;
+      const score = calculateBarcodeSimilarity(cleanRaw, item.ean);
+
+      // We only consider items with score >= minScore (e.g. 0.65)
+      if (score >= minScore) {
+        // Tie-breaker: prioritize items that actually have an image (icon)
+        const currentHasImage = Boolean(item.icon && item.icon.trim().length > 0);
+        const bestHasImage = Boolean(bestCandidate?.icon && bestCandidate.icon.trim().length > 0);
+
+        if (
+          score > highestScore ||
+          (Math.abs(score - highestScore) < 0.03 && currentHasImage && !bestHasImage)
+        ) {
+          highestScore = score;
+          bestCandidate = item;
+        }
+      }
+    }
+
+    if (bestCandidate && highestScore >= minScore) {
+      return {
+        product: bestCandidate,
+        matchScore: Number(highestScore.toFixed(2)),
+      };
+    }
+
+    return null;
   }
 
   async getProductById(id: number) {

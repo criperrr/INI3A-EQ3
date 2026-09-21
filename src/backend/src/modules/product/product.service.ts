@@ -172,23 +172,49 @@ class ProductServiceClass {
         return this.formatProductDTO(createdProduct, null);
       }
 
-      return {
-        id: 0,
-        barcode: cleanBarcode,
-        ean: cleanBarcode,
-        ncm: null,
-        name: safeName,
-        description: category,
-        category,
-        imageUri: imageUri || null,
-        icon: imageUri || null,
-        createdAt: new Date().toISOString(),
-        lastPrice: "Preço não informado",
-      };
+      if (safeName && imageUri) {
+        return {
+          id: 0,
+          barcode: cleanBarcode,
+          ean: cleanBarcode,
+          ncm: null,
+          name: safeName,
+          description: category,
+          category,
+          imageUri: imageUri || null,
+          icon: imageUri || null,
+          createdAt: new Date().toISOString(),
+          lastPrice: "Preço não informado",
+        };
+      }
     } catch (err) {
       console.warn("[ProductService] OpenFoodFacts search error:", err);
-      return null;
     }
+
+    // 3. Fallback: Search local database for similar barcode with score >= 65% (0.65)
+    try {
+      const similarLocal = await ProductRepository.findSimilarProductByBarcode(cleanBarcode, 0.65);
+      if (similarLocal && similarLocal.product) {
+        const prod = similarLocal.product;
+        const latestPrice = await ProductRepository.getLatestPriceForProduct(prod.id);
+        const stats = await ProductRepository.getPriceStats(prod.id);
+        const dto = this.formatProductDTO(prod, latestPrice);
+        return {
+          ...dto,
+          minPrice: stats.minPrice,
+          maxPrice: stats.maxPrice,
+          avgPrice: stats.avgPrice,
+          occurrencesCount: stats.count,
+          matchScore: similarLocal.matchScore,
+          isExactMatch: false,
+          scannedEan: cleanBarcode,
+        };
+      }
+    } catch (simErr) {
+      console.warn("[ProductService] Error in local barcode similarity check:", simErr);
+    }
+
+    return null;
   }
 
   async getProductById(id: number): Promise<ProductDetailDTO> {
