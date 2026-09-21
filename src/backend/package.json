@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "dependencies": {
     "@libsql/client": "^0.17.3",
