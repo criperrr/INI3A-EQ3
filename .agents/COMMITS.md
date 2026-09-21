@@ -3294,3 +3294,31 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - 
   - 
 - **Impact / Next Steps:** Disparar deploy via CI/CD no GitHub Actions e executar o comando de limpeza de produtos no servidor de producao.
+
+## `2026-09-21 12:04` - `docs(context)`: Consolidacao de memoria em .agents e expurgo de markdowns da raiz
+
+- **Description:** Consolidacao das informacoes uteis e decisoes tecnicas dos 17 arquivos markdown de planejamento e alteracoes temporarias da raiz para os arquivos canonicos em `.agents/` (`tech-decisions.md`, `MEMORY.md`, `CURRENT.md` e `.agents/DESIGN.md`). Arquivamento preventivo em `docs/archive/` e remocao completa dos markdowns redundantes da raiz do projeto.
+- **Files Modified:**
+  - `.agents/memory/tech-decisions.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/DESIGN.md`
+  - `.agents/COMMITS.md`
+  - `docs/archive/*`
+- **Impact / Next Steps:** Raiz do projeto higienizada com apenas `README.md` e `DESIGN.md`. Contexto integro preservado para modelos e desenvolvedores.
+
+
+## `2026-09-21 12:16` - `feat(product)`: Sincronização dinâmica de fotos do OpenFoodFacts no scan
+
+- **Description:** Implementada consulta e atualização automática da foto do produto a partir do OpenFoodFacts toda vez que um código de barras é escaneado. Se o produto estava sem foto ou se o OpenFoodFacts possui uma imagem nova, o registro no PostgreSQL é atualizado imediatamente, o cache Redis é invalidado e o DTO com a nova imagem é retornado ao fluxo de confirmação do scanner.
+- **Files Modified:**
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/tests/productBarcodeSync.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Produtos previamente sem foto ou com fotos atualizadas no OpenFoodFacts agora recebem a imagem automaticamente no primeiro scan subsequente sem intervenção manual.
