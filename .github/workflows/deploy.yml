@@ -70,6 +70,8 @@ jobs:
           REDIS_URL: ${{ secrets.REDIS_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM: ${{ secrets.RESEND_FROM }}
           ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           NODE_ENV: production

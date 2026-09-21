@@ -129,6 +129,8 @@ umask 077
   echo "NODE_ENV=${NODE_ENV:-production}"
   echo "LOG_DIR=$LOG_DIR"
   [ -n "${HERE_API_KEY:-}" ]     && echo "HERE_API_KEY=$HERE_API_KEY"
+  [ -n "${RESEND_API_KEY:-}" ]   && echo "RESEND_API_KEY=$RESEND_API_KEY"
+  [ -n "${RESEND_FROM:-}" ]      && echo "RESEND_FROM=$RESEND_FROM"
   [ -n "${ALLOWED_ORIGINS:-}" ]  && echo "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
 } > "$BACKEND_DIR/.env"
 chmod 600 "$BACKEND_DIR/.env"
