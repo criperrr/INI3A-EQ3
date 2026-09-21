@@ -15,6 +15,7 @@ export interface AuthUser {
   currentXp?: number;
   maxXp?: number;
   levelTitle?: string;
+  twoFactorVerified?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -194,5 +195,43 @@ export async function fetchUserProfile(): Promise<UserProfileData | null> {
   }
 }
 
+/**
+ * Solicita o envio do código de verificação de 2 etapas por e-mail (Resend)
+ */
+export async function sendTwoFactorCode(): Promise<{
+  success: boolean;
+  message: string;
+  cooldown?: boolean;
+  alreadyVerified?: boolean;
+  email?: string;
+}> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    cooldown?: boolean;
+    alreadyVerified?: boolean;
+    email?: string;
+  }>("/auth/2fa/send", {
+    method: "POST",
+  });
+}
 
-
+/**
+ * Valida o código de 6 dígitos e ativa o status 2FA da conta
+ */
+export async function verifyTwoFactorCode(code: string): Promise<{
+  success: boolean;
+  message: string;
+  twoFactorVerified: boolean;
+  user: AuthUser;
+}> {
+  return apiRequest<{
+    success: boolean;
+    message: string;
+    twoFactorVerified: boolean;
+    user: AuthUser;
+  }>("/auth/2fa/verify", {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}

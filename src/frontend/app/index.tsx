@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
@@ -602,6 +603,7 @@ const ItemsGrid = memo(function ItemsGrid({
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
 
   const itemsToRender = useMemo(() => {
     if (!isProductView) return data;
@@ -684,9 +686,18 @@ const ItemsGrid = memo(function ItemsGrid({
 
             {isProductView && item.price ? (
               <View style={styles.priceRow}>
-                <Text style={[styles.productPrice, { color: accent }]}>
-                  {item.price}
-                </Text>
+                {isAuthenticated ? (
+                  <Text style={[styles.productPrice, { color: accent }]}>
+                    {item.price}
+                  </Text>
+                ) : (
+                  <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
+                    <Ionicons name="lock-closed" size={10} color={accent} />
+                    <Text style={[styles.lockedPriceText, { color: accent }]}>
+                      Ver preço
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : null}
 
@@ -834,6 +845,20 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 15,
     fontWeight: "800",
+  },
+  lockedPricePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 7,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  lockedPriceText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   distancePill: {
     flexDirection: "row",

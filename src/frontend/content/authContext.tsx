@@ -12,6 +12,8 @@ import {
   logoutUser,
   getStoredTokens,
   fetchUserProfile,
+  sendTwoFactorCode,
+  verifyTwoFactorCode,
   type AuthUser,
   type UserProfileData,
 } from "../services/auth";
@@ -22,12 +24,25 @@ interface AuthContextData {
   profile: UserProfileData | null;
   isAdmin: boolean;
   isAuthenticated: boolean;
+  isTwoFactorVerified: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginAsTestUser: (role?: "user" | "admin") => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<UserProfileData | null>;
+  requestTwoFactorCode: () => Promise<{
+    success: boolean;
+    message: string;
+    cooldown?: boolean;
+    alreadyVerified?: boolean;
+    email?: string;
+  }>;
+  confirmTwoFactorCode: (code: string) => Promise<{
+    success: boolean;
+    message: string;
+    twoFactorVerified?: boolean;
+  }>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -62,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           currentXp: fullProfile.currentXp,
           maxXp: fullProfile.maxXp,
           levelTitle: fullProfile.levelTitle,
+          twoFactorVerified: fullProfile.twoFactorVerified,
         }));
         return fullProfile;
       } else {
@@ -113,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   currentXp: p.currentXp,
                   maxXp: p.maxXp,
                   levelTitle: p.levelTitle,
+                  twoFactorVerified: p.twoFactorVerified,
                 }));
               } else {
                 getStoredTokens().then((t) => {
@@ -182,29 +199,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (profile?.authority !== undefined && profile.authority >= 10)
   );
 
+  const isTwoFactorVerified = !!(
+    isAdmin ||
+    user?.twoFactorVerified === true ||
+    profile?.twoFactorVerified === true
+  );
+
+  const requestTwoFactorCode = useCallback(async () => {
+    return await sendTwoFactorCode();
+  }, []);
+
+  const confirmTwoFactorCode = useCallback(async (code: string) => {
+    const res = await verifyTwoFactorCode(code);
+    if (res.twoFactorVerified) {
+      setUser((prev) => (prev ? { ...prev, twoFactorVerified: true } : prev));
+      setProfile((prev) => (prev ? { ...prev, twoFactorVerified: true } : prev));
+    }
+    return res;
+  }, []);
+
   const contextValue = React.useMemo(
     () => ({
       user,
       profile,
       isAdmin,
       isAuthenticated: !!user,
+      isTwoFactorVerified,
       isLoading,
       login,
       loginAsTestUser,
       register,
       logout,
       refreshProfile,
+      requestTwoFactorCode,
+      confirmTwoFactorCode,
     }),
     [
       user,
       profile,
       isAdmin,
+      isTwoFactorVerified,
       isLoading,
       login,
       loginAsTestUser,
       register,
       logout,
       refreshProfile,
+      requestTwoFactorCode,
+      confirmTwoFactorCode,
     ],
   );
 

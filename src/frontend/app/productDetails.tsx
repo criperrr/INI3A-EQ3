@@ -22,6 +22,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
+import TwoFactorModal from "../components/TwoFactorModal";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -66,7 +67,7 @@ export default function ProductDetails() {
   const router = useRouter();
   const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
-  const { isAdmin, user, isAuthenticated, loginAsTestUser, refreshProfile } = useAuth();
+  const { isAdmin, user, isAuthenticated, isTwoFactorVerified, loginAsTestUser, refreshProfile } = useAuth();
   const { t, language } = useI18n();
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
@@ -85,6 +86,10 @@ export default function ProductDetails() {
   const [reportDescription, setReportDescription] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
   const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
+
+  const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
+  const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
+  const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
@@ -250,18 +255,41 @@ export default function ProductDetails() {
       return;
     }
 
-    router.push({
-      pathname: "/registerProduct",
-      params: {
-        id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
-        barcode: product?.barcode || targetBarcode,
-        ean: product?.ean || product?.barcode || targetBarcode,
-        name: product?.name || params.name,
-        category: product?.category || params.category,
-        imageUri: product?.imageUri || params.imageUri,
-        lastPrice: product?.lastPrice || params.lastPrice,
-      },
-    });
+    if (!isAuthenticated) {
+      Alert.alert(
+        t("auth.loginRequired") || "Autenticação Necessária",
+        "Você precisa estar conectado para registrar preços e ganhar XP. Deseja fazer login agora?",
+        [
+          { text: t("common.cancel") || "Cancelar", style: "cancel" },
+          { text: t("navigation.login") || "Fazer Login", onPress: () => router.push("/login") },
+        ],
+      );
+      return;
+    }
+
+    const navigateToRegister = () => {
+      router.push({
+        pathname: "/registerProduct",
+        params: {
+          id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
+          barcode: product?.barcode || targetBarcode,
+          ean: product?.ean || product?.barcode || targetBarcode,
+          name: product?.name || params.name,
+          category: product?.category || params.category,
+          imageUri: product?.imageUri || params.imageUri,
+          lastPrice: product?.lastPrice || params.lastPrice,
+        },
+      });
+    };
+
+    if (!isTwoFactorVerified) {
+      setTwoFactorActionDescription("Para registrar preços e contribuir com ofertas, confirme o código enviado para seu e-mail.");
+      setPending2FAAction(() => navigateToRegister);
+      setIsTwoFactorModalVisible(true);
+      return;
+    }
+
+    navigateToRegister();
   };
 
   const handleVote = async (occId: number, verdict: boolean) => {
@@ -272,22 +300,18 @@ export default function ProductDetails() {
         [
           { text: t("common.cancel"), style: "cancel" },
           {
-            text: t("auth.quickConnect"),
-            onPress: async () => {
-              try {
-                await loginAsTestUser("user");
-                await handleVote(occId, verdict);
-              } catch (err: any) {
-                Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
-              }
-            },
-          },
-          {
             text: t("navigation.login"),
             onPress: () => router.push("/login"),
           },
         ]
       );
+      return;
+    }
+
+    if (!isTwoFactorVerified) {
+      setTwoFactorActionDescription("Para votar na precisão dos preços e ganhar XP, confirme o código enviado para seu e-mail.");
+      setPending2FAAction(() => () => handleVote(occId, verdict));
+      setIsTwoFactorModalVisible(true);
       return;
     }
 
@@ -326,6 +350,13 @@ export default function ProductDetails() {
       if (product?.id) loadOccurrences(product.id);
       refreshProfile();
     } catch (err: any) {
+      if (err?.code === "TWO_FACTOR_REQUIRED" || String(err?.message).includes("duas etapas")) {
+        setTwoFactorActionDescription("Verificação de duas etapas necessária para interagir com ofertas.");
+        setPending2FAAction(() => () => handleVote(occId, verdict));
+        setIsTwoFactorModalVisible(true);
+        return;
+      }
+
       const isAuthError =
         err?.status === 401 ||
         err?.code === "UNAUTHORIZED" ||
@@ -338,17 +369,6 @@ export default function ProductDetails() {
           t("auth.loginToVote"),
           [
             { text: t("common.cancel"), style: "cancel" },
-            {
-              text: t("auth.quickConnect"),
-              onPress: async () => {
-                try {
-                  await loginAsTestUser("user");
-                  await handleVote(occId, verdict);
-                } catch (e: any) {
-                  Alert.alert(t("common.error"), e?.message || t("errors.genericError"));
-                }
-              },
-            },
             {
               text: t("navigation.login"),
               onPress: () => router.push("/login"),
@@ -681,13 +701,35 @@ export default function ProductDetails() {
 
           <View style={[styles.divider, { backgroundColor: semantic.colors.border.divider || semantic.colors.border.default }]} />
 
-          {/* Last Price Highlight */}
-          <View style={styles.priceHighlightBox}>
-            <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
-            <Text style={[styles.lastPriceValue, { color: accent }]}>
-              {product.lastPrice || t("productDetails.noOccurrences")}
-            </Text>
-          </View>
+          {!isAuthenticated ? (
+            <View style={[styles.lockedPriceContainer, themeStyles.card, themeStyles.border]}>
+              <View style={[styles.lockedPriceIconCircle, { backgroundColor: accent + "20" }]}>
+                <Ionicons name="lock-closed" size={32} color={accent} />
+              </View>
+              <Text style={[styles.lockedPriceTitle, themeStyles.text]}>
+                Faça login para ver os preços mais baratos
+              </Text>
+              <Text style={[styles.lockedPriceSubtitle, themeStyles.subText]}>
+                Cadastre-se ou acesse sua conta para ver onde encontrar este produto pelo menor preço, conferir a média da região e comparar valores nos mercados.
+              </Text>
+              <TouchableOpacity
+                style={[styles.lockedPriceLoginBtn, { backgroundColor: accent }]}
+                activeOpacity={0.85}
+                onPress={() => router.push("/login")}
+              >
+                <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.lockedPriceLoginBtnText}>Entrar ou Criar Conta</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Last Price Highlight */}
+              <View style={styles.priceHighlightBox}>
+                <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
+                <Text style={[styles.lastPriceValue, { color: accent }]}>
+                  {product.lastPrice || t("productDetails.noOccurrences")}
+                </Text>
+              </View>
 
           {/* Price Statistics Grid */}
           {Boolean(product.minPrice || product.maxPrice || product.avgPrice) ? (
@@ -860,6 +902,8 @@ export default function ProductDetails() {
               })
             )}
           </View>
+          </>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
@@ -1128,6 +1172,21 @@ export default function ProductDetails() {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <TwoFactorModal
+        visible={isTwoFactorModalVisible}
+        onClose={() => {
+          setIsTwoFactorModalVisible(false);
+          setPending2FAAction(null);
+        }}
+        onSuccess={() => {
+          setIsTwoFactorModalVisible(false);
+          const action = pending2FAAction;
+          setPending2FAAction(null);
+          if (action) action();
+        }}
+        actionDescription={twoFactorActionDescription}
+      />
     </View>
   );
 }
@@ -1502,6 +1561,51 @@ const styles = StyleSheet.create({
     height: 1,
     width: "100%",
     marginBottom: 16,
+  },
+  lockedPriceContainer: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  lockedPriceIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  lockedPriceTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  lockedPriceSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  lockedPriceLoginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    width: "100%",
+    maxWidth: 280,
+  },
+  lockedPriceLoginBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
   },
   priceHighlightBox: {
     alignItems: "center",

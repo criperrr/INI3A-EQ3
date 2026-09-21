@@ -25,6 +25,7 @@ import { getUserLocation } from "../utils/userLocation";
 import { formatLongDateWithWeekday, parseDateSafeMs } from "../utils/dateUtils";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import TwoFactorModal from "../components/TwoFactorModal";
 
 const FALLBACK_PRODUCT = {
   category: "Produto",
@@ -56,9 +57,11 @@ export default function RegisterProduct() {
   }>();
   const { tokens, accent, isDark } = useTheme();
   const { semantic } = tokens;
-  const { refreshProfile, user, isAuthenticated, loginAsTestUser } = useAuth();
+  const { refreshProfile, user, isAuthenticated, isTwoFactorVerified, loginAsTestUser } = useAuth();
   const { t, language } = useI18n();
   const [recordDate] = useState<Date>(new Date());
+  const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
+  const [pending2FASubmit, setPending2FASubmit] = useState<(() => void) | null>(null);
 
   const targetEan = params.ean || params.barcode;
   const targetId = params.id ? Number(params.id) : null;
@@ -347,6 +350,12 @@ export default function RegisterProduct() {
         String(err?.message).toLowerCase().includes("token") ||
         String(err?.message).toLowerCase().includes("autentica");
 
+      if (err?.code === "TWO_FACTOR_REQUIRED" || String(err?.message).includes("duas etapas")) {
+        setPending2FASubmit(() => () => executeSubmission(effectiveProductId, numPrice, confirmOutlier));
+        setIsTwoFactorModalVisible(true);
+        return;
+      }
+
       if (isAuthError) {
         promptLogin(() => executeSubmission(effectiveProductId, numPrice, confirmOutlier));
         return;
@@ -364,6 +373,17 @@ export default function RegisterProduct() {
   };
 
   const handleRegister = async () => {
+    if (!isAuthenticated) {
+      promptLogin(() => handleRegister());
+      return;
+    }
+
+    if (!isTwoFactorVerified) {
+      setPending2FASubmit(() => () => handleRegister());
+      setIsTwoFactorModalVisible(true);
+      return;
+    }
+
     const cleanDigits = price.replace(/\D/g, "");
     const numPrice = cleanDigits ? parseInt(cleanDigits, 10) / 100 : 0;
 
@@ -1182,6 +1202,21 @@ export default function RegisterProduct() {
             )}
           </View>
         </KeyboardAwareScrollView>
+
+        <TwoFactorModal
+          visible={isTwoFactorModalVisible}
+          onClose={() => {
+            setIsTwoFactorModalVisible(false);
+            setPending2FASubmit(null);
+          }}
+          onSuccess={() => {
+            setIsTwoFactorModalVisible(false);
+            const action = pending2FASubmit;
+            setPending2FASubmit(null);
+            if (action) action();
+          }}
+          actionDescription="Para registrar preços na comunidade, confirme o código enviado para seu e-mail."
+        />
       </View>
     </TouchableWithoutFeedback>
   );

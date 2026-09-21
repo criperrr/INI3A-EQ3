@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { DesignSystemTokens } from "../theme/types";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
 import {
   findCategoryDefinition,
@@ -516,6 +517,7 @@ const ProductCardItem = memo(function ProductCardItem({
   t: (key: any) => string;
 }) {
   const { semantic } = tokens;
+  const { isAuthenticated } = useAuth();
   const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 280, 70);
 
   const isUnquoted =
@@ -620,9 +622,18 @@ const ProductCardItem = memo(function ProductCardItem({
 
         <View style={styles.priceSlot}>
           {hasPrice ? (
-            <Text style={[styles.productPrice, { color: accent }]} numberOfLines={1}>
-              {displayPrice}
-            </Text>
+            isAuthenticated ? (
+              <Text style={[styles.productPrice, { color: accent }]} numberOfLines={1}>
+                {displayPrice}
+              </Text>
+            ) : (
+              <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
+                <Ionicons name="lock-closed" size={10} color={accent} />
+                <Text style={[styles.lockedPriceText, { color: accent }]}>
+                  Ver preço
+                </Text>
+              </View>
+            )
           ) : (
             <View
               style={[
@@ -949,6 +960,20 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 15,
     fontWeight: "bold",
+  },
+  lockedPricePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  lockedPriceText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   noPricePill: {
     flexDirection: "row",
