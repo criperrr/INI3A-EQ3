@@ -388,6 +388,12 @@ class ProductServiceClass {
     return deleted;
   }
 
+  async purgeAllProducts(): Promise<{ purged: boolean; rowCount: number }> {
+    const result = await ProductRepository.purgeAllProducts();
+    await invalidateCachePattern("products");
+    return result;
+  }
+
   async getCategories(): Promise<string[]> {
     return ProductRepository.getCategories();
   }

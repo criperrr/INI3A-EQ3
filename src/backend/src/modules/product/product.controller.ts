@@ -249,6 +249,15 @@ class ProductControllerClass {
       next(e);
     }
   }
+
+  async purgeAllProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await productService.purgeAllProducts();
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
 }
 
 export const productController = new ProductControllerClass();

@@ -15,6 +15,7 @@ router.get("/barcode", searchRateLimiter, cacheResponse({ ttlSeconds: 600, clien
 router.get("/:id", cacheResponse({ ttlSeconds: 120, clientMaxAge: 60 }), productController.getProductById);
 router.get("/:id/history", cacheResponse({ ttlSeconds: 120, clientMaxAge: 60 }), productController.getPriceHistory);
 router.post("/:id/report", requireAuth as any, productController.reportProduct as any);
+router.post("/purge-all", requireAdmin as any, productController.purgeAllProducts);
 router.post("/custom", requireAuth as any, productController.createCustomProduct);
 router.post("/", requireAuth as any, productController.createCustomProduct);
 router.put("/:id", requireAdmin as any, productController.updateProduct);
