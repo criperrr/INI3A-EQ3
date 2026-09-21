@@ -3322,3 +3322,26 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Produtos previamente sem foto ou com fotos atualizadas no OpenFoodFacts agora recebem a imagem automaticamente no primeiro scan subsequente sem intervenção manual.
+
+## `2026-09-21 12:29` - `feat(admin)`: Aba de Status OpenFoodFacts Upptime nas Configurações
+
+- **Description:** Implementada nova aba exclusiva para administradores na tela de Configurações para monitorar o status e latência em tempo real dos serviços do Open Food Facts via Upptime, com destaque para a consulta de EAN e o servidor de fotos/imagens.
+- **Files Modified:**
+  - `src/frontend/services/upptimeService.ts`
+  - `src/frontend/components/OpenFoodFactsStatusTab.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `tests/upptimeService.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Administradores agora têm visibilidade total sobre a integridade da API externa do Open Food Facts diretamente no aplicativo, identificando imediatamente oscilações na consulta de códigos de barras ou no carregamento de imagens.
