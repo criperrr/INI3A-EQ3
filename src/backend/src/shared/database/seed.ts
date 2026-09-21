@@ -773,7 +773,7 @@ export async function seedDatabase() {
       .update(user)
       .set({
         roleId: 5,
-        points: targetAdmin.points > 0 ? targetAdmin.points : 9999,
+        points: targetAdmin.points ?? 0,
         equippedBannerId: targetAdmin.equippedBannerId || 6,
         equippedAvatarFrameId: targetAdmin.equippedAvatarFrameId || 16,
         equippedLevelFrameId: targetAdmin.equippedLevelFrameId || 25,
