@@ -2926,8 +2926,6 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - .agents/CURRENT.md
   - .agents/COMMITS.md
 - **Impact / Next Steps:** GitHub Actions workflow compiles the Android APK securely using repository secrets with zero credential exposure in code or logs.
->>>>>>> c5215b58d682fce93608e1f5e587f05315af34e7
-
 ## `2026-09-10 12:33` - `fix(db)`: Drop remote products and add market fallback for Trigal
 
 - **Description:** Executou a limpeza transacional da tabela `product` e ocorrências no PostgreSQL remoto da equipe (`projetoscti.com.br:54432 / 26-presco`), mantendo todos os 115 mercados (incluindo Trigal ID 1) e dados de usuários intactos. Adicionou fallback em `registerProduct.tsx` e `index.tsx` para carregar mercados globais caso o GPS esteja indisponível ou o usuário esteja fora do raio local de 15km, garantindo que o mercado Trigal esteja sempre disponível.
@@ -2941,6 +2939,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Banco remoto limpo de produtos com sucesso; seleção de mercados agora é resiliente a localização e sempre disponibiliza Trigal.
 
+<<<<<<< HEAD
 ## `2026-09-10 12:36` - `fix(ui)`: Filter out products without price on home screen
 
 - **Description:** Adiciona função `hasValidPrice` e filtragem no grid da tela inicial (`index.tsx`) para descartar qualquer produto cujo preço não esteja informado ou esteja sob consulta, garantindo que apenas ofertas e produtos com preço real e válido sejam exibidos.
@@ -2952,3 +2951,14 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** A tela inicial do app agora só renderiza produtos que possuem preço real válido.
+=======
+## 2026-09-10 12:34 - feat(scripts): Add CMake-style progressive build indicator with percentage and ETA
+
+- **Description:** Updated scripts/android.ts with real-time progressive build tracking during Gradle compilation: displays percentage [XX%], objects completed [N/1021], dynamic ETA calculation, ANSI color progress bar, and active task name with TTY cursor rewriting and CI linear logging fallback.
+- **Files Modified:**
+  - `scripts/android.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers have clear, deterministic visibility into compilation progress without verbose Gradle log spam.
+
+>>>>>>> 73c341dbed7cbf2a4c5bb2d1e6bdfa16227d8926

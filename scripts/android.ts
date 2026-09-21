@@ -15,12 +15,14 @@
  *
  * Uso: npm run android [-- --debug] [--device <serial>] [--no-install]
  */
+import { spawn } from "node:child_process";
+import readline from "node:readline";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  detectOS, run, runLive, which, info, ok, warn, err, dim, bold, step,
+  detectOS, run, runLive, which, info, ok, warn, err, dim, bold, step, colors,
 } from "./lib/system.ts";
 import { ensureJdk, jdkEnv } from "./lib/jdk.ts";
 
@@ -240,15 +242,107 @@ async function main() {
   const buildOnly = !device || noInstall;
   const started = Date.now();
 
-  // Com aparelho: `expo run:android` compila e instala. Sem aparelho, chamamos
-  // o Gradle direto — `--no-install` do Expo pula dependências npm, não o APK.
-  const status = buildOnly
-    ? await runLive(
-        detectOS() === "windows" ? "gradlew.bat" : "./gradlew",
-        [`app:assemble${variant[0]!.toUpperCase()}${variant.slice(1)}`, "-x", "lint", "-x", "test"],
-        { cwd: path.join(FRONTEND, "android"), env },
-      )
-    : await runLive("npx", ["expo", "run:android", "--variant", variant], { cwd: FRONTEND, env });
+  let status = 0;
+  if (buildOnly) {
+    status = await new Promise<number>((resolve) => {
+      const gradlewBin = detectOS() === "windows" ? "gradlew.bat" : "./gradlew";
+      const gradleArgs = [
+        `app:assemble${variant[0]!.toUpperCase()}${variant.slice(1)}`,
+        "-x", "lint",
+        "-x", "test",
+        "--console=plain",
+      ];
+
+      const child = spawn(gradlewBin, gradleArgs, {
+        cwd: path.join(FRONTEND, "android"),
+        env,
+        stdio: ["inherit", "pipe", "pipe"],
+      });
+
+      const totalTasks = variant === "release" ? 1021 : 980;
+      let completedTasks = 0;
+      let lastPrintedPct = -1;
+      const isTTY = Boolean(process.stdout.isTTY);
+
+      const updateProgress = (taskName: string) => {
+        completedTasks++;
+        const pct = Math.min(99, Math.round((completedTasks / totalTasks) * 100));
+        const elapsedSec = Math.max(1, (Date.now() - started) / 1000);
+        const tasksPerSec = completedTasks / elapsedSec;
+        const remainingTasks = Math.max(0, totalTasks - completedTasks);
+        const remainingSec = tasksPerSec > 0 ? Math.round(remainingTasks / tasksPerSec) : 0;
+        const remFmt = remainingSec >= 60
+          ? `${Math.floor(remainingSec / 60)}m${(remainingSec % 60).toString().padStart(2, "0")}s`
+          : `${remainingSec}s`;
+
+        const barWidth = 20;
+        const filled = Math.min(barWidth, Math.round((pct / 100) * barWidth));
+        const bar = "█".repeat(filled) + "░".repeat(barWidth - filled);
+
+        const shortTask = taskName.length > 38 ? `…${taskName.slice(-37)}` : taskName;
+
+        if (isTTY) {
+          readline.cursorTo(process.stdout, 0);
+          process.stdout.write(
+            `${colors.cyan}[${pct.toString().padStart(2, " ")}%]${colors.reset} ` +
+            `${colors.bold}[${completedTasks}/${totalTasks}]${colors.reset} ` +
+            `${colors.yellow}[ETA ${remFmt}]${colors.reset} ` +
+            `${colors.green}[${bar}]${colors.reset} ` +
+            `${dim(shortTask)}`
+          );
+          readline.clearLine(process.stdout, 1);
+        } else {
+          // Em ambientes sem TTY / logs lineares, atualiza a cada 5% para não poluir
+          if (pct >= lastPrintedPct + 5 || completedTasks === totalTasks) {
+            lastPrintedPct = pct;
+            console.log(
+              `[${pct.toString().padStart(2, " ")}%] [${completedTasks}/${totalTasks}] [ETA ${remFmt}] [${bar}] ${shortTask}`
+            );
+          }
+        }
+      };
+
+      const handleChunk = (chunk: Buffer) => {
+        const text = chunk.toString();
+        const lines = text.split(/\r?\n/);
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+
+          // Detecta tarefas do Gradle executadas (ex: > Task :app:compileReleaseJavaWithJavac)
+          const taskMatch = trimmed.match(/> Task (:[a-zA-Z0-9_:-]+)/);
+          if (taskMatch && taskMatch[1]) {
+            updateProgress(taskMatch[1]);
+          } else if (
+            trimmed.includes("FAILED") ||
+            trimmed.includes("Error:") ||
+            trimmed.includes("Exception:")
+          ) {
+            if (isTTY) process.stdout.write("\n");
+            console.log(trimmed);
+          }
+        }
+      };
+
+      child.stdout.on("data", handleChunk);
+      child.stderr.on("data", handleChunk);
+
+      child.on("close", (code) => {
+        if (isTTY) {
+          readline.cursorTo(process.stdout, 0);
+          readline.clearLine(process.stdout, 0);
+        }
+        resolve(code ?? 0);
+      });
+
+      child.on("error", (e) => {
+        err(`Falha ao iniciar Gradle: ${e.message}`);
+        resolve(1);
+      });
+    });
+  } else {
+    status = await runLive("npx", ["expo", "run:android", "--variant", variant], { cwd: FRONTEND, env });
+  }
 
   const mins = ((Date.now() - started) / 60000).toFixed(1);
 
