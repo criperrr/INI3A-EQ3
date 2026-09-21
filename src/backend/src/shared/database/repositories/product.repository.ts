@@ -1,7 +1,7 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
-import { market, ocurrency, product, productReport } from "../schema";
+import { cartProduct, market, ocurrency, product, productReport } from "../schema";
 import { and, asc, desc, eq, gte, ilike, inArray, or, sql, isNotNull } from "drizzle-orm";
 
 export function calculateBarcodeSimilarity(codeA: string, codeB: string): number {
@@ -690,8 +690,20 @@ class ProductRepositoryClass {
 
   async deleteProduct(id: number) {
     this.categoryCache = null;
+    await db.delete(cartProduct).where(eq(cartProduct.productId, id)).catch(() => {});
+    await db.delete(productReport).where(eq(productReport.productId, id)).catch(() => {});
+    await db.delete(ocurrency).where(eq(ocurrency.productId, id)).catch(() => {});
     const res = await db.delete(product).where(eq(product.id, id));
     return (res.rowCount ?? 0) > 0;
+  }
+
+  async purgeAllProducts() {
+    this.categoryCache = null;
+    await db.execute(sql`DELETE FROM cart_product;`);
+    await db.execute(sql`DELETE FROM product_report;`);
+    await db.execute(sql`DELETE FROM ocurrency;`);
+    const res = await db.execute(sql`DELETE FROM product;`);
+    return { purged: true, rowCount: res.rowCount ?? 0 };
   }
 
   async getPredefinedCategories() {

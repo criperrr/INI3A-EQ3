@@ -1445,72 +1445,8 @@ export async function seedDatabase() {
     availableMarkets = await db.select().from(market).limit(10);
   }
 
-  let insertedProductCount = 0;
-  let insertedOccurrencesCount = 0;
-
-  for (const item of catalogProducts) {
-    let targetProduct = await db.query.product.findFirst({
-      where: (table, { eq }) => eq(table.ean, item.ean),
-    });
-
-    if (!targetProduct) {
-      const [newProduct] = await db
-        .insert(product)
-        .values({
-          ean: item.ean,
-          name: item.name,
-          description: item.description,
-          icon: item.icon,
-          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
-        })
-        .returning();
-      targetProduct = newProduct;
-      insertedProductCount++;
-    } else {
-      // Ensure description/category and icon are synchronized
-      await db
-        .update(product)
-        .set({
-          name: item.name,
-          description: item.description,
-          icon: item.icon,
-          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
-        })
-        .where(eq(product.id, targetProduct.id));
-    }
-
-    if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
-      for (let i = 0; i < item.prices.length; i++) {
-        const p = item.prices[i];
-        const assignedMarket = availableMarkets[i % availableMarkets.length];
-        if (!assignedMarket) continue;
-
-        const existingOcc = await db.query.ocurrency.findFirst({
-          where: (table, { and, eq }) =>
-            and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
-        });
-
-        if (!existingOcc) {
-          await db.insert(ocurrency).values({
-            userId: adminUserId,
-            marketId: assignedMarket.id,
-            productId: targetProduct.id,
-            value: p.value,
-            trustFlag: p.trustFlag ?? true,
-            isPromotion: Boolean(p.isPromotion),
-            upvoteCount: p.upvotes ?? 0,
-            downvoteCount: p.downvotes ?? 0,
-            ...(p.createdAt ? { createdAt: new Date(p.createdAt).toISOString() } : {}),
-          });
-          insertedOccurrencesCount++;
-        }
-      }
-    }
-  }
-
-  console.log(
-    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} price occurrences seeded).`
-  );
+  // Purged catalog: Do not auto-seed predefined products to keep database clean as requested by user.
+  console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }
 
