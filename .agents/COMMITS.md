@@ -3345,3 +3345,17 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Administradores agora têm visibilidade total sobre a integridade da API externa do Open Food Facts diretamente no aplicativo, identificando imediatamente oscilações na consulta de códigos de barras ou no carregamento de imagens.
+
+## `2026-09-21 12:36` - `feat(auth)`: 2FA email verification with Resend and guest price shielding
+
+- **Description:** Implemented 2FA verification code flow via Resend API, guarded product creation and voting routes with requireTwoFactor, protected price comparisons from unauthenticated guests, and created interactive TwoFactorModal.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0003_add_two_factor_verified.sql`
+  - `src/backend/src/shared/services/email.service.ts`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/frontend/components/TwoFactorModal.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+- **Impact / Next Steps:** Complete 2FA enforcement and guest price protection live on tests branch.

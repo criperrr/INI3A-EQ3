@@ -7,6 +7,16 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Autenticação em Duas Etapas (2FA/MFA via Email com Resend) & Proteção de Preços (`branch tests`):**
+  1. **Schema & Migrations:** Adicionado campo `twoFactorVerified` (booleano, default false) na tabela `user` ([`schema.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/schema.ts)), migração Drizzle `0003_add_two_factor_verified.sql` e journal atualizado.
+  2. **Serviço de Email & Resend:** Criado [`email.service.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/services/email.service.ts) usando native `fetch` para disparar códigos OTP de 6 dígitos via API da Resend com chave oficial e template HTML institucional.
+  3. **Camada de Repositório & Cache:** Métodos `storeTwoFactorCode`, `getTwoFactorCode`, `deleteTwoFactorCode` e `setTwoFactorCooldown` implementados em [`auth.repository.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/repositories/auth.repository.ts) com TTL de 10 min e cooldown de 60 segundos. Retornos de [`user.repository.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/repositories/user.repository.ts) atualizados com `twoFactorVerified`.
+  4. **Controle de Acesso & Middleware:** Middleware `requireTwoFactor` em [`authMiddleware.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/middlewares/authMiddleware.ts) bloqueia usuários sem verificação ao publicar produtos ([`product.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/product/product.routes.ts)), registrar ocorrências de preços ou votar em ocorrências ([`ocurrency.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/ocurrency/ocurrency.routes.ts)). Administradores mantêm bypass irrestrito.
+  5. **Endpoints de 2FA:** Adicionados `POST /auth/2fa/send` e `POST /auth/2fa/verify` em [`auth.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/auth/auth.routes.ts) e controlados via [`auth.controller.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/auth/auth.controller.ts).
+  6. **Interface Mobile & Experiência Guest:**
+     - Componente modal [`TwoFactorModal.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/components/TwoFactorModal.tsx) com campos de 6 dígitos, temporizador de reenvio, feedback háptico e tratamento dinâmico de erros.
+     - Usuários convidados (não autenticados) podem navegar livremente pelo catálogo e visualizar os produtos, mas os valores e comparativos de menores preços entre mercados são bloqueados com o card institucional direcionando para o login em [`productDetails.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/productDetails.tsx), além de badges `🔒 Ver preço` na Home ([`index.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/index.tsx)) e na Busca ([`search.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/search.tsx)).
+     - Telas de cadastro de produtos ([`customRegisterProduct.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/customRegisterProduct.tsx), [`registerProduct.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/registerProduct.tsx)) e perfil ([`profile.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/profile.tsx)) integradas com ativação de 2FA sob demanda.
 - **Configuração de Administradores no Banco de Dados:**
   1. Executado comando direto no PostgreSQL para atualizar `leonardomaxduda@gmail.com` para `role_id = 5` (Admin), mantendo seus pontos inalterados.
   2. Executado comando direto no PostgreSQL para configurar `aventureiromax1` como `role_id = 5` (Admin) com `points = 0`.
@@ -171,6 +181,8 @@ Direct relative paths from project root.
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
 | `src/backend/src/shared/database/repositories/customization.repository.ts` | `CustomizationRepository` — getAllItems, getItemById, getUserInventory, isItemOwnedByUser, addCustomizationToUser, updateUserEquipped, getUserEquippedCustomizations |
+| `src/backend/src/shared/services/email.service.ts` | `EmailService` singleton — Resend API email transport for 2FA verification codes |
+| `src/frontend/components/TwoFactorModal.tsx` | Interactive 6-digit 2FA modal component with auto-focus, Resend cooldown, and haptic feedback |
 | `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, incrementPoints, getUserWithRole, getUserBadges, getAllBadges, awardBadge, getUserRank, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
 | `src/backend/src/shared/database/repositories/ocurrency.repository.ts` | `OcurrencyRepository` — create, findById, findByProduct, findByUser, countByUser, update, delete, vote, getUserContributionGrid |
