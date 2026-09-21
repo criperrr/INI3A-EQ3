@@ -7,9 +7,7 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
-<<<<<<< HEAD
 - **Remoção de Produtos Sem Preço na Tela Inicial:** Implementada filtragem estrita com `hasValidPrice` no carregamento e renderização do grid da tela inicial (`index.tsx`). Itens sem preço ou com status "Preço não informado" / "sob consulta" são completamente excluídos do grid de produtos da Home.
-=======
 - **Higienização do Servidor Remoto & Pipeline de Deploy Autônomo (`v1.0.5`):**
   1. Reestruturado [`scripts/deploy_remote.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/scripts/deploy_remote.sh) para sincronizar estritamente os arquivos essenciais de execução do backend (`src/backend/`, `deploy/deploy.sh`, `ecosystem.config.cjs`), impedindo o envio de `.agents/`, `docs/`, `sprints/`, scripts de desenvolvimento, código de frontend e múltiplos markdowns.
   2. Implementada rotina de higienização automatizada em [`deploy/deploy.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/deploy/deploy.sh) que purga resíduos não essenciais no servidor remoto (`.agents`, `tests`, `docs`, `gestao`, `sprints`, `scripts`, `src/frontend`, `.github`, `docker-compose.yml`, `turbo.json`, `setup.*`, `start*`), remove todos os markdowns espalhados e cria o único documento explicativo oficial do servidor (`README.md`) apontando para o repositório GitHub.
