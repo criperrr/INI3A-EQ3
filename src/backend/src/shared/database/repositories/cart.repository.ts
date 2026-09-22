@@ -23,97 +23,70 @@ export interface ProductMarketPrice {
   marketId: number;
   marketName: string;
   marketLocation: any;
+  productName?: string;
+  productIcon?: string | null;
   value: number;
   isPromotion: boolean;
   createdAt: string;
 }
 
 class CartRepositoryClass {
-  async getOrCreateCart(userId: number): Promise<{ id: number; userId: number; createdAt: string }> {
-    const existing = await db
-      .select({
-        id: Cart.id,
-        userId: Cart.userId,
-        createdAt: Cart.createdAt,
-      })
-      .from(Cart)
-      .where(eq(Cart.userId, userId))
-      .limit(1);
-
-    const first = existing[0];
-    if (first) {
-      return first;
+  async getOrCreateCart(userId: number): Promise<{ id: number; userId: number }> {
+    const existing = await db.select().from(Cart).where(eq(Cart.userId, userId)).limit(1);
+    if (existing[0]) {
+      return existing[0];
     }
-
-    const inserted = await db
-      .insert(Cart)
-      .values({ userId })
-      .returning({
-        id: Cart.id,
-        userId: Cart.userId,
-        createdAt: Cart.createdAt,
-      });
-
-    if (!inserted[0]) {
-      throw new Error("Falha ao inicializar o carrinho do usuário.");
-    }
-    return inserted[0];
+    const created = await db.insert(Cart).values({ userId }).returning();
+    return created[0]!;
   }
 
-  async getCartWithItems(userId: number): Promise<{
-    cartId: number;
-    items: CartItemEntity[];
-  }> {
+  async getCartWithItems(userId: number): Promise<{ id: number; items: CartItemEntity[] }> {
     const userCart = await this.getOrCreateCart(userId);
 
     const rows = await db
       .select({
         productId: CartProduct.productId,
-        productName: Product.name,
-        productIcon: Product.icon,
-        productEan: Product.ean,
-        productDescription: Product.description,
         quantity: CartProduct.quantity,
         addedAt: CartProduct.addedAt,
+        name: Product.name,
+        icon: Product.icon,
+        ean: Product.ean,
+        description: Product.description,
       })
       .from(CartProduct)
       .innerJoin(Product, eq(CartProduct.productId, Product.id))
-      .where(eq(CartProduct.cartId, userCart.id))
-      .orderBy(desc(CartProduct.addedAt));
+      .where(eq(CartProduct.cartId, userCart.id));
 
-    return {
-      cartId: userCart.id,
-      items: rows.map((r) => ({
-        ...r,
-        quantity: Number(r.quantity) || 1,
-      })),
-    };
+    const items: CartItemEntity[] = rows.map((r) => ({
+      productId: r.productId,
+      productName: r.name,
+      productIcon: r.icon,
+      productEan: r.ean,
+      productDescription: r.description,
+      quantity: r.quantity,
+      addedAt: r.addedAt ? new Date(r.addedAt).toISOString() : new Date().toISOString(),
+    }));
+
+    return { id: userCart.id, items };
   }
 
   async addItem(cartId: number, productId: number, quantity: number = 1): Promise<void> {
-    const safeQty = Math.max(1, Math.floor(quantity));
-
-    // Check if item already exists in cart
     const existing = await db
-      .select({
-        quantity: CartProduct.quantity,
-      })
+      .select()
       .from(CartProduct)
       .where(and(eq(CartProduct.cartId, cartId), eq(CartProduct.productId, productId)))
       .limit(1);
 
-    const firstExisting = existing[0];
-    if (firstExisting) {
-      const newQty = (firstExisting.quantity || 1) + safeQty;
+    if (existing[0]) {
       await db
         .update(CartProduct)
-        .set({ quantity: newQty })
+        .set({ quantity: existing[0].quantity + quantity })
         .where(and(eq(CartProduct.cartId, cartId), eq(CartProduct.productId, productId)));
     } else {
       await db.insert(CartProduct).values({
         cartId,
         productId,
-        quantity: safeQty,
+        quantity,
       });
     }
   }
@@ -164,6 +137,8 @@ class CartRepositoryClass {
         productId: Ocurrency.productId,
         marketId: Ocurrency.marketId,
         marketName: Market.name,
+        productName: Product.name,
+        productIcon: Product.icon,
         marketLocation: sql`ST_AsGeoJson(${Market.location})`,
         value: Ocurrency.value,
         isPromotion: Ocurrency.isPromotion,
@@ -171,6 +146,7 @@ class CartRepositoryClass {
       })
       .from(Ocurrency)
       .innerJoin(Market, eq(Ocurrency.marketId, Market.id))
+      .innerJoin(Product, eq(Ocurrency.productId, Product.id))
       .where(and(...conditions))
       .orderBy(desc(Ocurrency.createdAt));
 
@@ -183,10 +159,12 @@ class CartRepositoryClass {
           productId: r.productId,
           marketId: r.marketId,
           marketName: r.marketName,
+          productName: r.productName,
+          productIcon: r.productIcon,
           marketLocation: typeof r.marketLocation === "string" ? JSON.parse(r.marketLocation) : r.marketLocation,
           value: Number(r.value),
           isPromotion: Boolean(r.isPromotion),
-          createdAt: r.createdAt,
+          createdAt: r.createdAt ? new Date(r.createdAt).toISOString() : new Date().toISOString(),
         });
       }
     }
