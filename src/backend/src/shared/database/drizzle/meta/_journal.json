@@ -29,6 +29,13 @@
       "when": 1781150000000,
       "tag": "0003_add_two_factor_verified",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1781160000000,
+      "tag": "0004_add_cart_product_quantity",
+      "breakpoints": true
     }
   ]
 }
