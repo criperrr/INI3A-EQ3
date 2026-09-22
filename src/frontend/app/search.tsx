@@ -847,16 +847,16 @@ const styles = StyleSheet.create({
   },
   categoriesScroll: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 10,
     alignItems: "center",
   },
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1,
-    gap: 6,
+    gap: 8,
   },
   categoryChipEmoji: {
     fontSize: 13,
