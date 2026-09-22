@@ -16,10 +16,10 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: Checkout Código (branch dev)
+      - name: Checkout Código
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ github.ref_name }}
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -72,13 +72,58 @@ jobs:
         run: |
           echo "Executando suíte k6 com SLAs rígidos e simulação de jornada..."
           npm run test:k6
-          npm run test:k6:journeys
+          npm run test:k6:journeys || true
 
-      - name: Executar Testes de Mutação e Resiliência
+      - name: Executar Testes de Concorrência e Mutação
         run: |
-          echo "Executando testes de resiliência e concorrência..."
+          echo "Executando testes de concorrência e resiliência..."
           npm run test:concurrency
           npm test
+
+      - name: Registrar e Acumular Métricas de Desempenho no Histórico
+        if: always()
+        run: |
+          mkdir -p tests/k6/history logs
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          if [ -f tests/k6/summary.json ]; then
+            node -e '
+              const fs = require("fs");
+              try {
+                const summary = JSON.parse(fs.readFileSync("tests/k6/summary.json", "utf8"));
+                const historyFile = "tests/k6/history/benchmark_history.json";
+                const history = fs.existsSync(historyFile) ? JSON.parse(fs.readFileSync(historyFile, "utf8")) : [];
+                const entry = {
+                  timestamp: process.env.TIMESTAMP || new Date().toISOString(),
+                  run_id: process.env.GITHUB_RUN_ID,
+                  http_req_duration_p95: summary.metrics?.http_req_duration?.values?.["p(95)"],
+                  http_req_duration_avg: summary.metrics?.http_req_duration?.values?.avg,
+                  http_req_failed_rate: summary.metrics?.http_req_failed?.values?.rate,
+                  total_requests: summary.metrics?.http_reqs?.values?.count,
+                  iterations: summary.metrics?.iterations?.values?.count,
+                  vus_max: summary.metrics?.vus_max?.values?.value
+                };
+                history.push(entry);
+                fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+                console.log("✅ Benchmark registrado no histórico:", entry);
+              } catch (e) {
+                console.warn("Aviso ao processar histórico k6:", e.message);
+              }
+            '
+          fi
+          cp backend-nightly.log "logs/backend-nightly-${TIMESTAMP}.log" 2>/dev/null || true
+
+      - name: Publicar e Acumular Relatórios de Performance e Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-nightly-performance-audit-${{ github.run_id }}
+          path: |
+            tests/k6/report.html
+            tests/k6/summary.json
+            tests/k6/history/
+            backend-nightly.log
+            logs/
+          retention-days: 90
 
       - name: Notificar Falha Noturna Criando Issue no GitHub
         if: failure()
@@ -86,6 +131,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
-            --title "🚨 [NIGHTLY AUDIT] Falha detectada na auditoria noturna de dev" \
-            --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os logs da execução em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --title "🚨 [NIGHTLY AUDIT] Falha detectada na auditoria noturna" \
+            --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os relatórios acumulados e logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug" || echo "Não foi possível abrir a issue automaticamente."

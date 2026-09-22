@@ -2,7 +2,7 @@ name: PR Gatekeeper (Quality & Security Gate)
 
 on:
   pull_request:
-    branches: [dev, main]
+    branches: [tests, dev, main]
     types: [opened, synchronize, reopened]
 
 concurrency:

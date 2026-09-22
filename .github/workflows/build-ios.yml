@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch para compilar (ex: tests ou main)"
+        description: "Branch para compilar (ex: dev ou main)"
         required: false
-        default: "tests"
+        default: "dev"
   push:
     tags:
       - "ios-v*"
