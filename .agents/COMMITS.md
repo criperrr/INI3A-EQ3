@@ -3592,3 +3592,4 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/memory/MEMORY.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Agents will now execute surgical commits only for the scope of the active chat, avoiding accidental inclusion of parallel chat changes.
+
