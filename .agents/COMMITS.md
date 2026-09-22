@@ -3742,3 +3742,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Complete visual fidelity across all landing sections with zero typecheck errors and full responsiveness. No spontaneous commit performed per Rule 6.1.
+
+## 2026-09-22 12:35 - feat(deploy): hospedar servidor no ambiente cti ra2457045
+
+- **Description:** Configuração e implantação completa do servidor backend Presco no ambiente de desenvolvimento do CTI sob o RA 2457045. Autenticação via chave SSH ed25519 na porta 4026, vinculação à porta exclusiva 59057 monitorada pelo portal CTI, proxy reverso Apache via .htaccess em public_html, conexão com PostgreSQL (banco 26-presco com PostGIS) e Redis Upstash, daemonização contínua via PM2 com persistência e adição de rota raiz informativa.
+- **Files Modified:**
+  - `deploy/cti.key`
+  - `deploy/.env.deploy`
+  - `deploy/deploy.sh`
+  - `ecosystem.config.cjs`
+  - `src/backend/src/app.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Servidor 100% operacional respondendo publicamente com HTTPS na URL oficial http://ra.projetoscti.com.br/2457045.
