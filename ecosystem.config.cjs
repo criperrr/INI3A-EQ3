@@ -27,8 +27,8 @@ module.exports = {
       max_memory_restart: "1G",
       env: {
         NODE_ENV: "production",
-        SERVER_PORT: 3333,
-        SERVER_HOST: "0.0.0.0",
+        SERVER_PORT: process.env.SERVER_PORT ? Number(process.env.SERVER_PORT) : 3333,
+        SERVER_HOST: process.env.SERVER_HOST || "0.0.0.0",
       },
       error_file: path.resolve(__dirname, "logs/backend-error.log"),
       out_file: path.resolve(__dirname, "logs/backend-out.log"),
@@ -51,8 +51,8 @@ module.exports = {
       max_memory_restart: "1G",
       env: {
         NODE_ENV: "development",
-        SERVER_PORT: 3334,
-        SERVER_HOST: "0.0.0.0",
+        SERVER_PORT: process.env.SERVER_PORT_DEV ? Number(process.env.SERVER_PORT_DEV) : 3334,
+        SERVER_HOST: process.env.SERVER_HOST || "0.0.0.0",
       },
       error_file: path.resolve(__dirname, "logs/backend-dev-error.log"),
       out_file: path.resolve(__dirname, "logs/backend-dev-out.log"),
