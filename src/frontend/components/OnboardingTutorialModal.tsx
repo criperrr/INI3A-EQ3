@@ -718,6 +718,7 @@ export default function OnboardingTutorialModal({
                 onPress={handleNext}
                 activeOpacity={0.85}
                 style={styles.whiteNextButton}
+                testID="next-tutorial-button"
               >
                 <Text style={styles.whiteNextButtonText} numberOfLines={1}>
                   {currentStep === totalSteps - 1

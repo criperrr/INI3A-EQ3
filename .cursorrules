@@ -11,9 +11,15 @@
 - Padrão de nomenclatura obrigatório: `^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$`.
 - Proibido ramificar de `main`, exceto hotfixes emergenciais de produção (`fix/hotfix-...`).
 
-## 3. Axioma de Merge Autônomo
+## 3. Axioma de Merge Autônomo e Validação Obrigatória de PRs (Regra Absoluta)
 - NUNCA realize `git merge` local em `dev` ou `main`.
-- O ciclo de vida é sempre: criar branch -> implementar/testar -> abrir PR via `gh pr create --base dev` -> habilitar `gh pr merge --auto --squash`.
+- **Regra Absoluta do Ciclo de PR:** Toda tarefa deve abrir PR via `gh pr create --base dev`.
+- **Acompanhamento Obrigatório de Testes:** O agente DEVE monitorar ativamente se os testes da esteira de CI passaram (`gh pr checks <PR> --watch`). É expressamente proibido dar a tarefa como encerrada sem constatar aprovação dos testes.
+- **Merge via `gh` da Máquina:** Se os testes passarem, o agente DEVE usar o `gh` da máquina do usuário para realizar o merge em `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`). Se falharem, conserte a implementação até passar!
+- **Pré-requisito do GitHub CLI:** Se o `gh` não estiver configurado ou autenticado (`gh auth status`), o agente DEVE parar imediatamente e solicitar ao usuário que execute `gh auth login`.
+- **Teste Mandatório com Maestro para Frontend:** Antes de commitar e dar push de qualquer branch que modifique o frontend (`src/frontend/**`), o agente DEVE testar a estabilidade completa da aplicação usando o Maestro (`npm run test:maestro:full` ou `npm run test:maestro:docker` / MCP) para garantir que nada na interface foi quebrado.
+
+
 
 ## 4. Blindagem de Testes (Anti-Tautologia)
 - Proibidos testes tautológicos ou vazios (`expect(true).toBe(true)` ou asserts genéricos sem verificação de estado).

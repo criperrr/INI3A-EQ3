@@ -317,6 +317,7 @@ export default function CartScreen() {
 
             {cartItems.length > 0 && (
               <TouchableOpacity
+                testID="cart-clear-btn"
                 style={[styles.clearBtn, { backgroundColor: `${semantic.colors.feedback.error}15` }]}
                 activeOpacity={0.7}
                 onPress={handleClearCart}
@@ -544,6 +545,7 @@ export default function CartScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  testID="cart-navigate-route-btn"
                   style={[styles.routeBtn, { backgroundColor: accent }]}
                   activeOpacity={0.85}
                   onPress={() => setIsRouteModalVisible(true)}

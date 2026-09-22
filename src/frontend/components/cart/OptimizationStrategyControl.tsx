@@ -60,6 +60,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
 
         <View style={styles.quickButtons}>
           <TouchableOpacity
+            testID="btn-travel-settings"
             style={[styles.smallBtn, { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default }]}
             activeOpacity={0.7}
             onPress={onOpenTravelSettings}
@@ -71,6 +72,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="btn-route-preview"
             style={[styles.smallBtn, { backgroundColor: `${accent}15`, borderColor: accent }]}
             activeOpacity={0.7}
             onPress={onOpenRoutePreview}
@@ -86,6 +88,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
       {/* Strategy Segmented Pills */}
       <View style={[styles.strategyPillContainer, { backgroundColor: semantic.colors.surface.input }]}>
         <TouchableOpacity
+          testID="strategy-tab-max-savings"
           style={[
             styles.strategyTab,
             settings.strategy === "max_savings" && [styles.strategyTabActive, { backgroundColor: accent }],
@@ -112,6 +115,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="strategy-tab-balanced"
           style={[
             styles.strategyTab,
             settings.strategy === "balanced" && [styles.strategyTabActive, { backgroundColor: accent }],
@@ -138,6 +142,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
         </TouchableOpacity>
 
         <TouchableOpacity
+          testID="strategy-tab-single-store"
           style={[
             styles.strategyTab,
             settings.strategy === "single_store" && [styles.strategyTabActive, { backgroundColor: accent }],
