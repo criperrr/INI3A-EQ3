@@ -72,6 +72,18 @@ app.get(["/health", "/ping", "/products/barcode/ping"], async (_, res) => {
   });
 });
 
+app.get(["/", "/index.html", "/index.php"], (_, res) => {
+  return res.status(200).json({
+    name: "Presco API",
+    description: "API de Monitoramento de Preços, Scanner EAN-13 e Otimizador de Rotas",
+    status: "online",
+    version: "1.3.7",
+    health: "/health",
+    docs: "/api/v1",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use("/api/v1", (_, res) => {
   return res.status(200).json({ message: "API is running!" });
 });

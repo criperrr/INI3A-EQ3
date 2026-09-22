@@ -47,9 +47,8 @@ if [ "${DEPLOY_PULL:-0}" = "1" ] || [ "${1:-}" = "--pull" ]; then
 fi
 
 # 2. Proxy reverso do Apache (público → 127.0.0.1:PORT)
-if [ ! -f "$PROJECT_DIR/.htaccess" ]; then
-  echo "⚙️  [Apache] Criando .htaccess de proxy reverso..."
-  cat > "$PROJECT_DIR/.htaccess" <<HTACCESS
+echo "⚙️  [Apache] Configurando .htaccess de proxy reverso..."
+cat > "$PROJECT_DIR/.htaccess" <<HTACCESS
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase ${REWRITE_BASE:-/}
@@ -67,7 +66,12 @@ if [ ! -f "$PROJECT_DIR/.htaccess" ]; then
 
 Options -Indexes
 HTACCESS
-  chmod 644 "$PROJECT_DIR/.htaccess"
+chmod 644 "$PROJECT_DIR/.htaccess"
+
+if [ -d "$HOME/public_html" ]; then
+  echo "⚙️  [Apache] Sincronizando .htaccess para $HOME/public_html..."
+  cp -f "$PROJECT_DIR/.htaccess" "$HOME/public_html/.htaccess"
+  chmod 644 "$HOME/public_html/.htaccess"
 fi
 
 # 2.5 Higienização: Manter no servidor estritamente os arquivos essenciais do backend
