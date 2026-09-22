@@ -267,12 +267,24 @@ export default function ProductDetails() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
     }
+    // Extract numeric price from product details (e.g. "R$ 2,00" -> 2.00)
+    let parsedPrice: number | undefined;
+    const rawPrice = product.bestPrice || product.lastPrice || product.minPrice;
+    if (rawPrice && typeof rawPrice === "string") {
+      const cleaned = rawPrice.replace(/[^\d.,]/g, "").replace(",", ".");
+      const val = parseFloat(cleaned);
+      if (!isNaN(val) && val > 0) {
+        parsedPrice = val;
+      }
+    }
+
     await cartService.addToCart(
       {
         id: product.id,
         name: product.name,
         icon: product.icon || product.imageUri || null,
         ean: product.ean || product.barcode || null,
+        estimatedPrice: parsedPrice,
       },
       cartQuantity
     );
