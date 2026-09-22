@@ -79,7 +79,7 @@ jobs:
           npm test
           echo "✅ Todos os testes unitários e de integração passaram com 100% de sucesso."
 
-      - name: Validar Bundle Expo Mobile (Condicional: apenas se src/frontend foi modificado)
+      - name: "Validar Bundle Expo Mobile (Condicional: apenas se src/frontend foi modificado)"
         run: |
           echo "Verificando se houve alterações no frontend..."
           MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
