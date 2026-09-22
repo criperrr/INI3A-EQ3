@@ -1,55 +1,84 @@
-const primitiveTypography = {
-    size: { title1: 22, title2: 20, title3: 18, base: 16, callout: 15, body: 14, sub: 12, sm: 11, xs: 10 },
-    weight: { regular: "400" as const, medium: "500" as const, semibold: "600" as const, bold: "700" as const },
-    lineHeight: { hero: 28, title: 26, relaxed: 24, body: 22, normal: 20, snug: 16 },
-    letterSpacing: { tight: -0.5, wide: 0.5, wider: 1.0 },
-};
-
-export const semanticTypography = {
+export const typography = {
+    display: {
+        fontSize: 48,
+        fontWeight: "900" as const,
+        lineHeight: 56,
+        letterSpacing: -1.5,
+    },
+    displaySm: {
+        fontSize: 36,
+        fontWeight: "800" as const,
+        lineHeight: 44,
+        letterSpacing: -1,
+    },
     hero: {
-        fontSize: primitiveTypography.size.title1,
-        fontWeight: primitiveTypography.weight.bold,
-        lineHeight: primitiveTypography.lineHeight.hero,
-        letterSpacing: primitiveTypography.letterSpacing.tight,
+        fontSize: 32,
+        fontWeight: "800" as const,
+        lineHeight: 40,
+        letterSpacing: -0.8,
     },
     sectionTitle: {
-        fontSize: primitiveTypography.size.title3,
-        fontWeight: primitiveTypography.weight.bold,
-        lineHeight: primitiveTypography.lineHeight.relaxed,
+        fontSize: 28,
+        fontWeight: "800" as const,
+        lineHeight: 36,
+        letterSpacing: -0.5,
     },
-    productTitle: {
-        fontSize: primitiveTypography.size.title2,
-        fontWeight: primitiveTypography.weight.bold,
-        lineHeight: primitiveTypography.lineHeight.title,
+    title1: {
+        fontSize: 22,
+        fontWeight: "700" as const,
+        lineHeight: 30,
+        letterSpacing: -0.3,
+    },
+    title2: {
+        fontSize: 18,
+        fontWeight: "700" as const,
+        lineHeight: 26,
     },
     subtitle: {
-        fontSize: primitiveTypography.size.base,
-        fontWeight: primitiveTypography.weight.semibold,
-        lineHeight: primitiveTypography.lineHeight.body,
+        fontSize: 16,
+        fontWeight: "600" as const,
+        lineHeight: 24,
+    },
+    bodyLarge: {
+        fontSize: 18,
+        fontWeight: "400" as const,
+        lineHeight: 28,
     },
     body: {
-        fontSize: primitiveTypography.size.body,
-        fontWeight: primitiveTypography.weight.regular,
-        lineHeight: primitiveTypography.lineHeight.normal,
+        fontSize: 15,
+        fontWeight: "400" as const,
+        lineHeight: 24,
     },
     bodyMedium: {
-        fontSize: primitiveTypography.size.body,
-        fontWeight: primitiveTypography.weight.medium,
-        lineHeight: primitiveTypography.lineHeight.normal,
+        fontSize: 15,
+        fontWeight: "500" as const,
+        lineHeight: 24,
     },
-    badge: {
-        fontSize: primitiveTypography.size.sm,
-        fontWeight: primitiveTypography.weight.bold,
-        letterSpacing: primitiveTypography.letterSpacing.wider,
+    bodyBold: {
+        fontSize: 15,
+        fontWeight: "700" as const,
+        lineHeight: 24,
     },
     button: {
-        fontSize: primitiveTypography.size.callout,
-        fontWeight: primitiveTypography.weight.bold,
-        lineHeight: primitiveTypography.lineHeight.body,
+        fontSize: 15,
+        fontWeight: "700" as const,
+        lineHeight: 20,
     },
     caption: {
-        fontSize: primitiveTypography.size.sub,
-        fontWeight: primitiveTypography.weight.regular,
-        lineHeight: primitiveTypography.lineHeight.snug,
+        fontSize: 13,
+        fontWeight: "500" as const,
+        lineHeight: 18,
+    },
+    badge: {
+        fontSize: 12,
+        fontWeight: "700" as const,
+        lineHeight: 16,
+        letterSpacing: 0.5,
+    },
+    micro: {
+        fontSize: 11,
+        fontWeight: "600" as const,
+        lineHeight: 14,
+        letterSpacing: 0.5,
     },
 };

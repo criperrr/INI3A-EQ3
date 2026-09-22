@@ -1,7 +1,8 @@
-import { createSemanticColors } from "./colors";
-import { semanticTypography } from "./typography";
+import { createSemanticColors, ThemeType, SemanticTheme } from "./colors";
+import { typography } from "./typography";
 
-export const ACCENT_COLOR = "#00D1B2"; // Cor primária da landing page
+export * from "./colors";
+export * from "./typography";
 
-export const themeColors = createSemanticColors("dark", false, ACCENT_COLOR);
-export const themeTypography = semanticTypography;
+export const defaultTheme = createSemanticColors("dark");
+export const defaultTypography = typography;
