@@ -1,0 +1,109 @@
+name: Staging Pipeline (Post-Merge in dev)
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: staging-pipeline
+  cancel-in-progress: false
+
+jobs:
+  concurrency_and_audit:
+    name: Concurrency Tests & Staging Validation
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Validar Tipagem (Typecheck)
+        run: npm run typecheck
+
+      - name: Executar Testes de Concorrência & Condições de Corrida
+        run: |
+          echo "Executando testes de concorrência e race conditions..."
+          npm run test:concurrency
+
+  build_staging_apk:
+    name: Build Mobile App (devFlavor / Staging)
+    needs: [concurrency_and_audit]
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Configurar Ambiente de Staging (devFlavor)
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir -p src/frontend
+          cat << EOF > src/frontend/.env
+          APP_VARIANT=development
+          EXPO_PUBLIC_APP_VARIANT=development
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco/staging}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          EOF
+
+      - name: Gerar Projeto Nativo Android com devFlavor (Expo Prebuild)
+        working-directory: src/frontend
+        env:
+          APP_VARIANT: development
+        run: npx expo prebuild --platform android --clean
+
+      - name: Permissão de Execução do Gradle Wrapper
+        run: chmod +x src/frontend/android/gradlew
+
+      - name: Compilar APK Android (devFlavor / assembleDebug)
+        working-directory: src/frontend/android
+        env:
+          APP_VARIANT: development
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Renomear Artefato de Staging
+        run: |
+          mkdir -p build-artifacts
+          cp src/frontend/android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/Presco-Staging-devFlavor.apk
+
+      - name: Publicar Artefato APK de Staging
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presco-Staging-devFlavor
+          path: build-artifacts/Presco-Staging-devFlavor.apk
+          retention-days: 14
