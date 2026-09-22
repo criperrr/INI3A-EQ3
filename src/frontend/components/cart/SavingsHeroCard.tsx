@@ -175,15 +175,16 @@ const styles = StyleSheet.create({
   },
   bannerSubtitle: {
     fontSize: 12,
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 17,
   },
   metricsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   metricCol: {
     flex: 1,
@@ -193,15 +194,18 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    marginBottom: 2,
+    letterSpacing: 0.4,
+    marginBottom: 4,
   },
   metricValue: {
     fontSize: 15,
     fontWeight: "700",
+    lineHeight: 20,
   },
   metricValueTotal: {
     fontSize: 16,
     fontWeight: "800",
+    lineHeight: 20,
   },
   dividerVertical: {
     width: 1,

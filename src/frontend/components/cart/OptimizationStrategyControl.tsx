@@ -83,85 +83,51 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
         </View>
       </View>
 
-      {/* Strategy Segmented Pills */}
+      {/* Strategy Stacked Options (Um em cima do outro para suporte a idiomas extensos) */}
       <View style={[styles.strategyPillContainer, { backgroundColor: semantic.colors.surface.input }]}>
-        <TouchableOpacity
-          style={[
-            styles.strategyTab,
-            settings.strategy === "max_savings" && [styles.strategyTabActive, { backgroundColor: accent }],
-          ]}
-          activeOpacity={0.8}
-          onPress={() => handleSelectStrategy("max_savings")}
-        >
-          <Ionicons
-            name="trending-down"
-            size={13}
-            color={settings.strategy === "max_savings" ? semantic.colors.text.inverse : semantic.colors.text.secondary}
-          />
-          <Text
-            style={[
-              styles.strategyTabText,
-              { color: settings.strategy === "max_savings" ? semantic.colors.text.inverse : semantic.colors.text.secondary },
-              settings.strategy === "max_savings" && styles.strategyTabTextActive,
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {t("cart.maxSavings")}
-          </Text>
-        </TouchableOpacity>
+        {([
+          { key: "max_savings" as const, icon: "trending-down" as const, label: t("cart.maxSavings") },
+          { key: "balanced" as const, icon: "scale-outline" as const, label: t("cart.balanced") },
+          { key: "single_store" as const, icon: "storefront-outline" as const, label: t("cart.singleStore") },
+        ] as const).map((strat) => {
+          const isSelected = settings.strategy === strat.key;
+          return (
+            <TouchableOpacity
+              key={strat.key}
+              style={[
+                styles.strategyTab,
+                isSelected
+                  ? [styles.strategyTabActive, { backgroundColor: accent, borderColor: accent }]
+                  : { backgroundColor: semantic.colors.surface.card, borderColor: semantic.colors.border.default },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => handleSelectStrategy(strat.key)}
+            >
+              <View style={styles.strategyTabLeft}>
+                <Ionicons
+                  name={strat.icon}
+                  size={16}
+                  color={isSelected ? semantic.colors.text.inverse : semantic.colors.text.secondary}
+                />
+                <Text
+                  style={[
+                    styles.strategyTabText,
+                    { color: isSelected ? semantic.colors.text.inverse : semantic.colors.text.primary },
+                    isSelected && styles.strategyTabTextActive,
+                  ]}
+                >
+                  {strat.label}
+                </Text>
+              </View>
 
-        <TouchableOpacity
-          style={[
-            styles.strategyTab,
-            settings.strategy === "balanced" && [styles.strategyTabActive, { backgroundColor: accent }],
-          ]}
-          activeOpacity={0.8}
-          onPress={() => handleSelectStrategy("balanced")}
-        >
-          <Ionicons
-            name="scale-outline"
-            size={13}
-            color={settings.strategy === "balanced" ? semantic.colors.text.inverse : semantic.colors.text.secondary}
-          />
-          <Text
-            style={[
-              styles.strategyTabText,
-              { color: settings.strategy === "balanced" ? semantic.colors.text.inverse : semantic.colors.text.secondary },
-              settings.strategy === "balanced" && styles.strategyTabTextActive,
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {t("cart.balanced")}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.strategyTab,
-            settings.strategy === "single_store" && [styles.strategyTabActive, { backgroundColor: accent }],
-          ]}
-          activeOpacity={0.8}
-          onPress={() => handleSelectStrategy("single_store")}
-        >
-          <Ionicons
-            name="storefront-outline"
-            size={13}
-            color={settings.strategy === "single_store" ? semantic.colors.text.inverse : semantic.colors.text.secondary}
-          />
-          <Text
-            style={[
-              styles.strategyTabText,
-              { color: settings.strategy === "single_store" ? semantic.colors.text.inverse : semantic.colors.text.secondary },
-              settings.strategy === "single_store" && styles.strategyTabTextActive,
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {t("cart.singleStore")}
-          </Text>
-        </TouchableOpacity>
+              <Ionicons
+                name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                size={18}
+                color={isSelected ? semantic.colors.text.inverse : semantic.colors.text.tertiary}
+              />
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={[styles.strategyDescription, { color: semantic.colors.text.tertiary }]}>
@@ -252,20 +218,28 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   strategyPillContainer: {
-    flexDirection: "row",
-    padding: 3,
-    borderRadius: 12,
+    flexDirection: "column",
+    padding: 6,
+    borderRadius: 14,
     marginBottom: 8,
+    gap: 6,
   },
   strategyTab: {
-    flex: 1,
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 3,
-    paddingVertical: 7,
-    paddingHorizontal: 4,
-    borderRadius: 9,
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  strategyTabLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    paddingRight: 8,
   },
   strategyTabActive: {
     shadowColor: "#000",
@@ -275,8 +249,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   strategyTabText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: "500",
+    flexShrink: 1,
   },
   strategyTabTextActive: {
     fontWeight: "700",
@@ -291,6 +266,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 8,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: "rgba(150, 150, 150, 0.2)",

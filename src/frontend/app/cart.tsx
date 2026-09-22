@@ -24,6 +24,7 @@ import {
   type TravelSettings,
   type OptimizationResult,
 } from "../services/cartService";
+import { fetchProductById } from "../services/productService";
 import { getUserLocation } from "../utils/userLocation";
 import { SavingsHeroCard } from "../components/cart/SavingsHeroCard";
 import { OptimizationStrategyControl } from "../components/cart/OptimizationStrategyControl";
@@ -49,19 +50,13 @@ export default function CartScreen() {
   const [isTravelModalVisible, setIsTravelModalVisible] = useState(false);
   const [isRouteModalVisible, setIsRouteModalVisible] = useState(false);
 
-  // Stable references to prevent hook re-trigger thrashing
-  const cartItemsRef = useRef<CartProductItem[]>([]);
-  const settingsRef = useRef<TravelSettings>(DEFAULT_TRAVEL_SETTINGS);
+  // Stable references for async callbacks
+  const cartItemsRef = useRef(cartItems);
+  cartItemsRef.current = cartItems;
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
-  useEffect(() => {
-    cartItemsRef.current = cartItems;
-  }, [cartItems]);
-
-  useEffect(() => {
-    settingsRef.current = settings;
-  }, [settings]);
-
-  // Run Optimization Engine in background
+  // Background optimizer trigger: does not block UI, resilient to 404/offline
   const triggerOptimization = useCallback(
     async (itemsToOptimize?: CartProductItem[], settingsToUse?: TravelSettings) => {
       const activeItems = itemsToOptimize || cartItemsRef.current;
@@ -90,9 +85,38 @@ export default function CartScreen() {
             quantity: it.quantity,
             productName: it.name,
             productIcon: it.icon,
+            estimatedPrice: it.estimatedPrice,
           })),
           customSettings: activeSettings,
         });
+
+        // Ensure storeGroups and unassignedItems show the actual product name from activeItems if returned as "Produto #..."
+        if (result) {
+          const nameMap = new Map(activeItems.map((c) => [c.productId, c.name]));
+          const iconMap = new Map(activeItems.map((c) => [c.productId, c.icon]));
+          result.storeGroups?.forEach((g) => {
+            g.items?.forEach((it) => {
+              if (!it.productName || it.productName.startsWith("Produto #")) {
+                const realName = nameMap.get(it.productId);
+                if (realName && !realName.startsWith("Produto #")) {
+                  it.productName = realName;
+                }
+              }
+              if (!it.productIcon) {
+                const realIcon = iconMap.get(it.productId);
+                if (realIcon) it.productIcon = realIcon;
+              }
+            });
+          });
+          result.unassignedItems?.forEach((it) => {
+            if (!it.productName || it.productName.startsWith("Produto #")) {
+              const realName = nameMap.get(it.productId);
+              if (realName && !realName.startsWith("Produto #")) {
+                it.productName = realName;
+              }
+            }
+          });
+        }
 
         setOptimization(result);
         setOptimizationError(null);
@@ -124,6 +148,35 @@ export default function CartScreen() {
 
         if (items.length > 0) {
           triggerOptimization(items, loadedSettings);
+
+          // Auto-heal any items that are missing real product names or named "Produto #..."
+          const itemsNeedingHeal = items.filter(
+            (it) => !it.name || it.name.trim() === "" || it.name.startsWith("Produto #")
+          );
+          if (itemsNeedingHeal.length > 0) {
+            Promise.all(
+              itemsNeedingHeal.map(async (item) => {
+                try {
+                  const prod = await fetchProductById(item.productId);
+                  if (prod && prod.name) {
+                    item.name = prod.name;
+                    if (!item.icon && (prod.icon || prod.imageUri)) {
+                      item.icon = prod.icon || prod.imageUri || null;
+                    }
+                    if (!item.ean && (prod.ean || prod.barcode)) {
+                      item.ean = prod.ean || prod.barcode || null;
+                    }
+                  }
+                } catch {}
+              })
+            ).then(async () => {
+              if (isMounted) {
+                setCartItems([...items]);
+                await cartService.saveCartItems(items);
+                triggerOptimization([...items], loadedSettings);
+              }
+            });
+          }
         }
       } catch {
         if (isMounted) setLoading(false);
@@ -154,6 +207,31 @@ export default function CartScreen() {
         cartService.getCartItems(),
         cartService.getTravelSettings(),
       ]);
+
+      // Auto-heal any items that are missing real product names or named "Produto #..."
+      const itemsNeedingHeal = items.filter(
+        (it) => !it.name || it.name.trim() === "" || it.name.startsWith("Produto #")
+      );
+      if (itemsNeedingHeal.length > 0) {
+        await Promise.all(
+          itemsNeedingHeal.map(async (item) => {
+            try {
+              const prod = await fetchProductById(item.productId);
+              if (prod && prod.name) {
+                item.name = prod.name;
+                if (!item.icon && (prod.icon || prod.imageUri)) {
+                  item.icon = prod.icon || prod.imageUri || null;
+                }
+                if (!item.ean && (prod.ean || prod.barcode)) {
+                  item.ean = prod.ean || prod.barcode || null;
+                }
+              }
+            } catch {}
+          })
+        );
+        await cartService.saveCartItems(items);
+      }
+
       setCartItems(items);
       setSettings(loadedSettings);
       if (items.length > 0) {
@@ -740,18 +818,19 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-    marginTop: 4,
+    gap: 8,
+    marginBottom: 12,
+    marginTop: 18,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
+    lineHeight: 20,
   },
   unassignedBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
+    gap: 12,
     padding: 14,
     borderRadius: 14,
     borderWidth: 1,
@@ -759,22 +838,24 @@ const styles = StyleSheet.create({
   },
   unassignedTextCol: {
     flex: 1,
+    gap: 6,
   },
   unassignedTitle: {
     fontSize: 13,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 2,
+    lineHeight: 18,
   },
   unassignedItem: {
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 18,
   },
   bottomBar: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderTopWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -3 },
@@ -789,15 +870,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   bottomBarTotal: {
     fontSize: 18,
     fontWeight: "800",
+    lineHeight: 22,
   },
   bottomBarSavings: {
     fontSize: 11,
     fontWeight: "700",
-    marginTop: 1,
+    marginTop: 2,
+    lineHeight: 15,
   },
   bottomBarActions: {
     flexDirection: "row",
@@ -827,7 +912,7 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   fallbackListContainer: {
-    gap: 10,
+    gap: 12,
   },
   offlineBanner: {
     flexDirection: "row",
@@ -840,35 +925,36 @@ const styles = StyleSheet.create({
   },
   offlineBannerTextCol: {
     flex: 1,
+    gap: 4,
   },
   offlineBannerTitle: {
     fontSize: 13,
     fontWeight: "700",
-    marginBottom: 4,
+    lineHeight: 18,
   },
   offlineBannerDesc: {
     fontSize: 12,
-    lineHeight: 16,
-    marginBottom: 10,
+    lineHeight: 17,
+    marginBottom: 8,
   },
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 8,
   },
   retryBtnText: {
     color: "#FFFFFF",
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
   },
   rawItemCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
+    padding: 14,
     borderRadius: 14,
     borderWidth: 1,
     gap: 12,
@@ -876,31 +962,33 @@ const styles = StyleSheet.create({
   rawItemImageWrap: {
     width: 50,
     height: 50,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   rawItemImage: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
   },
   rawItemInfo: {
     flex: 1,
     justifyContent: "center",
+    gap: 4,
   },
   rawItemName: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 2,
+    lineHeight: 19,
   },
   rawItemPrice: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "500",
-    marginBottom: 2,
+    lineHeight: 18,
   },
   rawItemEan: {
     fontSize: 11,
+    lineHeight: 15,
   },
   rawItemActions: {
     flexDirection: "row",
@@ -912,11 +1000,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderRadius: 8,
+    height: 32,
     overflow: "hidden",
   },
   rawStepBtn: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -926,8 +1015,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   rawDeleteBtn: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
