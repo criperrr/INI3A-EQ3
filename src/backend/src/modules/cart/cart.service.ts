@@ -1,6 +1,7 @@
 import { CartRepository } from "@/shared/database/repositories/cart.repository";
 import type { CartItemEntity } from "@/shared/database/repositories/cart.repository";
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
+import { ProductRepository } from "@/shared/database/repositories/product.repository";
 import { RoutingService } from "@/shared/services/routing.service";
 import type { GeoCoordinate } from "@/shared/services/routing.service";
 import { ValidationError, NotFoundError } from "@/shared/errors/errors";
@@ -169,6 +170,28 @@ class CartServiceClass {
 
     if (cartItems.length === 0) {
       throw new ValidationError([{ field: "items", message: "Shopping list is empty." }]);
+    }
+
+    // Enrich any missing product name/icon from ProductRepository
+    const missingProductIds = cartItems
+      .filter((c) => !c.productName || c.productName.trim() === "" || c.productName.startsWith("Produto #"))
+      .map((c) => c.productId);
+    if (missingProductIds.length > 0) {
+      try {
+        const dbProducts = await ProductRepository.getProductsBasicInfo(missingProductIds);
+        const productMap = new Map(dbProducts.map((p) => [p.id, p]));
+        for (const c of cartItems) {
+          if (!c.productName || c.productName.trim() === "" || c.productName.startsWith("Produto #")) {
+            const p = productMap.get(c.productId);
+            if (p && p.name) {
+              c.productName = p.name;
+              if (!c.productIcon && p.icon) c.productIcon = p.icon;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[CartService] Non-critical: could not enrich product details from DB:", err);
+      }
     }
 
     // 2. Resolve Parameters & Defaults

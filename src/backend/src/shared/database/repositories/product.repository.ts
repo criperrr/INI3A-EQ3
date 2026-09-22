@@ -895,8 +895,19 @@ class ProductRepositoryClass {
         description: description || null,
       })
       .returning();
-
     return created;
+  }
+
+  async getProductsBasicInfo(ids: number[]): Promise<{ id: number; name: string; icon: string | null }[]> {
+    if (!ids || ids.length === 0) return [];
+    return db
+      .select({
+        id: product.id,
+        name: product.name,
+        icon: product.icon,
+      })
+      .from(product)
+      .where(inArray(product.id, ids));
   }
 }
 
