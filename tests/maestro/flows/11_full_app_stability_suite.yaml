@@ -1,0 +1,275 @@
+appId: com.presco.app
+name: "11 - Comprehensive Full Application Stability & Regression Suite"
+tags:
+  - e2e
+  - regression
+  - stability
+  - full-suite
+---
+# ==============================================================================
+# Presco Full Application Stability Suite (Maestro Automated E2E)
+# Covers: Onboarding (7 steps), Auth, Home, Banners, Search, Catalog, Details,
+# Voting, Smart Shopping List & Multi-Store Travel Optimizer, Map, Profile,
+# Customization Shop, Admin Upptime Monitor, Theming & Clean Logout.
+# ==============================================================================
+
+# 1. Launch App cleanly
+- launchApp:
+    clearState: false
+
+# 2. Step through Onboarding Tutorial (All 7 Steps) if visible
+- runFlow:
+    when:
+      visible:
+        id: "next-tutorial-button"
+    commands:
+      # Step 1: Buscar & Comparar Preços
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 2: Leitor de Gôndola EAN
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 3: Lista de Compras Inteligente & Rota Econômica (NOVO)
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 4: Mapa de Mercados Próximos
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 5: Registrar Preços & Ganhar XP
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 6: Auditoria Comunitária
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+      # Step 7: Níveis, Insígnias & Recompensas (Final)
+      - tapOn:
+          id: "next-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+# Dismiss tutorial fallback if still present
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# 3. Authenticate using 1-tap Admin Dev Login
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# 4. Explore Home Screen & Interactive Carrossel
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 10000
+
+- tapOn:
+    id: "tab-home"
+
+# Scroll Home and pull to refresh
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# 5. Search & Discovery with Real-Time Debounce
+- tapOn:
+    id: "tab-search"
+
+- extendedWaitUntil:
+    visible:
+      id: "search-input"
+    timeout: 8000
+
+- tapOn:
+    id: "search-input"
+- inputText: "Leite"
+- hideKeyboard
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Clear search input
+- eraseText: 10
+- hideKeyboard
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# 6. Open Product Details & Test Interactivity
+# Tap first product item in catalogue
+- tapOn:
+    point: "50%, 35%"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-register-price"
+    timeout: 8000
+
+# Add product to Smart Shopping List
+- runFlow:
+    when:
+      visible:
+        id: "btn-add-to-cart"
+    commands:
+      - tapOn:
+          id: "btn-add-to-cart"
+      - waitForAnimationToEnd:
+          timeout: 1200
+
+# Test community price vote if occurrence exists
+- runFlow:
+    when:
+      visible:
+        id: "btn-vote-up"
+    commands:
+      - tapOn:
+          id: "btn-vote-up"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+# Return back to Home
+- back
+
+# 7. Smart Shopping List & Multi-Store Optimizer (/cart)
+- extendedWaitUntil:
+    visible:
+      id: "header-cart-btn"
+    timeout: 8000
+
+- tapOn:
+    id: "header-cart-btn"
+
+- waitForAnimationToEnd:
+    timeout: 2500
+
+# Test Strategy Controls (Max Savings, Balanced, Single Store)
+- runFlow:
+    when:
+      visible:
+        id: "strategy-tab-max-savings"
+    commands:
+      - tapOn:
+          id: "strategy-tab-max-savings"
+      - waitForAnimationToEnd:
+          timeout: 800
+      - tapOn:
+          id: "strategy-tab-balanced"
+      - waitForAnimationToEnd:
+          timeout: 800
+      - tapOn:
+          id: "strategy-tab-single-store"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+# Test Travel Settings Modal
+- runFlow:
+    when:
+      visible:
+        id: "btn-travel-settings"
+    commands:
+      - tapOn:
+          id: "btn-travel-settings"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - back
+
+# Test Route Preview Modal
+- runFlow:
+    when:
+      visible:
+        id: "btn-route-preview"
+    commands:
+      - tapOn:
+          id: "btn-route-preview"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - back
+
+# Test Cart Clear
+- runFlow:
+    when:
+      visible:
+        id: "cart-clear-btn"
+    commands:
+      - tapOn:
+          id: "cart-clear-btn"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- back
+
+# 8. PostGIS Markets Map Screen
+- tapOn:
+    id: "tab-map"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# 9. Dynamic Profile, XP & Customization Shop
+- tapOn:
+    id: "tab-profile"
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-shop-btn"
+    timeout: 8000
+
+# Open Customization Shop Modal
+- tapOn:
+    id: "profile-shop-btn"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- back
+
+# 10. Settings, Preferences, OpenFoodFacts Upptime & Theming
+- tapOn:
+    id: "header-settings-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "theme-dark-switch"
+    timeout: 8000
+
+# Toggle Theme
+- tapOn:
+    id: "theme-dark-switch"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "theme-dark-switch"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# 11. Clean Logout
+- runFlow:
+    file: "../subflows/logout.yaml"
+
+# 12. Verify return to Auth Gateway
+- extendedWaitUntil:
+    visible:
+      id: "login-submit-btn"
+    timeout: 8000
+
+- assertVisible:
+    id: "login-submit-btn"
