@@ -383,6 +383,7 @@ export const cartProduct = pgTable(
   {
     cartId: integer("cart_id").notNull(),
     productId: integer("product_id").notNull(),
+    quantity: integer("quantity").default(1).notNull(),
     addedAt: timestamp("added_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),

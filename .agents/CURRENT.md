@@ -7,6 +7,42 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Correção de Layout ("Design Encavalado") e Simulação de Fallback Offline no Carrinho (`v1.3.1`):**
+  1. **Diagnóstico da Causa do Erro "Offline":**
+     - O servidor remoto em `https://eq.projetoscti.com.br/26-presco` está online e saudável (`/health` retorna 200 OK com banco e Redis operacionais).
+     - No entanto, a nova API do otimizador (`POST /cart/optimize`) foi implementada localmente nesta branch e **ainda não foi publicada no servidor remoto de produção**.
+     - A requisição do app para o servidor retornava `HTTP 404 Not Found (Cannot POST /cart/optimize)`, o que disparava a mensagem de banner "Modo Local (Offline)".
+     - Implementado gerador automático de simulação local no `cartService.ts` com base nos itens do carrinho, calculando rotas, divisões em supermercados e economia estimada mesmo quando o servidor remoto ainda estiver rodando a versão anterior (404) ou sem rede.
+  2. **Diagnóstico e Resolução do Design "Encavalado" (Sobreposições e Conflitos Visuais):**
+     - **Header Duplo:** O layout raiz `_layout.tsx` já renderiza o `<Header />` global com botão voltar, logo, ícone do carrinho e configurações. A tela `cart.tsx` possuía uma segunda barra de navegação com `paddingTop: insets.top + 8` e outro botão de voltar, criando dois headers empilhados e duplicados. O header duplicado foi removido, sendo substituído por um cabeçalho contextual elegante dentro do próprio `ScrollView`.
+     - **Colisão do Rodapé (BottomBar vs Footer):** A `bottomBar` possuía `position: "absolute", bottom: 0` e `paddingBottom: insets.bottom`, colidindo com o componente `<Footer />` já renderizado globalmente pelo `_layout.tsx`. Foi convertida para posicionamento normal ancorado no rodapé da visualização flex, com espaçamento limpo acima do `Footer`.
+     - **Controle de Estratégias Responsivo:** Em telas compactas (< 375px), o container de estratégia (`OptimizationStrategyControl.tsx`) tinha overflow de largura. Adicionado `flexWrap: "wrap"` no topo e `numberOfLines={1}` com `ellipsizeMode="tail"` nas abas para eliminar quebras de linha irregulares.
+     - **Itens Rápidos:** Ajustado espaçamento no card de produto para telas estreitas.
+- **Resolução de Loop Infinito de Carregamento e Fallback Offline do Carrinho (`v1.3.1`):**
+  1. **Diagnóstico da Causa Raiz:** A função `runOptimization` possuía `[cartItems, settings]` como dependências e estava presente na lista de dependências do `useEffect` principal. Ao carregar itens locais, `setCartItems` gerava uma nova referência de array, que recriava `runOptimization`, disparando novamente o `useEffect`, o qual executava `setLoading(true)`, prendendo o componente em loop infinito de carregamento ("Carregando sua lista..."). Além disso, o término de `loading` aguardava a requisição de rede e GPS da otimização, e não havia renderização de fallback caso a otimização retornasse nula (offline/servidor inacessível).
+  2. **Correção de Arquitetura & UX Offline-First:**
+     - Desacoplado o carregamento local inicial (`setLoading(false)` imediato em < 5ms a partir do `AsyncStorage`), permitindo exibição instantânea dos itens.
+     - `triggerOptimization` estabilizado com referências atômicas (`useRef`), executando em background sem travar a interface e sem re-renderizações cíclicas.
+     - Implementada lista de itens de fallback (`fallbackListContainer`) renderizada caso o servidor esteja desconectado ou a otimização esteja pendente, permitindo alterar quantidades, excluir itens e tentar re-otimizar com 1 toque.
+     - Versão corrigida para `v1.3.1` (`versionCode: 17`), com 0 erros no typecheck e 100% de testes passando.
+- **Smart Multi-Store Shopping List & Travel Cost Optimizer (`v1.3.0`):**
+  1. **Motor de Otimização Multilojas & Custo de Viagem:**
+     - Implementado algoritmo de decisão de alocação de itens com trade-off financeiro estrito: $\Delta P > \Delta C_{\text{travel}} + P_{\text{convenience}}$.
+     - Suporte a 3 estratégias de otimização: Economia Máxima (`max_savings`), Modo Balanceado (`balanced` com limiar de conveniência configurável em R$) e Loja Única (`single_store`).
+     - Integração com a HERE Routing API v8 (`router.hereapi.com/v8/routes`) para cálculo da rota veicular real (distância em metros e tempo em segundos), com fallback geodésico Haversine e tortuosidade urbana de 1.35x.
+     - Suporte a múltiplos stops com ordenação ótima heurística TSP (Travelling Salesperson Problem) e circuito fechado de ida e volta (round-trip) para modelagem realista de combustível.
+  2. **Camada de Banco de Dados & Backend (Express 5 / Drizzle ORM):**
+     - Adicionado campo `quantity: integer("quantity").default(1).notNull()` na tabela `cart_product` com migração Drizzle `0004_add_cart_product_quantity.sql`.
+     - Criado [`CartRepository`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/cart.repository.ts) com suporte a criação/recuperação atômica de carrinho por usuário, agregação com fotos e nomes de produtos, e consulta analítica de menores preços cruzados em supermercados ativos.
+     - Criados serviço [`CartService`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts), controlador [`cart.controller.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.controller.ts) e rotas em [`cart.routes.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.routes.ts) montadas em `/cart` no `app.ts` (`GET /cart`, `POST /cart/items`, `PUT /cart/items/:productId`, `DELETE /cart/items/:productId`, `DELETE /cart`, `POST /cart/optimize`).
+  3. **Interface Mobile (React Native / Expo SDK 57 / Monet Design Tokens):**
+     - Criada tela completa do carrinho [`app/cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) com lista interativa de produtos, pull-to-refresh, cards agrupados por supermercado, badge dinâmico de economia líquida e atalhos rápidos.
+     - Componentes dedicados: [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx) (comparativo dinâmico de loja única vs multilojas), [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx) (seleção háptica de estratégia), [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) (stepper de quantidade, realocação manual entre lojas, visualização de subtotal e distância), [`TravelSettingsModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/TravelSettingsModal.tsx) (autonomia km/L, preço combustível R$/L, raio máx, ida e volta) e [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx) (ordem dos stops, distância total e launcher para Google Maps / Waze / Apple Maps).
+     - Integrações no Header ([`Header.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/Header.tsx)) com ícone do carrinho e contador badge em tempo real, e na tela de detalhes ([`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx)) com stepper de quantidade e botão "Adicionar à Lista".
+     - Suporte a internacionalização completa nos 7 idiomas do Presco (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+  4. **Testes Automatizados & Versionamento:**
+     - Criada suíte unitária do otimizador em [`tests/cartOptimizer.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/tests/cartOptimizer.test.ts) e testes de integração em [`src/backend/tests/cart.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/tests/cart.test.ts) validando todos os Critérios de Aceitação.
+     - 100% de aprovação nos testes e 0 erros no typecheck. Versão sincronizada para `v1.3.0` (`versionCode: 16`).
 - **Governança de Branches, Automação via GitHub CLI, Blindagem de Testes e Multi-Ambiente Mobile:**
   1. **Governança Remota no GitHub (`gh`):**
      - Habilitada exclusão automática de branches pós-merge (`delete-branch-on-merge = true`).
@@ -178,6 +214,12 @@ Routes:
 - `POST /customizations/equip/:itemId` — equip an owned banner, avatar frame or level badge (requireAuth)
 - `POST /customizations/unequip/:category` — restore a customization category to default (requireAuth)
 - `GET /images/optimize` — dynamic media transcoding to WebP/AVIF with Sharp and 7-day Redis binary cache
+- `GET /cart` — get or initialize active user shopping cart with products (requireAuth)
+- `POST /cart/items` — add or increment item quantity in cart (requireAuth)
+- `PUT /cart/items/:productId` — update item quantity in cart (requireAuth)
+- `DELETE /cart/items/:productId` — remove product from cart (requireAuth)
+- `DELETE /cart` — clear all items from cart (requireAuth)
+- `POST /cart/optimize` — multi-store and travel cost optimizer (HERE Routing v8 + TSP)
 - `GET /health` — inspect database and Redis health
 
 **Caching & Performance Architecture:** Multi-tier caching with HTTP ETag (304 Not Modified), Brotli/Gzip payload compression (`compression`), Redis cache-aside on product routes with in-memory fallback and pattern invalidation, and Sharp dynamic image pipeline.
@@ -222,6 +264,11 @@ Direct relative paths from project root.
 | `src/backend/src/shared/services/hereMarketDiscovery.service.ts` | `HereMarketDiscovery` — HERE Location Services (Discover & Browse v7) supermarket discovery with PostGIS sync |
 | `src/backend/src/modules/image/image.routes.ts` | Image Router (`GET /optimize?url=&w=&q=&fmt=`) |
 | `src/backend/src/modules/image/image.controller.ts` | `imageOptimizerController` — Sharp image transcoding (WebP/AVIF), resizing, and 7-day Redis binary cache |
+| `src/backend/src/modules/cart/cart.routes.ts` | Cart Router (`GET /`, `POST /items`, `PUT /items/:productId`, `DELETE /items/:productId`, `DELETE /`, `POST /optimize`) |
+| `src/backend/src/modules/cart/cart.controller.ts` | `cartController` singleton — getCart, addItem, updateQuantity, removeItem, clearCart, optimizeShoppingList |
+| `src/backend/src/modules/cart/cart.service.ts` | `cartService` singleton — cart management and multi-store travel cost optimization engine |
+| `src/backend/src/shared/database/repositories/cart.repository.ts` | `CartRepository` — atomic cart management, items aggregation, and multi-market price lookup |
+| `src/backend/src/shared/services/routing.service.ts` | `RoutingService` — HERE Routing API v8 route distance, Haversine fallback, and TSP permutation ordering |
 | `src/backend/src/shared/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, description, and normalization helpers) |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, customizationItem, userCustomization, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 
@@ -287,8 +334,15 @@ Direct relative paths from project root.
 | `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
 | `src/frontend/services/ocurrencyService.ts` | `submitPriceOccurrence`, `fetchProductOccurrences`, `voteOccurrence`, `updateOccurrence`, `deleteOccurrence` |
 | `src/frontend/services/marketService.ts` | `fetchMarkets`, `createMarket` |
+| `src/frontend/services/cartService.ts` | `cartService` — offline-first shopping cart manager, travel settings storage, listener events, and `/cart/optimize` API integration |
 | `src/frontend/app/_layout.tsx` | Root stack layout, gesture navigator wrapper and theme/i18n providers |
 | `src/frontend/app/index.tsx` | Home screen with dynamic products loading and item navigation |
+| `src/frontend/app/cart.tsx` | Full-featured shopping cart screen with store-grouped items, savings hero card, optimization controls, and GPS route preview |
+| `src/frontend/components/cart/SavingsHeroCard.tsx` | Hero card displaying net financial savings (single vs multi-store), grocery vs travel breakdown, and distance delta |
+| `src/frontend/components/cart/OptimizationStrategyControl.tsx` | Strategy selector pill component (Economia Máxima, Balanceado, Loja Única) with haptic feedback and travel settings shortcut |
+| `src/frontend/components/cart/StoreGroupCard.tsx` | Store group card showing items, subtotals, distance/travel cost, quantity steppers, and cross-store manual reallocation modal |
+| `src/frontend/components/cart/TravelSettingsModal.tsx` | Modal for customizing vehicle fuel efficiency (km/L), fuel price (R$/L), search radius, convenience threshold, and round-trip |
+| `src/frontend/components/cart/RoutePreviewModal.tsx` | Optimized itinerary modal with stop-by-stop sequencing, driving metrics, and 1-tap launcher for Google Maps / Waze / Apple Maps |
 | `src/frontend/app/login.tsx` | Login screen with Expo Go / Dev detection and 1-tap quick login for `admin@admin.org` and regular test user |
 | `src/frontend/app/registerUser.tsx` | Registration screen |
 | `src/frontend/app/scannerProduct.tsx` | Camera EAN barcode scanning |
@@ -341,11 +395,14 @@ Direct relative paths from project root.
 | `tests/maestro/subflows/*.yaml` | Reusable subflows for quick admin login, regular user login, logout, tutorial dismissal |
 | `tests/maestro/flows/*.yaml` | 10 comprehensive E2E mobile test flows covering all screens, interactions, forms, and admin moderation |
 | `tests/maestro/run_maestro.sh` | Portable Maestro CLI test runner script with device detection and exit codes |
+| `tests/cartOptimizer.test.ts` | Multi-Store Travel Cost Optimizer unit tests (AC1-AC5 acceptance criteria validation) |
+| `src/backend/tests/cart.test.ts` | Backend Cart API integration tests (Drizzle schema, repository, routing, and controller validation) |
 
 ---
 
 ## 3. Active Tasks & Roadmap
 
+- [x] Smart Multi-Store Shopping List & Travel Cost Optimizer (`v1.3.0`) — motor de trade-off de deslocamento com HERE Routing API v8, estratégias de economia (Max Savings, Balanced, Single Store), carrinho offline-first com AsyncStorage, agrupamento por lojas, reatribuição manual de itens, modais de configurações veiculares e itinerário GPS.
 - [x] Governança Estrita de Branches, Automação Remota via GitHub CLI, Blindagem de Testes e Multi-Ambiente (Ruleset de proteção de branches, 4 camadas de GitHub Actions, testes de concorrência, app.config.js com flavors, .cursorrules e endurecimento do AGENTS.md).
 - [x] Comprehensive Maestro E2E Mobile Automation & Grafana k6 Load/Performance Suite (10 mobile E2E flows, 9 backend k6 scenarios, 3 realistic user journeys, stress/spike tests, testID instrumentation across 9 screens/components, HTML reporting, and package scripts).
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
