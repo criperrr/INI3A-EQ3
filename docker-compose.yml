@@ -44,6 +44,18 @@ services:
       timeout: 3s
       retries: 10
 
+  maestro:
+    build:
+      context: .
+      dockerfile: tests/maestro/Dockerfile
+    container_name: presco_maestro
+    network_mode: host
+    environment:
+      - ADB_SERVER_SOCKET=tcp:localhost:5037
+    volumes:
+      - .:/app
+
+
 volumes:
   postgres_data:
   redis_data:

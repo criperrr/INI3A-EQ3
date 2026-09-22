@@ -132,3 +132,11 @@ Antes de modificar ou criar código, defina de forma ultra-concisa:
   - `src/frontend/package.json`
   - `src/frontend/app.json` (`version` e incremento de `versionCode`)
 - Aplique diretamente nos arquivos ou use o comando unificado `npm run version:bump` (`:minor` / `:major`).
+
+### 6. Axioma de Pull Requests, Validação de CI e Merge via GitHub CLI (`gh`)
+- **Regra Absoluta de Abertura de PR:** O fluxo de conclusão de uma tarefa exige abertura de Pull Request para `dev` via `gh pr create --base dev --title "..." --body "..."`.
+- **Validação Ativa de Testes (CI Gatekeeper):** O agente DEVE monitorar ativamente a execução dos testes (`gh pr checks <PR> --watch`). É expressamente proibido dar uma tarefa como encerrada sem verificar se os testes passaram (`SUCCESS`).
+- **Merge via `gh` do Usuário:** Se os testes passarem, o agente DEVE usar a CLI `gh` da máquina para realizar o merge em `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`). Se falharem, o agente deve diagnosticar, corrigir a implementação e revalidar.
+- **Pré-requisito do `gh`:** O agente deve verificar se o GitHub CLI está instalado e autenticado (`gh auth status`). Caso o `gh` não esteja configurado/autenticado, o agente DEVE interromper a automação e solicitar ao usuário que realize o login (`gh auth login`).
+- **Validação Mandatória com Maestro para Frontend:** Antes de commitar e dar push de qualquer branch com alterações no frontend mobile (`src/frontend/**`), o agente DEVE executar a suíte de testes de estabilidade do Maestro (`npm run test:maestro:full` ou `npm run test:maestro:docker` / MCP) para assegurar que toda a aplicação e jornadas de usuário permanecem estáveis.
+

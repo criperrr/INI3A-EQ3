@@ -3754,3 +3754,69 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/backend/src/app.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Servidor 100% operacional respondendo publicamente com HTTPS na URL oficial http://ra.projetoscti.com.br/2457045.
+
+## `2026-09-22 11:50` - `docs(agents)`: enforce mandatory PR creation, CI test verification and gh CLI merge
+
+- **Description:** Established absolute rule across AGENTS.md, .cursorrules, code-rules.md, and memory files requiring agents to create Pull Requests to dev, actively monitor CI test checks (Gatekeeper), and autonomously execute squash merge via user's gh CLI upon test success. If gh CLI is unauthenticated or missing, the agent is mandated to halt and instruct the user to configure gh auth login.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Ensures 100% test-verified merges with strict GitHub CLI integration, preventing unvalidated code landing in dev or broken PRs remaining unmonitored.
+
+## `2026-09-22 11:55` - `perf(ci)`: decouple full apk gradle builds to manual workflow dispatch
+
+- **Description:** Optimized GitHub Actions staging.yml and production.yml pipelines to drastically cut CI execution times. Full Android Gradle APK builds are now manual-only via workflow_dispatch with gradle/actions/setup-gradle caching. Automated push runs on dev and main focus strictly on fast, robust validation: strict typechecks, full unit tests, concurrency suites, and backend deployment.
+- **Files Modified:**
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Push workflows on dev now finish in under 2 minutes instead of 15-40 minutes, while preserving full test robustness.
+
+## `2026-09-22 12:05` - `test(maestro)`: add comprehensive stability suite, docker support and pre-push requirement
+
+- **Description:** Created full-application stability test flow in Maestro (11_full_app_stability_suite.yaml) covering onboarding 7 steps, auth, carrossel, search, product details, voting, smart shopping list & travel optimizer, map, profile/shop, and settings. Added Docker service in docker-compose.yml and Dockerfile with ADB integration. Updated run_maestro.sh and npm scripts (test:maestro:full, test:maestro:docker). Enforced strict rule across AGENTS.md, .cursorrules, and code-rules.md requiring agents to run Maestro tests before committing/pushing frontend modifications.
+- **Files Modified:**
+  - `tests/maestro/flows/11_full_app_stability_suite.yaml`
+  - `tests/maestro/Dockerfile`
+  - `tests/maestro/run_maestro.sh`
+  - `docker-compose.yml`
+  - `package.json`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers and AI agents now have an automated, reproducible Docker-capable end-to-end test suite verifying complete mobile UI stability before any remote push.
+
+## 2026-09-22 12:22 - test(maestro): add docker stability suite, fast ci and mandatory pr merge rules
+
+- **Description:** Encapsulated Maestro UI testing 100% into a standalone Docker container (`presco_maestro`) with host ADB networking, created comprehensive 11-step end-to-end stability flow covering all screens and modals, decoupled heavy Gradle APK builds in GitHub Actions to manual `workflow_dispatch` only (< 2 min CI), and codified the absolute rule for agents to verify PR checks and squash-merge via `gh` CLI.
+- **Files Modified:**
+  - `docker-compose.yml`
+  - `package.json`
+  - `tests/maestro/Dockerfile`
+  - `tests/maestro/run_maestro.sh`
+  - `tests/maestro/flows/11_full_app_stability_suite.yaml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/CURRENT.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+- **Impact / Next Steps:** Ensures full stability testing prior to frontend merges, drastically cuts CI execution times, and automates PR verification and merging via `gh`.

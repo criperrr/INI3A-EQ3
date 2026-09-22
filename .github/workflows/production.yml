@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      build_apk:
+        description: "Compilar APK completo de produção (Gradle)"
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: production-pipeline
@@ -88,8 +94,9 @@ jobs:
         run: rm -f ~/.ssh/deploy_key
 
   build_production_apk:
-    name: Build Mobile App (prodFlavor / Production)
+    name: Build Mobile App (prodFlavor / Production - Manual)
     needs: [contract_and_type_check]
+    if: github.event_name == 'workflow_dispatch' && (inputs.build_apk == true || inputs.build_apk == 'true')
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 45
@@ -109,6 +116,9 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
+
+      - name: Configurar Cache do Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Configurar Android SDK
         run: |

@@ -60,6 +60,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
 
         <View style={styles.quickButtons}>
           <TouchableOpacity
+            testID="btn-travel-settings"
             style={[styles.smallBtn, { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default }]}
             activeOpacity={0.7}
             onPress={onOpenTravelSettings}
@@ -71,6 +72,7 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="btn-route-preview"
             style={[styles.smallBtn, { backgroundColor: `${accent}15`, borderColor: accent }]}
             activeOpacity={0.7}
             onPress={onOpenRoutePreview}
@@ -86,14 +88,15 @@ export const OptimizationStrategyControl = memo(function OptimizationStrategyCon
       {/* Strategy Stacked Options (Um em cima do outro para suporte a idiomas extensos) */}
       <View style={[styles.strategyPillContainer, { backgroundColor: semantic.colors.surface.input }]}>
         {([
-          { key: "max_savings" as const, icon: "trending-down" as const, label: t("cart.maxSavings") },
-          { key: "balanced" as const, icon: "scale-outline" as const, label: t("cart.balanced") },
-          { key: "single_store" as const, icon: "storefront-outline" as const, label: t("cart.singleStore") },
+          { key: "max_savings" as const, testID: "strategy-tab-max-savings", icon: "trending-down" as const, label: t("cart.maxSavings") },
+          { key: "balanced" as const, testID: "strategy-tab-balanced", icon: "scale-outline" as const, label: t("cart.balanced") },
+          { key: "single_store" as const, testID: "strategy-tab-single-store", icon: "storefront-outline" as const, label: t("cart.singleStore") },
         ] as const).map((strat) => {
           const isSelected = settings.strategy === strat.key;
           return (
             <TouchableOpacity
               key={strat.key}
+              testID={strat.testID}
               style={[
                 styles.strategyTab,
                 isSelected
