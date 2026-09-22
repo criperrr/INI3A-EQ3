@@ -3592,3 +3592,100 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/memory/MEMORY.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Agents will now execute surgical commits only for the scope of the active chat, avoiding accidental inclusion of parallel chat changes.
+
+## `2026-09-22 11:03` - `fix(cart)`: Desencavala layout de lista e restaura nomes de produtos
+
+- **Description:** Redesenhado o layout de itens da lista de compras e grupos de supermercados eliminando a colisão vertical e horizontal de textos; corrigido payload de otimização e backend para carregar os nomes reais de produtos via ProductRepository e auto-healing em vez de exibir "Produto #ID".
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/cart/SavingsHeroCard.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Lista de compras espaçosa, sem sobreposições visuais e com nomes e fotos reais de produtos. Testes e typecheck 100% aprovados.
+
+## `2026-09-22 11:07` - `feat(landing)`: Complete Presco landing page refactor with app aesthetics, phone mockup and policy system
+
+- **Description:** Refactored the entire institutional landing page in `src/landing`, strictly aligning the visual design with the Presco mobile app tokens (Emerald, Dark, AMOLED, and Light modes), integrating official logos/icons and an interactive smartphone mockup showcasing live app screens (Shopping Optimizer, Lowest Price, EAN Scanner, PostGIS Radar). Added the comprehensive Security & Protection architecture and interactive Policy Modal (Terms of Service, Privacy/LGPD, Community Guidelines, Local Storage) along with a compliant consent banner and QR code download hub.
+- **Files Modified:**
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/DownloadSection.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/components/PolicyModal.tsx`
+  - `src/landing/components/ConsentBanner.tsx`
+  - `src/landing/components/Footer.tsx`
+  - `src/landing/theme/colors.ts`
+  - `src/landing/theme/typography.ts`
+  - `src/landing/theme/index.ts`
+  - `src/landing/assets/`
+- **Impact / Next Steps:** Landing page is production-grade, highly responsive, and fully compliant with design standards and privacy policies. Available for local testing at http://localhost:8082.
+
+## `2026-09-22 11:17` - `feat(landing)`: Switch accent to Presco yellow and add app screenshots gallery
+
+- **Description:** Updated the landing page accent color from emerald to Presco's official signature golden yellow (`#FFB703` / `#F5B731`) across themes, buttons, badges, glows, and interactive cards. Integrated authentic high-resolution app prints of the Presco mobile application (`print-cart.jpg`, `print-scanner.jpg`, `print-product.jpg`) into `PhoneMockup.tsx` and created the new `ScreenshotsGallerySection.tsx` showcase section.
+- **Files Modified:**
+  - `src/landing/theme/colors.ts`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/assets/prints/`
+- **Impact / Next Steps:** Landing page aesthetics now feature the vibrant Presco yellow branding and showcase authentic mobile application UI screenshots. Live and bundled on http://localhost:8082.
+
+## `2026-09-22 11:18` - `fix(ui)`: Espacamento e respiracao visual nos filtros e chips para idiomas extensos
+
+- **Description:** Aumentado o gap e padding horizontal/vertical de chips e barras de filtros no frontend para evitar encavalamento de textos em idiomas extensos como alemao, russo, portugues e espanhol.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/components/OpenFoodFactsStatusTab.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Filtros legiveis e confortaveis em todas as 7 linguas suportadas pelo Presco, sem compressao visual.
+
+## `2026-09-22 11:34` - `refactor(ui)`: Filtros de estrategia empilhados verticalmente para suporte a idiomas extensos
+
+- **Description:** Transformado o seletor de estrategias de otimizacao em cards empilhados verticalmente (um em cima do outro) de largura total com indicadores visuais de selecao, evitando corte de texto ou encavalamento em alemao, russo e outras linguas longas.
+- **Files Modified:**
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Nomes de estrategias e filtros 100% visiveis e legiveis em todas as linguas sem truncagem ou sobreposicao.
+
+## `2026-09-22 11:34` - `feat(landing)`: Redesign landing page with ClickUp SaaS structure and Too Good To Go aesthetics
+
+- **Description:** Redesigned the institutional landing page in `src/landing` by fusing ClickUp's high-conversion interactive product tour structure with Too Good To Go's warm, food-centric, and community-driven aesthetics. Integrated a deep forest slate dark mode (`#0A1612`), a warm cream/ivory light mode (`#FBF9F4`), the signature Presco golden yellow (`#FFB703`), a 3-step consumer journey section (`HowItWorksSection.tsx`), an impact metric counter strip (`ImpactStatsSection.tsx`), real app prints in the interactive product showcase and gallery, and sticky navigation.
+- **Files Modified:**
+  - `src/landing/theme/colors.ts`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/ImpactStatsSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/LandingPage.tsx`
+- **Impact / Next Steps:** Landing page delivers top-tier SaaS elegance and community food warmth, bundled and live on http://localhost:8082.
