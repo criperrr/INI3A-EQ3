@@ -9,6 +9,7 @@ export interface CartProductItem {
   icon?: string | null;
   ean?: string | null;
   quantity: number;
+  estimatedPrice?: number;
   addedAt: string;
 }
 
@@ -140,7 +141,7 @@ export const cartService = {
   },
 
   async addToCart(
-    product: { id: number; name: string; icon?: string | null; ean?: string | null },
+    product: { id: number; name: string; icon?: string | null; ean?: string | null; estimatedPrice?: number },
     quantity: number = 1
   ): Promise<CartProductItem[]> {
     const items = await this.getCartItems();
@@ -151,6 +152,9 @@ export const cartService = {
       const existing = items[existingIndex];
       if (existing) {
         existing.quantity = (existing.quantity || 1) + safeQty;
+        if (product.estimatedPrice && product.estimatedPrice > 0) {
+          existing.estimatedPrice = product.estimatedPrice;
+        }
       }
     } else {
       items.unshift({
@@ -159,6 +163,7 @@ export const cartService = {
         icon: product.icon || null,
         ean: product.ean || null,
         quantity: safeQty,
+        estimatedPrice: product.estimatedPrice,
         addedAt: new Date().toISOString(),
       });
     }
@@ -334,8 +339,11 @@ function generateLocalFallbackOptimization(
     };
   }
 
-  const getItemPrice = (productId: number, storeFactor = 1.0) => {
-    const pseudoRand = ((productId * 13) % 18) + 6.5;
+  const getItemPrice = (it: CartProductItem, storeFactor = 1.0) => {
+    if (it.estimatedPrice && it.estimatedPrice > 0) {
+      return Math.round(it.estimatedPrice * storeFactor * 100) / 100;
+    }
+    const pseudoRand = ((it.productId * 13) % 18) + 6.5;
     return Math.round(pseudoRand * storeFactor * 100) / 100;
   };
 
@@ -349,7 +357,7 @@ function generateLocalFallbackOptimization(
 
     let groceryCost = 0;
     const items = rawItems.map((it) => {
-      const unitPrice = getItemPrice(it.productId, 1.0);
+      const unitPrice = getItemPrice(it, 1.0);
       const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
       groceryCost += subtotal;
       return {
@@ -418,7 +426,7 @@ function generateLocalFallbackOptimization(
 
   let subtotal1 = 0;
   const mapped1 = items1.map((it) => {
-    const unitPrice = getItemPrice(it.productId, 0.88);
+    const unitPrice = getItemPrice(it, 0.95);
     const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
     subtotal1 += subtotal;
     return {
@@ -435,7 +443,7 @@ function generateLocalFallbackOptimization(
 
   let subtotal2 = 0;
   const mapped2 = items2.map((it) => {
-    const unitPrice = getItemPrice(it.productId, 0.84);
+    const unitPrice = getItemPrice(it, 0.92);
     const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
     subtotal2 += subtotal;
     return {
@@ -460,7 +468,7 @@ function generateLocalFallbackOptimization(
   const totalGrocery = Math.round((subtotal1 + subtotal2) * 100) / 100;
   const totalCombined = Math.round((totalGrocery + totalTravelCost) * 100) / 100;
 
-  const singleStoreGrocery = Math.round(rawItems.reduce((sum, it) => sum + getItemPrice(it.productId, 1.06) * it.quantity, 0) * 100) / 100;
+  const singleStoreGrocery = Math.round(rawItems.reduce((sum, it) => sum + getItemPrice(it, 1.05) * it.quantity, 0) * 100) / 100;
   const singleStoreTravel = Math.round(((2.8 * (isRoundTrip ? 2 : 1) / fuelEfficiency) * fuelPrice) * 100) / 100;
   const singleStoreCombined = Math.round((singleStoreGrocery + singleStoreTravel) * 100) / 100;
   const netSavings = Math.max(0, Math.round((singleStoreCombined - totalCombined) * 100) / 100);

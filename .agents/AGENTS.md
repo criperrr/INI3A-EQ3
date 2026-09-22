@@ -214,6 +214,11 @@ After any file modification or addition:
 ### 6.1. Git Commit Policy (Atomic Commits Strictly On Request)
 
 - **NO SPONTANEOUS COMMITS (CRITICAL):** The AI must NEVER execute `git commit` or stage files spontaneously. Commits are executed **ONLY IF AND WHEN THE USER EXPLICITLY REQUESTS IT** (e.g., "commita", "pode commitar", "faça os commits"). Otherwise, all modifications must remain in the working directory.
+- **ISOLAMENTO DE ESCOPO POR CHAT/SESSÃO (COMMIT & PUSH CIRÚRGICO):** Quando o usuário solicitar commit e/ou push em uma sessão de chat, a IA DEVE realizar o commit e push **ESTRITAMENTE dos arquivos modificados, criados ou tocados na sessão daquele chat específico**, ignorando e preservando intocadas as alterações de outros chats ou tarefas:
+  - **Proibição Absoluta de Adição Global:** NUNCA execute `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
+  - **Adição Cirúrgica de Arquivos:** Inspecione os arquivos manipulados no chat atual e execute `git add <arquivo1> <arquivo2> ...` apenas para os arquivos pertencentes ao escopo daquela solicitação.
+  - **Preservação da Working Tree:** Quaisquer alterações pendentes deixadas por outros chats concorrentes ou intervenções manuais não relacionadas ao chat solicitante devem permanecer intocadas na working tree (unstaged).
+  - **Push Isolado:** O push deve refletir e sincronizar apenas o conjunto de commits originados da tarefa do chat em questão.
 - **Decomposition of Large Tasks (Atomic Commits):** When explicitly asked to commit after complex multi-file or multi-layer changes:
   1. Inspect modified files (`git status`).
   2. DO NOT create a single monolithic commit (`git add . && git commit`).
@@ -273,10 +278,11 @@ After any file modification or addition:
 
 ## 8. Governança Rígida de Branches, Commits, CI/CD e Blindagem de Testes
 
-### 8.1. Axioma de Commits (Sintaxe Obrigatória)
+### 8.1. Axioma de Commits (Sintaxe Obrigatória e Isolamento por Chat)
 - **Formato Estrito:** `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
 - **Categorias Permitidas:** `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
-- **Regra:** Mensagens fora desta sintaxe ou commits sem propósito atômico claro são rejeitados pelo pipeline de CI (`pr-gatekeeper.yml`).
+- **Regra de Sintaxe:** Mensagens fora desta sintaxe ou commits sem propósito atômico claro são rejeitados pelo pipeline de CI (`pr-gatekeeper.yml`).
+- **Isolamento de Escopo por Chat (Commit & Push):** Ao receber comando para commitar e/ou dar push, o agente deve selecionar cirurgicamente APENAS os arquivos que foram modificados ou criados na sessão do chat atual. Nunca utilizar `git add .` ou incluir alterações originadas de outros chats ou tarefas simultâneas na working tree.
 
 ### 8.2. Axioma de Criação de Branches
 - **Branch Base Obrigatória:** Toda nova tarefa, feature ou correção deve nascer exclusivamente a partir da branch `dev`.

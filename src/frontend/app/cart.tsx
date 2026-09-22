@@ -88,6 +88,8 @@ export default function CartScreen() {
           customItems: activeItems.map((it) => ({
             productId: it.productId,
             quantity: it.quantity,
+            productName: it.name,
+            productIcon: it.icon,
           })),
           customSettings: activeSettings,
         });
@@ -458,11 +460,15 @@ export default function CartScreen() {
                     <Text style={[styles.rawItemName, { color: semantic.colors.text.primary }]} numberOfLines={2}>
                       {item.name}
                     </Text>
-                    {item.ean && (
+                    {item.estimatedPrice && item.estimatedPrice > 0 ? (
+                      <Text style={[styles.rawItemPrice, { color: semantic.colors.text.secondary }]}>
+                        R$ {item.estimatedPrice.toFixed(2).replace(".", ",")} / un.
+                      </Text>
+                    ) : item.ean ? (
                       <Text style={[styles.rawItemEan, { color: semantic.colors.text.tertiary }]}>
                         EAN: {item.ean}
                       </Text>
-                    )}
+                    ) : null}
                   </View>
 
                   <View style={styles.rawItemActions}>
@@ -886,6 +892,11 @@ const styles = StyleSheet.create({
   rawItemName: {
     fontSize: 14,
     fontWeight: "600",
+    marginBottom: 2,
+  },
+  rawItemPrice: {
+    fontSize: 12,
+    fontWeight: "500",
     marginBottom: 2,
   },
   rawItemEan: {

@@ -23,6 +23,8 @@ export interface OptimizationPreferencesDTO {
 export interface OptimizationItemInputDTO {
   productId: number;
   quantity?: number;
+  productName?: string;
+  productIcon?: string | null;
 }
 
 export interface OptimizationRequestDTO {
@@ -141,13 +143,19 @@ class CartServiceClass {
    * applying user convenience trade-off constraints.
    */
   async optimizeCart(params: OptimizationRequestDTO): Promise<OptimizationResponseDTO> {
-    // 1. Resolve Cart Items (from payload or user's database cart)
-    let cartItems: { productId: number; quantity: number; productName?: string; productIcon?: string | null }[] = [];
+    let cartItems: {
+      productId: number;
+      quantity: number;
+      productName?: string | undefined;
+      productIcon?: string | null | undefined;
+    }[] = [];
 
     if (params.items && params.items.length > 0) {
       cartItems = params.items.map((it) => ({
         productId: it.productId,
         quantity: Math.max(1, it.quantity || 1),
+        productName: it.productName,
+        productIcon: it.productIcon,
       }));
     } else if (params.userId) {
       const dbCart = await CartRepository.getCartWithItems(params.userId);
@@ -218,10 +226,53 @@ class CartServiceClass {
     const productIds = cartItems.map((c) => c.productId);
 
     // 4. Fetch Active Prices Across Candidate Markets
-    const rawPrices = await CartRepository.getPricesForProductsAcrossMarkets(productIds, marketIds);
+    let rawPrices = await CartRepository.getPricesForProductsAcrossMarkets(productIds, marketIds);
 
-    // Map: productId -> marketId -> { value, isPromotion, marketName, coordinate }
-    const pricesByProduct = new Map<number, Map<number, { value: number; isPromotion: boolean }>>();
+    const marketsMap = new Map<number, { id: number; name: string; coordinate: GeoCoordinate }>();
+    for (const m of candidateMarkets) {
+      marketsMap.set(m.id, m);
+    }
+
+    // If candidate markets within radius carry none of the products,
+    // expand candidate markets to include markets that DO have active prices for these products
+    if (rawPrices.length === 0) {
+      const allProductPrices = await CartRepository.getPricesForProductsAcrossMarkets(productIds);
+      if (allProductPrices.length > 0) {
+        const activeMarketIds = Array.from(new Set(allProductPrices.map((p) => p.marketId)));
+        const allMarkets = await MarketRepository.getAllMarkets({ lat: userLocation.lat, lng: userLocation.lng });
+        const matchedMarkets = allMarkets.filter((m) => activeMarketIds.includes(Number(m.id)));
+        if (matchedMarkets.length > 0) {
+          candidateMarkets = matchedMarkets.slice(0, 10).map((m: any) => {
+            const loc = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
+            const coords = loc?.coordinates || [0, 0];
+            return {
+              id: Number(m.id),
+              name: String(m.name),
+              coordinate: { lat: Number(coords[1]), lng: Number(coords[0]) } as GeoCoordinate,
+              distanceMeters: Number(m.distance) || 0,
+            };
+          });
+          for (const m of candidateMarkets) {
+            marketsMap.set(m.id, m);
+          }
+          rawPrices = allProductPrices.filter((p) => candidateMarkets.some((m) => m.id === p.marketId));
+        }
+      }
+    }
+
+    // Map: productId -> marketId -> { value, isPromotion, productName, productIcon }
+    const pricesByProduct = new Map<
+      number,
+      Map<
+        number,
+        {
+          value: number;
+          isPromotion: boolean;
+          productName?: string | undefined;
+          productIcon?: string | null | undefined;
+        }
+      >
+    >();
     for (const item of rawPrices) {
       if (!pricesByProduct.has(item.productId)) {
         pricesByProduct.set(item.productId, new Map());
@@ -229,12 +280,9 @@ class CartServiceClass {
       pricesByProduct.get(item.productId)!.set(item.marketId, {
         value: item.value,
         isPromotion: item.isPromotion,
+        productName: item.productName,
+        productIcon: item.productIcon,
       });
-    }
-
-    const marketsMap = new Map<number, { id: number; name: string; coordinate: GeoCoordinate }>();
-    for (const m of candidateMarkets) {
-      marketsMap.set(m.id, m);
     }
 
     // 5. Evaluate Single-Store Candidates
@@ -266,8 +314,8 @@ class CartServiceClass {
           groceryCost += sub;
           assigned.push({
             productId: cartItem.productId,
-            productName: cartItem.productName || `Produto #${cartItem.productId}`,
-            productIcon: cartItem.productIcon || null,
+            productName: cartItem.productName || priceInfo.productName || `Produto #${cartItem.productId}`,
+            productIcon: cartItem.productIcon || priceInfo.productIcon || null,
             quantity: cartItem.quantity,
             unitPrice: priceInfo.value,
             subtotal: sub,
@@ -361,12 +409,24 @@ class CartServiceClass {
           if (!pMap) continue;
 
           // Find the store in this combination with the lowest price for this item
-          let lowestPrice: { marketId: number; value: number; isPromotion: boolean } | null = null;
+          let lowestPrice: {
+            marketId: number;
+            value: number;
+            isPromotion: boolean;
+            productName?: string | undefined;
+            productIcon?: string | null | undefined;
+          } | null = null;
           for (const mId of comb) {
             const p = pMap.get(mId);
             if (p) {
               if (!lowestPrice || p.value < lowestPrice.value) {
-                lowestPrice = { marketId: mId, value: p.value, isPromotion: p.isPromotion };
+                lowestPrice = {
+                  marketId: mId,
+                  value: p.value,
+                  isPromotion: p.isPromotion,
+                  productName: p.productName,
+                  productIcon: p.productIcon,
+                };
               }
             }
           }
@@ -377,8 +437,8 @@ class CartServiceClass {
             combGroceryCost += sub;
             assignedByStore.get(lowestPrice.marketId)!.push({
               productId: cartItem.productId,
-              productName: cartItem.productName || `Produto #${cartItem.productId}`,
-              productIcon: cartItem.productIcon || null,
+              productName: cartItem.productName || lowestPrice.productName || `Produto #${cartItem.productId}`,
+              productIcon: cartItem.productIcon || lowestPrice.productIcon || null,
               quantity: cartItem.quantity,
               unitPrice: lowestPrice.value,
               subtotal: sub,

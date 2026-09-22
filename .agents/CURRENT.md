@@ -7,6 +7,27 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Política de Isolamento Estrito de Escopo por Chat para Commits e Push:**
+  1. **Regra de Isolamento Cirúrgico:**
+     - Quando o usuário solicitar comandos de commit ou push (ex: "commita", "dá push", "faça commit e push"), o agente deve comitar e subir **estritamente e exclusivamente os arquivos modificados ou criados na sessão do chat em que a ordem foi dada**.
+     - É terminantemente proibido o uso de `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
+     - O agente deve inspecionar os arquivos manipulados no chat atual e fazer `git add <arquivo1> <arquivo2> ...` apenas para esses arquivos específicos.
+     - Quaisquer alterações pendentes na working tree pertencentes a outros chats, sessões concorrentes ou tarefas paralelas devem permanecer ignoradas e intocadas (unstaged).
+  2. **Atualização da Governança Multi-Agente & Memória:**
+     - Atualizados [`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md) (Seções 6.1 e 8.1), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules) (Seção 1), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) (Seção 4), [`.agents/memory/user-preferences.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/user-preferences.md) e [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md).
+- **Correção da Exibição de Preço Unitário vs Subtotal no Carrinho & Preservação do Preço Cadastrado (`v1.3.4`):**
+  1. **Diagnóstico da Causa Raiz do "Preço a R$ 20,00 a unidade":**
+     - **Ambiguidade Visual no Card:** Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), o subtotal multiplicado (R$ 20,00 para 10 unidades de R$ 2,00) era exibido diretamente em negrito acima do seletor numérico `[-] 10 [+]` sem nenhum rótulo textual de "Total" ou "Subtotal", e o preço unitário na coluna esquerda não possuía o sufixo `/ un.`. O cérebro do usuário lia o destaque numérico `R$ 20,00` colado ao `10` como se fosse o preço por unidade.
+     - **Preço Fictício no Fallback de Simulação:** Quando o GPS demorava para obter coordenadas ou o endpoint remoto não encontrava ocorrências no raio estrito de 15 km da localização padrão de São Paulo, o fallback gerava um preço pseudo-aleatório via fórmula matemática `((productId * 13) % 18) + 6.5` que para produtos com ID 65 resultava literalmente em R$ ~20,00 a unidade!
+     - **Perda do Preço no Adicionar ao Carrinho:** O método `addToCart` em [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx) descartava o preço real (`product.bestPrice` / `product.lastPrice`) e não gravava o valor estimado no AsyncStorage.
+  2. **Solução Implementada no Frontend:**
+     - **Clareza Visual Inconfundível:** Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), o preço unitário agora exibe expressamente `R$ 2,00 / un.`, e o valor da direita possui o rótulo `Total (10x): R$ 20,00` posicionado acima do stepper.
+     - **Lista de Itens Brutos:** Em [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx), a lista de itens exibe o preço estimado unitário `R$ 2,00 / un.`.
+     - **Preservação do Preço Estimado:** `CartProductItem` agora armazena `estimatedPrice?: number`. Ao adicionar pelo [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx), o preço cadastrado é convertido numericamente e salvo.
+     - **Prioridade no Fallback:** A simulação local em [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts) agora prioriza `it.estimatedPrice` em vez de fórmulas matemáticas arbitrárias.
+  3. **Aprimoramento no Backend (`cart.service.ts` e `cart.repository.ts`):**
+     - O repositório agora faz `innerJoin(Product)` retornando nome e ícone reais nas ocorrências.
+     - Caso os mercados no raio estrito de 15 km da localização do usuário não possuam ofertas para os produtos adicionados, o otimizador expande a busca para os mercados que possuem preços registrados para tais itens em vez de lançar `NotFoundError`, evitando quedas artificiais no fallback.
 - **Refatoração do Tutorial Inicial com Lista de Compras Inteligente & Otimizador Multilojas (`v1.3.3`):**
   1. **Expansão do Fluxo Guiado para 7 Etapas:**
      - O tutorial inicial ([`OnboardingTutorialModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OnboardingTutorialModal.tsx)) foi expandido de 6 para 7 etapas interativas.

@@ -146,7 +146,7 @@ export const StoreGroupCard = memo(function StoreGroupCard({
               </Text>
               <View style={styles.priceRow}>
                 <Text style={[styles.unitPrice, { color: semantic.colors.text.secondary }]}>
-                  R$ {item.unitPrice.toFixed(2).replace(".", ",")}
+                  R$ {item.unitPrice.toFixed(2).replace(".", ",")} / un.
                 </Text>
                 {item.isPromotion && (
                   <View style={[styles.promoChip, { backgroundColor: `${accent}20` }]}>
@@ -158,9 +158,14 @@ export const StoreGroupCard = memo(function StoreGroupCard({
 
             {/* Stepper and Subtotal */}
             <View style={styles.itemRight}>
-              <Text style={[styles.itemSubtotal, { color: semantic.colors.text.primary }]}>
-                R$ {item.subtotal.toFixed(2).replace(".", ",")}
-              </Text>
+              <View style={styles.subtotalWrap}>
+                <Text style={[styles.subtotalLabel, { color: semantic.colors.text.tertiary }]}>
+                  Total ({item.quantity}x)
+                </Text>
+                <Text style={[styles.itemSubtotal, { color: semantic.colors.text.primary }]}>
+                  R$ {item.subtotal.toFixed(2).replace(".", ",")}
+                </Text>
+              </View>
 
               <View
                 style={[
@@ -391,6 +396,15 @@ const styles = StyleSheet.create({
   itemRight: {
     alignItems: "flex-end",
     gap: 4,
+  },
+  subtotalWrap: {
+    alignItems: "flex-end",
+  },
+  subtotalLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
   },
   itemSubtotal: {
     fontSize: 13,
