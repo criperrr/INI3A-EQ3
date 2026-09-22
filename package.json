@@ -1,6 +1,6 @@
 {
   "name": "presco",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -22,8 +22,14 @@
     "build": "turbo run build",
     "lint": "npm run --prefix src/frontend lint",
     "typecheck": "npm run --prefix src/backend typecheck && npm run --prefix src/frontend typecheck",
-    "test": "npm run --prefix src/backend test && tsx --test tests/*.test.ts",
+    "test": "npm run --prefix src/backend test && tsx --test tests/*.test.ts tests/concurrency/*.test.ts",
     "test:backend": "npm run --prefix src/backend test",
+    "test:concurrency": "tsx --test tests/concurrency/*.test.ts",
+    "test:k6": "k6 run tests/k6/main.js",
+    "test:k6:journeys": "k6 run tests/k6/user_journeys/anonymous_browser.js && k6 run tests/k6/user_journeys/active_collaborator.js",
+    "test:k6:stress": "k6 run tests/k6/stress_and_soak/stress_test.js",
+    "test:k6:spike": "k6 run tests/k6/stress_and_soak/spike_test.js",
+    "test:maestro": "bash tests/maestro/run_maestro.sh",
     "version:bump": "tsx scripts/bump_version.ts patch",
     "version:bump:minor": "tsx scripts/bump_version.ts minor",
     "version:bump:major": "tsx scripts/bump_version.ts major",

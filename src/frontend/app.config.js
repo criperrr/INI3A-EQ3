@@ -1,18 +1,19 @@
 /**
  * app.config.js
- * Camada dinâmica sobre `app.json`.
+ * Configuração dinâmica do Expo com suporte a Flavors/Variants (Dev/Staging vs Produção).
  *
- * A chave do Google Maps NÃO pode viver no `app.json`: este repositório é
- * público, e o arquivo é versionado. Ela entra aqui a partir do ambiente
- * (`src/frontend/.env`, que é gitignored) e é injetada no AndroidManifest
- * durante o prebuild.
- *
- * Importante: a chave acaba embutida no APK de qualquer forma — isso é
- * inerente ao Google Maps no Android. A proteção correta não é escondê-la do
- * APK, e sim restringi-la no Google Cloud Console por nome de pacote
- * (com.presco.app) + impressão SHA-1 do certificado de assinatura.
+ * Suporta segregação estrita entre:
+ * - development / staging: package com.presco.app.dev, nome "Presco (Dev)", scheme presco-dev
+ * - production: package com.presco.app, nome "Presco", scheme presco
  */
 module.exports = ({ config }) => {
+  const appVariant = process.env.APP_VARIANT || "production";
+  const isDev = appVariant === "development" || appVariant === "staging";
+
+  const appName = isDev ? "Presco (Dev)" : (config.name || "Presco");
+  const appId = isDev ? "com.presco.app.dev" : (config.android?.package || "com.presco.app");
+  const scheme = isDev ? "presco-dev" : (config.scheme || "presco");
+
   const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
 
   if (!googleMapsApiKey) {
@@ -25,11 +26,23 @@ module.exports = ({ config }) => {
 
   return {
     ...config,
+    name: appName,
+    scheme: scheme,
+    ios: {
+      ...config.ios,
+      bundleIdentifier: appId,
+    },
     android: {
       ...config.android,
+      package: appId,
       ...(googleMapsApiKey
         ? { config: { ...config.android?.config, googleMaps: { apiKey: googleMapsApiKey } } }
         : {}),
+    },
+    extra: {
+      ...config.extra,
+      appVariant,
+      isDev,
     },
   };
 };
