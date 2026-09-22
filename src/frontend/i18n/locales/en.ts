@@ -723,6 +723,7 @@ export const en: TranslationSchema = {
     savingsBannerSingle: "Buying everything at {store} is the most cost-effective option!",
     grocerySubtotal: "Items Subtotal",
     travelCost: "Travel / Fuel Cost",
+    stopTotal: "Stop Total",
     totalCombined: "Total Expenditure (Items + Travel)",
     netSavings: "Net Savings",
     singleStoreBest: "Best Single Store",

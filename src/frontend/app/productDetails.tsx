@@ -1801,13 +1801,13 @@ const styles = StyleSheet.create({
   periodChipsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingVertical: 2,
-    paddingHorizontal: 1,
+    paddingHorizontal: 2,
   },
   periodChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1,
   },

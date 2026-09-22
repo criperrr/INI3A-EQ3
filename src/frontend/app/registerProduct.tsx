@@ -1434,14 +1434,15 @@ const styles = StyleSheet.create({
   },
   marketRetryText: {},
   marketsScroll: {
-    gap: 8,
+    gap: 10,
     paddingVertical: 4,
+    paddingHorizontal: 2,
   },
   marketChip: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     borderWidth: 1,
   },
   marketChipContent: {

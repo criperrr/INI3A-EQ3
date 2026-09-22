@@ -216,6 +216,11 @@ export const cartService = {
     apiRequest("/cart", { method: "DELETE" }).catch(() => {});
   },
 
+  async saveCartItems(items: CartProductItem[]): Promise<void> {
+    await AsyncStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(items));
+    notifyListeners(items);
+  },
+
   async getTravelSettings(): Promise<TravelSettings> {
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEYS.TRAVEL_SETTINGS);
@@ -253,13 +258,25 @@ export const cartService = {
 
   async optimizeCart(params?: {
     userLocation?: { lat: number; lng: number };
-    customItems?: { productId: number; quantity: number }[];
+    customItems?: {
+      productId: number;
+      quantity: number;
+      productName?: string;
+      productIcon?: string | null;
+      estimatedPrice?: number;
+    }[];
     customSettings?: Partial<TravelSettings>;
   }): Promise<OptimizationResult> {
-    const items = params?.customItems || (await this.getCartItems()).map((it) => ({
-      productId: it.productId,
-      quantity: it.quantity,
-    }));
+    const rawCart = await this.getCartItems();
+    const items =
+      params?.customItems ||
+      rawCart.map((it) => ({
+        productId: it.productId,
+        quantity: it.quantity,
+        productName: it.name,
+        productIcon: it.icon,
+        estimatedPrice: it.estimatedPrice,
+      }));
 
     const settings = {
       ...(await this.getTravelSettings()),

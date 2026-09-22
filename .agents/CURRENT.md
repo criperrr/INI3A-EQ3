@@ -7,6 +7,135 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Deploy e Hospedagem Completa do Servidor no Ambiente Oficial CTI (`ra2457045`):**
+  1. **Configuração e Autenticação SSH/SFTP:**
+     - Chave privada OpenSSH salva com permissões estritas `600` em [`deploy/cti.key`](file:///Users/aventureiromax/INI3A-EQ3/deploy/cti.key).
+     - Conexão autenticada com sucesso via porta `4026` em `projetoscti.com.br` para o usuário `ra2457045`.
+  2. **Parametrização de Portas e Proxy Reverso Apache:**
+     - Identificada a porta exclusiva primária `59057` via ferramenta oficial do CTI (`https://vitor.projetoscti.com.br/portas.php?ra=2457045`), agora confirmada como `EM USO (Por você)`.
+     - [`ecosystem.config.cjs`](file:///Users/aventureiromax/INI3A-EQ3/ecosystem.config.cjs): Parametrizado para ler `SERVER_PORT` dinamicamente do ambiente, subindo o backend em `127.0.0.1:59057`.
+     - [`deploy/deploy.sh`](file:///Users/aventureiromax/INI3A-EQ3/deploy/deploy.sh): Sincronização automática do arquivo `.htaccess` para `/home/ra2457045/public_html/.htaccess` com proxy reverso transparente (`RewriteRule ^(.*)$ http://127.0.0.1:59057/$1 [P,L]`).
+  3. **Conexão de Banco de Dados, Redis e Migrações:**
+     - Backend conectado com sucesso ao banco de dados PostgreSQL com PostGIS ativo (`26-presco` na porta `54432`).
+     - Migrações, seeds idempotentes e realocação de 193 mercados executadas com sucesso.
+     - Sessões e cache conectados ao Upstash Redis com fallback seguro para `InMemoryStore`.
+  4. **Rotas e Validação Pública:**
+     - Adicionada rota raiz em [`src/backend/src/app.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/app.ts) atendendo `/`, `/index.html` e `/index.php` com metadados e diretório da API.
+     - Endpoints públicos testados e 100% funcionais em HTTPS:
+       - `https://ra.projetoscti.com.br/2457045/` (200 OK, metadados da API)
+       - `https://ra.projetoscti.com.br/2457045/health` (200 OK, `database: connected`, `redis: connected`)
+       - `https://ra.projetoscti.com.br/2457045/products` (200 OK, listagem de produtos)
+       - `https://ra.projetoscti.com.br/2457045/markets` (200 OK, catálogo geodésico)
+       - `https://ra.projetoscti.com.br/2457045/api/v1` (200 OK)
+     - Gerenciador de processos PM2 daemonizado e persistido com `pm2 save`.
+- **Integração de Capturas de Tela Oficiais em Alta Resolução (`src/landing`):**
+  1. **Padronização e Otimização de Nomes dos Ativos:**
+     - Arquivos brutos em ultra resolução renomeados com nomenclatura semântica descritiva:
+       - `print-home.jpg` (1206x3644): Feed inicial com radar geodésico de 15km e ofertas inteligentes.
+       - `print-cart.png` (1206x4423): Otimizador multilojas e cálculo de combustível, higienizado via script Swift (`NSImage`/`CGImage`) para remover marca d'água externa de costura ("Tailor 3 Screenshots Stitched") mantendo intacta a navegação nativa.
+       - `print-search.jpg` (1206x4393): Catálogo de produtos com busca dinâmica e categorias.
+       - `print-product.jpg` (1206x5336): Detalhes de produto, comparativo entre redes, histórico de preços e votos da comunidade.
+       - `print-profile.jpg` (1206x3877): Perfil gamificado com nível 3 Detetive de Ofertas, 460 XP, conquistas e heatmap semanal.
+       - `print-settings.jpg` (1206x6436): Central de segurança e privacidade com 2FA ativo, modo AMOLED, perfil anônimo e exclusão LGPD.
+       - `print-scanner.jpg`: Scanner óptico EAN-13 via câmera.
+  2. **Adaptação Completa dos Componentes da Landing Page:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx): Adicionada a aba interativa de Catálogo (`search`) e mapa completo das 7 telas em alta definição.
+     - [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx): Grade responsiva atualizada com `print-cart.png` e `print-search.jpg`.
+     - [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx): Passo 03 agora referencia `print-cart.png` em alta definição.
+     - [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx): Moldura de configurações alimentada com `print-settings.jpg`.
+  3. **Qualidade & Validação:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor Metro ativo e respondendo na porta 8082.
+- **Correção de Encavalamento e Alinhamento no Rodapé/Menu dos Cards da Lista de Compras (`v1.3.7`):**
+  1. **Diagnóstico do Encavalamento Horizontal:**
+     - No componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), a barra inferior de métricas (`cardFooter`) continha três colunas sem `flex: 1` e sem delimitadores (`footerCol`), fazendo com que textos em caixa alta extensos ("SUBTOTAL DE PRODUTOS" e "CUSTO DE DESLOCAMENTO") colidissem sem qualquer espaçamento horizontal (`SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P...`), empurrando a terceira coluna ("TOTAL DA PARADA" e o valor "R$ 10,14") para fora da tela.
+  2. **Refatoração para Distribuição Balanceada, Divisores e Alinhamento Simétrico:**
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx): `footerCol` atualizado com `flex: 1`, `alignItems: "center"`, `justifyContent: "center"`, `paddingHorizontal: 4` e `gap: 4`.
+     - Inseridos divisores verticais (`footerDivider`) de 28px de altura com `semantic.colors.border.default` entre as colunas, estabelecendo uma separação límpida e harmônica.
+     - `footerLabel` recebeu `textAlign: "center"`, `numberOfLines={2}` e `minHeight: 26` com `lineHeight: 13`. Isso garante que rótulos de 1 ou 2 linhas ocupem rigorosamente a mesma altura vertical, alinhando todos os valores numéricos (`footerValue` e `footerValueTotal`) na exata mesma linha horizontal.
+     - [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx): Aplicado o mesmo padrão de alinhamento com `numberOfLines={2}`, `minHeight: 26` e `paddingHorizontal: 4` nas colunas de métricas superiores.
+     - Internacionalização: Adicionada a chave `stopTotal` em `types.ts` e nos 7 idiomas do projeto (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`), eliminando o texto hardcoded em português.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.7` (`versionCode: 23`).
+- **Redesign da Landing Page: Fusão ClickUp (SaaS & Interatividade) + Too Good To Go (Comunidade & Alimentação) (`src/landing`):**
+  1. **Atmosfera Visual Deep Forest & Warm Cream com Amarelo Oficial:**
+     - Paleta combinando **Deep Forest Slate** (`#0A1612`, `#112620`, `#1D3F35`), **Modo AMOLED puro** (`#000000`, `#07120E`) e o **Modo Claro em tom Marfim/Creme acolhedor** (`#FBF9F4`, `#F2EDE3`, `#0D211A`), inspirado no Too Good To Go.
+     - Destaque vibrante com o **Amarelo e Ouro Presco Oficial** (`#FFB703` / `#F5B731`) em botões de ação (CTAs), badges luminosos, abas ativas e realces.
+  2. **Showcase Interativo Central Estilo ClickUp Product Tour:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) e [`HeroSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HeroSection.tsx) reformulados com seletor superior de abas dinâmicas permitindo explorar interativamente os prints reais do app: Carrinho e Rotas de Combustível, Scanner de Gôndola EAN-13, Menor Preço Local e Radar PostGIS de 15km.
+  3. **Jornada do Consumidor em 3 Passos (Too Good To Go):**
+     - Criado componente [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx) estruturando os 3 passos de valor: 01. Descubra no Radar 15km ➔ 02. Aponte na Gôndola (OpenFoodFacts) ➔ 03. Economize no Caixa & na Gasolina (Otimizador Multilojas).
+  4. **Ticker de Impacto Comunitário:**
+     - Criado componente [`ImpactStatsSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ImpactStatsSection.tsx) com cartões elegantes destacando: R$ 38,70 de economia média semanal, 15km de cobertura PostGIS, 100% de código aberto e 2FA via Resend.
+  5. **Navegação & Estabilidade:**
+     - [`Header.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/Header.tsx) atualizado com links estilo pílula SaaS (`Como Funciona`, `Telas do App`, `Recursos`, `Proteção & LGPD`, `FAQ`), botão de tema e CTA amarelo.
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor ativo em `http://localhost:8082`.
+- **Filtros de Estratégia Empilhados Verticalmente ("Um em Cima do Outro") para Idiomas Extensos (`v1.3.6`):**
+  1. **Diagnóstico da Truncagem e Falta de Espaço Horizontal:**
+     - No componente [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx), as 3 estratégias de otimização ("Máxima Economia", "Equilibrado", "Loja Única") eram dispostas horizontalmente dividindo a largura da tela em 3 partes de ~100px.
+     - Em idiomas com palavras extensas (como alemão "Maximale Ersparnis" / "Ausgewogene Route" / "Einzelnes Geschäft", ou russo "Максимальная экономия" / "Сбалансированный"), o texto ficava truncado com reticências (`ellipsizeMode="tail"`) ou colidia com os ícones.
+  2. **Refatoração para Layout Vertical Stacked:**
+     - [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx): `strategyPillContainer` transformado em `flexDirection: "column"` com `gap: 6` e `padding: 6`.
+     - Cada opção de estratégia agora é um card de largura total (`width: "100%"`), com ícone à esquerda, texto com largura completa (`flexShrink: 1` e sem truncagem artificial) e indicador de seleção à direita (`checkmark-circle` quando ativo e `ellipse-outline` quando inativo).
+     - Na linha de paradas máximas (`controlsRow`), adicionado `flexWrap: "wrap"` e `gap: 8` para evitar colisão de títulos longos com as pílulas numéricas.
+     - Em [`profile.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/profile.tsx): `badgeFilterRow` recebeu `flexWrap: "wrap"` e `rowGap: 8` para garantir que filtros de conquistas também quebrem em pilha vertical confortavelmente quando traduzidos.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.6` (`versionCode: 22`).
+- **Espaçamento e Respiração Visual nos Filtros e Chips para Suporte a Múltiplos Idiomas (`v1.3.5`):**
+  1. **Diagnóstico da Compressão em Idiomas Longos:**
+     - Em idiomas com palavras extensas (como alemão, russo e expressões longas em português e espanhol), chips e seletores de categorias ficavam encavalados horizontal e verticalmente devido a `gap: 8` e `paddingHorizontal: 10~12`, causando sensação de texto amontoado e quebras desconfortáveis.
+  2. **Ajustes de Espaçamento e Margem Interna:**
+     - [`search.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/search.tsx): `categoriesScroll` ampliado para `gap: 10`, `categoryChip` com `paddingHorizontal: 14`, `paddingVertical: 8` e `gap: 8` entre emoji e texto.
+     - [`CategorySelector.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/CategorySelector.tsx): `horizontalScroll` ampliado para `gap: 10`, `chip` com `paddingHorizontal: 14`, `paddingVertical: 9`, `selectedScroll` com `gap: 8` e `selectedPill` com `paddingHorizontal: 12`, `paddingVertical: 6` e `gap: 6`.
+     - [`help.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/help.tsx): `categoriesContainer` com `gap: 10` e `categoryChip` com `paddingHorizontal: 14`, `paddingVertical: 9` e `gap: 8`.
+     - [`profile.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/profile.tsx): `badgeFilterRow` com `gap: 10`, `badgeFilterChip` com `paddingHorizontal: 14`, `paddingVertical: 7`, `categoryTabsScroll` com `gap: 10` e `categoryTabChip` com `paddingHorizontal: 14`, `paddingVertical: 8` e `gap: 8`.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx): `periodChipsContainer` com `gap: 10` e `periodChip` com `paddingHorizontal: 16` e `paddingVertical: 7`.
+     - [`registerProduct.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/registerProduct.tsx): `marketsScroll` com `gap: 10` e `marketChip` com `paddingHorizontal: 14` e `paddingVertical: 8`.
+     - [`OpenFoodFactsStatusTab.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OpenFoodFactsStatusTab.tsx): `filterPillsRow` com `gap: 10`, `rowGap: 8`, `flexWrap: "wrap"` e `filterPill` com `paddingHorizontal: 14`, `paddingVertical: 7`.
+     - [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx): `strategyPillContainer` com `gap: 4` e `strategyTab` com `paddingHorizontal: 6`, `paddingVertical: 7` e `gap: 5`.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.5` (`versionCode: 21`).
+- **Transição para Amarelo Oficial do Presco (`#FFB703`) e Galeria de Prints Reais do App (`src/landing`):**
+  1. **Substituição da Cor de Destaque para o Amarelo/Gold Oficial:**
+     - Atualizados os tokens em [`colors.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/theme/colors.ts) para utilizar o amarelo característico do app (`brand.yellow500` `#FFB703`, `yellow600` `#F59E0B` e `goldAccent` `#F5B731`), presente no `DEFAULT_ACCENT_DARK` do app e na identidade visual.
+     - Botões primários de ação, badges, realces luminosos, indicador do radar, laser do scanner e sombras agora irradiam o amarelo oficial do Presco.
+  2. **Inclusão de Prints Reais do Aplicativo Móvel:**
+     - Gerados e salvos em `src/landing/assets/prints/` os prints oficiais do Presco no Android:
+       - `print-cart.jpg`: Otimizador Multilojas de Carrinho com divisão entre Atacadão e Assaí, hero card de economia e cálculo de combustível.
+       - `print-scanner.jpg`: HUD da câmera com laser amarelo lendo código de barras de gôndola e produto reconhecido via OpenFoodFacts.
+       - `print-product.jpg`: Tela de menor preço com gráfico de variação histórica, comparativo entre mercados e selo 2FA.
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) atualizado para carregar diretamente as capturas reais de tela do app na moldura interativa.
+     - Criada a nova seção [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx) expondo o design das telas em alta resolução com cards detalhados.
+  3. **Qualidade e Estabilidade:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`).
+- **Refatoração Completa da Landing Page com Identidade Presco, Mockup Interativo e Políticas (`src/landing`):**
+  1. **Harmonização Fiel com o Design System Oficial (`DESIGN.md`):**
+     - Substituídas cores e estilos anteriores por tokens oficiais do Presco: paleta `brand.emerald` (`#10B981`, `#059669`, `#2E7D32`), superfícies `darkPalette` (`#0D1117`), `amoledPalette` (`#000000`), `lightPalette` (`#F5F7F2`) e tipografia responsiva.
+     - Adicionado alternador dinâmico de temas na barra superior com memorização da preferência do usuário em `localStorage`.
+  2. **Ativos Reais e Mockup Interativo de Smartphone:**
+     - Integrados os logos oficiais em alta resolução (`logo-darkmode.png`, `logo-presco.png`), ícones e banners em `src/landing/assets/`.
+     - Criado componente [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) com moldura realista de smartphone que permite navegar de forma interativa por 4 telas reais do aplicativo: Otimizador de Carrinho e Rota de Combustível, Menor Preço Local com Quórum de Confirmação, Leitor de Gôndola EAN-13 e Radar PostGIS de Proximidade (15km).
+  3. **Sistema Completo de Proteção e Central de Políticas (LGPD/Termos):**
+     - Criada seção [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx) detalhando o Quórum Comunitário Anti-Fraude, 2FA com códigos OTP via Resend, Geofencing PostGIS e conformidade estrita com a LGPD.
+     - Criado modal interativo [`PolicyModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PolicyModal.tsx) com 4 abas completas: Termos de Uso, Política de Privacidade e LGPD (Lei 13.709/2018), Diretrizes da Comunidade / Moderação de Preços e Política de Armazenamento Local.
+     - Criado banner de consentimento [`ConsentBanner.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ConsentBanner.tsx) para LGPD e armazenamento local.
+  4. **Hub de Download e FAQ:**
+     - Criada área de download [`DownloadSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/DownloadSection.tsx) com QR Code para leitura por câmera e download do APK `v1.3.3`.
+     - Criado accordion de perguntas frequentes [`FaqSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/FaqSection.tsx) e rodapé completo [`Footer.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/Footer.tsx).
+  5. **Qualidade e Estabilidade:**
+     - 0 erros no typecheck da landing (`npx tsc --noEmit --project src/landing/tsconfig.json`) e 0 erros no typecheck global (`npm run typecheck`). Metro bundler compila 100% com sucesso em `http://localhost:8082`.
+- **Resolução do Design Encavalado na Lista e Recuperação de Nomes Reais de Produtos (`v1.3.4`):**
+  1. **Diagnóstico e Resolução do Design Encavalado (Textos Muito Próximos):**
+     - Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), os cards empilhavam `subtotalWrap` ("Total (10x) R$ 20,00"), o stepper `[-] 10 [+]` e o botão "Trocar loja" em uma coluna estreita à direita com apenas 4px de gap e 0px de margem interna, comprimindo a coluna do título do produto para menos de 150px e fazendo os textos colidirem verticalmente.
+     - Implementado layout espaçoso em duas zonas: Zona Superior com Imagem (48x48 rounded-xl), Informações do Produto (`flex: 1` com título em `fontSize: 14`, `lineHeight: 19` e badge de oferta) e Subtotal à direita com etiqueta e valor destacados; Zona Inferior de Ações com linha dedicada contendo o seletor de supermercado ("Trocar loja") e o stepper com botões confortáveis e 30px de altura.
+     - Ajustados `header` (margem no título e wrap nas métricas) e `cardFooter` (espaçamento e `lineHeight` confortáveis).
+     - Em [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) e [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx), corrigidos os espaçamentos das listas brutas (`rawItemCard`), banners de itens não atribuídos (`unassignedBox`) e métricas comparativas com `lineHeight` e margens de respiração entre 4px e 8px.
+  2. **Diagnóstico e Resolução de Produtos Exibidos como "Produto #70":**
+     - **Causa Raiz 1 (Frontend):** O método `cartService.optimizeCart` mapeava os itens apenas com `{ productId, quantity }`, descartando `name` e `icon` do payload enviado ao endpoint de otimização.
+     - **Causa Raiz 2 (Backend):** Em [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts), quando o produto não possuía ocorrência recente de preço nos mercados do raio, o backend recorria a `c.productName || \`Produto #${c.productId}\``, gerando "Produto #70".
+     - **Correção no Backend:** Criado método `getProductsBasicInfo` em [`ProductRepository`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/product.repository.ts). Antes da otimização, o backend detecta qualquer produto sem nome ou com fallback e busca o nome e ícone oficiais diretamente na tabela `product`.
+     - **Correção no Frontend:** [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts) agora envia `productName`, `productIcon` e `estimatedPrice`. Além disso, [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) enriquece a resposta da otimização mapeando os nomes reais dos itens ativos e executa auto-healing consultando `fetchProductById` para regenerar qualquer item do storage legado que estivesse salvo com o texto "Produto #...".
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de aprovação na suíte completa de testes (`30 passing`), versão sincronizada para `v1.3.4` (`versionCode: 20`).
 - **Suíte Abrangente de Estabilidade Mobile com Maestro (Nativo & Docker) & Blindagem Pré-Push:**
   1. **Suíte Completa de Ponta a Ponta (`11_full_app_stability_suite.yaml`):**
      - Criado fluxo automatizado abrangente que percorre 100% da aplicação: Onboarding em 7 etapas (incluindo a nova etapa de carrinho inteligente), login 1-tap dev, exploração da home e carrossel de 6 banners, busca com debounce, detalhes de produto, votação de preços, otimizador de rota e compras multilojas (`/cart`), troca de estratégias, modais de viagem e rota, mapa PostGIS, perfil com loja de cosméticos, configurações, abas do admin, troca de temas Monet e logout limpo.

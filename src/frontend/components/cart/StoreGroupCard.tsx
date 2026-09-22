@@ -120,44 +120,45 @@ export const StoreGroupCard = memo(function StoreGroupCard({
               { borderBottomColor: semantic.colors.surface.input },
             ]}
           >
-            {/* Product Image */}
-            <View
-              style={[
-                styles.imageBox,
-                { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
-              ]}
-            >
-              {item.productIcon ? (
-                <Image
-                  source={{ uri: item.productIcon }}
-                  style={styles.productImg}
-                  contentFit="contain"
-                  transition={150}
-                />
-              ) : (
-                <Ionicons name="cube-outline" size={20} color={semantic.colors.icon.secondary} />
-              )}
-            </View>
-
-            {/* Product Info */}
-            <View style={styles.itemInfo}>
-              <Text style={[styles.itemName, { color: semantic.colors.text.primary }]} numberOfLines={2}>
-                {item.productName}
-              </Text>
-              <View style={styles.priceRow}>
-                <Text style={[styles.unitPrice, { color: semantic.colors.text.secondary }]}>
-                  R$ {item.unitPrice.toFixed(2).replace(".", ",")} / un.
-                </Text>
-                {item.isPromotion && (
-                  <View style={[styles.promoChip, { backgroundColor: `${accent}20` }]}>
-                    <Text style={[styles.promoText, { color: accent }]}>Oferta</Text>
-                  </View>
+            {/* Top Zone: Product Image + Info + Subtotal */}
+            <View style={styles.itemMainRow}>
+              {/* Product Image */}
+              <View
+                style={[
+                  styles.imageBox,
+                  { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
+                ]}
+              >
+                {item.productIcon ? (
+                  <Image
+                    source={{ uri: item.productIcon }}
+                    style={styles.productImg}
+                    contentFit="contain"
+                    transition={150}
+                  />
+                ) : (
+                  <Ionicons name="cube-outline" size={22} color={semantic.colors.icon.secondary} />
                 )}
               </View>
-            </View>
 
-            {/* Stepper and Subtotal */}
-            <View style={styles.itemRight}>
+              {/* Product Info */}
+              <View style={styles.itemInfo}>
+                <Text style={[styles.itemName, { color: semantic.colors.text.primary }]} numberOfLines={2}>
+                  {item.productName}
+                </Text>
+                <View style={styles.priceRow}>
+                  <Text style={[styles.unitPrice, { color: semantic.colors.text.secondary }]}>
+                    R$ {item.unitPrice.toFixed(2).replace(".", ",")} / un.
+                  </Text>
+                  {item.isPromotion && (
+                    <View style={[styles.promoChip, { backgroundColor: `${accent}20` }]}>
+                      <Text style={[styles.promoText, { color: accent }]}>Oferta</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              {/* Item Subtotal on Right */}
               <View style={styles.subtotalWrap}>
                 <Text style={[styles.subtotalLabel, { color: semantic.colors.text.tertiary }]}>
                   Total ({item.quantity}x)
@@ -166,6 +167,24 @@ export const StoreGroupCard = memo(function StoreGroupCard({
                   R$ {item.subtotal.toFixed(2).replace(".", ",")}
                 </Text>
               </View>
+            </View>
+
+            {/* Bottom Action Row: Reallocate Button & Quantity Stepper */}
+            <View style={styles.itemActionRow}>
+              {otherStores.length > 0 ? (
+                <TouchableOpacity
+                  style={[styles.reallocBtn, { backgroundColor: `${accent}15` }]}
+                  activeOpacity={0.7}
+                  onPress={() => setReallocatingItem(item)}
+                >
+                  <Ionicons name="swap-horizontal" size={13} color={accent} />
+                  <Text style={[styles.reallocText, { color: accent }]}>
+                    {t("cart.reallocate")}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <View />
+              )}
 
               <View
                 style={[
@@ -197,28 +216,26 @@ export const StoreGroupCard = memo(function StoreGroupCard({
                   <Ionicons name="add" size={14} color={semantic.colors.icon.primary} />
                 </TouchableOpacity>
               </View>
-
-              {otherStores.length > 0 && (
-                <TouchableOpacity
-                  style={styles.reallocBtn}
-                  activeOpacity={0.7}
-                  onPress={() => setReallocatingItem(item)}
-                >
-                  <Ionicons name="swap-horizontal" size={12} color={accent} />
-                  <Text style={[styles.reallocText, { color: accent }]}>
-                    {t("cart.reallocate")}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
         ))}
       </View>
 
       {/* Card Footer Summary */}
-      <View style={[styles.cardFooter, { backgroundColor: semantic.colors.surface.input }]}>
+      <View
+        style={[
+          styles.cardFooter,
+          {
+            backgroundColor: semantic.colors.surface.input,
+            borderTopColor: semantic.colors.border.default,
+          },
+        ]}
+      >
         <View style={styles.footerCol}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.grocerySubtotal")}
           </Text>
           <Text style={[styles.footerValue, { color: semantic.colors.text.primary }]}>
@@ -226,8 +243,13 @@ export const StoreGroupCard = memo(function StoreGroupCard({
           </Text>
         </View>
 
+        <View style={[styles.footerDivider, { backgroundColor: semantic.colors.border.default }]} />
+
         <View style={styles.footerCol}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.travelCost")}
           </Text>
           <Text style={[styles.footerValue, { color: semantic.colors.text.secondary }]}>
@@ -235,9 +257,14 @@ export const StoreGroupCard = memo(function StoreGroupCard({
           </Text>
         </View>
 
-        <View style={[styles.footerCol, { alignItems: "flex-end" }]}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
-            Total da Parada
+        <View style={[styles.footerDivider, { backgroundColor: semantic.colors.border.default }]} />
+
+        <View style={styles.footerCol}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
+            {t("cart.stopTotal")}
           </Text>
           <Text style={[styles.footerValueTotal, { color: accent }]}>
             {formattedTotal}
@@ -327,36 +354,41 @@ const styles = StyleSheet.create({
   storeName: {
     fontSize: 15,
     fontWeight: "700",
-    marginBottom: 4,
+    marginBottom: 5,
+    lineHeight: 20,
   },
   storeMetricsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+    flexWrap: "wrap",
   },
   tag: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 3,
+    gap: 4,
   },
   tagText: {
     fontSize: 11,
     fontWeight: "500",
+    lineHeight: 15,
   },
   itemsList: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
   },
   itemRow: {
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  itemMainRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    gap: 12,
   },
   imageBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -368,12 +400,13 @@ const styles = StyleSheet.create({
   },
   itemInfo: {
     flex: 1,
+    justifyContent: "center",
   },
   itemName: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
-    marginBottom: 3,
-    lineHeight: 17,
+    marginBottom: 4,
+    lineHeight: 19,
   },
   priceRow: {
     flexDirection: "row",
@@ -383,81 +416,110 @@ const styles = StyleSheet.create({
   unitPrice: {
     fontSize: 12,
     fontWeight: "500",
+    lineHeight: 16,
   },
   promoChip: {
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 6,
   },
   promoText: {
     fontSize: 10,
     fontWeight: "700",
   },
-  itemRight: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
   subtotalWrap: {
     alignItems: "flex-end",
+    marginLeft: 6,
   },
   subtotalLabel: {
     fontSize: 10,
-    fontWeight: "500",
+    fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
+    marginBottom: 2,
   },
   itemSubtotal: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
+    lineHeight: 18,
+  },
+  itemActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+    paddingTop: 8,
+    paddingLeft: 60, // Aligns neatly after 48px image + 12px gap
   },
   stepperBox: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 8,
     borderWidth: 1,
+    height: 30,
   },
   stepBtn: {
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   stepQty: {
     fontSize: 12,
     fontWeight: "700",
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   reallocBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
-    marginTop: 2,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 7,
   },
   reallocText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "600",
   },
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   footerCol: {
-    alignItems: "flex-start",
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    gap: 4,
   },
   footerLabel: {
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    marginBottom: 1,
+    letterSpacing: 0.3,
+    lineHeight: 13,
+    textAlign: "center",
+    minHeight: 26,
   },
   footerValue: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
+    lineHeight: 18,
+    textAlign: "center",
   },
   footerValueTotal: {
     fontSize: 14,
     fontWeight: "800",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  footerDivider: {
+    width: 1,
+    height: 28,
   },
   modalOverlay: {
     flex: 1,

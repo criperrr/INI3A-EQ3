@@ -844,12 +844,14 @@ const styles = StyleSheet.create({
   filterPillsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    flexWrap: "wrap",
+    gap: 10,
+    rowGap: 8,
     marginBottom: 12,
   },
   filterPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
   },

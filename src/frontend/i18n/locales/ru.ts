@@ -723,6 +723,7 @@ export const ru: TranslationSchema = {
     savingsBannerSingle: "Покупка всех товаров в {store} — самый выгодный вариант!",
     grocerySubtotal: "Сумма товаров",
     travelCost: "Расходы на дорогу (топливо)",
+    stopTotal: "Итог остановки",
     totalCombined: "Итого (товары + бензин)",
     netSavings: "Чистая экономия",
     singleStoreBest: "Лучший один магазин",
