@@ -198,6 +198,7 @@ export default function CustomRegisterProduct() {
           <FocusedInputWrapper borderRadius={12}>
             <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
               <TextInput
+                testID="custom-product-ean"
                 style={[styles.input, themeStyles.text]}
                 placeholder={t("scanner.barcode")}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -214,6 +215,7 @@ export default function CustomRegisterProduct() {
           <FocusedInputWrapper borderRadius={12}>
             <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
               <TextInput
+                testID="custom-product-name"
                 style={[styles.input, themeStyles.text]}
                 placeholder={t("products.productNamePlaceholder")}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -231,6 +233,7 @@ export default function CustomRegisterProduct() {
             <FocusedInputWrapper borderRadius={12}>
               <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
                 <TextInput
+                  testID="custom-product-brand"
                   style={[styles.input, themeStyles.text]}
                   placeholder={t("products.brandPlaceholder")}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -246,6 +249,7 @@ export default function CustomRegisterProduct() {
             <FocusedInputWrapper borderRadius={12}>
               <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
                 <TextInput
+                  testID="custom-product-unit"
                   style={[styles.input, themeStyles.text]}
                   placeholder={t("products.unitPlaceholder")}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -316,6 +320,7 @@ export default function CustomRegisterProduct() {
             </View>
           </View>
           <Switch
+            testID="custom-product-promo-switch"
             value={isPromotion}
             onValueChange={setIsPromotion}
             trackColor={{ false: isDark ? "#4B5563" : "#D1D5DB", true: accent + "80" }}
@@ -324,6 +329,7 @@ export default function CustomRegisterProduct() {
         </View>
 
         <TouchableOpacity
+          testID="custom-product-submit"
           style={[styles.button, { backgroundColor: accent }]}
           activeOpacity={0.8}
           onPress={handleRegister}

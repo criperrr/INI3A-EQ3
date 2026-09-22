@@ -908,6 +908,7 @@ export default function ProductDetails() {
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
             <TouchableOpacity
+              testID="btn-register-price"
               style={[
                 styles.primaryActionBtn,
                 isCooldownActive
@@ -952,6 +953,7 @@ export default function ProductDetails() {
               <View style={styles.secondaryActionsRow}>
                 {Boolean(product.id) ? (
                   <TouchableOpacity
+                    testID="btn-admin-edit"
                     style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
                     activeOpacity={0.8}
                     onPress={handleOpenEdit}
@@ -965,6 +967,7 @@ export default function ProductDetails() {
 
                 {Boolean(product.id) ? (
                   <TouchableOpacity
+                    testID="btn-admin-delete"
                     style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
                     activeOpacity={0.8}
                     onPress={handleDeleteProduct}

@@ -628,6 +628,7 @@ const CustomizationBar = memo(function CustomizationBar({
 }) {
   return (
     <TouchableOpacity
+      testID="profile-shop-btn"
       style={[styles.customizationBar, themeStyles.card, { borderColor: accent + "50" }]}
       activeOpacity={0.8}
       onPress={onPress}
@@ -1920,6 +1921,7 @@ const LogoutButton = memo(function LogoutButton({
   const { themeStyles, isDark } = useTheme();
   return (
     <TouchableOpacity
+      testID="profile-logout-btn"
       style={[
         styles.logoutButton,
         themeStyles.card,

@@ -656,6 +656,7 @@ const SettingsScreen: React.FC = () => {
               </Text>
             </View>
             <Switch
+              testID="theme-dark-switch"
               value={isSettingsDark}
               trackColor={{ false: "#D4DCC8", true: accent }}
               onValueChange={() => {
@@ -1075,6 +1076,7 @@ const SettingsScreen: React.FC = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="btn-clear-cache"
               style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
               onPress={() => {
                 triggerHaptic();
@@ -1186,6 +1188,7 @@ const SettingsScreen: React.FC = () => {
           </View>
 
           <TouchableOpacity
+            testID="btn-about"
             style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 2 }]}
             activeOpacity={0.7}
             onPress={() => router.push("/about")}
@@ -1633,6 +1636,7 @@ const SettingsScreen: React.FC = () => {
                 <Text style={themeStyles.text}>{t("common.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
+                testID="modal-confirm-clear-cache"
                 style={[styles.modalBtn, { backgroundColor: accent }]}
                 onPress={handleClearCache}
                 disabled={isClearingCache}
