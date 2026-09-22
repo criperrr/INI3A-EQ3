@@ -42,6 +42,7 @@ import {
 import { getUserLocation } from "../utils/userLocation";
 import CategorySelector from "../components/CategorySelector";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { cartService } from "../services/cartService";
 import {
   formatDisplayDate,
   formatFullDisplayDate,
@@ -90,6 +91,10 @@ export default function ProductDetails() {
   const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
   const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
+
+  const [isInCart, setIsInCart] = useState(false);
+  const [cartQuantity, setCartQuantity] = useState(1);
+  const [cartAddedSuccess, setCartAddedSuccess] = useState(false);
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
@@ -241,6 +246,39 @@ export default function ProductDetails() {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  useEffect(() => {
+    if (product?.id) {
+      cartService.isProductInCart(product.id).then(setIsInCart);
+    }
+    const unsub = cartService.subscribe((items) => {
+      if (product?.id) {
+        setIsInCart(items.some((it) => it.productId === product.id));
+      }
+    });
+    return unsub;
+  }, [product?.id]);
+
+  const handleAddToCart = async () => {
+    if (!product || !product.id) return;
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+    }
+    await cartService.addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        icon: product.icon || product.imageUri || null,
+        ean: product.ean || product.barcode || null,
+      },
+      cartQuantity
+    );
+    setIsInCart(true);
+    setCartAddedSuccess(true);
+    setTimeout(() => setCartAddedSuccess(false), 2500);
   };
 
   const handleRegisterPrice = () => {
@@ -907,6 +945,74 @@ export default function ProductDetails() {
 
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
+            {/* Add to Shopping List Button with Stepper */}
+            <View style={styles.cartActionRow}>
+              <View style={[styles.cartStepperBox, themeStyles.inputBg, themeStyles.border]}>
+                <TouchableOpacity
+                  style={styles.cartStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (cartQuantity > 1) {
+                      try {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      } catch {}
+                      setCartQuantity(cartQuantity - 1);
+                    }
+                  }}
+                >
+                  <Ionicons name="remove" size={16} color={semantic.colors.icon.primary} />
+                </TouchableOpacity>
+
+                <Text style={[styles.cartStepQty, themeStyles.text]}>{cartQuantity}</Text>
+
+                <TouchableOpacity
+                  style={styles.cartStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    } catch {}
+                    setCartQuantity(cartQuantity + 1);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color={semantic.colors.icon.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                testID="btn-add-to-cart"
+                style={[
+                  styles.addToCartBtn,
+                  cartAddedSuccess
+                    ? { backgroundColor: "#10B981" }
+                    : isInCart
+                    ? [themeStyles.inputBg, themeStyles.border, { borderColor: accent }]
+                    : { backgroundColor: `${accent}20`, borderColor: accent, borderWidth: 1 },
+                ]}
+                activeOpacity={0.8}
+                onPress={handleAddToCart}
+              >
+                <Ionicons
+                  name={cartAddedSuccess ? "checkmark-circle" : isInCart ? "cart" : "cart-outline"}
+                  size={20}
+                  color={cartAddedSuccess ? "#FFFFFF" : accent}
+                />
+                <Text
+                  style={[
+                    styles.addToCartText,
+                    { color: cartAddedSuccess ? "#FFFFFF" : accent, fontWeight: "700" },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {cartAddedSuccess
+                    ? t("cart.addedSuccess")
+                    : isInCart
+                    ? `${t("productDetails.inCart")}`
+                    : t("productDetails.addToCart")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               testID="btn-register-price"
               style={[
@@ -1829,6 +1935,44 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     gap: 12,
+  },
+  cartActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cartStepperBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 4,
+  },
+  cartStepBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartStepQty: {
+    fontSize: 14,
+    fontWeight: "700",
+    minWidth: 20,
+    textAlign: "center",
+  },
+  addToCartBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 48,
+    borderRadius: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  addToCartText: {
+    fontSize: 14,
   },
   primaryActionBtn: {
     flexDirection: "row",
