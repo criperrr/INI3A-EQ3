@@ -18,22 +18,40 @@ export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps>
 
     const screens = [
         {
+            title: "Início & Radar de 15km",
+            subtitle: "Ofertas e menores preços no raio de até 15km com economia de até 35%",
+            tag: "RAIO GEODÉSICO",
+            image: require("../assets/prints/print-home.jpg"),
+        },
+        {
             title: "Otimizador de Rotas & Carrinho",
             subtitle: "Divide os produtos por supermercado e desconta o combustível",
             tag: "ECONOMIA LÍQUIDA",
-            image: require("../assets/prints/print-cart.jpg"),
-        },
-        {
-            title: "Scanner Óptico de Gôndola",
-            subtitle: "Reconhecimento instantâneo de EAN-13 e OpenFoodFacts",
-            tag: "LEITURA EM TEMPO REAL",
-            image: require("../assets/prints/print-scanner.jpg"),
+            image: require("../assets/prints/print-cart.png"),
         },
         {
             title: "Menor Preço & Quórum 2FA",
-            subtitle: "Comparativo entre redes, histórico de variação e votos",
-            tag: "AUDITORIA COMUNITÁRIA",
+            subtitle: "Comparativo entre redes, histórico de variação e votos comunitários",
+            tag: "AUDITORIA TRANSPARENTE",
             image: require("../assets/prints/print-product.jpg"),
+        },
+        {
+            title: "Catálogo & Busca por Categoria",
+            subtitle: "Filtros rápidos por tipo de alimento com destaques de menor preço",
+            tag: "BUSCA DINÂMICA",
+            image: require("../assets/prints/print-search.jpg"),
+        },
+        {
+            title: "Perfil Gamificado & Conquistas",
+            subtitle: "Detetive de Ofertas Nível 3, 460 XP e heatmap de contribuição semanal",
+            tag: "GAMIFICAÇÃO & XP",
+            image: require("../assets/prints/print-profile.jpg"),
+        },
+        {
+            title: "Configurações, Segurança & 2FA",
+            subtitle: "Autenticação em 2 etapas, modo AMOLED, perfil privado e exportação",
+            tag: "PRIVACIDADE & LGPD",
+            image: require("../assets/prints/print-settings.jpg"),
         },
     ];
 
@@ -192,7 +210,9 @@ const styles = StyleSheet.create({
     },
     gridDesktop: {
         flexDirection: "row",
+        flexWrap: "wrap",
         justifyContent: "space-between",
+        rowGap: 32,
     },
     card: {
         borderRadius: 28,

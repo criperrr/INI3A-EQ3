@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Dimensions,
+    Image,
 } from "react-native";
 import { SemanticTheme } from "../theme";
 
@@ -125,59 +126,103 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                     ))}
                 </View>
 
-                {/* Policy Interactive Callout Banner */}
+                {/* Policy Interactive Callout Banner with Authentic Settings Screenshot */}
                 <View
                     style={[
                         styles.calloutCard,
+                        isDesktop && styles.calloutCardDesktop,
                         {
                             backgroundColor: theme.surface.card,
                             borderColor: theme.accent + "40",
                         },
                     ]}
                 >
-                    <View style={styles.calloutLeft}>
+                    <View style={[styles.calloutLeft, isDesktop && styles.calloutLeftDesktop]}>
+                        <View
+                            style={[
+                                styles.calloutBadge,
+                                { backgroundColor: theme.accent + "18" },
+                            ]}
+                        >
+                            <Text style={[styles.calloutBadgeText, { color: theme.accent }]}>
+                                🔒 PRIVACIDADE & SEGURANÇA VERIFICÁVEL
+                            </Text>
+                        </View>
+
                         <Text style={[styles.calloutTitle, { color: theme.text.primary }]}>
                             Central Oficial de Políticas & Governança
                         </Text>
                         <Text style={[styles.calloutText, { color: theme.text.secondary }]}>
-                            Acesse os documentos completos sobre nossos termos de uso, tratamento de dados
-                            pessoais sob a LGPD, diretrizes de conduta e armazenamento local.
+                            Tudo o que defendemos está implementado no código. Consulte nossos termos de uso,
+                            diretrizes de tratamento de dados sob a LGPD (Lei 13.709/2018), auditoria comunitária
+                            e políticas de armazenamento local.
                         </Text>
+
+                        <View style={styles.complianceChecks}>
+                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                ✅ Autenticação em Duas Etapas (2FA) nativa com código descartável
+                            </Text>
+                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                ✅ Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
+                            </Text>
+                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                ✅ Zero rastreamento publicitário ou venda de relatórios de consumo
+                            </Text>
+                        </View>
+
+                        <View style={styles.calloutActions}>
+                            <TouchableOpacity
+                                style={[styles.policyBtn, { borderColor: theme.surface.border }]}
+                                onPress={() => onOpenPolicies("terms")}
+                            >
+                                <Text style={[styles.policyBtnText, { color: theme.text.primary }]}>
+                                    Termos de Uso
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.policyBtn,
+                                    {
+                                        backgroundColor: theme.accent,
+                                        borderColor: theme.accent,
+                                    },
+                                ]}
+                                onPress={() => onOpenPolicies("privacy")}
+                            >
+                                <Text style={[styles.policyBtnText, { color: "#030712", fontWeight: "800" }]}>
+                                    Privacidade & LGPD
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.policyBtn, { borderColor: theme.surface.border }]}
+                                onPress={() => onOpenPolicies("guidelines")}
+                            >
+                                <Text style={[styles.policyBtnText, { color: theme.text.primary }]}>
+                                    Moderação de Preços
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <View style={styles.calloutActions}>
-                        <TouchableOpacity
-                            style={[styles.policyBtn, { borderColor: theme.surface.border }]}
-                            onPress={() => onOpenPolicies("terms")}
-                        >
-                            <Text style={[styles.policyBtnText, { color: theme.text.primary }]}>
-                                Termos de Uso
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
+                    {/* Screenshot Frame of App Settings */}
+                    <View style={styles.calloutRight}>
+                        <View
                             style={[
-                                styles.policyBtn,
+                                styles.settingsPreviewFrame,
                                 {
-                                    backgroundColor: theme.accent,
-                                    borderColor: theme.accent,
+                                    borderColor: theme.accent + "50",
+                                    backgroundColor: "#05070A",
                                 },
                             ]}
-                            onPress={() => onOpenPolicies("privacy")}
                         >
-                            <Text style={[styles.policyBtnText, { color: "#030712", fontWeight: "800" }]}>
-                                Privacidade & LGPD
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.policyBtn, { borderColor: theme.surface.border }]}
-                            onPress={() => onOpenPolicies("guidelines")}
-                        >
-                            <Text style={[styles.policyBtnText, { color: theme.text.primary }]}>
-                                Moderação de Preços
-                            </Text>
-                        </TouchableOpacity>
+                            <Image
+                                source={require("../assets/prints/print-settings.jpg")}
+                                style={styles.settingsPreviewImage}
+                                resizeMode="cover"
+                            />
+                        </View>
                     </View>
                 </View>
             </View>
@@ -259,28 +304,80 @@ const styles = StyleSheet.create({
         lineHeight: 22,
     },
     calloutCard: {
-        padding: 28,
-        borderRadius: 24,
+        padding: 32,
+        borderRadius: 28,
         borderWidth: 1,
         flexDirection: "column",
-        gap: 20,
+        gap: 28,
+    },
+    calloutCardDesktop: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
     },
     calloutLeft: {
-        maxWidth: 700,
+        width: "100%",
+    },
+    calloutLeftDesktop: {
+        width: "60%",
+    },
+    calloutBadge: {
+        alignSelf: "flex-start",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+        marginBottom: 12,
+    },
+    calloutBadgeText: {
+        fontSize: 11,
+        fontWeight: "800",
+        letterSpacing: 0.6,
     },
     calloutTitle: {
-        fontSize: 20,
-        fontWeight: "800",
+        fontSize: 22,
+        fontWeight: "900",
         marginBottom: 8,
+        letterSpacing: -0.4,
     },
     calloutText: {
         fontSize: 14,
         lineHeight: 22,
+        marginBottom: 16,
+    },
+    complianceChecks: {
+        gap: 8,
+        marginBottom: 24,
+    },
+    checkItem: {
+        fontSize: 13,
+        lineHeight: 20,
+        fontWeight: "600",
     },
     calloutActions: {
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 12,
+    },
+    calloutRight: {
+        width: "100%",
+        alignItems: "center",
+        justifyContent: "center",
+        marginTop: 10,
+    },
+    settingsPreviewFrame: {
+        width: 260,
+        height: 480,
+        borderRadius: 32,
+        borderWidth: 3,
+        overflow: "hidden",
+        shadowOffset: { width: 0, height: 16 },
+        shadowOpacity: 0.3,
+        shadowRadius: 30,
+        elevation: 12,
+    },
+    settingsPreviewImage: {
+        width: "100%",
+        height: "100%",
     },
     policyBtn: {
         paddingVertical: 10,

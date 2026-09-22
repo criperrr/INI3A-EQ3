@@ -4,6 +4,7 @@ import {
     Text,
     StyleSheet,
     Dimensions,
+    Image,
 } from "react-native";
 import { SemanticTheme } from "../theme";
 
@@ -20,22 +21,25 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
             stepNumber: "01",
             icon: "📍",
             title: "Descubra no Radar 15km",
-            desc: "Abra o app e consulte supermercados, atacados e feiras na sua região. O Presco mapeia as menores cotações registradas pela própria comunidade local.",
+            desc: "Abra o app e consulte supermercados, atacados e feiras na sua região. O Presco mapeia as menores cotações registradas pela comunidade.",
             tag: "GEOPROCESSAMENTO POSTGIS",
+            image: require("../assets/prints/print-home.jpg"),
         },
         {
             stepNumber: "02",
             icon: "📸",
             title: "Aponte na Gôndola",
-            desc: "Escaneie o código de barras EAN-13 direto pela câmera. O Presco sincroniza com o OpenFoodFacts, valida o histórico e premia você com XP no ranking comunitário.",
+            desc: "Escaneie o código de barras EAN-13 direto pela câmera. O Presco valida o histórico e premia você com XP no ranking comunitário.",
             tag: "SCANNER ÓPTICO INSTANTÂNEO",
+            image: require("../assets/prints/print-scanner.jpg"),
         },
         {
             stepNumber: "03",
             icon: "🚗",
-            title: "Economize no Caixa & na Gasolina",
-            desc: "O motor matemático calcula a rota ideal e só sugere dividir a lista de compras se o desconto total cobrir com folga o combustível gasto no trajeto.",
+            title: "Economize no Caixa & Gasolina",
+            desc: "O motor matemático calcula a rota ideal e só sugere dividir a lista se o desconto total cobrir com folga o combustível gasto.",
             tag: "OTIMIZADOR MULTILOJAS",
+            image: require("../assets/prints/print-cart.png"),
         },
     ];
 
@@ -139,6 +143,22 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                             >
                                 {s.desc}
                             </Text>
+
+                            <View
+                                style={[
+                                    styles.stepImageWrapper,
+                                    {
+                                        borderColor: theme.surface.borderSubtle,
+                                        backgroundColor: "#05070A",
+                                    },
+                                ]}
+                            >
+                                <Image
+                                    source={s.image}
+                                    style={styles.stepImage}
+                                    resizeMode="cover"
+                                />
+                            </View>
                         </View>
                     ))}
                 </View>
@@ -247,5 +267,17 @@ const styles = StyleSheet.create({
     stepDesc: {
         fontSize: 14,
         lineHeight: 22,
+    },
+    stepImageWrapper: {
+        width: "100%",
+        height: 240,
+        borderRadius: 18,
+        overflow: "hidden",
+        marginTop: 20,
+        borderWidth: 1,
+    },
+    stepImage: {
+        width: "100%",
+        height: "100%",
     },
 });

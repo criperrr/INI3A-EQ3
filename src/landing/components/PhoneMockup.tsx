@@ -13,18 +13,32 @@ interface PhoneMockupProps {
     theme: SemanticTheme;
 }
 
-type ScreenTab = "cart" | "scanner" | "product" | "map";
+type ScreenTab = "home" | "cart" | "search" | "product" | "profile" | "scanner" | "settings";
 
 export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
-    const [activeTab, setActiveTab] = useState<ScreenTab>("cart");
+    const [activeTab, setActiveTab] = useState<ScreenTab>("home");
     const { width } = Dimensions.get("window");
     const isMobile = width < 480;
 
-    const prints = {
-        cart: require("../assets/prints/print-cart.jpg"),
-        scanner: require("../assets/prints/print-scanner.jpg"),
+    const prints: Record<ScreenTab, any> = {
+        home: require("../assets/prints/print-home.jpg"),
+        cart: require("../assets/prints/print-cart.png"),
+        search: require("../assets/prints/print-search.jpg"),
         product: require("../assets/prints/print-product.jpg"),
+        profile: require("../assets/prints/print-profile.jpg"),
+        scanner: require("../assets/prints/print-scanner.jpg"),
+        settings: require("../assets/prints/print-settings.jpg"),
     };
+
+    const tabs: { key: ScreenTab; label: string }[] = [
+        { key: "home", label: "🏠 Início & Radar" },
+        { key: "cart", label: "🛒 Otimizador" },
+        { key: "search", label: "🏷️ Catálogo" },
+        { key: "product", label: "🔍 Menor Preço" },
+        { key: "profile", label: "🏆 Perfil & XP" },
+        { key: "scanner", label: "📸 Scanner" },
+        { key: "settings", label: "⚙️ 2FA & Ajustes" },
+    ];
 
     return (
         <View style={styles.wrapper}>
@@ -38,103 +52,35 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
                     },
                 ]}
             >
-                <TouchableOpacity
-                    style={[
-                        styles.tabBtn,
-                        activeTab === "cart" && [
-                            styles.tabBtnActive,
-                            { backgroundColor: theme.accent },
-                        ],
-                    ]}
-                    onPress={() => setActiveTab("cart")}
-                >
-                    <Text
-                        style={[
-                            styles.tabBtnText,
-                            {
-                                color:
-                                    activeTab === "cart"
-                                        ? "#000000"
-                                        : theme.text.secondary,
-                            },
-                        ]}
-                    >
-                        🛒 Carrinho & Rotas
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[
-                        styles.tabBtn,
-                        activeTab === "scanner" && [
-                            styles.tabBtnActive,
-                            { backgroundColor: theme.accent },
-                        ],
-                    ]}
-                    onPress={() => setActiveTab("scanner")}
-                >
-                    <Text
-                        style={[
-                            styles.tabBtnText,
-                            {
-                                color:
-                                    activeTab === "scanner"
-                                        ? "#000000"
-                                        : theme.text.secondary,
-                            },
-                        ]}
-                    >
-                        📸 Scanner de Gôndola
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[
-                        styles.tabBtn,
-                        activeTab === "product" && [
-                            styles.tabBtnActive,
-                            { backgroundColor: theme.accent },
-                        ],
-                    ]}
-                    onPress={() => setActiveTab("product")}
-                >
-                    <Text
-                        style={[
-                            styles.tabBtnText,
-                            {
-                                color:
-                                    activeTab === "product"
-                                        ? "#000000"
-                                        : theme.text.secondary,
-                            },
-                        ]}
-                    >
-                        🔍 Menor Preço Local
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[
-                        styles.tabBtn,
-                        activeTab === "map" && [
-                            styles.tabBtnActive,
-                            { backgroundColor: theme.accent },
-                        ],
-                    ]}
-                    onPress={() => setActiveTab("map")}
-                >
-                    <Text
-                        style={[
-                            styles.tabBtnText,
-                            {
-                                color:
-                                    activeTab === "map" ? "#000000" : theme.text.secondary,
-                            },
-                        ]}
-                    >
-                        🗺️ Radar 15km
-                    </Text>
-                </TouchableOpacity>
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab.key;
+                    return (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={[
+                                styles.tabBtn,
+                                isActive && [
+                                    styles.tabBtnActive,
+                                    { backgroundColor: theme.accent },
+                                ],
+                            ]}
+                            onPress={() => setActiveTab(tab.key)}
+                        >
+                            <Text
+                                style={[
+                                    styles.tabBtnText,
+                                    {
+                                        color: isActive
+                                            ? "#000000"
+                                            : theme.text.secondary,
+                                    },
+                                ]}
+                            >
+                                {tab.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
 
             {/* Smartphone Frame */}
@@ -157,77 +103,11 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
 
                 {/* Display Area */}
                 <View style={styles.phoneScreen}>
-                    {activeTab !== "map" ? (
-                        <Image
-                            source={prints[activeTab as "cart" | "scanner" | "product"]}
-                            style={styles.printImage}
-                            resizeMode="cover"
-                        />
-                    ) : (
-                        /* Radar 15km Map Screen Simulation with Yellow/Gold Theme */
-                        <View style={styles.mapContainer}>
-                            <View style={styles.mapCanvas}>
-                                <View
-                                    style={[styles.userGpsPin, { borderColor: theme.accent }]}
-                                >
-                                    <View
-                                        style={[
-                                            styles.userGpsCenter,
-                                            { backgroundColor: theme.accent },
-                                        ]}
-                                    />
-                                    <View
-                                        style={[
-                                            styles.radarWave,
-                                            { borderColor: theme.accent + "40" },
-                                        ]}
-                                    />
-                                </View>
-
-                                {/* Market Pin 1 */}
-                                <View style={[styles.marketPin, { top: 70, left: 40, backgroundColor: theme.accent }]}>
-                                    <Text style={styles.marketPinText}>Atacadão • 1.2km</Text>
-                                </View>
-
-                                {/* Market Pin 2 */}
-                                <View style={[styles.marketPin, { top: 140, right: 35, backgroundColor: theme.accent }]}>
-                                    <Text style={styles.marketPinText}>Assaí • 2.8km</Text>
-                                </View>
-
-                                {/* Market Pin 3 */}
-                                <View style={[styles.marketPin, { bottom: 80, left: 70, backgroundColor: theme.accent }]}>
-                                    <Text style={styles.marketPinText}>Sonda • 3.5km</Text>
-                                </View>
-                            </View>
-
-                            <View
-                                style={[
-                                    styles.mapBottomCard,
-                                    {
-                                        backgroundColor: theme.isDark ? "#161B22" : "#FFFFFF",
-                                        borderColor: theme.accent + "50",
-                                    },
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.mapCardTitle,
-                                        { color: theme.isDark ? "#FFFFFF" : "#111827" },
-                                    ]}
-                                >
-                                    📍 8 Mercados no Raio de 15km
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.mapCardDesc,
-                                        { color: theme.text.secondary },
-                                    ]}
-                                >
-                                    Cálculo geodésico Haversine e rotas inteligentes com integração direta ao Waze e Google Maps.
-                                </Text>
-                            </View>
-                        </View>
-                    )}
+                    <Image
+                        source={prints[activeTab]}
+                        style={styles.printImage}
+                        resizeMode="cover"
+                    />
                 </View>
 
                 {/* Home indicator bar */}
@@ -319,76 +199,6 @@ const styles = StyleSheet.create({
     printImage: {
         width: "100%",
         height: "100%",
-    },
-    mapContainer: {
-        flex: 1,
-        justifyContent: "space-between",
-        padding: 12,
-        backgroundColor: "#0D1117",
-    },
-    mapCanvas: {
-        flex: 1,
-        position: "relative",
-        borderRadius: 20,
-        backgroundColor: "#111827",
-        borderWidth: 1,
-        borderColor: "#1F2937",
-        overflow: "hidden",
-    },
-    userGpsPin: {
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        marginLeft: -12,
-        marginTop: -12,
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        borderWidth: 2,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    userGpsCenter: {
-        width: 8,
-        height: 8,
-        borderRadius: 4,
-    },
-    radarWave: {
-        position: "absolute",
-        width: 140,
-        height: 140,
-        borderRadius: 70,
-        borderWidth: 1,
-    },
-    marketPin: {
-        position: "absolute",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-    },
-    marketPinText: {
-        color: "#030712",
-        fontSize: 10,
-        fontWeight: "800",
-    },
-    mapBottomCard: {
-        padding: 14,
-        borderRadius: 16,
-        borderWidth: 1,
-        marginTop: 10,
-    },
-    mapCardTitle: {
-        fontSize: 13,
-        fontWeight: "800",
-        marginBottom: 4,
-    },
-    mapCardDesc: {
-        fontSize: 11,
-        lineHeight: 16,
     },
     phoneHomeBar: {
         width: 120,
