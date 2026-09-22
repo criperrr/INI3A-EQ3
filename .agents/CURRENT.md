@@ -23,7 +23,12 @@ Executive summary and direct file index for token-efficient agent navigation. Re
      - **Camada 1 (`pr-gatekeeper.yml`):** SLA < 3 min. Lint de regex de branch, validação de commits, `npm run typecheck`, SAST com Semgrep e barreira de testes unitários.
      - **Camada 2 (`staging.yml`):** Acionado por push em `dev`. Executa testes de concorrência, gera build Android com `devFlavor` (`com.presco.app.dev`, "Presco (Dev)", `presco-dev`, API de staging) e publica APK como artefato.
      - **Camada 3 (`production.yml`):** Acionado por push em `main`. Validação de contrato, deploy seguro no servidor remoto de produção via `scripts/deploy_remote.sh`, compilação do APK `prodFlavor` (`com.presco.app`, "Presco", API de produção) e publicação de artefato.
-     - **Camada 4 (`nightly-audit.yml`):** Cron diário às 02:00 UTC na branch `dev`. Executa testes de mutação/concorrência, carga real k6 e abertura automática de Issue no GitHub em caso de falha.
+     - **Camada 4 (`nightly-audit.yml`):** Cron diário às 02:00 UTC na branch `dev`. Executa testes em ambiente autocontido via Docker (independente do servidor CTI), simulação de carga real k6 com think time, testes de concorrência/resiliência, **acúmulo histórico de métricas de performance (`benchmark_history.json`)**, upload de artefatos com retenção de 90 dias (`report.html`, `summary.json`, logs) e abertura automática de Issue em caso de falha.
+  4. **Padronização e Higienização de Branches no Repositório Remoto:**
+     - Comprovado que 100% dos commits de `tests` foram incorporados a `dev` sem perda de histórico.
+     - A branch legada `tests` foi completamente removida do remoto e do local.
+     - O repositório opera exclusivamente sob o padrão de mercado com **`main`** (produção) e **`dev`** (desenvolvimento/staging).
+     - Todas as novas tarefas nascem como `feat/<nome>` a partir de `dev`, abrem Pull Request apontando para `dev` e sofrem squash merge.
   4. **Suíte de Testes de Concorrência & Condições de Corrida (`tests/concurrency/race_conditions.test.ts`):**
      - 4 cenários profundos: Rate Limiter atômico com 50 requisições simultâneas, Quorum de 25 votos simultâneos sem lost updates, Prevenção de saldo negativo e duplicidade em compra de cosméticos, e Revogação atômica concorrente de tokens JTI.
      - Adicionado script `"test:concurrency"` ao `package.json` e integrado ao `npm test`.

@@ -3453,3 +3453,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Repositório completamente blindado contra regressões, com governança remota no GitHub, segregação de builds mobile e esteira de CI/CD em 4 camadas orientada a custo, velocidade e rigor.
+
+## `2026-09-21 23:54` - `ci(actions)`: Hardening de runners, acúmulo de métricas no nightly audit e expurgo da branch tests
+
+- **Description:** Implementado acúmulo sistemático de relatórios e métricas no workflow noturno (`nightly-audit.yml`) com salvamento de histórico JSON (`benchmark_history.json`), relatórios HTML e logs com retenção de 90 dias. Corrigida a configuração de SDK Android em `staging.yml` e `production.yml` usando o path nativo do Ubuntu runner. Restringido o `deploy.yml` exclusivamente à branch `main`. Comprovado que a branch `tests` foi 100% incorporada à `dev` e expurgada do repositório remoto e local, consolidando a esteira com `main` e `dev`.
+- **Files Modified:**
+  - `.github/workflows/nightly-audit.yml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.github/workflows/deploy.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Repositório operando exclusivamente com as branches `main` e `dev`, relatórios de performance acumulados de forma autônoma e workflows resilientes.
