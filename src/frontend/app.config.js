@@ -43,6 +43,7 @@ module.exports = ({ config }) => {
       ...config.extra,
       appVariant,
       isDev,
+      apiUrl: isDev ? "https://eq.projetoscti.com.br/26-presco-dev" : "https://eq.projetoscti.com.br/26-presco",
     },
   };
 };
