@@ -299,3 +299,16 @@ After any file modification or addition:
   - Diretórios estruturais de teste: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
   - **Regra Inegociável:** Modelos e agentes de IA **NÃO têm permissão** para relaxar thresholds de performance (SLAs de latência/erros no k6), alterar asserções para falsos-positivos ou desativar steps de validação para forçar a passagem de pipelines de CI. Se um teste falhar, a causa raiz na implementação deve ser investigada e corrigida.
 
+### 8.5. Axioma de Títulos e Descrições de Pull Requests (PRs)
+- **Estilo Idêntico a Mensagens de Commit (Proibição de Slop de IA):** Expressamente proibido o uso de templates corporativos, prolixos e gerados por IA em títulos ou bodies de PR (sem `### Resumo`, sem listas com negrito `**`, sem emojis, sem tabelas e sem qualquer formatação de markdown).
+- **Regras Estritas de Escrita:**
+  - **Idioma:** Exclusivamente em inglês (`en-US`).
+  - **Caixa:** Totalmente em minúsculas (`lowercase`), tanto no título quanto no `--body`.
+  - **Sem Markdown:** Texto puro, corrido, sem headers, bullet points rebuscados ou negrito.
+  - **Tom:** Informal, direto e despojado ("meio jogado"), mas com vocabulário tecnicamente denso e preciso (estilo clássico de engenheiro sênior no terminal).
+- **Exemplo de Título:**
+  `feat(ci): add conditional expo bundle check to gatekeeper`
+- **Exemplo de Body (`--body`):**
+  `added conditional expo export step in pr-gatekeeper.yml that only triggers when src/frontend files are changed, bumped semver patch to 1.2.2 and cleaned up tests branch from workflows`
+
+

@@ -19,3 +19,10 @@
 - Cobertura de código mínima de 80% nos arquivos modificados/adicionados.
 - ZONAS PROTEGIDAS: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
 - Proibido para IAs alterar asserções de teste ou relaxar thresholds de SLA de performance para burlar a esteira de CI. Se houver falha, conserte a implementação!
+
+## 5. Axioma de Títulos e Descrições de Pull Requests (PRs)
+- Estilo estritamente idêntico a mensagens/descrições de commit de desenvolvedores reais:
+  - Idioma: Exclusivamente em inglês (`en-US`).
+  - Formato: Letras minúsculas (`lowercase`), sem markdown, sem bullet points rebuscados, sem negrito, sem emojis.
+  - Tom: Meio jogado e informal, direto ao ponto, mas tecnicamente denso e bom.
+  - Proibido qualquer formatação corporativa ou prolixa de IA (ex: "### Resumo da Alteração").
