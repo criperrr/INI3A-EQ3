@@ -3724,3 +3724,21 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/landing/components/SecurityProtectionSection.tsx`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Landing page now showcases authentic, real-world user interface screenshots throughout the entire page experience.
+
+## `2026-09-22 12:25` - `feat(landing)`: Adapt landing page components to ultra high-resolution screenshots
+
+- **Description:** Renamed and standardized the user's high-resolution screenshots into semantic descriptive filenames (`print-home.jpg`, `print-cart.png`, `print-product.jpg`, `print-profile.jpg`, `print-search.jpg`, `print-settings.jpg`). Cropped the stitching tool watermark from `print-cart.png` using Swift `NSImage`/`CGImage` to maintain a clean native UI without distortion. Adapted `PhoneMockup.tsx`, `ScreenshotsGallerySection.tsx`, `HowItWorksSection.tsx`, and `SecurityProtectionSection.tsx` to display all 7 authentic application screens in crisp quality.
+- **Files Modified:**
+  - `src/landing/assets/prints/print-home.jpg`
+  - `src/landing/assets/prints/print-cart.png`
+  - `src/landing/assets/prints/print-product.jpg`
+  - `src/landing/assets/prints/print-profile.jpg`
+  - `src/landing/assets/prints/print-search.jpg`
+  - `src/landing/assets/prints/print-settings.jpg`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Complete visual fidelity across all landing sections with zero typecheck errors and full responsiveness. No spontaneous commit performed per Rule 6.1.

@@ -7,19 +7,44 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
-- **Integração Completa de Prints Oficiais do Usuário em Toda a Landing Page (`src/landing`):**
-  1. **Capturas Autênticas Incorporadas em Alta Resolução:**
-     - `print-home.jpg`: Feed de Início com carrossel "Economia Inteligente", ofertas no Raio de 15km e produtos reais (Água Lindoya R$ 0,90, Nescau R$ 0,75, Negresco R$ 2,00).
-     - `print-profile.jpg`: Perfil Gamificado com Usuário Comum, Nível 3 Detetive de Ofertas, 460 XP, 7/15 Conquistas (Pioneiro, Caçador de Preços) e Heatmap Semanal de Contribuições.
-     - `print-settings.jpg`: Configurações nativas do aplicativo comprovando 2FA via OTP, Perfil Privado, Modo Escuro/AMOLED, Telemetria Anônima e Exclusão de Conta LGPD.
-     - `print-cart.jpg`, `print-scanner.jpg`, `print-product.jpg`: Otimizador Multilojas, Scanner Óptico EAN-13 e Menor Preço Local com Quórum Comunitário.
-  2. **Refatoração dos Componentes Visuais com as Novas Telas:**
-     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx): Mockup interativo de smartphone atualizado com 6 abas dinâmicas (`Início & Radar`, `Otimizador`, `Menor Preço`, `Perfil & XP`, `Scanner`, `2FA & Ajustes`), iniciando na tela Home autêntica do app.
-     - [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx): Galeria expandida para grade responsiva de 6 cards (2x3 no desktop) detalhando cada recurso com tags de valor.
-     - [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx): Cada um dos 3 passos da jornada agora possui moldura com captura real da respectiva funcionalidade (`print-home.jpg`, `print-scanner.jpg`, `print-cart.jpg`).
-     - [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx): Card institucional de governança com prova visual das configurações nativas de privacidade (`print-settings.jpg`).
-  3. **Qualidade & Estabilidade:**
-     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor ativo em `http://localhost:8082`.
+- **Deploy e Hospedagem Completa do Servidor no Ambiente Oficial CTI (`ra2457045`):**
+  1. **Configuração e Autenticação SSH/SFTP:**
+     - Chave privada OpenSSH salva com permissões estritas `600` em [`deploy/cti.key`](file:///Users/aventureiromax/INI3A-EQ3/deploy/cti.key).
+     - Conexão autenticada com sucesso via porta `4026` em `projetoscti.com.br` para o usuário `ra2457045`.
+  2. **Parametrização de Portas e Proxy Reverso Apache:**
+     - Identificada a porta exclusiva primária `59057` via ferramenta oficial do CTI (`https://vitor.projetoscti.com.br/portas.php?ra=2457045`), agora confirmada como `EM USO (Por você)`.
+     - [`ecosystem.config.cjs`](file:///Users/aventureiromax/INI3A-EQ3/ecosystem.config.cjs): Parametrizado para ler `SERVER_PORT` dinamicamente do ambiente, subindo o backend em `127.0.0.1:59057`.
+     - [`deploy/deploy.sh`](file:///Users/aventureiromax/INI3A-EQ3/deploy/deploy.sh): Sincronização automática do arquivo `.htaccess` para `/home/ra2457045/public_html/.htaccess` com proxy reverso transparente (`RewriteRule ^(.*)$ http://127.0.0.1:59057/$1 [P,L]`).
+  3. **Conexão de Banco de Dados, Redis e Migrações:**
+     - Backend conectado com sucesso ao banco de dados PostgreSQL com PostGIS ativo (`26-presco` na porta `54432`).
+     - Migrações, seeds idempotentes e realocação de 193 mercados executadas com sucesso.
+     - Sessões e cache conectados ao Upstash Redis com fallback seguro para `InMemoryStore`.
+  4. **Rotas e Validação Pública:**
+     - Adicionada rota raiz em [`src/backend/src/app.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/app.ts) atendendo `/`, `/index.html` e `/index.php` com metadados e diretório da API.
+     - Endpoints públicos testados e 100% funcionais em HTTPS:
+       - `https://ra.projetoscti.com.br/2457045/` (200 OK, metadados da API)
+       - `https://ra.projetoscti.com.br/2457045/health` (200 OK, `database: connected`, `redis: connected`)
+       - `https://ra.projetoscti.com.br/2457045/products` (200 OK, listagem de produtos)
+       - `https://ra.projetoscti.com.br/2457045/markets` (200 OK, catálogo geodésico)
+       - `https://ra.projetoscti.com.br/2457045/api/v1` (200 OK)
+     - Gerenciador de processos PM2 daemonizado e persistido com `pm2 save`.
+- **Integração de Capturas de Tela Oficiais em Alta Resolução (`src/landing`):**
+  1. **Padronização e Otimização de Nomes dos Ativos:**
+     - Arquivos brutos em ultra resolução renomeados com nomenclatura semântica descritiva:
+       - `print-home.jpg` (1206x3644): Feed inicial com radar geodésico de 15km e ofertas inteligentes.
+       - `print-cart.png` (1206x4423): Otimizador multilojas e cálculo de combustível, higienizado via script Swift (`NSImage`/`CGImage`) para remover marca d'água externa de costura ("Tailor 3 Screenshots Stitched") mantendo intacta a navegação nativa.
+       - `print-search.jpg` (1206x4393): Catálogo de produtos com busca dinâmica e categorias.
+       - `print-product.jpg` (1206x5336): Detalhes de produto, comparativo entre redes, histórico de preços e votos da comunidade.
+       - `print-profile.jpg` (1206x3877): Perfil gamificado com nível 3 Detetive de Ofertas, 460 XP, conquistas e heatmap semanal.
+       - `print-settings.jpg` (1206x6436): Central de segurança e privacidade com 2FA ativo, modo AMOLED, perfil anônimo e exclusão LGPD.
+       - `print-scanner.jpg`: Scanner óptico EAN-13 via câmera.
+  2. **Adaptação Completa dos Componentes da Landing Page:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx): Adicionada a aba interativa de Catálogo (`search`) e mapa completo das 7 telas em alta definição.
+     - [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx): Grade responsiva atualizada com `print-cart.png` e `print-search.jpg`.
+     - [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx): Passo 03 agora referencia `print-cart.png` em alta definição.
+     - [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx): Moldura de configurações alimentada com `print-settings.jpg`.
+  3. **Qualidade & Validação:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor Metro ativo e respondendo na porta 8082.
 - **Correção de Encavalamento e Alinhamento no Rodapé/Menu dos Cards da Lista de Compras (`v1.3.7`):**
   1. **Diagnóstico do Encavalamento Horizontal:**
      - No componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), a barra inferior de métricas (`cardFooter`) continha três colunas sem `flex: 1` e sem delimitadores (`footerCol`), fazendo com que textos em caixa alta extensos ("SUBTOTAL DE PRODUTOS" e "CUSTO DE DESLOCAMENTO") colidissem sem qualquer espaçamento horizontal (`SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P...`), empurrando a terceira coluna ("TOTAL DA PARADA" e o valor "R$ 10,14") para fora da tela.
