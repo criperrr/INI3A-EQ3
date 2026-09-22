@@ -6,6 +6,7 @@ import productRouter from "@/modules/product/product.routes";
 import ocurrencyRouter from "@/modules/ocurrency/ocurrency.routes";
 import marketRouter from "@/modules/market/market.routes";
 import customizationRouter from "@/modules/customization/customization.routes";
+import cartRouter from "@/modules/cart/cart.routes";
 
 import { checkDatabaseHealth } from "@/shared/database/database";
 import { redisClient } from "@/shared/redis/server";
@@ -81,6 +82,7 @@ app.use("/ocurrency", ocurrencyRouter);
 app.use("/markets", marketRouter);
 app.use("/customizations", customizationRouter);
 app.use("/images", imageRouter);
+app.use("/cart", cartRouter);
 
 app.use(errorHandler);
 
