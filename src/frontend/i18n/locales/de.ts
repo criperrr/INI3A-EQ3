@@ -723,6 +723,7 @@ export const de: TranslationSchema = {
     savingsBannerSingle: "Alles bei {store} zu kaufen ist die wirtschaftlichste Option!",
     grocerySubtotal: "Zwischensumme Produkte",
     travelCost: "Fahrt- & Kraftstoffkosten",
+    stopTotal: "Stopp-Gesamt",
     totalCombined: "Gesamtausgaben (Waren + Fahrt)",
     netSavings: "Netto-Ersparnis",
     singleStoreBest: "Bester Einzelsupermarkt",

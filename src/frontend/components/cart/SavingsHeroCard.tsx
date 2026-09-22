@@ -83,7 +83,10 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
       {/* Metrics Row */}
       <View style={[styles.metricsRow, { borderTopColor: semantic.colors.border.default }]}>
         <View style={styles.metricCol}>
-          <Text style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.grocerySubtotal")}
           </Text>
           <Text style={[styles.metricValue, { color: semantic.colors.text.primary }]}>
@@ -94,7 +97,10 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
         <View style={[styles.dividerVertical, { backgroundColor: semantic.colors.border.default }]} />
 
         <View style={styles.metricCol}>
-          <Text style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.travelCost")}
           </Text>
           <Text style={[styles.metricValue, { color: semantic.colors.text.secondary }]}>
@@ -105,7 +111,10 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
         <View style={[styles.dividerVertical, { backgroundColor: semantic.colors.border.default }]} />
 
         <View style={styles.metricCol}>
-          <Text style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.metricLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.totalCombined")}
           </Text>
           <Text style={[styles.metricValueTotal, { color: accent }]}>
@@ -189,13 +198,18 @@ const styles = StyleSheet.create({
   metricCol: {
     flex: 1,
     alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
   },
   metricLabel: {
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+    lineHeight: 13,
     marginBottom: 4,
+    textAlign: "center",
+    minHeight: 26,
   },
   metricValue: {
     fontSize: 15,

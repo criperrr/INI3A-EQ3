@@ -723,6 +723,7 @@ export const zh: TranslationSchema = {
     savingsBannerSingle: "全部在 {store} 采购是最省心划算的选择！",
     grocerySubtotal: "商品总额",
     travelCost: "预估交通油费",
+    stopTotal: "本站合计",
     totalCombined: "总支出（商品 + 油费）",
     netSavings: "净节省金额",
     singleStoreBest: "最佳单家超市",

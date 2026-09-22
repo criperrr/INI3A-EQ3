@@ -721,6 +721,7 @@ export interface TranslationSchema {
     savingsBannerSingle: string;
     grocerySubtotal: string;
     travelCost: string;
+    stopTotal: string;
     totalCombined: string;
     netSavings: string;
     singleStoreBest: string;

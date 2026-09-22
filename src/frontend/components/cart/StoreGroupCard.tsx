@@ -222,9 +222,20 @@ export const StoreGroupCard = memo(function StoreGroupCard({
       </View>
 
       {/* Card Footer Summary */}
-      <View style={[styles.cardFooter, { backgroundColor: semantic.colors.surface.input }]}>
+      <View
+        style={[
+          styles.cardFooter,
+          {
+            backgroundColor: semantic.colors.surface.input,
+            borderTopColor: semantic.colors.border.default,
+          },
+        ]}
+      >
         <View style={styles.footerCol}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.grocerySubtotal")}
           </Text>
           <Text style={[styles.footerValue, { color: semantic.colors.text.primary }]}>
@@ -232,8 +243,13 @@ export const StoreGroupCard = memo(function StoreGroupCard({
           </Text>
         </View>
 
+        <View style={[styles.footerDivider, { backgroundColor: semantic.colors.border.default }]} />
+
         <View style={styles.footerCol}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
             {t("cart.travelCost")}
           </Text>
           <Text style={[styles.footerValue, { color: semantic.colors.text.secondary }]}>
@@ -241,9 +257,14 @@ export const StoreGroupCard = memo(function StoreGroupCard({
           </Text>
         </View>
 
-        <View style={[styles.footerCol, { alignItems: "flex-end" }]}>
-          <Text style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}>
-            Total da Parada
+        <View style={[styles.footerDivider, { backgroundColor: semantic.colors.border.default }]} />
+
+        <View style={styles.footerCol}>
+          <Text
+            style={[styles.footerLabel, { color: semantic.colors.text.tertiary }]}
+            numberOfLines={2}
+          >
+            {t("cart.stopTotal")}
           </Text>
           <Text style={[styles.footerValueTotal, { color: accent }]}>
             {formattedTotal}
@@ -465,28 +486,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   footerCol: {
-    alignItems: "flex-start",
-    gap: 3,
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    gap: 4,
   },
   footerLabel: {
     fontSize: 10,
     fontWeight: "600",
     textTransform: "uppercase",
-    letterSpacing: 0.4,
-    lineHeight: 14,
+    letterSpacing: 0.3,
+    lineHeight: 13,
+    textAlign: "center",
+    minHeight: 26,
   },
   footerValue: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
     lineHeight: 18,
+    textAlign: "center",
   },
   footerValueTotal: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
-    lineHeight: 20,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  footerDivider: {
+    width: 1,
+    height: 28,
   },
   modalOverlay: {
     flex: 1,

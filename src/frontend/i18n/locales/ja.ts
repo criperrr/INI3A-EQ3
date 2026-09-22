@@ -723,6 +723,7 @@ export const ja: TranslationSchema = {
     savingsBannerSingle: "{store} でまとめて購入するのが最もお得で便利です！",
     grocerySubtotal: "商品小計",
     travelCost: "移動・ガソリン費用",
+    stopTotal: "店舗合計",
     totalCombined: "総出費（商品 ＋ ガソリン代）",
     netSavings: "純節約額",
     singleStoreBest: "最安の単独店舗",
