@@ -1,9 +1,15 @@
-name: Staging Pipeline (Post-Merge in tests/dev)
+name: Staging Pipeline (Post-Merge in dev)
 
 on:
   push:
     branches: [dev]
   workflow_dispatch:
+    inputs:
+      build_apk:
+        description: "Compilar APK completo de staging (Gradle)"
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: staging-pipeline
@@ -11,10 +17,10 @@ concurrency:
 
 jobs:
   concurrency_and_audit:
-    name: Concurrency Tests & Staging Validation
+    name: Concurrency & Robust Test Validation
     runs-on: ubuntu-latest
     environment: staging
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout Código
@@ -32,17 +38,22 @@ jobs:
       - name: Validar Tipagem (Typecheck)
         run: npm run typecheck
 
+      - name: Executar Suíte Completa de Testes
+        run: npm test
+
       - name: Executar Testes de Concorrência & Condições de Corrida
         run: |
           echo "Executando testes de concorrência e race conditions..."
           npm run test:concurrency
 
   build_staging_apk:
-    name: Build Mobile App (devFlavor / Staging)
+    name: Build Mobile App (devFlavor / Staging - Manual)
     needs: [concurrency_and_audit]
+    if: github.event_name == 'workflow_dispatch' && (inputs.build_apk == true || inputs.build_apk == 'true')
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 40
+
 
     steps:
       - name: Checkout Repositório
@@ -59,6 +70,9 @@ jobs:
         with:
           distribution: "temurin"
           java-version: "17"
+
+      - name: Configurar Cache do Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Configurar Android SDK
         run: |
