@@ -2,7 +2,7 @@ name: Staging Pipeline (Post-Merge in tests/dev)
 
 on:
   push:
-    branches: [tests, dev]
+    branches: [dev]
   workflow_dispatch:
 
 concurrency:
