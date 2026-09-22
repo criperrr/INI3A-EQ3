@@ -3689,3 +3689,38 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/landing/components/ScreenshotsGallerySection.tsx`
   - `src/landing/LandingPage.tsx`
 - **Impact / Next Steps:** Landing page delivers top-tier SaaS elegance and community food warmth, bundled and live on http://localhost:8082.
+
+## `2026-09-22 12:08` - `fix(cart)`: Corrigir encavalamento e alinhamento do menu de métricas nos cards de supermercado
+
+- **Description:** No componente StoreGroupCard, a barra inferior de métricas agrupava os subtotais e custos de deslocamento sem flex: 1, fazendo com que rótulos longos colidissem horizontalmente ("SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P..."). O footer foi reestruturado com colunas flex: 1 balanceadas, divisores verticais sutis, labels com minHeight e quebra em até 2 linhas centralizadas, mantendo todos os valores perfeitamente nivelados na horizontal. Adicionada também a chave de tradução i18n stopTotal nos 7 idiomas suportados e alinhamento equivalente nas métricas do SavingsHeroCard.
+- **Files Modified:**
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/cart/SavingsHeroCard.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Eliminação total do encavalamento e cortes de texto no carrinho. Layout perfeitamente simétrico e espaçado em qualquer resolução e idioma.
+
+## `2026-09-22 12:08` - `feat(landing)`: Integrate user-uploaded authentic mobile app prints across landing page
+
+- **Description:** Integrated newly uploaded authentic screenshots of the Presco mobile application directly into the landing page components. Added `print-home.jpg` (Home feed with 15km radar and smart grocery deals), `print-profile.jpg` (Gamified profile with Offer Detective level 3, 460 XP, achievements and GitHub-style contribution heatmap), and `print-settings.jpg` (Native settings verifying 2FA, private profile, AMOLED mode, and LGPD data deletion). Updated `PhoneMockup.tsx` with 6 interactive tabs defaulting to Home, expanded `ScreenshotsGallerySection.tsx` to a responsive 6-card grid, embedded step previews into `HowItWorksSection.tsx`, and added verifiable settings proof into `SecurityProtectionSection.tsx`.
+- **Files Modified:**
+  - `src/landing/assets/prints/print-home.jpg`
+  - `src/landing/assets/prints/print-profile.jpg`
+  - `src/landing/assets/prints/print-settings.jpg`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page now showcases authentic, real-world user interface screenshots throughout the entire page experience.

@@ -7,6 +7,30 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Integração Completa de Prints Oficiais do Usuário em Toda a Landing Page (`src/landing`):**
+  1. **Capturas Autênticas Incorporadas em Alta Resolução:**
+     - `print-home.jpg`: Feed de Início com carrossel "Economia Inteligente", ofertas no Raio de 15km e produtos reais (Água Lindoya R$ 0,90, Nescau R$ 0,75, Negresco R$ 2,00).
+     - `print-profile.jpg`: Perfil Gamificado com Usuário Comum, Nível 3 Detetive de Ofertas, 460 XP, 7/15 Conquistas (Pioneiro, Caçador de Preços) e Heatmap Semanal de Contribuições.
+     - `print-settings.jpg`: Configurações nativas do aplicativo comprovando 2FA via OTP, Perfil Privado, Modo Escuro/AMOLED, Telemetria Anônima e Exclusão de Conta LGPD.
+     - `print-cart.jpg`, `print-scanner.jpg`, `print-product.jpg`: Otimizador Multilojas, Scanner Óptico EAN-13 e Menor Preço Local com Quórum Comunitário.
+  2. **Refatoração dos Componentes Visuais com as Novas Telas:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx): Mockup interativo de smartphone atualizado com 6 abas dinâmicas (`Início & Radar`, `Otimizador`, `Menor Preço`, `Perfil & XP`, `Scanner`, `2FA & Ajustes`), iniciando na tela Home autêntica do app.
+     - [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx): Galeria expandida para grade responsiva de 6 cards (2x3 no desktop) detalhando cada recurso com tags de valor.
+     - [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx): Cada um dos 3 passos da jornada agora possui moldura com captura real da respectiva funcionalidade (`print-home.jpg`, `print-scanner.jpg`, `print-cart.jpg`).
+     - [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx): Card institucional de governança com prova visual das configurações nativas de privacidade (`print-settings.jpg`).
+  3. **Qualidade & Estabilidade:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor ativo em `http://localhost:8082`.
+- **Correção de Encavalamento e Alinhamento no Rodapé/Menu dos Cards da Lista de Compras (`v1.3.7`):**
+  1. **Diagnóstico do Encavalamento Horizontal:**
+     - No componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), a barra inferior de métricas (`cardFooter`) continha três colunas sem `flex: 1` e sem delimitadores (`footerCol`), fazendo com que textos em caixa alta extensos ("SUBTOTAL DE PRODUTOS" e "CUSTO DE DESLOCAMENTO") colidissem sem qualquer espaçamento horizontal (`SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P...`), empurrando a terceira coluna ("TOTAL DA PARADA" e o valor "R$ 10,14") para fora da tela.
+  2. **Refatoração para Distribuição Balanceada, Divisores e Alinhamento Simétrico:**
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx): `footerCol` atualizado com `flex: 1`, `alignItems: "center"`, `justifyContent: "center"`, `paddingHorizontal: 4` e `gap: 4`.
+     - Inseridos divisores verticais (`footerDivider`) de 28px de altura com `semantic.colors.border.default` entre as colunas, estabelecendo uma separação límpida e harmônica.
+     - `footerLabel` recebeu `textAlign: "center"`, `numberOfLines={2}` e `minHeight: 26` com `lineHeight: 13`. Isso garante que rótulos de 1 ou 2 linhas ocupem rigorosamente a mesma altura vertical, alinhando todos os valores numéricos (`footerValue` e `footerValueTotal`) na exata mesma linha horizontal.
+     - [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx): Aplicado o mesmo padrão de alinhamento com `numberOfLines={2}`, `minHeight: 26` e `paddingHorizontal: 4` nas colunas de métricas superiores.
+     - Internacionalização: Adicionada a chave `stopTotal` em `types.ts` e nos 7 idiomas do projeto (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`), eliminando o texto hardcoded em português.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.7` (`versionCode: 23`).
 - **Redesign da Landing Page: Fusão ClickUp (SaaS & Interatividade) + Too Good To Go (Comunidade & Alimentação) (`src/landing`):**
   1. **Atmosfera Visual Deep Forest & Warm Cream com Amarelo Oficial:**
      - Paleta combinando **Deep Forest Slate** (`#0A1612`, `#112620`, `#1D3F35`), **Modo AMOLED puro** (`#000000`, `#07120E`) e o **Modo Claro em tom Marfim/Creme acolhedor** (`#FBF9F4`, `#F2EDE3`, `#0D211A`), inspirado no Too Good To Go.
