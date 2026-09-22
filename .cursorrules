@@ -4,6 +4,7 @@
 - Todo commit DEVE seguir estritamente o formato: `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
 - Categorias válidas: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
 - Não realize commits espontâneos sem solicitação explícita do usuário.
+- **Isolamento por Chat (Commit & Push):** Ao receber pedido de commit ou push, commitar e enviar EXCLUSIVAMENTE os arquivos tocados ou criados na sessão do chat atual. É estritamente proibido `git add .` ou `git commit -a`. Deixe alterações de outros chats/sessões intocadas na working tree.
 
 ## 2. Axioma de Branches
 - Toda nova tarefa nasce OBRIGATORIAMENTE a partir de `dev`: `git checkout -b <categoria>/<nome-da-task> dev`.

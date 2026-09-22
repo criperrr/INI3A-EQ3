@@ -21,7 +21,7 @@
 
 ## User Preferences
 - [user] Prioridade para execucao cirurgica e conservacao de contexto de tokens → user-preferences.md
-- [user] Política estrita de Git: NUNCA dar git push ou commit automaticamente; somente sob solicitação explícita; manter trabalho em tests sem tocar na main → user-preferences.md
+- [user] Política estrita de Git: isolamento cirúrgico por chat (commitar e dar push estritamente nos arquivos do chat solicitante, ignorando outros chats); NUNCA dar push ou commit automaticamente; branches a partir de dev sem tocar na main → user-preferences.md
 
 ## Feedback
 - [feedback] Impedir auto-votacao de precos e corrigir consultas geograficas no backend → feedback-history.md

@@ -7,6 +7,14 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Política de Isolamento Estrito de Escopo por Chat para Commits e Push:**
+  1. **Regra de Isolamento Cirúrgico:**
+     - Quando o usuário solicitar comandos de commit ou push (ex: "commita", "dá push", "faça commit e push"), o agente deve comitar e subir **estritamente e exclusivamente os arquivos modificados ou criados na sessão do chat em que a ordem foi dada**.
+     - É terminantemente proibido o uso de `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
+     - O agente deve inspecionar os arquivos manipulados no chat atual e fazer `git add <arquivo1> <arquivo2> ...` apenas para esses arquivos específicos.
+     - Quaisquer alterações pendentes na working tree pertencentes a outros chats, sessões concorrentes ou tarefas paralelas devem permanecer ignoradas e intocadas (unstaged).
+  2. **Atualização da Governança Multi-Agente & Memória:**
+     - Atualizados [`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md) (Seções 6.1 e 8.1), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules) (Seção 1), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) (Seção 4), [`.agents/memory/user-preferences.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/user-preferences.md) e [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md).
 - **Correção da Exibição de Preço Unitário vs Subtotal no Carrinho & Preservação do Preço Cadastrado (`v1.3.4`):**
   1. **Diagnóstico da Causa Raiz do "Preço a R$ 20,00 a unidade":**
      - **Ambiguidade Visual no Card:** Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), o subtotal multiplicado (R$ 20,00 para 10 unidades de R$ 2,00) era exibido diretamente em negrito acima do seletor numérico `[-] 10 [+]` sem nenhum rótulo textual de "Total" ou "Subtotal", e o preço unitário na coluna esquerda não possuía o sufixo `/ un.`. O cérebro do usuário lia o destaque numérico `R$ 20,00` colado ao `10` como se fosse o preço por unidade.

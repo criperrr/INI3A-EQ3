@@ -3580,3 +3580,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/backend/src/shared/database/repositories/cart.repository.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Zero visual ambiguity between unit price and total cost. Real prices preserved consistently across online and fallback modes. Ready for commit upon user request.
+
+## `2026-09-22 10:46` - `docs(agents)`: Add strict per-chat isolation policy for git commits and pushes
+
+- **Description:** Added strict policy across all agent guidelines, memory indexes, and rules requiring that whenever a commit or push is requested by the user in a chat, the AI must strictly stage, commit, and push only the files modified or created within that specific chat session, completely ignoring and preserving changes from other chats or tasks in the working tree. Banned git add . and indiscriminate staging.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Agents will now execute surgical commits only for the scope of the active chat, avoiding accidental inclusion of parallel chat changes.
