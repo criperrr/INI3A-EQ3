@@ -3547,3 +3547,36 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** The home carousel now provides a more comprehensive overview of Presco features with direct 1-tap navigation and smooth auto-rotation.
+
+## `2026-09-22 09:30` - `feat(ui)`: add smart shopping list step to onboarding tutorial
+
+- **Description:** Refactored Presco's guided onboarding tutorial from 6 to 7 steps, adding the Smart Shopping List & Multi-Store Travel Optimizer as step 3. Designed a dedicated handcrafted doodle mockup showcasing multi-market distribution, fuel cost calculation, and net savings stamp. Fully integrated with theme tokens and localized into 7 languages. Bumped SemVer patch version to 1.3.3 (versionCode 19).
+- **Files Modified:**
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Tutorial now fully covers the newly launched shopping list and route optimization feature for first-time users and settings replay. All 30 unit/concurrency tests passing and 0 typecheck errors.
+
+## `2026-09-22 09:31` - `fix(cart)`: Disambiguate unit price vs subtotal and preserve estimated price
+
+- **Description:** Fixed price display confusion where 10 units of an item at R$ 2,00 appeared as "20 reais a unidade". Added explicit `/ un.` suffix to unit price and `Total (10x): R$ 20,00` label above the stepper in `StoreGroupCard.tsx`. Preserved real product price (`product.bestPrice` / `product.lastPrice`) when adding to cart from `productDetails.tsx`, storing `estimatedPrice` in `CartProductItem`. Replaced mathematical pseudo-random prices in `generateLocalFallbackOptimization` with `item.estimatedPrice`. Enhanced backend `CartService.optimizeCart` to expand candidate markets when local 15km radius lacks occurrences, preventing unnecessary `NotFoundError` fallback.
+- **Files Modified:**
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/src/shared/database/repositories/cart.repository.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Zero visual ambiguity between unit price and total cost. Real prices preserved consistently across online and fallback modes. Ready for commit upon user request.
