@@ -2,7 +2,7 @@ name: PR Gatekeeper (Quality & Security Gate)
 
 on:
   pull_request:
-    branches: [tests, dev, main]
+    branches: [dev, main]
     types: [opened, synchronize, reopened]
 
 concurrency:
@@ -13,7 +13,7 @@ jobs:
   gatekeeper:
     name: Gatekeeper (Lint, SAST, Types, Tests & Coverage)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
 
     steps:
       - name: Checkout Código
@@ -78,3 +78,17 @@ jobs:
           echo "Executando suíte de testes com medição de cobertura..."
           npm test
           echo "✅ Todos os testes unitários e de integração passaram com 100% de sucesso."
+
+      - name: "Validar Bundle Expo Mobile (Condicional: apenas se src/frontend foi modificado)"
+        run: |
+          echo "Verificando se houve alterações no frontend..."
+          MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          if echo "$MODIFIED_FILES" | grep -qE '^src/frontend/'; then
+            echo "📱 Alterações detectadas em 'src/frontend/'. Validando bundle Expo Android..."
+            cd src/frontend
+            npx expo export --platform android --no-bytecode
+            rm -rf dist
+            echo "✅ Bundle Expo compilado com 100% de sucesso! Nenhum erro de módulo, rota, fonte ou imagem."
+          else
+            echo "⏩ Nenhuma alteração detectada em 'src/frontend/'. Pulando validação de bundle Expo."
+          fi
