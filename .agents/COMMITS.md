@@ -3547,3 +3547,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** The home carousel now provides a more comprehensive overview of Presco features with direct 1-tap navigation and smooth auto-rotation.
+
+## `2026-09-22 10:44` - `feat(ui)`: add smart shopping list step to onboarding tutorial
+
+- **Description:** Refactored Presco's guided onboarding tutorial from 6 to 7 steps, adding the Smart Shopping List & Multi-Store Travel Optimizer as step 3. Designed a dedicated handcrafted doodle mockup showcasing multi-market distribution, fuel cost calculation, and net savings stamp. Fully integrated with theme tokens and localized into 7 languages. Bumped SemVer patch version to 1.3.3 (versionCode 19).
+- **Files Modified:**
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Tutorial now fully covers the newly launched shopping list and route optimization feature for first-time users and settings replay. All 30 unit/concurrency tests passing and 0 typecheck errors.

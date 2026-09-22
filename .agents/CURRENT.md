@@ -7,6 +7,21 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Refatoração do Tutorial Inicial com Lista de Compras Inteligente & Otimizador Multilojas (`v1.3.3`):**
+  1. **Expansão do Fluxo Guiado para 7 Etapas:**
+     - O tutorial inicial ([`OnboardingTutorialModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OnboardingTutorialModal.tsx)) foi expandido de 6 para 7 etapas interativas.
+     - A etapa **Lista de Compras Inteligente & Rota Econômica** foi introduzida na posição 3 (entre Leitor de Gôndola EAN e Mapa de Mercados).
+     - Sequência completa: 1. Buscar & Comparar → 2. Leitor de Gôndola EAN → 3. Lista de Compras & Rota (NOVO) → 4. Mapa de Mercados → 5. Registrar Preços → 6. Auditoria Comunitária → 7. Níveis & Customização.
+  2. **Mockup Doodle Artesanal com Tematização Monet:**
+     - Criado card doodle estilizado (`case 2`) representando o carrinho inteligente: cabeçalho com selo "Máxima Economia", divisão visual entre supermercados com checkmarks e preços comparativos, banner de rota veicular com combustível e carimbo destacado de economia líquida.
+     - Estilo 100% harmonizado com os tokens de design do Presco (`useTheme()`) suportando Light Mode, Dark Mode e AMOLED.
+     - Acessibilidade reforçada: adicionados `accessibilityLabel="Pular tutorial"` e `testID="dismiss-tutorial-button"`.
+  3. **Internacionalização Completa em 7 Idiomas:**
+     - Chaves tipadas `screen7Title`, `screen7Subtitle`, `screen7Badge` e `screen7Tip` adicionadas ao namespace `onboarding` em [`types.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/i18n/types.ts).
+     - Sincronização e tradução contextual nos 7 idiomas do Presco: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN` e `ja-JP`.
+     - Atualizada a chave `replayTutorialDesc` na tela de configurações para mencionar a lista de compras.
+  4. **Qualidade & Versionamento SemVer:**
+     - Sincronização SemVer de versão para `v1.3.3` (`versionCode: 19`), 0 erros no typecheck (`npm run typecheck`), 0 erros de lint (`npm run lint`) e 100% de aprovação na suíte de testes unitários e de concorrência (`30 passing`).
 - **Expansão dos Banners do Carrossel da Home com Navegação Interativa e i18n Completo (`v1.3.2`):**
   1. **Novos Banners Adicionados:**
      - **Banner 4 (Otimizador de Carrinho):** Destaque para a funcionalidade de otimização de compras e combustível, com rota direta para `/cart`.
