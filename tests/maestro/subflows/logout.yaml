@@ -1,0 +1,23 @@
+appId: com.presco.app
+---
+# Subflow: Logout
+# Opens Profile or Settings and triggers clean logout
+- tapOn:
+    id: "tab-profile"
+
+- scrollUntilVisible:
+    element:
+      id: "profile-logout-btn"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn:
+    id: "profile-logout-btn"
+
+# Confirm logout modal alert
+- tapOn: "Sair"
+
+- extendedWaitUntil:
+    visible:
+      id: "login-submit-btn"
+    timeout: 8000

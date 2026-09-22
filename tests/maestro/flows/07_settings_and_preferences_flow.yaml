@@ -1,0 +1,82 @@
+appId: com.presco.app
+name: "07 - Settings, Theming & Cache Management Flow"
+tags:
+  - settings
+  - theme
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_user.yaml"
+
+# Open Settings from Header
+- tapOn:
+    id: "header-settings-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "theme-dark-switch"
+    timeout: 8000
+
+# Toggle Theme Switch
+- tapOn:
+    id: "theme-dark-switch"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Toggle Theme Switch back
+- tapOn:
+    id: "theme-dark-switch"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Scroll down to Clear Cache & About
+- scrollUntilVisible:
+    element:
+      id: "btn-clear-cache"
+    direction: DOWN
+    timeout: 10000
+
+# Test Clear Cache
+- tapOn:
+    id: "btn-clear-cache"
+
+- extendedWaitUntil:
+    visible:
+      id: "modal-confirm-clear-cache"
+    timeout: 5000
+
+- tapOn:
+    id: "modal-confirm-clear-cache"
+
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
+
+# Open About Screen
+- scrollUntilVisible:
+    element:
+      id: "btn-about"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn:
+    id: "btn-about"
+
+- waitForAnimationToEnd:
+    timeout: 1500
+
+# Return to Settings then to Home
+- back
+- back

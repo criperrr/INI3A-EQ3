@@ -1,0 +1,34 @@
+appId: com.presco.app
+name: "08 - Map & Proximity Market Discovery Flow"
+tags:
+  - map
+  - markets
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_user.yaml"
+
+# Navigate to Map tab
+- tapOn:
+    id: "tab-map"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Swipe or scroll across market cards / legend
+- swipe:
+    direction: LEFT
+    duration: 300
+    optional: true
+
+# Return to Home tab
+- tapOn:
+    id: "tab-home"

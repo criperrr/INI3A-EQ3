@@ -1,0 +1,77 @@
+appId: com.presco.app
+name: "04 - Price Occurrence Registration Flow (+15 XP)"
+tags:
+  - prices
+  - contributions
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# Use Admin for 2FA-verified price submission bypass
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# Go to Search and select a product
+- tapOn:
+    id: "tab-search"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+- tapOn:
+    point: "50%, 35%"
+
+# Tap Informar Preço
+- extendedWaitUntil:
+    visible:
+      id: "btn-register-price"
+    timeout: 8000
+
+- tapOn:
+    id: "btn-register-price"
+
+# Verify on Register Product Screen
+- extendedWaitUntil:
+    visible:
+      id: "register-price-input"
+    timeout: 8000
+
+# Input price
+- tapOn:
+    id: "register-price-input"
+- inputText: "14,89"
+- hideKeyboard
+
+# Select market if list is loaded
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Tap Submit
+- scrollUntilVisible:
+    element:
+      id: "register-price-submit"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn:
+    id: "register-price-submit"
+
+# Dismiss confirmation alert if present
+- runFlow:
+    when:
+      visible: "Concluir"
+    commands:
+      - tapOn: "Concluir"
+
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"
