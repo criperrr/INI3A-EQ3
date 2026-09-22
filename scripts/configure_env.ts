@@ -16,8 +16,8 @@ const colors = {
 
 const ROOT_DIR = process.cwd();
 const FRONTEND_DIR = path.resolve(ROOT_DIR, "src/frontend");
-const FRONTEND_ENV_PATH = path.resolve(FRONTEND_DIR, ".env");
 const REMOTE_PROD_URL = "https://eq.projetoscti.com.br/26-presco";
+const REMOTE_DEV_URL = "https://eq.projetoscti.com.br/26-presco-dev";
 
 function askQuestion(query: string): Promise<string> {
   const rl = readline.createInterface({
@@ -106,6 +106,12 @@ async function main() {
     return;
   }
 
+  if (command === "dev" || command === "--dev" || command === "staging") {
+    writeFrontendEnv(REMOTE_DEV_URL);
+    await verifyAndReport(REMOTE_DEV_URL);
+    return;
+  }
+
   if (command === "local" || command === "--local" || command === "lan") {
     const url = `http://${detectedLanIp}:3333`;
     writeFrontendEnv(url);
@@ -143,29 +149,35 @@ async function main() {
   console.log(`🔍 URL Atual: ${colors.bold}${currentUrl}${colors.reset}\n`);
 
   console.log(`${colors.bold}Selecione a URL do Backend que o Frontend deve consumir:${colors.reset}\n`);
-  console.log(`  ${colors.bold}${colors.green}[1] 🌐 SERVIDOR REMOTO OFICIAL (CTI Produção)${colors.reset}`);
+  console.log(`  ${colors.bold}${colors.green}[1] 🌐 SERVIDOR REMOTO DE PRODUÇÃO (CTI Produção)${colors.reset}`);
   console.log(`      • ${colors.cyan}${REMOTE_PROD_URL}${colors.reset}`);
   console.log(`      • Funciona de qualquer lugar (4G, Wi-Fi escolar/residencial, emulador).\n`);
 
-  console.log(`  ${colors.bold}${colors.cyan}[2] ⚡ REDE LOCAL (LAN / Wi-Fi / Hotspot)${colors.reset}`);
+  console.log(`  ${colors.bold}${colors.magenta}[2] 🧪 SERVIDOR REMOTO DE DESENVOLVIMENTO (CTI Dev/Staging)${colors.reset}`);
+  console.log(`      • ${colors.cyan}${REMOTE_DEV_URL}${colors.reset}`);
+  console.log(`      • Backend dedicado para testes da equipe e homologação de features.\n`);
+
+  console.log(`  ${colors.bold}${colors.cyan}[3] ⚡ REDE LOCAL (LAN / Wi-Fi / Hotspot)${colors.reset}`);
   console.log(`      • ${colors.cyan}http://${detectedLanIp}:3333${colors.reset}`);
   console.log(`      • Testes locais no celular com backend rodando no seu computador.\n`);
 
-  console.log(`  ${colors.bold}${colors.yellow}[3] 💻 LOCALHOST (Simulador iOS / Emulador Android / Web)${colors.reset}`);
+  console.log(`  ${colors.bold}${colors.yellow}[4] 💻 LOCALHOST (Simulador iOS / Emulador Android / Web)${colors.reset}`);
   console.log(`      • ${colors.cyan}http://localhost:3333${colors.reset}`);
   console.log(`      • Desenvolvimento no mesmo computador sem celular físico.\n`);
 
-  console.log(`  ${colors.bold}${colors.magenta}[4] ✏️ URL PERSONALIZADA (ex: túnel ngrok ou outro IP)${colors.reset}\n`);
+  console.log(`  ${colors.bold}${colors.gray}[5] ✏️ URL PERSONALIZADA (ex: túnel ngrok ou outro IP)${colors.reset}\n`);
 
-  const choice = await askQuestion(`${colors.bold}Opção desejada [1-4] (Padrão: 1): ${colors.reset}`);
+  const choice = await askQuestion(`${colors.bold}Opção desejada [1-5] (Padrão: 1): ${colors.reset}`);
   const opt = choice.trim() || "1";
 
   let selectedUrl = REMOTE_PROD_URL;
   if (opt === "2") {
-    selectedUrl = `http://${detectedLanIp}:3333`;
+    selectedUrl = REMOTE_DEV_URL;
   } else if (opt === "3") {
-    selectedUrl = "http://localhost:3333";
+    selectedUrl = `http://${detectedLanIp}:3333`;
   } else if (opt === "4") {
+    selectedUrl = "http://localhost:3333";
+  } else if (opt === "5") {
     const custom = await askQuestion("Digite a URL completa do backend: ");
     if (custom.trim()) {
       selectedUrl = custom.trim();

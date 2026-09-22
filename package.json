@@ -1,6 +1,6 @@
 {
   "name": "presco",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -43,6 +43,8 @@
     "install:all": "npm install",
     "deploy": "bash scripts/deploy_remote.sh",
     "env": "tsx scripts/configure_env.ts",
+    "env:dev": "tsx scripts/configure_env.ts dev",
+    "env:prod": "tsx scripts/configure_env.ts prod",
     "env:remote": "tsx scripts/configure_env.ts remote",
     "env:local": "tsx scripts/configure_env.ts local",
     "env:localhost": "tsx scripts/configure_env.ts localhost",
@@ -54,6 +56,8 @@
     "deploy:only": "bash scripts/deploy_remote.sh --no-sync",
     "remote:shell": "bash scripts/remote.sh shell",
     "android:debug": "tsx scripts/android.ts --debug",
+    "android:dev": "APP_VARIANT=development tsx scripts/android.ts --debug",
+    "android:prod": "APP_VARIANT=production tsx scripts/android.ts --no-install",
     "android:apk": "tsx scripts/android.ts --no-install",
     "doctor:jdk": "tsx scripts/lib/jdk.ts --install",
     "release": "tsx scripts/upload_release.ts"
