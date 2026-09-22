@@ -195,6 +195,9 @@ export interface TranslationSchema {
     avgPriceLast5Desc: string;
     registeredAt: string;
     promotionTag: string;
+    addToCart: string;
+    inCart: string;
+    quantity: string;
   };
   settings: {
     title: string;
@@ -682,6 +685,46 @@ export interface TranslationSchema {
     replayTutorial: string;
     replayTutorialDesc: string;
   };
+  cart: {
+    title: string;
+    emptyTitle: string;
+    emptySubtitle: string;
+    exploreProducts: string;
+    strategy: string;
+    maxSavings: string;
+    maxSavingsDesc: string;
+    balanced: string;
+    balancedDesc: string;
+    singleStore: string;
+    singleStoreDesc: string;
+    maxStops: string;
+    maxRadius: string;
+    travelSettings: string;
+    fuelEfficiency: string;
+    fuelPrice: string;
+    convenienceThreshold: string;
+    roundTrip: string;
+    savingsBannerSavings: string;
+    savingsBannerSingle: string;
+    grocerySubtotal: string;
+    travelCost: string;
+    totalCombined: string;
+    netSavings: string;
+    singleStoreBest: string;
+    optimizedRoute: string;
+    reallocate: string;
+    reallocateModalTitle: string;
+    openInMaps: string;
+    missingItems: string;
+    clearCartConfirm: string;
+    clearCartTitle: string;
+    addedSuccess: string;
+    itemCount: string;
+    storesCount: string;
+    travelTime: string;
+    km: string;
+    liters: string;
+  };
 }
 
 export type SupportedLanguage = "pt-BR" | "en-US" | "es-ES" | "de-DE" | "ru-RU" | "zh-CN" | "ja-JP";
@@ -710,5 +753,6 @@ export type TranslationKey =
   | `errors.${keyof TranslationSchema["errors"]}`
   | `productCategories.${keyof TranslationSchema["productCategories"]}`
   | `onboarding.${keyof TranslationSchema["onboarding"]}`
-  | `admin.${keyof TranslationSchema["admin"]}`;
+  | `admin.${keyof TranslationSchema["admin"]}`
+  | `cart.${keyof TranslationSchema["cart"]}`;
 
