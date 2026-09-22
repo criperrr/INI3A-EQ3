@@ -1,0 +1,160 @@
+name: Production Pipeline (Promotion to main)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: production-pipeline
+  cancel-in-progress: false
+
+jobs:
+  contract_and_type_check:
+    name: API Contract & Strict Type Validation
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar Dependências
+        run: npm ci
+
+      - name: Validar Tipagem Monorepo (Contrato Backend & Frontend)
+        run: npm run typecheck
+
+      - name: Executar Testes Unitários de Produção
+        run: npm test
+
+  deploy_backend_production:
+    name: Deploy Backend to Production Server
+    needs: [contract_and_type_check]
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Preparar Chave SSH para o Servidor de Produção
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Executar Deploy Autônomo e Higienização do Servidor
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_KEY_FILE: ~/.ssh/deploy_key
+          REMOTE_TARGET_DIR: ${{ secrets.REMOTE_TARGET_DIR }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM: ${{ secrets.RESEND_FROM }}
+          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          NODE_ENV: production
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          REWRITE_BASE: ${{ secrets.REWRITE_BASE }}
+          DEPLOY_CONFIG: /dev/null
+        run: bash scripts/deploy_remote.sh
+
+      - name: Limpar Credenciais Locais
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
+
+  build_production_apk:
+    name: Build Mobile App (prodFlavor / Production)
+    needs: [contract_and_type_check]
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Configurar Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Configurar Ambiente de Produção (prodFlavor)
+        env:
+          PUBLIC_URL: ${{ secrets.PUBLIC_URL }}
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          mkdir -p src/frontend
+          cat << EOF > src/frontend/.env
+          APP_VARIANT=production
+          EXPO_PUBLIC_APP_VARIANT=production
+          EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
+          EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
+          GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+          EOF
+
+      - name: Gerar Projeto Nativo Android (Expo Prebuild)
+        working-directory: src/frontend
+        env:
+          APP_VARIANT: production
+        run: npx expo prebuild --platform android --clean
+
+      - name: Permissão de Execução do Gradle Wrapper
+        run: chmod +x src/frontend/android/gradlew
+
+      - name: Compilar APK Android de Produção (prodFlavor / assembleRelease)
+        working-directory: src/frontend/android
+        env:
+          APP_VARIANT: production
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Renomear Artefato de Produção
+        run: |
+          mkdir -p build-artifacts
+          cp src/frontend/android/app/build/outputs/apk/release/app-release-unsigned.apk build-artifacts/Presco-Production-prodFlavor.apk || \
+          cp src/frontend/android/app/build/outputs/apk/release/app-release.apk build-artifacts/Presco-Production-prodFlavor.apk
+
+      - name: Publicar Artefato APK de Produção
+        uses: actions/upload-artifact@v4
+        with:
+          name: Presco-Production-prodFlavor
+          path: build-artifacts/Presco-Production-prodFlavor.apk
+          retention-days: 30

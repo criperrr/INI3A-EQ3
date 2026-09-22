@@ -1,0 +1,14 @@
+appId: com.presco.app
+---
+# Subflow: Dismiss Onboarding Tutorial if Visible
+- runFlow:
+    when:
+      visible: "Pular tutorial"
+    commands:
+      - tapOn: "Pular tutorial"
+
+- runFlow:
+    when:
+      visible: "Entendi"
+    commands:
+      - tapOn: "Entendi"

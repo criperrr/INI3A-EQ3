@@ -680,6 +680,7 @@ export default function RegisterProduct() {
                     {"R$ "}
                   </Text>
                   <TextInput
+                    testID="register-price-input"
                     style={[
                       styles.input,
                       {
@@ -1128,6 +1129,7 @@ export default function RegisterProduct() {
 
             {/* Submit Button */}
             <TouchableOpacity
+              testID="register-price-submit"
               style={[
                 styles.registerButton,
                 {

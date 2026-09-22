@@ -88,6 +88,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
     >
       <TouchableOpacity
         activeOpacity={0.7}
+        testID="header-left-btn"
         style={[
           styles.iconButton,
           !isHomeScreen && {
@@ -112,6 +113,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
 
       <TouchableOpacity
         activeOpacity={0.7}
+        testID="header-settings-btn"
         style={styles.iconButton}
         onPress={onPressSettings}
         accessibilityRole="button"

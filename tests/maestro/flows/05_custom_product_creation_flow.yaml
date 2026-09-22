@@ -1,0 +1,72 @@
+appId: com.presco.app
+name: "05 - Custom Product Registration Flow (+25 XP)"
+tags:
+  - custom-product
+  - catalog
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# Navigate to Search tab
+- tapOn:
+    id: "tab-search"
+
+- extendedWaitUntil:
+    visible:
+      id: "search-add-custom-btn"
+    timeout: 8000
+
+# Open Custom Product Creation
+- tapOn:
+    id: "search-add-custom-btn"
+
+# Fill product details
+- extendedWaitUntil:
+    visible:
+      id: "custom-product-name"
+    timeout: 8000
+
+- tapOn:
+    id: "custom-product-name"
+- inputText: "Café Especial Gourmet 500g"
+
+- tapOn:
+    id: "custom-product-brand"
+- inputText: "Presco Seleção"
+
+- tapOn:
+    id: "custom-product-unit"
+- inputText: "500g"
+- hideKeyboard
+
+# Scroll to submit
+- scrollUntilVisible:
+    element:
+      id: "custom-product-submit"
+    direction: DOWN
+    timeout: 10000
+
+- tapOn:
+    id: "custom-product-submit"
+
+# Dismiss alert
+- runFlow:
+    when:
+      visible: "Concluir"
+    commands:
+      - tapOn: "Concluir"
+
+- runFlow:
+    when:
+      visible: "OK"
+    commands:
+      - tapOn: "OK"

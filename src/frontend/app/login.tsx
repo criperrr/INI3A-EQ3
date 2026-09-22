@@ -95,6 +95,7 @@ export default function LoginScreen() {
               </Text>
               <View style={styles.devButtonsRow}>
                 <TouchableOpacity
+                  testID="quick-login-admin"
                   style={[styles.quickLoginBtn, { backgroundColor: accent }]}
                   activeOpacity={0.8}
                   onPress={() => handleQuickLogin("admin@admin.org", "admin")}
@@ -105,6 +106,7 @@ export default function LoginScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
+                  testID="quick-login-user"
                   style={[styles.quickLoginBtnSecondary, themeStyles.inputBg, themeStyles.border]}
                   activeOpacity={0.8}
                   onPress={() => handleQuickLogin("usuario@presco.com", "user123")}
@@ -128,13 +130,14 @@ export default function LoginScreen() {
             </Text>
 
             {errorMessage !== "" && (
-              <View style={styles.errorContainer}>
+              <View style={styles.errorContainer} testID="login-error-container">
                 <Ionicons name="alert-circle" size={18} color="#D32F2F" />
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <Text style={styles.errorText} testID="login-error-text">{errorMessage}</Text>
               </View>
             )}
 
             <InputField
+              testID="login-email-input"
               icon="mail-outline"
               placeholder={t("auth.email")}
               value={email}
@@ -149,6 +152,7 @@ export default function LoginScreen() {
             />
 
             <PasswordField
+              testID="login-password-input"
               placeholder={t("auth.password")}
               value={password}
               onChangeText={(text: string) => {
@@ -175,6 +179,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="login-submit-btn"
               style={[
                 styles.loginButton,
                 { backgroundColor: accent, shadowColor: accent },
@@ -212,6 +217,7 @@ export default function LoginScreen() {
 // --- Componentes Internos ---
 
 const InputField = ({
+  testID,
   icon,
   placeholder,
   value,
@@ -230,6 +236,7 @@ const InputField = ({
         style={styles.inputIcon}
       />
       <TextInput
+        testID={testID}
         style={[styles.input, themeStyles.text]}
         placeholder={placeholder}
         placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}
@@ -247,6 +254,7 @@ const InputField = ({
 );
 
 const PasswordField = ({
+  testID,
   value,
   onChangeText,
   showPassword,
@@ -264,6 +272,7 @@ const PasswordField = ({
         style={styles.inputIcon}
       />
       <TextInput
+        testID={testID}
         style={[styles.input, themeStyles.text]}
         placeholder="••••••••"
         placeholderTextColor={isDark ? "#9CA3AF" : "#8E8E93"}

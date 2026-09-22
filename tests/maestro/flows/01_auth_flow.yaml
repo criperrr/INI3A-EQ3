@@ -1,0 +1,65 @@
+appId: com.presco.app
+name: "01 - Authentication & Security Flow"
+tags:
+  - auth
+  - smoke
+---
+# Step 1: Launch application
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# If already logged in, log out first
+- runFlow:
+    when:
+      visible:
+        id: "tab-home"
+    commands:
+      - runFlow:
+          file: "../subflows/logout.yaml"
+
+# Step 2: Test Invalid Login Credentials
+- assertVisible:
+    id: "login-submit-btn"
+
+- tapOn:
+    id: "login-email-input"
+- inputText: "invalid_user@presco.com"
+
+- tapOn:
+    id: "login-password-input"
+- inputText: "wrongpassword"
+- hideKeyboard
+
+- tapOn:
+    id: "login-submit-btn"
+
+- assertVisible:
+    id: "login-error-container"
+
+# Step 3: Test Navigation to Registration Screen
+- tapOn: "Cadastre-se"
+- assertVisible: "Cadastrar"
+
+# Go back to Login
+- back
+- assertVisible:
+    id: "login-submit-btn"
+
+# Step 4: Quick Dev Login as Regular Test User
+- runFlow:
+    file: "../subflows/quick_login_user.yaml"
+
+# Verify landed on Home Screen
+- assertVisible:
+    id: "tab-home"
+- assertVisible:
+    id: "header-settings-btn"
+
+# Step 5: Clean Logout
+- runFlow:
+    file: "../subflows/logout.yaml"
+- assertVisible:
+    id: "login-submit-btn"

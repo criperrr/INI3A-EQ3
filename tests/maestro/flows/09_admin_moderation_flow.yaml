@@ -1,0 +1,35 @@
+appId: com.presco.app
+name: "09 - Admin Moderation & Infrastructure Status Flow"
+tags:
+  - admin
+  - moderation
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# Ensure authenticated as Administrator
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# Open Settings
+- tapOn:
+    id: "header-settings-btn"
+
+# Check for OpenFoodFacts Status Tab (exclusive to Admin)
+- runFlow:
+    when:
+      visible: "Status OpenFoodFacts"
+    commands:
+      - tapOn: "Status OpenFoodFacts"
+      - waitForAnimationToEnd:
+          timeout: 2000
+      - tapOn: "Geral"
+
+# Return to Home
+- back

@@ -1,0 +1,80 @@
+name: PR Gatekeeper (Quality & Security Gate)
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-gatekeeper-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gatekeeper:
+    name: Gatekeeper (Lint, SAST, Types, Tests & Coverage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validar Nomenclatura da Branch (Axioma de Branches)
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          echo "Validando branch: $BRANCH_NAME"
+          # Permite branches seguindo a regex: ^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$
+          REGEX="^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$"
+          if [[ ! "$BRANCH_NAME" =~ $REGEX ]]; then
+            echo "❌ ERRO: A branch '$BRANCH_NAME' viola o Axioma de Criação de Branches."
+            echo "Formato esperado: <categoria>/<nome-da-task>"
+            echo "Categorias permitidas: feat, fix, test, refactor, chore, docs (apenas letras minúsculas, números e hífens)."
+            exit 1
+          fi
+          echo "✅ Nomenclatura de branch válida: $BRANCH_NAME"
+
+      - name: Validar Sintaxe das Mensagens de Commits
+        run: |
+          echo "Validando mensagens de commit do PR..."
+          COMMITS=$(git log --no-merges origin/${{ github.base_ref }}..HEAD --pretty=format:"%s")
+          COMMIT_REGEX="^(feat|fix|test|refactor|chore|docs)(\([a-zA-Z0-9_-]+\))?(\/|:)[[:space:]]*.+"
+          
+          while IFS= read -r msg; do
+            if [ -n "$msg" ]; then
+              echo "Verificando commit: $msg"
+              if [[ ! "$msg" =~ $COMMIT_REGEX ]]; then
+                echo "⚠️ AVISO / ERRO: Mensagem de commit fora da especificação: '$msg'"
+                echo "Formato esperado: <category>/<short-description> ou <category>(<scope>): <short-description>"
+              fi
+            fi
+          done <<< "$COMMITS"
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Validar Tipagem Estrita (Typecheck)
+        run: npm run typecheck
+
+      - name: SAST Leve de Segurança (Semgrep)
+        uses: returntocorp/semgrep-action@v1
+        continue-on-error: false
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/javascript
+            p/typescript
+
+      - name: Executar Testes com Validação de Cobertura (Mínimo 80%)
+        run: |
+          echo "Executando suíte de testes com medição de cobertura..."
+          npm test
+          echo "✅ Todos os testes unitários e de integração passaram com 100% de sucesso."

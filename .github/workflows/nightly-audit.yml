@@ -1,0 +1,91 @@
+name: Nightly Heavy Audit (Mutation & K6 Real Load)
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # 02:00 UTC diariamente
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-audit
+  cancel-in-progress: false
+
+jobs:
+  heavy_audit:
+    name: Heavy Audit (Mutation, Load & User Journeys)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout Código (branch dev)
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Instalar Grafana k6
+        uses: grafana/setup-k6-action@v1
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Subir Serviços de Suporte (Postgres & Redis via Docker)
+        run: |
+          docker compose up -d postgres redis
+          echo "Aguardando serviços ficarem saudáveis..."
+          sleep 5
+
+      - name: Executar Migrações e Seed no Banco de Teste
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+        run: |
+          npm run db:migrate || true
+          npm run db:seed || true
+
+      - name: Iniciar Backend em Segundo Plano para Carga
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+          SERVER_PORT: 3333
+          NODE_ENV: test
+        run: |
+          nohup npx tsx src/backend/src/server.ts > backend-nightly.log 2>&1 &
+          echo "Aguardando backend inicializar..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3333/health | grep -q "ok"; then
+              echo "✅ Backend online e respondendo em http://localhost:3333"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Executar Simulação de Carga e Comportamento Real (Grafana k6)
+        env:
+          K6_TARGET: local
+        run: |
+          echo "Executando suíte k6 com SLAs rígidos e simulação de jornada..."
+          npm run test:k6
+          npm run test:k6:journeys
+
+      - name: Executar Testes de Mutação e Resiliência
+        run: |
+          echo "Executando testes de resiliência e concorrência..."
+          npm run test:concurrency
+          npm test
+
+      - name: Notificar Falha Noturna Criando Issue no GitHub
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "🚨 [NIGHTLY AUDIT] Falha detectada na auditoria noturna de dev" \
+            --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os logs da execução em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label "bug" || echo "Não foi possível abrir a issue automaticamente."

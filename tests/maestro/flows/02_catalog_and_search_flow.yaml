@@ -1,0 +1,56 @@
+appId: com.presco.app
+name: "02 - Product Catalog & Search Discovery Flow"
+tags:
+  - catalog
+  - search
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# Ensure authenticated
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_user.yaml"
+
+# Navigate to Search Tab
+- tapOn:
+    id: "tab-search"
+
+- assertVisible:
+    id: "search-input"
+
+# Search for staple groceries
+- tapOn:
+    id: "search-input"
+- inputText: "Arroz"
+- hideKeyboard
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Tap on a category chip
+- tapOn:
+    text: "Todos"
+
+# Clear search input
+- tapOn:
+    id: "search-input"
+- eraseText: 10
+- hideKeyboard
+
+# Pull to refresh
+- swipe:
+    direction: DOWN
+    duration: 400
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Navigate back to Home
+- tapOn:
+    id: "tab-home"

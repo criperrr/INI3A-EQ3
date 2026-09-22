@@ -239,6 +239,7 @@ export default function SearchScreen() {
         </View>
 
         <TouchableOpacity
+          testID="search-add-custom-btn"
           style={[
             styles.addCustomBtn,
             {
@@ -385,6 +386,7 @@ const SearchBar = memo(function SearchBar({
     >
       <Ionicons name="search-outline" size={20} color={accent} style={styles.searchIcon} />
       <TextInput
+        testID="search-input"
         style={[
           styles.searchInput,
           {

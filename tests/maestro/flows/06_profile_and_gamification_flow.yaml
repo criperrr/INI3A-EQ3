@@ -1,0 +1,52 @@
+appId: com.presco.app
+name: "06 - Profile, Gamification & Customization Shop Flow"
+tags:
+  - profile
+  - gamification
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# Navigate to Profile Tab
+- tapOn:
+    id: "tab-profile"
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-shop-btn"
+    timeout: 8000
+
+# Open Customization Shop
+- tapOn:
+    id: "profile-shop-btn"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Browse Shop tabs
+- tapOn:
+    text: "Banners"
+    optional: true
+
+- tapOn:
+    text: "Molduras"
+    optional: true
+
+# Close Shop Modal
+- back
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Scroll down to inspect Badges & Heatmap
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000

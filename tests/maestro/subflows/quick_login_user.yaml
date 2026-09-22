@@ -1,0 +1,34 @@
+appId: com.presco.app
+---
+# Subflow: 1-Tap Quick Login as Regular Test User
+- runFlow:
+    when:
+      visible:
+        id: "quick-login-user"
+    commands:
+      - tapOn:
+          id: "quick-login-user"
+      - extendedWaitUntil:
+          notVisible:
+            id: "quick-login-user"
+          timeout: 10000
+
+# Fallback: Standard login
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    commands:
+      - tapOn:
+          id: "login-email-input"
+      - inputText: "usuario@presco.com"
+      - tapOn:
+          id: "login-password-input"
+      - inputText: "user123"
+      - hideKeyboard
+      - tapOn:
+          id: "login-submit-btn"
+      - extendedWaitUntil:
+          notVisible:
+            id: "login-submit-btn"
+          timeout: 10000
