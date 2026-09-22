@@ -289,14 +289,21 @@ After any file modification or addition:
 - **Nomenclatura Obrigatória:** `<categoria>/<nome-da-task>` (ex: `feat/real-time-alerts`, `fix/login-session`, `test/concurrency-shop`).
 - **Proibição:** É expressamente proibido ramificar a partir de `main`, com a única exceção de hotfixes emergenciais de produção (`fix/hotfix-...`).
 
-### 8.3. Axioma de Merge Autônomo
+### 8.3. Axioma de Merge Autônomo e Validação Obrigatória de PRs (Regra Absoluta)
 - **Proibição de Merge Local:** Agentes e modelos de IA **NUNCA** executam `git merge` localmente em `dev` ou `main`.
 - **Fluxo Exclusivo de Integração:**
   1. Criar branch temática a partir de `dev`: `git checkout -b <categoria>/<nome-da-task> dev`.
   2. Implementar e validar código e testes localmente (`npm test`, `npm run typecheck`).
+     - **Teste Obrigatório com Maestro para Frontend:** Caso a modificação infira ou toque no frontend mobile (`src/frontend/**`, componentes, telas, rotas Expo, tokens de design ou i18n), o agente **DEVE OBRIGATORIAMENTE testar a estabilidade da aplicação usando o Maestro** (`npm run test:maestro:full` ou `npm run test:maestro:docker`) antes de prosseguir com o commit e push para o remoto.
   3. Enviar branch para o repositório remoto: `git push origin <categoria>/<nome-da-task>`.
   4. Abrir Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
-  5. Habilitar auto-merge via squash: `gh pr merge --auto --squash`.
+  5. **Verificação Obrigatória de Testes:** O agente DEVE acompanhar ativamente a esteira de CI (`gh pr checks <PR> --watch` ou consulta equivalente) para verificar se todos os testes passaram (`SUCCESS`). A tarefa NUNCA deve ser considerada finalizada sem essa verificação.
+  6. **Merge via GitHub CLI (`gh`):**
+     - Se os testes passarem: o agente DEVE obrigatoriamente utilizar a CLI `gh` da máquina do usuário para realizar o merge do PR na branch `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`).
+     - Se os testes falharem: o agente DEVE investigar a causa raiz da falha na esteira, corrigir o código, subir novo commit cirúrgico e aguardar a nova execução do CI até que seja aprovado.
+- **Pré-requisito Mandatório da CLI `gh`:**
+  - O agente deve verificar se o GitHub CLI está configurado e autenticado (`gh auth status`).
+  - Se o `gh` **NÃO** estiver configurado ou autenticado na máquina do usuário, o agente DEVE interromper a automação e solicitar explicitamente que o usuário configure o `gh` via terminal (executando `gh auth login`).
 
 ### 8.4. Proteção contra Testes Falsos (Anti-Tautologia) e Zonas Protegidas
 - **Proibição de Testes Tautológicos:** Proibido criar testes com asserções genéricas ou vazias (ex: `expect(true).toBe(true)`, `expect(res).toBeDefined()`), testes sem validação de mutação de estado real ou mocks excessivos que disfarcem falhas de integração.

@@ -7,6 +7,32 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Suíte Abrangente de Estabilidade Mobile com Maestro (Nativo & Docker) & Blindagem Pré-Push:**
+  1. **Suíte Completa de Ponta a Ponta (`11_full_app_stability_suite.yaml`):**
+     - Criado fluxo automatizado abrangente que percorre 100% da aplicação: Onboarding em 7 etapas (incluindo a nova etapa de carrinho inteligente), login 1-tap dev, exploração da home e carrossel de 6 banners, busca com debounce, detalhes de produto, votação de preços, otimizador de rota e compras multilojas (`/cart`), troca de estratégias, modais de viagem e rota, mapa PostGIS, perfil com loja de cosméticos, configurações, abas do admin, troca de temas Monet e logout limpo.
+  2. **Suporte a Execução em Docker & Scripts NPM:**
+     - Adicionado serviço `maestro` no [`docker-compose.yml`](file:///Users/aventureiromax/INI3A-EQ3/docker-compose.yml) baseado no [`tests/maestro/Dockerfile`](file:///Users/aventureiromax/INI3A-EQ3/tests/maestro/Dockerfile) com suporte a rede do host (`network_mode: host`) e comunicação direta via ADB.
+     - Atualizado runner [`run_maestro.sh`](file:///Users/aventureiromax/INI3A-EQ3/tests/maestro/run_maestro.sh) com detecção automática de ambiente nativo vs Docker.
+     - Scripts npm adicionados: `npm run test:maestro` (execução padrão), `npm run test:maestro:full` (suíte completa de estabilidade) e `npm run test:maestro:docker` (execução autocontida no Docker).
+  3. **Axioma de Teste Mandatório com Maestro para Frontend:**
+     - Estabelecido nas diretrizes de governança ([`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) e preferências) que qualquer alteração que infira no frontend mobile (`src/frontend/**`) **DEVE obrigatoriamente ser testada via Maestro antes do commit e push para o remoto**.
+- **Otimização dos Workflows de CI/CD & Desacoplamento de Builds de APK:**
+  1. **Redução Drástica do Tempo de Execução no GitHub Actions:**
+     - A compilação completa de APKs Android via Gradle (`build_staging_apk` em `staging.yml` e `build_production_apk` em `production.yml`) foi desacoplada de pushes automáticos, preservando a esteira rápida e focada em garantir que o commit não quebre o projeto.
+     - A esteira automática em `dev` executa validação estrita de tipos (`typecheck`), suíte completa de testes unitários e testes de concorrência. Em `main`, executa testes de contrato, suíte completa e deploy seguro do backend.
+     - Compilações completas de APK Android (`devFlavor` e `prodFlavor`) passam a ser acionadas estritamente de forma manual sob demanda via `workflow_dispatch` com input `build_apk: true` e aceleração com `gradle/actions/setup-gradle@v4`.
+- **Regra Absoluta de Abertura de PR, Validação de CI e Merge via GitHub CLI (`gh`):**
+  1. **Axioma do Ciclo Completo de PR:**
+     - O agente NUNCA deve dar uma tarefa por concluída apenas subindo a branch.
+     - O agente DEVE obrigatoriamente abrir o Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
+     - O agente DEVE acompanhar e validar ativamente a execução dos testes no CI (`gh pr checks <PR> --watch`).
+  2. **Merge via CLI `gh`:**
+     - Se os testes passarem (`SUCCESS`), o agente DEVE utilizar a CLI `gh` da máquina do usuário para realizar o merge em `dev` (`gh pr merge --squash`).
+     - Se os testes falharem, o agente DEVE investigar a causa raiz, corrigir o código e revalidar.
+  3. **Pré-requisito Obrigatório de Autenticação (`gh auth status`):**
+     - O agente deve verificar se o GitHub CLI está autenticado. Caso o `gh` não esteja configurado, o agente DEVE pausar a automação e solicitar ao usuário que execute `gh auth login`.
+  4. **Atualização da Governança Multi-Agente & Memória:**
+     - Atualizados [`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md) (Seção 8.3), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules) (Seção 3), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) (Seção 6), [`.agents/memory/user-preferences.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/user-preferences.md) e [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md).
 - **Política de Isolamento Estrito de Escopo por Chat para Commits e Push:**
   1. **Regra de Isolamento Cirúrgico:**
      - Quando o usuário solicitar comandos de commit ou push (ex: "commita", "dá push", "faça commit e push"), o agente deve comitar e subir **estritamente e exclusivamente os arquivos modificados ou criados na sessão do chat em que a ordem foi dada**.
@@ -105,8 +131,8 @@ Executive summary and direct file index for token-efficient agent navigation. Re
      - **Blindagem Anti-Tautologia & Zonas Protegidas:** Proibidos testes sem verificação de estado real ou mocks disfarçados; barreira de 80% de cobertura; diretórios estruturais de teste (`tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/`, `.github/workflows/`) protegidos contra relaxamento de thresholds ou asserções.
   3. **Esteira de CI/CD em 4 Camadas no GitHub Actions (`.github/workflows/`):**
      - **Camada 1 (`pr-gatekeeper.yml`):** SLA < 3 min. Lint de regex de branch, validação de commits, `npm run typecheck`, SAST com Semgrep e barreira de testes unitários.
-     - **Camada 2 (`staging.yml`):** Acionado por push em `dev`. Executa testes de concorrência, gera build Android com `devFlavor` (`com.presco.app.dev`, "Presco (Dev)", `presco-dev`, API de staging) e publica APK como artefato.
-     - **Camada 3 (`production.yml`):** Acionado por push em `main`. Validação de contrato, deploy seguro no servidor remoto de produção via `scripts/deploy_remote.sh`, compilação do APK `prodFlavor` (`com.presco.app`, "Presco", API de produção) e publicação de artefato.
+     - **Camada 2 (`staging.yml`):** Acionado por push em `dev`. Validação rápida e robusta de tipagem e suíte completa de testes (unitários e concorrência). A compilação completa do APK Android (`devFlavor`) foi otimizada para acionamento estritamente manual via `workflow_dispatch` com cache do Gradle, economizando tempo e recursos da esteira.
+     - **Camada 3 (`production.yml`):** Acionado por push em `main`. Validação de contrato, typecheck e testes de produção, com deploy autônomo e seguro no servidor remoto via `scripts/deploy_remote.sh`. A compilação completa do APK de produção (`prodFlavor`) foi otimizada para acionamento estritamente manual via `workflow_dispatch`.
      - **Camada 4 (`nightly-audit.yml`):** Cron diário às 02:00 UTC na branch `dev`. Executa testes em ambiente autocontido via Docker (independente do servidor CTI), simulação de carga real k6 com think time, testes de concorrência/resiliência, **acúmulo histórico de métricas de performance (`benchmark_history.json`)**, upload de artefatos com retenção de 90 dias (`report.html`, `summary.json`, logs) e abertura automática de Issue em caso de falha.
   4. **Padronização e Higienização de Branches no Repositório Remoto:**
      - Comprovado que 100% dos commits de `tests` foram incorporados a `dev` sem perda de histórico.
