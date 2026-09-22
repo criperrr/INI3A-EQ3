@@ -3526,3 +3526,24 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/services/cartService.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Cart UI renders cleanly without overlaps; smart optimization runs either against deployed backend or via local fallback simulation when 404 occurs.
+
+## `2026-09-22 09:20` - `feat(ui)`: expand home carousel banners with interactive routing and full i18n
+
+- **Description:** Added 3 new rich banners to the home screen carousel (Smart Cart Optimizer, Barcode Scanner, and Achievements & Rewards), doubling the carousel items to 6. Transformed banner cards into interactive touch targets with light haptic feedback (`Haptics.impactAsync`) and direct routing (`/cart`, `/scannerProduct`, `/profile`, `/search`, `/registerProduct`, `/map`). Added complete localized strings across all 7 supported languages. Synchronized SemVer to `v1.3.2` (Android versionCode 18).
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The home carousel now provides a more comprehensive overview of Presco features with direct 1-tap navigation and smooth auto-rotation.

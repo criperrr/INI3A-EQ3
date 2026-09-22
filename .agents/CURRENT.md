@@ -7,6 +7,18 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Expansão dos Banners do Carrossel da Home com Navegação Interativa e i18n Completo (`v1.3.2`):**
+  1. **Novos Banners Adicionados:**
+     - **Banner 4 (Otimizador de Carrinho):** Destaque para a funcionalidade de otimização de compras e combustível, com rota direta para `/cart`.
+     - **Banner 5 (Leitor de Código de Barras):** Destaque para a consulta instantânea por câmera de códigos EAN-13, com rota direta para `/scannerProduct`.
+     - **Banner 6 (Conquistas e Recompensas):** Destaque para o sistema de gamificação comunitária, XP e cosméticos, com rota direta para `/profile`.
+  2. **Interatividade & Feedback Háptico:**
+     - Os cards do carrossel foram tornados tocáveis (`TouchableOpacity` com `activeOpacity: 0.88`), integrados a feedback háptico leve (`Haptics.impactAsync`) e roteamento dinâmico via Expo Router.
+     - Adicionado indicador visual de ação (`bannerActionRow` com ícone de seta/chevron contextual na cor de destaque `accent`).
+  3. **Internacionalização (i18n) em 7 Idiomas:**
+     - Chaves adicionadas em `src/frontend/i18n/types.ts` e traduzidas nos 7 idiomas suportados: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`.
+  4. **Qualidade & Versionamento:**
+     - Sincronização SemVer de versão para `v1.3.2` (`versionCode: 18`), 0 erros no typecheck e 100% de aprovação na suíte de testes unitários e de concorrência.
 - **Correção de Layout ("Design Encavalado") e Simulação de Fallback Offline no Carrinho (`v1.3.1`):**
   1. **Diagnóstico da Causa do Erro "Offline":**
      - O servidor remoto em `https://eq.projetoscti.com.br/26-presco` está online e saudável (`/health` retorna 200 OK com banco e Redis operacionais).
