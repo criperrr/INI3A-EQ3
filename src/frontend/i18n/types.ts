@@ -119,6 +119,15 @@ export interface TranslationSchema {
     banner3Title: string;
     banner3Subtitle: string;
     banner3Action: string;
+    banner4Title: string;
+    banner4Subtitle: string;
+    banner4Action: string;
+    banner5Title: string;
+    banner5Subtitle: string;
+    banner5Action: string;
+    banner6Title: string;
+    banner6Subtitle: string;
+    banner6Action: string;
     nearbyOffers: string;
     radiusFilter15km: string;
   };
@@ -682,6 +691,10 @@ export interface TranslationSchema {
     screen6Subtitle: string;
     screen6Badge: string;
     screen6Tip: string;
+    screen7Title: string;
+    screen7Subtitle: string;
+    screen7Badge: string;
+    screen7Tip: string;
     replayTutorial: string;
     replayTutorialDesc: string;
   };
