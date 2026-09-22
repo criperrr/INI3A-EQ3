@@ -1,0 +1,21 @@
+# Presco (.cursorrules) - Governança Estrita de Branches, Commits e Blindagem de Testes
+
+## 1. Axioma de Commits
+- Todo commit DEVE seguir estritamente o formato: `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+- Categorias válidas: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
+- Não realize commits espontâneos sem solicitação explícita do usuário.
+
+## 2. Axioma de Branches
+- Toda nova tarefa nasce OBRIGATORIAMENTE a partir de `dev`: `git checkout -b <categoria>/<nome-da-task> dev`.
+- Padrão de nomenclatura obrigatório: `^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$`.
+- Proibido ramificar de `main`, exceto hotfixes emergenciais de produção (`fix/hotfix-...`).
+
+## 3. Axioma de Merge Autônomo
+- NUNCA realize `git merge` local em `dev` ou `main`.
+- O ciclo de vida é sempre: criar branch -> implementar/testar -> abrir PR via `gh pr create --base dev` -> habilitar `gh pr merge --auto --squash`.
+
+## 4. Blindagem de Testes (Anti-Tautologia)
+- Proibidos testes tautológicos ou vazios (`expect(true).toBe(true)` ou asserts genéricos sem verificação de estado).
+- Cobertura de código mínima de 80% nos arquivos modificados/adicionados.
+- ZONAS PROTEGIDAS: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
+- Proibido para IAs alterar asserções de teste ou relaxar thresholds de SLA de performance para burlar a esteira de CI. Se houver falha, conserte a implementação!

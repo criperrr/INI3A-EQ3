@@ -267,4 +267,35 @@ After any file modification or addition:
 - **Comments:** Write minimal comments. Self-documenting code through clear naming.
 - **TypeScript:** Use `type` for DTOs; `interface` for extensible object shapes. Use `import type` for type-only imports. Use `async/await` throughout.
 - **Singletons:** Controllers and Services are exported as singleton instances (`export const authController = new AuthControllerClass()`).
-- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql\`ST_AsGeoJson(${table.location})\``.
+- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql`ST_AsGeoJson(${table.location})``.
+
+---
+
+## 8. Governança Rígida de Branches, Commits, CI/CD e Blindagem de Testes
+
+### 8.1. Axioma de Commits (Sintaxe Obrigatória)
+- **Formato Estrito:** `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+- **Categorias Permitidas:** `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
+- **Regra:** Mensagens fora desta sintaxe ou commits sem propósito atômico claro são rejeitados pelo pipeline de CI (`pr-gatekeeper.yml`).
+
+### 8.2. Axioma de Criação de Branches
+- **Branch Base Obrigatória:** Toda nova tarefa, feature ou correção deve nascer exclusivamente a partir da branch `dev`.
+- **Nomenclatura Obrigatória:** `<categoria>/<nome-da-task>` (ex: `feat/real-time-alerts`, `fix/login-session`, `test/concurrency-shop`).
+- **Proibição:** É expressamente proibido ramificar a partir de `main`, com a única exceção de hotfixes emergenciais de produção (`fix/hotfix-...`).
+
+### 8.3. Axioma de Merge Autônomo
+- **Proibição de Merge Local:** Agentes e modelos de IA **NUNCA** executam `git merge` localmente em `dev` ou `main`.
+- **Fluxo Exclusivo de Integração:**
+  1. Criar branch temática a partir de `dev`: `git checkout -b <categoria>/<nome-da-task> dev`.
+  2. Implementar e validar código e testes localmente (`npm test`, `npm run typecheck`).
+  3. Enviar branch para o repositório remoto: `git push origin <categoria>/<nome-da-task>`.
+  4. Abrir Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
+  5. Habilitar auto-merge via squash: `gh pr merge --auto --squash`.
+
+### 8.4. Proteção contra Testes Falsos (Anti-Tautologia) e Zonas Protegidas
+- **Proibição de Testes Tautológicos:** Proibido criar testes com asserções genéricas ou vazias (ex: `expect(true).toBe(true)`, `expect(res).toBeDefined()`), testes sem validação de mutação de estado real ou mocks excessivos que disfarcem falhas de integração.
+- **Barreira de Cobertura de Código:** Cobertura mínima de **80%** de linhas e branches nos arquivos criados ou modificados.
+- **Zonas Protegidas (Arquivos Intocáveis por IA para Burlar CI):**
+  - Diretórios estruturais de teste: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
+  - **Regra Inegociável:** Modelos e agentes de IA **NÃO têm permissão** para relaxar thresholds de performance (SLAs de latência/erros no k6), alterar asserções para falsos-positivos ou desativar steps de validação para forçar a passagem de pipelines de CI. Se um teste falhar, a causa raiz na implementação deve ser investigada e corrigida.
+

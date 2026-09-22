@@ -23,9 +23,9 @@ Presco é uma aplicação full-stack de comparação de preços e leitura de có
 | Componente | Quantidade |
 |---|---|
 | **Total Agents** | 18 |
-| **Total Skills** | 41 |
+| **Total Skills** | 44 |
 | **Total Workflows** | 13 |
-| **Total Skill Scripts** | 14 |
+| **Total Skill Scripts** | 15 |
 
 ---
 

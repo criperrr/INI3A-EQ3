@@ -3359,3 +3359,97 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/productDetails.tsx`
   - `src/frontend/app/profile.tsx`
 - **Impact / Next Steps:** Complete 2FA enforcement and guest price protection live on tests branch.
+
+## `2026-09-21 23:28` - `feat(test)`: Comprehensive Maestro Mobile E2E and Grafana k6 Load Testing Suites
+
+- **Description:** Implementada infraestrutura completa e profunda de testes automatizados móveis ponta a ponta com Maestro e testes de carga, estresse e simulação de jornadas do usuário com Grafana k6. Adicionada instrumentação de testID determinística em todos os componentes e telas essenciais do React Native Expo (Footer, Header, login, busca, cadastro customizado, registro de preços, detalhes, perfil e configurações). Construídos 9 cenários modulares no k6 cobrindo 100% dos módulos do backend, 3 jornadas realistas de usuários, testes de estresse (até 100 VUs) e picos de tráfego, orquestrador principal com setup de pré-autenticação resiliente ao rate limiter e gerador de relatórios HTML. Criados 10 fluxos completos de E2E no Maestro com subfluxos reutilizáveis de autenticação rápida, runner executável e documentação completa. Incrementada versão do projeto para v1.2.0 (versionCode 12).
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `tests/k6/main.js`
+  - `tests/k6/README.md`
+  - `tests/k6/config/environments.js`
+  - `tests/k6/config/thresholds.js`
+  - `tests/k6/helpers/auth.js`
+  - `tests/k6/helpers/generator.js`
+  - `tests/k6/helpers/http.js`
+  - `tests/k6/scenarios/01_health_and_system.js`
+  - `tests/k6/scenarios/02_auth_lifecycle.js`
+  - `tests/k6/scenarios/03_catalog_and_search.js`
+  - `tests/k6/scenarios/04_contributions_and_prices.js`
+  - `tests/k6/scenarios/05_custom_products.js`
+  - `tests/k6/scenarios/06_markets_and_geospatial.js`
+  - `tests/k6/scenarios/07_gamification_and_shop.js`
+  - `tests/k6/scenarios/08_admin_moderation.js`
+  - `tests/k6/scenarios/09_image_optimization.js`
+  - `tests/k6/user_journeys/anonymous_browser.js`
+  - `tests/k6/user_journeys/active_collaborator.js`
+  - `tests/k6/user_journeys/power_shopper.js`
+  - `tests/k6/stress_and_soak/stress_test.js`
+  - `tests/k6/stress_and_soak/spike_test.js`
+  - `tests/maestro/config.yaml`
+  - `tests/maestro/README.md`
+  - `tests/maestro/run_maestro.sh`
+  - `tests/maestro/subflows/quick_login_admin.yaml`
+  - `tests/maestro/subflows/quick_login_user.yaml`
+  - `tests/maestro/subflows/logout.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `tests/maestro/flows/01_auth_flow.yaml`
+  - `tests/maestro/flows/02_catalog_and_search_flow.yaml`
+  - `tests/maestro/flows/03_product_details_and_voting_flow.yaml`
+  - `tests/maestro/flows/04_register_price_occurrence_flow.yaml`
+  - `tests/maestro/flows/05_custom_product_creation_flow.yaml`
+  - `tests/maestro/flows/06_profile_and_gamification_flow.yaml`
+  - `tests/maestro/flows/07_settings_and_preferences_flow.yaml`
+  - `tests/maestro/flows/08_map_and_market_discovery_flow.yaml`
+  - `tests/maestro/flows/09_admin_moderation_flow.yaml`
+  - `tests/maestro/flows/10_full_e2e_user_journey.yaml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Aplicação agora dispõe de suíte completa de qualidade industrial cobrindo ponta a ponta a experiência móvel e a escalabilidade/robustez do backend.
+
+## 2026-09-21 23:35 - feat(skills): Adicionar e padronizar skill SemVer conforme especificacao Agent Skills
+
+- **Description:** Auditado o repositorio aberto agentskills/agentskills (especificacao aberta do ecossistema Agent Skills) e criada a skill oficial semver em .agents/skills/semver/ estritamente conforme aos padroes de metadados (SKILL.md, when_to_use, allowed-tools, version: 1.0.0, compatibility) e as diretrizes do monorepo Presco (SemVer 2.0.0, Conventional Commits, sincronizacao multi-pacote de package.json, src/backend, src/frontend e app.json, e pipeline de release no GitHub Actions). Adicionados scripts executaveis (scripts/bump.sh e scripts/validate_semver.py), referencias e template de release notes. Saneado o frontmatter de .agents/skills/semantic-versioning/SKILL.md, expurgados arquivos deslocados, atualizado o inventario de componentes em ARCHITECTURE.md (44 skills, 15 scripts), e sincronizados manifest.json e manifest.lock.json.
+- **Files Modified:**
+  - `.agents/skills/semver/SKILL.md`
+  - `.agents/skills/semver/scripts/bump.sh`
+  - `.agents/skills/semver/scripts/validate_semver.py`
+  - `.agents/skills/semver/references/semver-spec.md`
+  - `.agents/skills/semver/references/conventional-commits.md`
+  - `.agents/skills/semver/references/presco-release-policy.md`
+  - `.agents/skills/semver/templates/release-notes.md`
+  - `.agents/skills/semantic-versioning/SKILL.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/manifest.json`
+  - `.agents/manifest.lock.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Suporte completo e oficial para ativacao de versionamento semantico tanto via @semver quanto via @semantic-versioning em conformidade com o padrao Agent Skills e com as regras do Presco.
+
+## `2026-09-21 23:42` - `feat(devops)`: Governança de Branches, GitHub Rulesets, Blindagem de Testes e Multi-Ambiente
+
+- **Description:** Implementada a governança integral de branches e infraestrutura de CI/CD em 4 camadas no repositório. Configurados remotamente via GitHub CLI (`gh`): autodelete de branches pós-merge (`delete-branch-on-merge = true`), merge estrito via auto-merge e squash, criação da branch remota `dev`, ruleset de proteção (`protect-main-and-dev`) para `main` e `dev` com bloqueio de deleções/force-pushes e exigência de PR/squash, e configuração dos environments `staging` e `production` com políticas estritas de branch. Atualizado `AGENTS.md` e criado `.cursorrules` com axiomas de commits, criação de branches a partir de `dev`, merge autônomo via PR/squash e blindagem de testes (anti-tautologia, barreira de 80% e zonas protegidas). Criadas as 4 camadas de pipelines no GitHub Actions: `pr-gatekeeper.yml`, `staging.yml` (devFlavor APK), `production.yml` (prodFlavor APK & deploy) e `nightly-audit.yml` (k6 load, mutação e auto-issue). Implementada suíte de testes de concorrência em `tests/concurrency/race_conditions.test.ts` (4 cenários) e configurados flavors mobile em `src/frontend/app.config.js`.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.github/workflows/nightly-audit.yml`
+  - `tests/concurrency/race_conditions.test.ts`
+  - `src/frontend/app.config.js`
+  - `package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Repositório completamente blindado contra regressões, com governança remota no GitHub, segregação de builds mobile e esteira de CI/CD em 4 camadas orientada a custo, velocidade e rigor.

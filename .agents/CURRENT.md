@@ -7,6 +7,48 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Governança de Branches, Automação via GitHub CLI, Blindagem de Testes e Multi-Ambiente Mobile:**
+  1. **Governança Remota no GitHub (`gh`):**
+     - Habilitada exclusão automática de branches pós-merge (`delete-branch-on-merge = true`).
+     - Habilitado merge estrito via auto-merge e squash (`allow_auto_merge = true`, `allow_squash_merge = true`, `allowed_merge_methods: ["squash"]`).
+     - Criada branch remota `dev` a partir de `tests`.
+     - Criado Ruleset de Proteção (`protect-main-and-dev` / ID 23801428) para `main` e `dev` bloqueando deleções, force-pushes (`non_fast_forward`) e exigindo Pull Request obrigatório com resolução de threads e método squash.
+     - Ambientes GitHub configurados com políticas estritas de deploy: `production` restrito à branch `main`; `staging` restrito às branches `dev` e `tests`.
+  2. **Endurecimento de `AGENTS.md` e `.cursorrules` (Axiomas Inegociáveis):**
+     - **Axioma de Commits:** Sintaxe obrigatória `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+     - **Axioma de Criação de Branches:** Toda task nasce de `dev` sob `^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$`. Proibido ramificar de `main` (exceto hotfix de prod).
+     - **Axioma de Merge Autônomo:** Agentes nunca executam `git merge` local; ciclo exclusivo via `gh pr create` e `gh pr merge --auto --squash`.
+     - **Blindagem Anti-Tautologia & Zonas Protegidas:** Proibidos testes sem verificação de estado real ou mocks disfarçados; barreira de 80% de cobertura; diretórios estruturais de teste (`tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/`, `.github/workflows/`) protegidos contra relaxamento de thresholds ou asserções.
+  3. **Esteira de CI/CD em 4 Camadas no GitHub Actions (`.github/workflows/`):**
+     - **Camada 1 (`pr-gatekeeper.yml`):** SLA < 3 min. Lint de regex de branch, validação de commits, `npm run typecheck`, SAST com Semgrep e barreira de testes unitários.
+     - **Camada 2 (`staging.yml`):** Acionado por push em `dev`. Executa testes de concorrência, gera build Android com `devFlavor` (`com.presco.app.dev`, "Presco (Dev)", `presco-dev`, API de staging) e publica APK como artefato.
+     - **Camada 3 (`production.yml`):** Acionado por push em `main`. Validação de contrato, deploy seguro no servidor remoto de produção via `scripts/deploy_remote.sh`, compilação do APK `prodFlavor` (`com.presco.app`, "Presco", API de produção) e publicação de artefato.
+     - **Camada 4 (`nightly-audit.yml`):** Cron diário às 02:00 UTC na branch `dev`. Executa testes de mutação/concorrência, carga real k6 e abertura automática de Issue no GitHub em caso de falha.
+  4. **Suíte de Testes de Concorrência & Condições de Corrida (`tests/concurrency/race_conditions.test.ts`):**
+     - 4 cenários profundos: Rate Limiter atômico com 50 requisições simultâneas, Quorum de 25 votos simultâneos sem lost updates, Prevenção de saldo negativo e duplicidade em compra de cosméticos, e Revogação atômica concorrente de tokens JTI.
+     - Adicionado script `"test:concurrency"` ao `package.json` e integrado ao `npm test`.
+  5. **Flavors/Variants Mobile Segregados (`src/frontend/app.config.js`):**
+     - Suporte dinâmico a `APP_VARIANT=development` / `staging` vs `production`, segregando package, nome do app, scheme e endpoints.
+- **Integração e Padronização da Skill SemVer (Agent Skills Spec - `agentskills/agentskills`):**
+  1. **Auditoria da Especificação Aberta:** Inspecionado o repositório oficial [agentskills/agentskills](https://github.com/agentskills/agentskills.git) ([agentskills.io](https://agentskills.io)), comprovando que ele define o padrão aberto de estrutura e metadados de Agent Skills (`SKILL.md`, YAML frontmatter com `name`, `description`, `when_to_use`, `allowed-tools`, `version`, `compatibility`, progressive disclosure e diretórios `scripts/`, `references/`, `templates/`), além do validador `skills-ref`.
+  2. **Criação da Skill Oficial `semver`:** Criada a pasta `.agents/skills/semver/` contendo [`SKILL.md`](file:///home/criper/Documents/projetos/INI3A-EQ3/.agents/skills/semver/SKILL.md) 100% conforme com a especificação do Agent Skills e com as convenções do Presco (SemVer 2.0.0, Conventional Commits, sincronização multi-pacote, e pipeline de release no GitHub Actions).
+  3. **Scripts & Ferramentas:** Adicionados scripts utilitários executáveis: `scripts/bump.sh` (ponte CLI para o script `scripts/bump_version.ts` do Presco) e `scripts/validate_semver.py` (validador regex de especificações SemVer 2.0.0).
+  4. **Guias & Templates:** Criados `references/semver-spec.md`, `references/conventional-commits.md`, `references/presco-release-policy.md` e template de release em `templates/release-notes.md`.
+  5. **Saneamento e Sincronização:** Atualizado o frontmatter de `.agents/skills/semantic-versioning/SKILL.md` para estrita conformidade, purgados arquivos espúrios (`validate-api.sh` e `api-scaffold.yaml`), atualizado o inventário em `ARCHITECTURE.md` (44 skills, 15 scripts), e regenerados com sucesso `manifest.json` e `manifest.lock.json` via `generate_manifest.py`.
+- **Infraestrutura Completa de Testes Automatizados Mobile (Maestro) & Carga/Comportamento Backend (Grafana k6) (`v1.2.0`):**
+  1. **Grafana k6 Test Suite (`tests/k6/`):**
+     - Cobertura profunda de 100% dos módulos do backend (`01_health_and_system`, `02_auth_lifecycle`, `03_catalog_and_search`, `04_contributions_and_prices`, `05_custom_products`, `06_markets_and_geospatial`, `07_gamification_and_shop`, `08_admin_moderation`, `09_image_optimization`).
+     - Simulação de comportamentos realistas de usuários (User Journeys): `anonymous_browser` (navegação e busca de ofertas), `active_collaborator` (registro de preços e votação comunitária) e `power_shopper` (descoberta de mercados próximos e personalização de perfil).
+     - Testes de estresse e picos de tráfego (`stress_test.js` até 100 VUs, `spike_test.js` simulando picos de tráfego instantâneos).
+     - Orquestrador principal [`main.js`](file:///home/criper/Documents/projetos/INI3A-EQ3/tests/k6/main.js) com ciclo de vida `setup()` (autenticação centralizada pré-teste para contornar rate limiter), métricas customizadas de latência e gerador de relatórios HTML interativos (`report.html`).
+  2. **Maestro Mobile E2E Test Suite (`tests/maestro/`):**
+     - Instrumentação completa do frontend React Native Expo com seletores determinísticos `testID` em [`Footer.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/components/Footer.tsx), [`Header.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/components/Header.tsx), [`login.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/login.tsx), [`search.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/search.tsx), [`customRegisterProduct.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/customRegisterProduct.tsx), [`registerProduct.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/registerProduct.tsx), [`productDetails.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/productDetails.tsx), [`profile.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/profile.tsx), e [`settings.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/settings.tsx).
+     - 10 fluxos de ponta a ponta: autenticação, catálogo/busca com chips e pull-to-refresh, detalhes e histórico com votação, registro de preço (+15 XP), cadastro de produto customizado (+25 XP), gamificação/loja de cosméticos, configurações/temas/limpeza de cache, mapa de mercados PostGIS, moderação administrativa de preços e jornada completa do usuário.
+     - Subfluxos modulares para login rápido (`admin` e `regular user`), logout e dismiss de tutorial.
+     - Runner script executável [`run_maestro.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/tests/maestro/run_maestro.sh) e integração com Maestro Studio/Viewer.
+  3. **Scripts de Pacote NPM & Versionamento:**
+     - Comandos adicionados ao `package.json`: `npm run test:k6`, `npm run test:k6:journeys`, `npm run test:k6:stress`, `npm run test:k6:spike`, `npm run test:maestro`.
+     - Versão do projeto incrementada para `v1.2.0` (`versionCode: 12`).
 - **Autenticação em Duas Etapas (2FA/MFA via Email com Resend) & Proteção de Preços (`branch tests`):**
   1. **Schema & Migrations:** Adicionado campo `twoFactorVerified` (booleano, default false) na tabela `user` ([`schema.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/schema.ts)), migração Drizzle `0003_add_two_factor_verified.sql` e journal atualizado.
   2. **Serviço de Email & Resend:** Criado [`email.service.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/services/email.service.ts) usando native `fetch` para disparar códigos OTP de 6 dígitos via API da Resend com chave oficial e template HTML institucional.
@@ -208,6 +250,7 @@ Direct relative paths from project root.
 | `scripts/dev_launcher.ts` | Unified cross-platform dev launcher: interactive network mode selector (LAN, Corporate Tunnel, Localhost, Remote CTI), process tree lifecycle manager |
 | `scripts/configure_env.ts` | Interactive & CLI frontend environment manager (`npm run env`, `env:remote`, `env:local`, `env:localhost`) |
 | `scripts/bump_version.ts` | CLI & programmatic SemVer manager: synchronized multi-package version bumping (`npm run version:bump[:minor|:major]`) |
+| `.agents/skills/semver/SKILL.md` | Skill oficial de SemVer 2.0.0 (AgentSkills spec): regras de versão, scripts de bump e release policy |
 | `scripts/patch_ios_swift6.js` | Swift 6.1 & Xcode 16.4 compatibility patcher: sanitizes SPM package manifests, trailing commas, weak let/var, Task polyfills, and C++ init bridges |
 | `.github/workflows/release.yml` | GitHub Actions workflow: autonomous test, typecheck, Expo prebuild, Gradle release APK compilation and GitHub Releases publication |
 | `scripts/deploy_remote.sh` | Remote deployment automation script for pushing and orchestrating release on CTI server |
@@ -272,10 +315,34 @@ Direct relative paths from project root.
 | `src/frontend/components/KeyboardAwareScrollView.tsx` | Smart scroll container with dynamic keyboard listeners, safe insets, and auto-scroll |
 | `src/frontend/components/FocusedInputWrapper.tsx` | Usability wrapper highlighting focused input container (Monet accent) and triggering scroll |
 
+### Testing, QA Automation & CI/CD Infrastructure
+
+| File | Key exports / purpose |
+|---|---|
+| `.github/workflows/pr-gatekeeper.yml` | Camada 1: Gatekeeper de PRs (< 3 min, regex de branch, validação de commits, typecheck, Semgrep SAST, testes) |
+| `.github/workflows/staging.yml` | Camada 2: Pipeline de pós-merge em dev (testes de concorrência, build APK devFlavor, upload de artefato) |
+| `.github/workflows/production.yml` | Camada 3: Pipeline de promoção para main (validação de contrato, deploy produção, build APK prodFlavor) |
+| `.github/workflows/nightly-audit.yml` | Camada 4: Auditoria noturna diária 02:00 UTC em dev (k6 real load, mutação/resiliência, abertura de Issue em falhas) |
+| `tests/concurrency/race_conditions.test.ts` | Suíte de testes de condições de corrida (rate limiting, quorum de votos, compra de cosméticos, revogação JTI) |
+| `src/frontend/app.config.js` | Configuração dinâmica do Expo com segregação de Flavors/Variants (devFlavor vs prodFlavor) |
+| `.cursorrules` | Regras estritas de IDE para governança de branches, sintaxe de commits e blindagem de testes |
+| `tests/k6/main.js` | Grafana k6 master test runner with centralized `setup()` pre-auth, metrics, and HTML reporter |
+| `tests/k6/config/environments.js` | Target environments (local `localhost:3333` vs remote `eq.projetoscti.com.br`) and test users |
+| `tests/k6/config/thresholds.js` | Strict SLA thresholds (p95 < 250ms, error rate < 1%, zero failures on critical endpoints) |
+| `tests/k6/scenarios/*.js` | 9 isolated scenario tests covering 100% of API endpoints (health, auth, catalog, occurrences, custom products, markets, shop, admin, image) |
+| `tests/k6/user_journeys/*.js` | End-to-end user behavior simulations: `anonymous_browser`, `active_collaborator`, `power_shopper` |
+| `tests/k6/stress_and_soak/*.js` | High-load stress test (up to 100 VUs) and instantaneous spike test |
+| `tests/maestro/config.yaml` | Maestro app configuration, appId (`com.presco.app`), env vars, tags |
+| `tests/maestro/subflows/*.yaml` | Reusable subflows for quick admin login, regular user login, logout, tutorial dismissal |
+| `tests/maestro/flows/*.yaml` | 10 comprehensive E2E mobile test flows covering all screens, interactions, forms, and admin moderation |
+| `tests/maestro/run_maestro.sh` | Portable Maestro CLI test runner script with device detection and exit codes |
+
 ---
 
 ## 3. Active Tasks & Roadmap
 
+- [x] Governança Estrita de Branches, Automação Remota via GitHub CLI, Blindagem de Testes e Multi-Ambiente (Ruleset de proteção de branches, 4 camadas de GitHub Actions, testes de concorrência, app.config.js com flavors, .cursorrules e endurecimento do AGENTS.md).
+- [x] Comprehensive Maestro E2E Mobile Automation & Grafana k6 Load/Performance Suite (10 mobile E2E flows, 9 backend k6 scenarios, 3 realistic user journeys, stress/spike tests, testID instrumentation across 9 screens/components, HTML reporting, and package scripts).
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
   - [x] Turborepo monorepo + Docker Compose infrastructure migration (Postgres/PostGIS + Redis in Docker, backend/frontend via `turbo run dev`, cross-platform, Expo Go LAN/tunnel support).
 - [x] Frontend HTTP abstraction (`apiRequest`) with auto-refresh on 401.
