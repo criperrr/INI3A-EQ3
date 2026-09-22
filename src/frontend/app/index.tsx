@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
@@ -336,6 +337,7 @@ export default function HomeScreen() {
 }
 
 const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
+  const router = useRouter();
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
@@ -351,6 +353,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner1Action"),
         image:
           "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/search",
       },
       {
         id: "2",
@@ -359,6 +362,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner2Action"),
         image:
           "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/registerProduct",
       },
       {
         id: "3",
@@ -367,6 +371,34 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner3Action"),
         image:
           "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/map",
+      },
+      {
+        id: "4",
+        title: t("home.banner4Title"),
+        subtitle: t("home.banner4Subtitle"),
+        linkText: t("home.banner4Action"),
+        image:
+          "https://images.unsplash.com/photo-1584473457406-6240486418e9?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/cart",
+      },
+      {
+        id: "5",
+        title: t("home.banner5Title"),
+        subtitle: t("home.banner5Subtitle"),
+        linkText: t("home.banner5Action"),
+        image:
+          "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/scannerProduct",
+      },
+      {
+        id: "6",
+        title: t("home.banner6Title"),
+        subtitle: t("home.banner6Subtitle"),
+        linkText: t("home.banner6Action"),
+        image:
+          "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/profile",
       },
     ],
     [t]
@@ -412,7 +444,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         showsHorizontalScrollIndicator={false}
         initialNumToRender={3}
         maxToRenderPerBatch={3}
-        windowSize={3}
+        windowSize={5}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         getItemLayout={(_, index) => ({
@@ -422,7 +454,14 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         })}
         renderItem={({ item }) => (
           <View style={{ width: CARD_WIDTH }}>
-            <View
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => {
+                if (item.route) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push(item.route as any);
+                }
+              }}
               style={[
                 styles.bannerCardFull,
                 {
@@ -467,21 +506,29 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
               >
                 {item.subtitle}
               </Text>
-              <Text
-                style={[
-                  styles.bannerLink,
-                  {
-                    color: accent,
-                    ...semantic.typography.caption,
-                    fontWeight: "600",
-                  },
-                ]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.linkText}
-              </Text>
-            </View>
+              <View style={styles.bannerActionRow}>
+                <Text
+                  style={[
+                    styles.bannerLink,
+                    {
+                      color: accent,
+                      ...semantic.typography.caption,
+                      fontWeight: "600",
+                    },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.linkText}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={13}
+                  color={accent}
+                  style={{ marginLeft: 2, marginTop: 1 }}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -737,7 +784,12 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {},
   bannerSubtitle: { marginTop: 2 },
-  bannerLink: { marginTop: 6 },
+  bannerActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  bannerLink: {},
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
