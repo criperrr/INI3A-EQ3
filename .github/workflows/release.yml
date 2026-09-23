@@ -42,8 +42,14 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
+      - name: Configurar Cache do Gradle
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Instalar Dependências do Monorepo
         run: npm ci
@@ -62,6 +68,8 @@ jobs:
         run: |
           mkdir -p src/frontend
           cat << EOF > src/frontend/.env
+          APP_VARIANT=production
+          EXPO_PUBLIC_APP_VARIANT=production
           EXPO_PUBLIC_API_URL=${PUBLIC_URL:-https://eq.projetoscti.com.br/26-presco}
           EXPO_PUBLIC_HERE_API_KEY=${HERE_API_KEY}
           GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
@@ -69,6 +77,8 @@ jobs:
 
       - name: Gerar Projeto Nativo Android (Expo Prebuild)
         working-directory: src/frontend
+        env:
+          APP_VARIANT: production
         run: npx expo prebuild --platform android --clean
 
       - name: Configurar Permissão de Execução do Gradle Wrapper
@@ -77,13 +87,14 @@ jobs:
       - name: Compilar APK de Release com Gradle
         working-directory: src/frontend/android
         env:
+          APP_VARIANT: production
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
-        run: ./gradlew app:assembleRelease -x lint -x test
+        run: ./gradlew assembleRelease -x lint -x test --no-daemon
 
       - name: Localizar APK de Release
         id: locate_apk
         run: |
-          APK_PATH=$(find src/frontend/android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          APK_PATH=$(find src/frontend/android/app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
             echo "::error::Nenhum arquivo APK de release encontrado!"
             exit 1
@@ -98,12 +109,26 @@ jobs:
           path: ${{ steps.locate_apk.outputs.apk_path }}
           retention-days: 14
 
+      - name: Determinar Versão da Release
+        id: release_version
+        run: |
+          INPUT_TAG="${{ github.event.inputs.tag_name }}"
+          if [ -n "$INPUT_TAG" ]; then
+            VERSION_TAG="$INPUT_TAG"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION_TAG="${{ github.ref_name }}"
+          else
+            PKG_VERSION=$(node -p "require('./package.json').version")
+            VERSION_TAG="v${PKG_VERSION}"
+          fi
+          echo "tag=$VERSION_TAG" >> $GITHUB_OUTPUT
+          echo "Versão da Release: $VERSION_TAG"
+
       - name: Criar GitHub Release e Publicar APK
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.tag_name != ''
         with:
-          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
-          name: Release Presco ${{ github.event.inputs.tag_name || github.ref_name }}
+          tag_name: ${{ steps.release_version.outputs.tag }}
+          name: Release Presco ${{ steps.release_version.outputs.tag }}
           files: ${{ steps.locate_apk.outputs.apk_path }}
           generate_release_notes: true
           draft: false
