@@ -71,6 +71,8 @@ export interface OptimizationResult {
     productName: string;
     quantity: number;
     reason: string;
+    unitPrice?: number;
+    marketName?: string;
   }[];
   parametersUsed: {
     userLocation: { lat: number; lng: number };

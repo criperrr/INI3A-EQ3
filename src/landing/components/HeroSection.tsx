@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SemanticTheme } from "../theme";
 import { PhoneMockup } from "./PhoneMockup";
+import { TropicalFaunaFloraCanvas } from "./TropicalFaunaFloraCanvas";
 
 interface HeroSectionProps {
     theme: SemanticTheme;
@@ -37,6 +38,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             ]}
         >
             <View style={styles.ambientGlow} />
+
+            {/* JavaScript Canvas 2D: Arara-canindé e Folhas de Costela-de-Adão */}
+            <TropicalFaunaFloraCanvas theme={theme} showMacaw={true} showLeaves={true} />
 
             <View style={[styles.inner, isDesktop && styles.innerDesktop]}>
                 {/* Left Column: Text & Actions */}

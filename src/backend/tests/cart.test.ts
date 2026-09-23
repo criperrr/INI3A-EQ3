@@ -44,3 +44,97 @@ test("RoutingService - computeOptimalRoute with 1 stop returns round-trip double
   assert.ok(route.totalDistanceKm > 0);
   assert.ok(route.totalDurationMinutes >= 1);
 });
+
+test("CartService - optimizeCart covers items across multiple markets without leaving them as unassigned", async () => {
+  const { MarketRepository } = await import("../src/shared/database/repositories/market.repository.ts");
+  const { CartRepository } = await import("../src/shared/database/repositories/cart.repository.ts");
+
+  const origGetMarketsByRadius = MarketRepository.getMarketsByRadius;
+  const origGetAllMarkets = MarketRepository.getAllMarkets;
+  const origGetPrices = CartRepository.getPricesForProductsAcrossMarkets;
+
+  try {
+    (MarketRepository as any).getMarketsByRadius = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+      { id: 2, name: "Mercado Norte", location: { coordinates: [-46.64, -23.56] }, distance: 3000 },
+    ];
+    (MarketRepository as any).getAllMarkets = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+      { id: 2, name: "Mercado Norte", location: { coordinates: [-46.64, -23.56] }, distance: 3000 },
+    ];
+
+    (CartRepository as any).getPricesForProductsAcrossMarkets = async (pIds: number[], mIds?: number[]) => {
+      const allPrices = [
+        { productId: 101, marketId: 1, marketName: "Mercado Sul", productName: "Arroz", value: 20.0, isPromotion: false, createdAt: new Date().toISOString() },
+        { productId: 102, marketId: 2, marketName: "Mercado Norte", productName: "Feijão", value: 10.0, isPromotion: false, createdAt: new Date().toISOString() },
+      ];
+      return allPrices.filter((p) => pIds.includes(p.productId) && (!mIds || mIds.includes(p.marketId)));
+    };
+
+    const result = await CartService.optimizeCart({
+      items: [
+        { productId: 101, quantity: 1, productName: "Arroz" },
+        { productId: 102, quantity: 1, productName: "Feijão" },
+      ],
+      preferences: { strategy: "balanced", maxStops: 3 },
+    });
+
+    assert.equal(result.recommendedType, "multi_store");
+    assert.equal(result.unassignedItems.length, 0, "Nenhum item com preço deve ficar como unassigned");
+    const assignedIds = result.storeGroups.flatMap((g) => g.items.map((it) => it.productId));
+    assert.ok(assignedIds.includes(101));
+    assert.ok(assignedIds.includes(102));
+  } finally {
+    (MarketRepository as any).getMarketsByRadius = origGetMarketsByRadius;
+    (MarketRepository as any).getAllMarkets = origGetAllMarkets;
+    (CartRepository as any).getPricesForProductsAcrossMarkets = origGetPrices;
+  }
+});
+
+test("CartService - optimizeCart expands to outer markets when item is missing price in initial radius", async () => {
+  const { MarketRepository } = await import("../src/shared/database/repositories/market.repository.ts");
+  const { CartRepository } = await import("../src/shared/database/repositories/cart.repository.ts");
+
+  const origGetMarketsByRadius = MarketRepository.getMarketsByRadius;
+  const origGetAllMarkets = MarketRepository.getAllMarkets;
+  const origGetPrices = CartRepository.getPricesForProductsAcrossMarkets;
+
+  try {
+    // Only Market 1 is within initial radius
+    (MarketRepository as any).getMarketsByRadius = async () => [
+      { id: 1, name: "Mercado Perto", location: { coordinates: [-46.63, -23.55] }, distance: 1000 },
+    ];
+    // Market 3 is outside initial radius
+    (MarketRepository as any).getAllMarkets = async () => [
+      { id: 1, name: "Mercado Perto", location: { coordinates: [-46.63, -23.55] }, distance: 1000 },
+      { id: 3, name: "Hiper Regional", location: { coordinates: [-46.68, -23.60] }, distance: 18000 },
+    ];
+
+    (CartRepository as any).getPricesForProductsAcrossMarkets = async (pIds: number[], mIds?: number[]) => {
+      const allPrices = [
+        { productId: 201, marketId: 1, marketName: "Mercado Perto", productName: "Café", value: 15.0, isPromotion: false, createdAt: new Date().toISOString() },
+        { productId: 202, marketId: 3, marketName: "Hiper Regional", productName: "Azeite", value: 35.0, isPromotion: false, createdAt: new Date().toISOString() },
+      ];
+      return allPrices.filter((p) => pIds.includes(p.productId) && (!mIds || mIds.includes(p.marketId)));
+    };
+
+    const result = await CartService.optimizeCart({
+      items: [
+        { productId: 201, quantity: 1, productName: "Café" },
+        { productId: 202, quantity: 1, productName: "Azeite" },
+      ],
+      preferences: { strategy: "max_savings", maxStops: 3 },
+    });
+
+    assert.equal(result.recommendedType, "multi_store");
+    assert.equal(result.unassignedItems.length, 0);
+    const assignedIds = result.storeGroups.flatMap((g) => g.items.map((it) => it.productId));
+    assert.ok(assignedIds.includes(201));
+    assert.ok(assignedIds.includes(202));
+  } finally {
+    (MarketRepository as any).getMarketsByRadius = origGetMarketsByRadius;
+    (MarketRepository as any).getAllMarkets = origGetAllMarkets;
+    (CartRepository as any).getPricesForProductsAcrossMarkets = origGetPrices;
+  }
+});
+
