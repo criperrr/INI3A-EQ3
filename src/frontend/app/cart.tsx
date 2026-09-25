@@ -45,6 +45,8 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [optimizing, setOptimizing] = useState(false);
+  const [selectedSingleMarketId, setSelectedSingleMarketId] = useState<number | null>(null);
+  const [prioritizedProductId, setPrioritizedProductId] = useState<number | null>(null);
 
   // Modals
   const [isTravelModalVisible, setIsTravelModalVisible] = useState(false);
@@ -55,12 +57,23 @@ export default function CartScreen() {
   cartItemsRef.current = cartItems;
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+  const selectedSingleMarketIdRef = useRef(selectedSingleMarketId);
+  selectedSingleMarketIdRef.current = selectedSingleMarketId;
+  const prioritizedProductIdRef = useRef(prioritizedProductId);
+  prioritizedProductIdRef.current = prioritizedProductId;
 
   // Background optimizer trigger: does not block UI, resilient to 404/offline
   const triggerOptimization = useCallback(
-    async (itemsToOptimize?: CartProductItem[], settingsToUse?: TravelSettings) => {
+    async (
+      itemsToOptimize?: CartProductItem[],
+      settingsToUse?: TravelSettings,
+      overrideMarketId?: number | null,
+      overrideProdId?: number | null
+    ) => {
       const activeItems = itemsToOptimize || cartItemsRef.current;
       const activeSettings = settingsToUse || settingsRef.current;
+      const targetMarketId = overrideMarketId !== undefined ? overrideMarketId : selectedSingleMarketIdRef.current;
+      const targetProdId = overrideProdId !== undefined ? overrideProdId : prioritizedProductIdRef.current;
 
       if (!activeItems || activeItems.length === 0) {
         setOptimization(null);
@@ -88,6 +101,8 @@ export default function CartScreen() {
             estimatedPrice: it.estimatedPrice,
           })),
           customSettings: activeSettings,
+          selectedMarketId: activeSettings.strategy === "single_store" ? (targetMarketId || undefined) : undefined,
+          prioritizedProductId: activeSettings.strategy === "single_store" ? (targetProdId || undefined) : undefined,
         });
 
         // Ensure storeGroups and unassignedItems show the actual product name from activeItems if returned as "Produto #..."
@@ -264,7 +279,53 @@ export default function CartScreen() {
   const handleUpdateSettings = async (updates: Partial<TravelSettings>) => {
     const updated = await cartService.saveTravelSettings(updates);
     setSettings(updated);
-    triggerOptimization(cartItems, updated);
+    if (updates.strategy && updates.strategy !== "single_store") {
+      setSelectedSingleMarketId(null);
+      setPrioritizedProductId(null);
+      triggerOptimization(cartItems, updated, null, null);
+    } else {
+      triggerOptimization(cartItems, updated);
+    }
+  };
+
+  const handleSwitchToMultiStore = () => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      } catch {}
+    }
+    const newSettings: TravelSettings = {
+      ...settings,
+      strategy: "balanced",
+      maxStops: Math.max(2, settings.maxStops),
+    };
+    setSelectedSingleMarketId(null);
+    setPrioritizedProductId(null);
+    setSettings(newSettings);
+    cartService.saveTravelSettings(newSettings);
+    triggerOptimization(cartItems, newSettings, null, null);
+  };
+
+  const handleSelectPrioritizedProduct = (prodId: number | null) => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    setPrioritizedProductId(prodId);
+    setSelectedSingleMarketId(null);
+    triggerOptimization(cartItems, settings, null, prodId);
+  };
+
+  const handleSelectSingleMarket = (mId: number | null) => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    setSelectedSingleMarketId(mId);
+    setPrioritizedProductId(null);
+    triggerOptimization(cartItems, settings, mId, null);
   };
 
   const handleUpdateItemQty = async (productId: number, qty: number) => {
@@ -465,6 +526,178 @@ export default function CartScreen() {
               {/* Savings & Comparison Banner */}
               <SavingsHeroCard optimization={optimization} />
 
+              {/* Single Store Incomplete Notice & Selection */}
+              {optimization.strategy === "single_store" &&
+                (optimization.unassignedItems.length > 0 ||
+                  (optimization.singleStoreOptions && !optimization.singleStoreOptions.hasCompleteStore)) && (
+                  <View
+                    style={[
+                      styles.singleStoreWarningCard,
+                      {
+                        backgroundColor: `${semantic.colors.feedback.warning}12`,
+                        borderColor: semantic.colors.feedback.warning,
+                      },
+                    ]}
+                  >
+                    <View style={styles.singleStoreWarningHeader}>
+                      <Ionicons name="alert-circle" size={24} color={semantic.colors.feedback.warning} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.singleStoreWarningTitle, { color: semantic.colors.text.primary }]}>
+                          {t("cart.singleStoreIncompleteTitle")}
+                        </Text>
+                        <Text style={[styles.singleStoreWarningDesc, { color: semantic.colors.text.secondary }]}>
+                          {t("cart.singleStoreIncompleteDesc")}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Switch to Multi-Store Button */}
+                    <TouchableOpacity
+                      testID="btn-switch-multi-store"
+                      style={[styles.singleStoreSwitchBtn, { backgroundColor: accent }]}
+                      activeOpacity={0.85}
+                      onPress={handleSwitchToMultiStore}
+                    >
+                      <Ionicons name="git-branch-outline" size={16} color="#FFFFFF" />
+                      <Text style={styles.singleStoreSwitchBtnText}>{t("cart.switchToMultiStore")}</Text>
+                    </TouchableOpacity>
+
+                    {/* Prioritize Specific Product */}
+                    <View style={styles.singleStoreSection}>
+                      <Text style={[styles.singleStoreSectionLabel, { color: semantic.colors.text.secondary }]}>
+                        {t("cart.chooseProductToPrioritize")}
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={styles.singleStoreChipsScroll}
+                      >
+                        <TouchableOpacity
+                          style={[
+                            styles.singleStoreProductChip,
+                            prioritizedProductId === null
+                              ? [styles.singleStoreChipActive, { backgroundColor: accent, borderColor: accent }]
+                              : {
+                                  backgroundColor: semantic.colors.surface.card,
+                                  borderColor: semantic.colors.border.default,
+                                },
+                          ]}
+                          activeOpacity={0.8}
+                          onPress={() => handleSelectPrioritizedProduct(null)}
+                        >
+                          <Ionicons
+                            name="sparkles-outline"
+                            size={13}
+                            color={prioritizedProductId === null ? "#FFFFFF" : semantic.colors.text.secondary}
+                          />
+                          <Text
+                            style={[
+                              styles.singleStoreProductChipText,
+                              { color: prioritizedProductId === null ? "#FFFFFF" : semantic.colors.text.primary },
+                            ]}
+                          >
+                            {t("cart.allProductsOption")}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {cartItems.map((c) => {
+                          const isSelected = prioritizedProductId === c.productId;
+                          return (
+                            <TouchableOpacity
+                              key={c.productId}
+                              style={[
+                                styles.singleStoreProductChip,
+                                isSelected
+                                  ? [styles.singleStoreChipActive, { backgroundColor: accent, borderColor: accent }]
+                                  : {
+                                      backgroundColor: semantic.colors.surface.card,
+                                      borderColor: semantic.colors.border.default,
+                                    },
+                              ]}
+                              activeOpacity={0.8}
+                              onPress={() => handleSelectPrioritizedProduct(isSelected ? null : c.productId)}
+                            >
+                              <Ionicons
+                                name="pricetag-outline"
+                                size={12}
+                                color={isSelected ? "#FFFFFF" : semantic.colors.text.secondary}
+                              />
+                              <Text
+                                style={[
+                                  styles.singleStoreProductChipText,
+                                  { color: isSelected ? "#FFFFFF" : semantic.colors.text.primary },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {c.name}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+
+                    {/* Alternative Single Store Candidates */}
+                    {optimization.singleStoreOptions?.stores && optimization.singleStoreOptions.stores.length > 1 && (
+                      <View style={styles.singleStoreSection}>
+                        <Text style={[styles.singleStoreSectionLabel, { color: semantic.colors.text.secondary }]}>
+                          {t("cart.chooseMarket")}
+                        </Text>
+                        <ScrollView
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          contentContainerStyle={styles.singleStoreChipsScroll}
+                        >
+                          {optimization.singleStoreOptions.stores.map((s) => {
+                            const isCurrentActive =
+                              selectedSingleMarketId === s.marketId ||
+                              (!selectedSingleMarketId && optimization.storeGroups[0]?.marketId === s.marketId);
+
+                            return (
+                              <TouchableOpacity
+                                key={s.marketId}
+                                style={[
+                                  styles.singleStoreMarketChip,
+                                  isCurrentActive
+                                    ? [styles.singleStoreChipActive, { backgroundColor: `${accent}20`, borderColor: accent }]
+                                    : {
+                                        backgroundColor: semantic.colors.surface.card,
+                                        borderColor: semantic.colors.border.default,
+                                      },
+                                ]}
+                                activeOpacity={0.8}
+                                onPress={() => handleSelectSingleMarket(s.marketId)}
+                              >
+                                <View style={styles.singleStoreMarketChipHeader}>
+                                  <Ionicons
+                                    name="storefront-outline"
+                                    size={13}
+                                    color={isCurrentActive ? accent : semantic.colors.icon.secondary}
+                                  />
+                                  <Text
+                                    style={[
+                                      styles.singleStoreMarketChipTitle,
+                                      { color: isCurrentActive ? accent : semantic.colors.text.primary },
+                                    ]}
+                                    numberOfLines={1}
+                                  >
+                                    {s.marketName}
+                                  </Text>
+                                </View>
+                                <Text
+                                  style={[styles.singleStoreMarketChipSub, { color: semantic.colors.text.tertiary }]}
+                                >
+                                  {s.coveredCount}/{s.totalCount} itens • ~{s.distanceKm} km
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+                )}
+
               {/* Grouped Stores List */}
               <View style={styles.sectionHeader}>
                 <Ionicons name="git-merge-outline" size={16} color={accent} />
@@ -503,14 +736,20 @@ export default function CartScreen() {
                       <Text style={[styles.unassignedTitle, { color: semantic.colors.text.primary }]}>
                         {bannerTitle} ({optimization.unassignedItems.length})
                       </Text>
-                      {optimization.unassignedItems.map((it) => (
-                        <Text key={it.productId} style={[styles.unassignedItem, { color: semantic.colors.text.secondary }]}>
-                          • {it.quantity}x {it.productName}
-                          {it.unitPrice && it.unitPrice > 0
-                            ? ` — R$ ${it.unitPrice.toFixed(2).replace(".", ",")}${it.marketName ? ` (${it.marketName})` : ""}`
-                            : ` — ${t("cart.noPriceRegistered")}`}
-                        </Text>
-                      ))}
+                      {optimization.unassignedItems.map((it) => {
+                        const itemCart = cartItems.find((c) => c.productId === it.productId);
+                        const effectivePrice = it.unitPrice && it.unitPrice > 0 ? it.unitPrice : itemCart?.estimatedPrice;
+                        const priceDisplay =
+                          effectivePrice && effectivePrice > 0
+                            ? ` — R$ ${effectivePrice.toFixed(2).replace(".", ",")}${it.marketName ? ` (${it.marketName})` : ""}`
+                            : ` — ${t("cart.noPriceRegistered")}`;
+
+                        return (
+                          <Text key={it.productId} style={[styles.unassignedItem, { color: semantic.colors.text.secondary }]}>
+                            • {it.quantity}x {it.productName}{priceDisplay}
+                          </Text>
+                        );
+                      })}
                     </View>
                   </View>
                 );
@@ -1054,5 +1293,96 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
+  },
+  singleStoreWarningCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    gap: 12,
+  },
+  singleStoreWarningHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  singleStoreWarningTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  singleStoreWarningDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  singleStoreSwitchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  singleStoreSwitchBtnText: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  singleStoreSection: {
+    gap: 8,
+  },
+  singleStoreSectionLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  singleStoreChipsScroll: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  singleStoreProductChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  singleStoreProductChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    maxWidth: 160,
+  },
+  singleStoreChipActive: {
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+  },
+  singleStoreMarketChip: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 140,
+    gap: 4,
+  },
+  singleStoreMarketChipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  singleStoreMarketChipTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    maxWidth: 150,
+  },
+  singleStoreMarketChipSub: {
+    fontSize: 11,
   },
 });

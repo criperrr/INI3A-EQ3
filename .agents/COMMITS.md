@@ -3855,3 +3855,25 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/landing/components/HeroSection.tsx`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Landing page features lively, Brazilian biodiversity-themed interactive visuals at 60 FPS without external image overhead. Zero typecheck errors.
+
+## `2026-09-25 07:58` - `fix(cart)`: Single-store incomplete warning, product prioritization and multi-store route fix
+
+- **Description:** Fixed cart optimizer incorrectly forcing single_store mode and marking other items as unpriced when multi-store strategies were active. Implemented warning card with 1-tap switch to multi-store route, priority product chip selector, and alternative candidate store selection when single-store strategy is chosen and no market carries all cart items.
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Cart optimization properly routes multi-store trips across available markets and provides complete user controls in single-store mode. Ready for review or user-requested commit.
