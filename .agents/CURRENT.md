@@ -17,7 +17,8 @@ Executive summary and direct file index for token-efficient agent navigation. Re
   3. **Qualidade & Validação:**
      - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), 153 módulos compilados pelo Metro.
 - **Correção de Produtos Sem Preço e Otimização da Lista de Compras (`v1.3.8`):**
-  1. **Diagnóstico da Causa Raiz:**
+  1. **Diagnóstico da Causa Raiz e Documentação Técnica:**
+     - Documento completo consolidado em [`docs/DIAGNOSTICO_PRECOS_CARRINHO.md`](file:///Users/aventureiromax/INI3A-EQ3/docs/DIAGNOSTICO_PRECOS_CARRINHO.md).
      - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), a busca de preços limitava-se aos mercados no raio inicial (~15km) e só expandia para todos os mercados se nenhum produto do carrinho tivesse preço (`rawPrices.length === 0`). Se um produto tinha preço, os demais que estivessem fora do raio nunca tinham seus preços consultados.
      - No cálculo de decisão multi-loja vs loja única, o backend comparava o custo da loja única (que só vendia parte dos itens) com o multi-loja (que vendia todos), gerando `netSavings` negativo e forçando `single_store` mesmo em `balanced` e `max_savings`, descartando os outros itens como "Itens sem preço recente".
      - No frontend, o `handleAddToCart` não capturava valores numéricos ou de ocorrências como fallback, e o auto-heal do carrinho não preenchia o `estimatedPrice`.
