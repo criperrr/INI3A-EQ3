@@ -28,6 +28,7 @@ import {
 } from "../constants/productCategories";
 import { getUserLocation } from "../utils/userLocation";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 
 export default function SearchScreen() {
   const { tokens, accent, isDark } = useTheme();
@@ -656,7 +657,7 @@ const ProductCardItem = memo(function ProductCardItem({
 
         <View style={styles.distanceSlot}>
           {Boolean(product.formattedDistance) ? (
-            <View
+            <TouchableOpacity
               style={[
                 styles.distancePill,
                 {
@@ -665,6 +666,19 @@ const ProductCardItem = memo(function ProductCardItem({
                   borderRadius: semantic.radius.badge,
                 },
               ]}
+              activeOpacity={product.nearestMarketName ? 0.7 : 1}
+              onPress={(e) => {
+                if (product.nearestMarketName) {
+                  e.stopPropagation();
+                  openMarketInGoogleMaps({
+                    marketName: product.nearestMarketName,
+                    coordinate: product.nearestMarketCoordinate,
+                    mode: "search",
+                  });
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={product.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${product.nearestMarketName}` : undefined}
             >
               <Ionicons name="location" size={10} color={accent} />
               <Text
@@ -675,7 +689,10 @@ const ProductCardItem = memo(function ProductCardItem({
                 {product.formattedDistance}
                 {product.nearestMarketName ? ` • ${product.nearestMarketName}` : ""}
               </Text>
-            </View>
+              {Boolean(product.nearestMarketName) && (
+                <Ionicons name="open-outline" size={9} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
+              )}
+            </TouchableOpacity>
           ) : null}
         </View>
       </View>

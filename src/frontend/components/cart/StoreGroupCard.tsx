@@ -14,6 +14,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme";
 import { useI18n } from "../../content/i18nContext";
 import type { OptimizedStoreGroupDisplay, OptimizedItemDisplay } from "../../services/cartService";
+import { openMarketInGoogleMaps } from "../../utils/mapNavigation";
 
 interface StoreGroupCardProps {
   group: OptimizedStoreGroupDisplay;
@@ -78,14 +79,36 @@ export const StoreGroupCard = memo(function StoreGroupCard({
     >
       {/* Store Header */}
       <View style={[styles.header, { borderBottomColor: semantic.colors.border.default }]}>
-        <View style={styles.headerLeft}>
+        <TouchableOpacity
+          style={styles.headerLeft}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (group.coordinate) {
+              openMarketInGoogleMaps({
+                marketName: group.marketName,
+                coordinate: { latitude: group.coordinate.lat, longitude: group.coordinate.lng },
+                mode: "search",
+              });
+            } else {
+              openMarketInGoogleMaps({
+                marketName: group.marketName,
+                mode: "search",
+              });
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${group.marketName} - ${t("productDetails.viewInGoogleMaps")}`}
+        >
           <View style={[styles.stopBadge, { backgroundColor: accent }]}>
             <Text style={styles.stopBadgeText}>#{group.stopOrder}</Text>
           </View>
           <View style={styles.storeDetails}>
-            <Text style={[styles.storeName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
-              {group.marketName}
-            </Text>
+            <View style={styles.storeNameRow}>
+              <Text style={[styles.storeName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
+                {group.marketName}
+              </Text>
+              <Ionicons name="open-outline" size={13} color={accent} style={{ marginLeft: 5 }} />
+            </View>
             <View style={styles.storeMetricsRow}>
               <View style={styles.tag}>
                 <Ionicons name="navigate-outline" size={12} color={semantic.colors.text.secondary} />
@@ -107,7 +130,7 @@ export const StoreGroupCard = memo(function StoreGroupCard({
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Items List */}
@@ -351,11 +374,16 @@ const styles = StyleSheet.create({
   storeDetails: {
     flex: 1,
   },
+  storeNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   storeName: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 5,
     lineHeight: 20,
+    flexShrink: 1,
   },
   storeMetricsRow: {
     flexDirection: "row",
