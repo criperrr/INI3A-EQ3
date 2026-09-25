@@ -3877,3 +3877,84 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `src/frontend/app.json`
 - **Impact / Next Steps:** Cart optimization properly routes multi-store trips across available markets and provides complete user controls in single-store mode. Ready for review or user-requested commit.
+
+## `2026-09-25 08:40` - `feat(maps)`: Resolve market nominal address and open Google Maps via place search
+
+- **Description:** Implemented nominal address resolution and place search query construction for Google Maps navigation across market listings, product search, product occurrences and route previews. Prevents Google Maps from dropping anonymous "Dropped Pins" by searching the official business listing with establishment name and address.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/*.ts`
+  - `tests/mapNavigation.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Seamless UX where tapping on any market or product's nearest market opens Google's official business profile and search list with photos, ratings and hours instead of an anonymous coordinate pin.
+
+## 2026-09-25 08:58 - feat(maps): multi-address waypoints encoding and branch disambiguation
+
+- **Description:** Fixed multi-stop route generation in Google Maps by escaping intermediate waypoints with %7C (preventing URL parser failure on unencoded pipe characters), added buildGoogleMapsRouteUrl utility with unit tests, enabled clicking individual store cards in StoreGroupCard to search specific supermarkets, and enriched backend spatial queries with nearestMarketCoordinate and marketCoordinate to disambiguate supermarket chains with multiple addresses in the same city.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** All 42 tests passing and 0 typecheck errors. Multi-stop routes and multi-address lists resolve cleanly without dropped pins or broken intent URLs.
+
+## 2026-09-25 09:10 - feat(cart): round-trip route starting and ending at user location
+
+- **Description:** Updated RoutePreviewModal handleOpenGps to configure full round-trip route in Google Maps starting from the user's location, visiting all selected supermarkets as intermediate waypoints with resolved nominal addresses, and concluding back at the user's starting point (origin = destination = userLocation). Updated itinerary card destination step to display "Sua Localização Atual (Retorno)" and added unit test verifying round-trip URL generation.
+- **Files Modified:**
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 43 tests passing, 0 typecheck errors. Full shopping loop supported natively in Google Maps.
+
+## 2026-09-25 09:15 - feat(maps): omit origin to activate native Sua Localizacao in Google Maps
+
+- **Description:** Updated RoutePreviewModal handleOpenGps to omit the origin parameter from buildGoogleMapsRouteUrl. Following Google Maps Universal Cross-Platform URL specifications, omitting origin causes Google Maps to automatically activate the user's native live GPS position ("Sua localização" / pulsing blue dot) as the starting point instead of placing an anonymous "Dropped Pin" (alfinete inserido). Destination at return is resolved to the user's nominal street address. Added unit test.
+- **Files Modified:**
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 44 tests passing, 0 typecheck errors. No dropped pin at route start; device location is natively selected.
+
+## `2026-09-25 12:25` - `feat(frontend)`: Universal cart sharing without fuel costs and with Google Maps route link
+
+- **Description:** Updated cart sharing message to remove the word 'Otimizada' from the title and eliminate personal fuel/distance calculations since recipients open the link from other locations. Added an open Google Maps navigation route link starting from the recipient's live device location ("Sua localização") and traversing all stores. Added a quick share button to RoutePreviewModal header.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Recipients receive clean, universal shopping lists with total product costs and direct Google Maps route navigation from their current location. All 46 tests passing and 0 typecheck errors.
+
+## `2026-09-25 12:33` - `feat(frontend)`: Precise return location address in shared cart and navigation route
+
+- **Description:** Added precise return address resolution and display for both the shared cart message text and Google Maps route navigation. In RoutePreviewModal, displays the resolved street address under starting and return destinations. In the shared text and universal Google Maps link, sets the precise return location as final destination with all stores as waypoints.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Recipients and drivers can return precisely to the exact starting location.

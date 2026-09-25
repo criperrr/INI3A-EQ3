@@ -7,6 +7,35 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Compartilhamento Universal de Lista e Trajeto no Google Maps (`v1.4.2`):**
+  1. **Ajuste na Mensagem Compartilhada:**
+     - Removido o termo "Otimizada" do título da mensagem de compartilhamento, agora padronizado como `🛒 *Minha Lista de Compras (Presco)*`.
+     - Removido o custo de combustível (`g.fuelCost` e `optimization.totalTravelCost`) e quilometragem do remetente da mensagem compartilhada, visto que o destinatário pode abrir a lista em outro local e com veículo próprio.
+     - Preservado o subtotal por estabelecimento, o `💰 *Total dos Produtos:* R$ X,XX` e a `✨ *Economia:* R$ X,XX`.
+     - Adicionado o campo preciso de retorno `🏁 *Local de Retorno:* <endereço nominal completo ou coordenadas>` na mensagem compartilhada para orientar exatamente o ponto de término da viagem.
+  2. **Link Universal e Traçado do Trajeto no Google Maps:**
+     - [`mapNavigation.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapNavigation.ts) & [`mapQueryBuilder.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts): Implementados `buildCartRouteShareUrl`, `buildCartShareText` e `shareCartList`.
+     - O traçado do trajeto define o endereço nominal de retorno como destino final e todos os supermercados como waypoints intermediários, com `origin` omitido para sair da "Sua localização" em tempo real e retornar com precisão ao ponto de partida.
+     - [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx): Exibe o endereço nominal completo sob "PONTO DE PARTIDA" e "DESTINO FINAL (RETORNO)", além do botão de compartilhamento no cabeçalho.
+  3. **Qualidade e Testes:**
+     - 46 testes unitários passando (18 backend + 28 raiz incluindo testes de formatação de compartilhamento, rotas universais e 'Sua localização').
+     - 0 erros de tipagem no `npm run typecheck`.
+- **Busca por Nome e Endereço de Estabelecimentos no Google Maps e Suporte a Múltiplos Endereços (`v1.4.2`):**
+  1. **Diagnóstico dos Cenários de Múltiplos Endereços:**
+     - **Rotas com Múltiplas Paradas (`stores.length > 1`):** A URL do Google Maps gerava o separador `|` não codificado (`join("|")`), violando o padrão RFC 3986 e causando rejeição ou truncamento pelo intent parser no Android e no iOS.
+     - **Redes de Supermercados com Múltiplas Filiais:** Ao buscar um produto ou abrir uma ocorrência cujo mercado é uma rede com várias lojas na mesma cidade (ex: Confiança, Tauste, Pão de Açúcar), enviar apenas o nome e cidade fazia o Google Maps exibir uma lista genérica ou não abrir a filial correta por falta das coordenadas exatas.
+     - **Cards de Supermercado no Carrinho:** Os cabeçalhos de lojas em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) não eram clicáveis para consulta direta no Google Maps.
+  2. **Implementação da Solução Completa:**
+     - [`mapQueryBuilder.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts): Implementada a função [`buildGoogleMapsRouteUrl`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts#L78-L109) com escape estrito de waypoints via `%7C`, parâmetros padronizados de rotas universais e testes unitários dedicados.
+     - [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx): Omissão de `origin` para que o Google Maps utilize a "Sua localização" nativa via GPS em tempo real (sem alfinete inserido), visitas a todos os mercados da lista como waypoints intermediários e retorno resolvido para o endereço nominal do usuário.
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx): Cabeçalho de supermercado agora é interativo com ícone `open-outline`, disparando busca nominal georreferenciada no Google Maps para cada mercado da lista.
+     - [`product.repository.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/product.repository.ts) & [`product.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.service.ts): Enriquecimento da busca espacial de produtos com `nearestMarketCoordinate: { latitude, longitude }`.
+     - [`ocurrency.repository.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/ocurrency.repository.ts): Extração de `marketCoordinate: { latitude, longitude }` para todas as ocorrências de preços de produtos.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx), [`search.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/search.tsx) e [`index.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/index.tsx): Propagação das coordenadas exatas nas chamadas [`openMarketInGoogleMaps`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapNavigation.ts#L108), garantindo geocodificação reversa de logradouro e número mesmo para redes com dezenas de filiais na cidade.
+  3. **Qualidade, Testes & Versionamento SemVer:**
+     - 44 testes unitários passando (18 backend + 26 raiz incluindo testes de waypoints, rotas multi-paradas, 'Sua localização' e circuito fechado).
+     - 0 erros de tipagem no `npm run typecheck` (backend + frontend).
+     - SemVer sincronizado para `v1.4.2` (`versionCode: 27`).
 - **Aviso de Loja Única Incompleta, Seletor de Priorização e Correção de Rota Multiloja (`v1.4.1`):**
   1. **Diagnóstico do Bloqueio de Rota Multilojas e Falso "Sem Preço Recente":**
      - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), nos modos `balanced` e `max_savings`, a rota multi-loja estava sendo descartada pelo cálculo de conveniência quando a loja única vendia apenas parte dos itens (comparando custo parcial de 1 item vs custo total de deslocamento de 2 lojas), forçando erroneamente o retorno de `single_store` mesmo sem o usuário ter selecionado "Loja Única".
