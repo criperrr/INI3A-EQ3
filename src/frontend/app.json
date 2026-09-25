@@ -2,7 +2,7 @@
   "expo": {
     "name": "Presco",
     "slug": "presco",
-    "version": "1.4.0",
+    "version": "1.4.1",
     "orientation": "portrait",
     "scheme": "presco",
     "userInterfaceStyle": "automatic",
@@ -19,7 +19,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
-      "versionCode": 25
+      "versionCode": 26
     },
     "web": {
       "output": "static"

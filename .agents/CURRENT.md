@@ -7,6 +7,29 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Aviso de Loja Única Incompleta, Seletor de Priorização e Correção de Rota Multiloja (`v1.4.1`):**
+  1. **Diagnóstico do Bloqueio de Rota Multilojas e Falso "Sem Preço Recente":**
+     - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), nos modos `balanced` e `max_savings`, a rota multi-loja estava sendo descartada pelo cálculo de conveniência quando a loja única vendia apenas parte dos itens (comparando custo parcial de 1 item vs custo total de deslocamento de 2 lojas), forçando erroneamente o retorno de `single_store` mesmo sem o usuário ter selecionado "Loja Única".
+     - Itens disponíveis em outros mercados eram marcados como sem preço ou descartados da rota.
+  2. **Implementação da Solução no Backend:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts):
+       - Nos modos `balanced` e `max_savings`, se a melhor loja única não cobre todos os itens (`coveredCount < cartItems.length`) e existe rota multi-loja, o sistema **NUNCA** força `single_store`, garantindo que todos os itens disponíveis sejam alocados em seus respectivos mercados.
+       - Aumentado o piso de paradas para `Math.max(2, maxStops)` quando a estratégia for multilojas.
+       - Adicionado o payload `singleStoreOptions` com `hasCompleteStore`, `bestStoreCoveredCount`, `totalCartItemsCount` e listagem de `stores` candidatas com `coveredCount`, `totalCount`, `groceryCost` e `distanceKm`.
+       - Suporte aos parâmetros de preferência `selectedMarketId` e `prioritizedProductId` para desempate e escolha explícita do usuário.
+       - Enriquecimento integral de `unassignedItems` com `unitPrice` e `marketName` de alternativas existentes.
+  3. **Implementação no Frontend & Experiência do Usuário (UX):**
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx):
+       - Inserido card de alerta proeminente (`singleStoreWarningCard`) quando a estratégia selecionada for "Loja Única" e nenhum supermercado tiver 100% da lista de compras.
+       - Botão com 1 toque para alternar para "Rota Multilojas" e comprar todos os itens divididos entre os melhores mercados.
+       - Seletor interativo em chips para priorizar um produto específico (qual produto o usuário faz questão de encontrar na visita única).
+       - Carrossel de supermercados alternativos para o usuário escolher manualmente em qual loja deseja comprar a sua lista parcial.
+     - [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts): Tipagens `SingleStoreOption`, `SingleStoreOptionsSummary` e propagação de preferências ao backend e fallback local.
+     - Internacionalização nos 7 idiomas do Presco (`pt`, `en`, `es`, `de`, `ru`, `zh`, `ja`) com as novas chaves `singleStoreIncompleteTitle`, `singleStoreIncompleteDesc`, `switchToMultiStore`, `chooseProductToPrioritize`, `chooseMarket`, `allProductsOption`.
+  4. **Qualidade, Testes & Versionamento SemVer:**
+     - 18 testes unitários de backend passando (`src/backend/tests/cart.test.ts`), 15 testes de integração/concorrência passando (33 testes no total).
+     - 0 erros de tipagem (`npm run typecheck` backend + frontend).
+     - SemVer sincronizado para `v1.4.1` (`versionCode: 26`).
 - **Adição da Arara-Canindé e Folhas Tropicais em JavaScript/Canvas 2D (`src/landing`):**
   1. **Renderização Procedural & Cinemática Vetorial:**
      - [`monsteraLeaf.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/graphics/monsteraLeaf.ts): Módulo procedural Canvas 2D da Folha de Costela-de-Adão (*Monstera deliciosa*) desenhada estritamente a partir da ilustração de referência, com silhueta cordiforme, lobos profundos, fenestras internas (orifícios naturais recortados via `destination-out`), nervuras iluminadas, balanço orgânico ao vento e reação de paralaxe ao mouse.
