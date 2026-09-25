@@ -46,6 +46,27 @@ export interface OptimizedStoreGroupDisplay {
   totalWithTravel: number;
 }
 
+export interface SingleStoreOption {
+  marketId: number;
+  marketName: string;
+  coordinate: { lat: number; lng: number };
+  coveredCount: number;
+  totalCount: number;
+  distanceKm: number;
+  groceryCost: number;
+  travelCost: number;
+  combinedCost: number;
+  coveredProductIds: number[];
+  missingProductIds: number[];
+}
+
+export interface SingleStoreOptionsSummary {
+  hasCompleteStore: boolean;
+  bestStoreCoveredCount: number;
+  totalCartItemsCount: number;
+  stores: SingleStoreOption[];
+}
+
 export interface OptimizationResult {
   strategy: OptimizationStrategy;
   recommendedType: "single_store" | "multi_store";
@@ -66,6 +87,7 @@ export interface OptimizationResult {
     availableItemCount: number;
     totalItemCount: number;
   } | null;
+  singleStoreOptions?: SingleStoreOptionsSummary;
   unassignedItems: {
     productId: number;
     productName: string;
@@ -268,6 +290,8 @@ export const cartService = {
       estimatedPrice?: number;
     }[];
     customSettings?: Partial<TravelSettings>;
+    selectedMarketId?: number;
+    prioritizedProductId?: number;
   }): Promise<OptimizationResult> {
     const rawCart = await this.getCartItems();
     const items =
@@ -298,6 +322,8 @@ export const cartService = {
         maxStops: settings.maxStops,
         maxRadiusKm: settings.maxRadiusKm,
         convenienceThreshold: settings.convenienceThreshold,
+        selectedMarketId: params?.selectedMarketId,
+        prioritizedProductId: params?.prioritizedProductId,
       },
     };
 
@@ -315,7 +341,14 @@ export const cartService = {
         : "Servidor indisponível no momento. Exibindo simulação local.";
 
       const fullCartItems = await this.getCartItems();
-      return generateLocalFallbackOptimization(fullCartItems, settings, params?.userLocation, fallbackReason);
+      return generateLocalFallbackOptimization(
+        fullCartItems,
+        settings,
+        params?.userLocation,
+        fallbackReason,
+        params?.selectedMarketId,
+        params?.prioritizedProductId
+      );
     }
   },
 };
@@ -324,7 +357,9 @@ function generateLocalFallbackOptimization(
   rawItems: CartProductItem[],
   settings: TravelSettings,
   userLocation?: { lat: number; lng: number },
-  reason?: string
+  reason?: string,
+  selectedMarketId?: number,
+  prioritizedProductId?: number
 ): OptimizationResult {
   const loc = userLocation || { lat: -23.5505, lng: -46.6333 };
   const fuelEfficiency = Math.max(1, settings.fuelEfficiency || 10);
@@ -374,9 +409,21 @@ function generateLocalFallbackOptimization(
     const travelDist = isRoundTrip ? storeDist * 2 : storeDist;
     const travelCost = Math.round(((travelDist / fuelEfficiency) * fuelPrice) * 100) / 100;
 
+    // Simulate single store options when rawItems > 1
+    const candidateStores = [
+      { id: 1, name: "Supermercado Econômico", dist: 2.4, factor: 1.0 },
+      { id: 2, name: "Atacadão das Ofertas", dist: 3.8, factor: 0.94 },
+    ];
+
+    let chosenStore = candidateStores[0]!;
+    if (selectedMarketId) {
+      const found = candidateStores.find((s) => s.id === selectedMarketId);
+      if (found) chosenStore = found;
+    }
+
     let groceryCost = 0;
     const items = rawItems.map((it) => {
-      const unitPrice = getItemPrice(it, 1.0);
+      const unitPrice = getItemPrice(it, chosenStore.factor);
       const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
       groceryCost += subtotal;
       return {
@@ -392,17 +439,31 @@ function generateLocalFallbackOptimization(
     });
 
     const storeGroup: OptimizedStoreGroupDisplay = {
-      marketId: 1,
-      marketName: "Supermercado Econômico",
+      marketId: chosenStore.id,
+      marketName: chosenStore.name,
       coordinate: { lat: loc.lat + 0.01, lng: loc.lng + 0.01 },
       stopOrder: 1,
-      distanceKm: storeDist,
+      distanceKm: chosenStore.dist,
       durationMinutes: storeDuration,
       fuelCost: travelCost,
       items,
       subtotalItems: Math.round(groceryCost * 100) / 100,
       totalWithTravel: Math.round((groceryCost + travelCost) * 100) / 100,
     };
+
+    const singleStoreOptionsList = candidateStores.map((s) => ({
+      marketId: s.id,
+      marketName: s.name,
+      coordinate: { lat: loc.lat + 0.01, lng: loc.lng + 0.01 },
+      coveredCount: rawItems.length,
+      totalCount: rawItems.length,
+      distanceKm: s.dist,
+      groceryCost: Math.round(groceryCost * 100) / 100,
+      travelCost,
+      combinedCost: Math.round((groceryCost + travelCost) * 100) / 100,
+      coveredProductIds: rawItems.map((c) => c.productId),
+      missingProductIds: [],
+    }));
 
     return {
       strategy: settings.strategy,
@@ -415,14 +476,20 @@ function generateLocalFallbackOptimization(
       netSavingsVsSingleStore: 0,
       storeGroups: [storeGroup],
       singleStoreComparison: {
-        marketId: 1,
-        marketName: "Supermercado Econômico",
+        marketId: chosenStore.id,
+        marketName: chosenStore.name,
         groceryCost: Math.round(groceryCost * 100) / 100,
         travelCost,
         combinedCost: Math.round((groceryCost + travelCost) * 100) / 100,
         distanceKm: travelDist,
         availableItemCount: rawItems.length,
         totalItemCount: rawItems.length,
+      },
+      singleStoreOptions: {
+        hasCompleteStore: true,
+        bestStoreCoveredCount: rawItems.length,
+        totalCartItemsCount: rawItems.length,
+        stores: singleStoreOptionsList,
       },
       unassignedItems: [],
       parametersUsed: {

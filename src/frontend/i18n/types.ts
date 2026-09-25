@@ -733,6 +733,12 @@ export interface TranslationSchema {
     itemsOtherStores: string;
     itemsMixedUnassigned: string;
     noPriceRegistered: string;
+    singleStoreIncompleteTitle: string;
+    singleStoreIncompleteDesc: string;
+    switchToMultiStore: string;
+    chooseProductToPrioritize: string;
+    chooseMarket: string;
+    allProductsOption: string;
     clearCartConfirm: string;
     clearCartTitle: string;
     addedSuccess: string;
