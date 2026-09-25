@@ -175,6 +175,7 @@ export const ja: TranslationSchema = {
     saveChanges: "変更を保存",
     saving: "保存中...",
     adminActions: "管理者操作",
+    viewInGoogleMaps: "Google マップで表示",
     chartDays30: "過去30日間",
     chartDays60: "過去60日間",
     chartDays90: "過去90日間",
@@ -530,6 +531,7 @@ export const ja: TranslationSchema = {
     hoursWithInfo: "営業時間情報あり",
     hoursUnknown: "営業時間未登録",
     open24Hours: "24時間営業",
+    searchOnGoogleMaps: "Google マップで検索",
   },
   help: {
     title: "ヘルプセンター",

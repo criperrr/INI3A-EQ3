@@ -173,6 +173,7 @@ export interface TranslationSchema {
     saveChanges: string;
     saving: string;
     adminActions: string;
+    viewInGoogleMaps: string;
     chartDays30: string;
     chartDays60: string;
     chartDays90: string;
@@ -528,6 +529,7 @@ export interface TranslationSchema {
     hoursWithInfo: string;
     hoursUnknown: string;
     open24Hours: string;
+    searchOnGoogleMaps: string;
   };
   help: {
     title: string;
