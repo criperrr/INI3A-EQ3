@@ -19,6 +19,8 @@ export interface OptimizationPreferencesDTO {
   maxStops?: number; // 1 to 4 (default 3)
   maxRadiusKm?: number; // default 15
   convenienceThreshold?: number; // default 5.00
+  selectedMarketId?: number; // manual selection of single store
+  prioritizedProductId?: number; // manual prioritization of a product for single store search
 }
 
 export interface OptimizationItemInputDTO {
@@ -59,6 +61,27 @@ export interface OptimizedStoreGroup {
   totalWithTravel: number;
 }
 
+export interface SingleStoreOptionDTO {
+  marketId: number;
+  marketName: string;
+  coordinate: GeoCoordinate;
+  coveredCount: number;
+  totalCount: number;
+  distanceKm: number;
+  groceryCost: number;
+  travelCost: number;
+  combinedCost: number;
+  coveredProductIds: number[];
+  missingProductIds: number[];
+}
+
+export interface SingleStoreOptionsSummaryDTO {
+  hasCompleteStore: boolean;
+  bestStoreCoveredCount: number;
+  totalCartItemsCount: number;
+  stores: SingleStoreOptionDTO[];
+}
+
 export interface OptimizationResponseDTO {
   strategy: OptimizationStrategy;
   recommendedType: "single_store" | "multi_store";
@@ -79,6 +102,7 @@ export interface OptimizationResponseDTO {
     availableItemCount: number;
     totalItemCount: number;
   } | null;
+  singleStoreOptions?: SingleStoreOptionsSummaryDTO;
   unassignedItems: {
     productId: number;
     productName: string;
@@ -207,9 +231,12 @@ class CartServiceClass {
     const isRoundTrip = params.vehicleSettings?.isRoundTrip ?? true;
 
     const strategy = params.preferences?.strategy ?? "balanced";
-    const maxStops = Math.min(4, Math.max(1, params.preferences?.maxStops ?? 3));
+    const rawMaxStops = params.preferences?.maxStops ?? 3;
+    const maxStops = Math.min(4, Math.max(1, rawMaxStops));
     const maxRadiusKm = Math.max(1, params.preferences?.maxRadiusKm ?? 15);
     const convenienceThreshold = Math.max(0, params.preferences?.convenienceThreshold ?? 5.0);
+    const selectedMarketId = params.preferences?.selectedMarketId;
+    const prioritizedProductId = params.preferences?.prioritizedProductId;
 
     const calcTravelCost = (distanceKm: number) => {
       return Number(((distanceKm / fuelEfficiency) * fuelPrice).toFixed(2));
@@ -386,9 +413,44 @@ class CartServiceClass {
       return a.combinedCost - b.combinedCost;
     });
 
-    const bestSingle = singleStoreEvals.length > 0 ? singleStoreEvals[0] : null;
+    const hasCompleteStore = singleStoreEvals.some((s) => s.coveredCount === cartItems.length);
 
-    // 6. Evaluate Multi-Store Candidates (up to maxStops, max 3 stops)
+    // Build rich singleStoreOptions summary for all candidate single stores
+    const singleStoreOptionsList: SingleStoreOptionDTO[] = singleStoreEvals.map((s) => {
+      const coveredIds = s.assignedItems.map((it) => it.productId);
+      const coveredSet = new Set(coveredIds);
+      const missingIds = cartItems.filter((c) => !coveredSet.has(c.productId)).map((c) => c.productId);
+      return {
+        marketId: s.marketId,
+        marketName: s.marketName,
+        coordinate: s.coordinate,
+        coveredCount: s.coveredCount,
+        totalCount: cartItems.length,
+        distanceKm: s.distanceKm,
+        groceryCost: s.groceryCost,
+        travelCost: s.travelCost,
+        combinedCost: s.combinedCost,
+        coveredProductIds: coveredIds,
+        missingProductIds: missingIds,
+      };
+    });
+
+    let bestSingle: SingleStoreEvaluation | null = null;
+    if (selectedMarketId) {
+      const explicit = singleStoreEvals.find((s) => s.marketId === selectedMarketId);
+      if (explicit) bestSingle = explicit;
+    }
+    if (!bestSingle && prioritizedProductId) {
+      const prioritized = singleStoreEvals.filter((s) =>
+        s.assignedItems.some((it) => it.productId === prioritizedProductId)
+      );
+      if (prioritized.length > 0) bestSingle = prioritized[0] ?? null;
+    }
+    if (!bestSingle) {
+      bestSingle = singleStoreEvals[0] ?? null;
+    }
+
+    // 6. Evaluate Multi-Store Candidates (up to maxStops, max 4 stops)
     interface MultiStoreEvaluation {
       marketIds: number[];
       coveredCount: number;
@@ -401,9 +463,10 @@ class CartServiceClass {
     }
 
     let bestMulti: MultiStoreEvaluation | null = null;
+    const effectiveMultiStops = strategy !== "single_store" ? Math.max(2, maxStops) : maxStops;
 
-    // Only compute multi-store combinations if maxStops > 1 and candidate markets > 1
-    if (maxStops > 1 && candidateMarkets.length > 1) {
+    // Only compute multi-store combinations if effectiveMultiStops > 1 and candidate markets > 1
+    if (effectiveMultiStops > 1 && candidateMarkets.length > 1) {
       // Prioritize markets that carry unique products to ensure full cart coverage
       const activeMarkets = candidateMarkets.filter((m) => {
         return Array.from(pricesByProduct.values()).some((pMap) => pMap.has(m.id));
@@ -418,14 +481,48 @@ class CartServiceClass {
         if (sortedMarketsForProd[0]) {
           essentialMarketIds.add(sortedMarketsForProd[0]!.id);
         }
+        if (sortedMarketsForProd[1]) {
+          essentialMarketIds.add(sortedMarketsForProd[1]!.id);
+        }
       }
 
       const essentialList = activeMarkets.filter((m) => essentialMarketIds.has(m.id));
       const nonEssentialList = activeMarkets.filter((m) => !essentialMarketIds.has(m.id));
-      const relevantMarkets = [...essentialList, ...nonEssentialList].slice(0, 10);
+      const relevantMarkets = [...essentialList, ...nonEssentialList].slice(0, 12);
 
       const combinations: number[][] = [];
-      const stopLimits = Math.min(maxStops, 4);
+      const stopLimits = Math.min(effectiveMultiStops, 4);
+
+      // Greedy combination to maximize distinct items covered across markets
+      const greedyCoverMarketIds: number[] = [];
+      const uncoveredProductIds = new Set(cartItems.map((c) => c.productId));
+      while (uncoveredProductIds.size > 0 && greedyCoverMarketIds.length < stopLimits) {
+        let bestMarketForGreedy: { id: number; coversCount: number } | null = null;
+        for (const m of activeMarkets) {
+          if (greedyCoverMarketIds.includes(m.id)) continue;
+          let count = 0;
+          for (const pId of uncoveredProductIds) {
+            if (pricesByProduct.get(pId)?.has(m.id)) count++;
+          }
+          if (!bestMarketForGreedy || count > bestMarketForGreedy.coversCount) {
+            bestMarketForGreedy = { id: m.id, coversCount: count };
+          }
+        }
+        if (bestMarketForGreedy && bestMarketForGreedy.coversCount > 0) {
+          greedyCoverMarketIds.push(bestMarketForGreedy.id);
+          for (const pId of Array.from(uncoveredProductIds)) {
+            if (pricesByProduct.get(pId)?.has(bestMarketForGreedy.id)) {
+              uncoveredProductIds.delete(pId);
+            }
+          }
+        } else {
+          break;
+        }
+      }
+
+      if (greedyCoverMarketIds.length >= 2) {
+        combinations.push(greedyCoverMarketIds);
+      }
 
       // Generate 2-store, 3-store, and 4-store combinations
       for (let i = 0; i < relevantMarkets.length; i++) {
@@ -595,21 +692,20 @@ class CartServiceClass {
       const extraStops = bestMulti.marketIds.length - 1;
       const netSavings = bestMulti.netSavingsVsSingle;
       const multiCoversMore = bestMulti.coveredCount > bestSingle.coveredCount;
+      const singleIsComplete = bestSingle.coveredCount === cartItems.length;
 
       if (strategy === "single_store") {
-        // Only split if net savings beat convenience penalty threshold by more than double
-        if (netSavings > convenienceThreshold * extraStops * 2 && bestMulti.coveredCount >= bestSingle.coveredCount) {
-          recommendedType = "multi_store";
-          chosenPlan = bestMulti;
-        } else {
-          recommendedType = "single_store";
-          chosenPlan = bestSingle;
-        }
+        recommendedType = "single_store";
+        chosenPlan = bestSingle;
       } else if (strategy === "balanced") {
         // Multi-store split permitted if:
         // 1) Multi-store covers MORE items than single store (fulfills more of the shopping list)
-        // 2) OR net savings per extra stop exceeds convenience threshold
+        // 2) OR single store is incomplete (single store doesn't have all products) and multi-store exists
+        // 3) OR net savings per extra stop exceeds convenience threshold
         if (multiCoversMore) {
+          recommendedType = "multi_store";
+          chosenPlan = bestMulti;
+        } else if (!singleIsComplete) {
           recommendedType = "multi_store";
           chosenPlan = bestMulti;
         } else if (netSavings >= convenienceThreshold * extraStops && bestMulti.coveredCount >= bestSingle.coveredCount) {
@@ -620,8 +716,8 @@ class CartServiceClass {
           chosenPlan = bestSingle;
         }
       } else {
-        // max_savings: split whenever multi-store covers more items OR net savings > 0
-        if (multiCoversMore) {
+        // max_savings: split whenever multi-store covers more items OR single store is incomplete OR net savings > 0
+        if (multiCoversMore || !singleIsComplete) {
           recommendedType = "multi_store";
           chosenPlan = bestMulti;
         } else if (netSavings > 0 && bestMulti.coveredCount >= bestSingle.coveredCount) {
@@ -749,6 +845,12 @@ class CartServiceClass {
             totalItemCount: cartItems.length,
           }
         : null,
+      singleStoreOptions: {
+        hasCompleteStore,
+        bestStoreCoveredCount: bestSingle?.coveredCount || 0,
+        totalCartItemsCount: cartItems.length,
+        stores: singleStoreOptionsList.slice(0, 10),
+      },
       unassignedItems,
       parametersUsed: {
         userLocation,

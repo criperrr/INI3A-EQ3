@@ -138,3 +138,79 @@ test("CartService - optimizeCart expands to outer markets when item is missing p
   }
 });
 
+test("CartService - single_store strategy provides singleStoreOptions and honors prioritizedProductId", async () => {
+  const { MarketRepository } = await import("../src/shared/database/repositories/market.repository.ts");
+  const { CartRepository } = await import("../src/shared/database/repositories/cart.repository.ts");
+
+  const origGetMarketsByRadius = MarketRepository.getMarketsByRadius;
+  const origGetAllMarkets = MarketRepository.getAllMarkets;
+  const origGetPrices = CartRepository.getPricesForProductsAcrossMarkets;
+
+  try {
+    (MarketRepository as any).getMarketsByRadius = async () => [
+      { id: 1, name: "Mercado A", location: { coordinates: [-46.63, -23.55] }, distance: 1000 },
+      { id: 2, name: "Mercado B", location: { coordinates: [-46.64, -23.56] }, distance: 1200 },
+    ];
+    (MarketRepository as any).getAllMarkets = async () => [
+      { id: 1, name: "Mercado A", location: { coordinates: [-46.63, -23.55] }, distance: 1000 },
+      { id: 2, name: "Mercado B", location: { coordinates: [-46.64, -23.56] }, distance: 1200 },
+    ];
+
+    // Mercado A only has product 301. Mercado B only has product 302. No single store has both!
+    (CartRepository as any).getPricesForProductsAcrossMarkets = async (pIds: number[], mIds?: number[]) => {
+      const allPrices = [
+        { productId: 301, marketId: 1, marketName: "Mercado A", productName: "Sabão", value: 12.0, isPromotion: false, createdAt: new Date().toISOString() },
+        { productId: 302, marketId: 2, marketName: "Mercado B", productName: "Detergente", value: 4.0, isPromotion: false, createdAt: new Date().toISOString() },
+      ];
+      return allPrices.filter((p) => pIds.includes(p.productId) && (!mIds || mIds.includes(p.marketId)));
+    };
+
+    // 1. Without prioritization: single_store strategy returns singleStoreOptions with hasCompleteStore: false
+    const res1 = await CartService.optimizeCart({
+      items: [
+        { productId: 301, quantity: 1, productName: "Sabão" },
+        { productId: 302, quantity: 1, productName: "Detergente" },
+      ],
+      preferences: { strategy: "single_store" },
+    });
+
+    assert.equal(res1.recommendedType, "single_store");
+    assert.ok(res1.singleStoreOptions);
+    assert.equal(res1.singleStoreOptions.hasCompleteStore, false);
+    assert.equal(res1.singleStoreOptions.totalCartItemsCount, 2);
+    assert.equal(res1.singleStoreOptions.stores.length, 2);
+    assert.equal(res1.unassignedItems.length, 1);
+    assert.equal(res1.unassignedItems[0]?.marketName !== undefined, true, "Unassigned item should have alternative marketName");
+
+    // 2. Prioritizing product 302 (which only Mercado B has):
+    const res2 = await CartService.optimizeCart({
+      items: [
+        { productId: 301, quantity: 1, productName: "Sabão" },
+        { productId: 302, quantity: 1, productName: "Detergente" },
+      ],
+      preferences: { strategy: "single_store", prioritizedProductId: 302 },
+    });
+
+    assert.equal(res2.storeGroups[0]?.marketId, 2, "Mercado B must be chosen because product 302 is prioritized");
+    assert.equal(res2.storeGroups[0]?.items[0]?.productId, 302);
+    assert.equal(res2.unassignedItems[0]?.productId, 301);
+
+    // 3. User selects Mercado A explicitly via selectedMarketId:
+    const res3 = await CartService.optimizeCart({
+      items: [
+        { productId: 301, quantity: 1, productName: "Sabão" },
+        { productId: 302, quantity: 1, productName: "Detergente" },
+      ],
+      preferences: { strategy: "single_store", selectedMarketId: 1 },
+    });
+
+    assert.equal(res3.storeGroups[0]?.marketId, 1, "Mercado A must be chosen because selectedMarketId is 1");
+    assert.equal(res3.storeGroups[0]?.items[0]?.productId, 301);
+  } finally {
+    (MarketRepository as any).getMarketsByRadius = origGetMarketsByRadius;
+    (MarketRepository as any).getAllMarkets = origGetAllMarkets;
+    (CartRepository as any).getPricesForProductsAcrossMarkets = origGetPrices;
+  }
+});
+
+
