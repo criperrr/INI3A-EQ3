@@ -730,6 +730,9 @@ export interface TranslationSchema {
     reallocateModalTitle: string;
     openInMaps: string;
     missingItems: string;
+    itemsOtherStores: string;
+    itemsMixedUnassigned: string;
+    noPriceRegistered: string;
     clearCartConfirm: string;
     clearCartTitle: string;
     addedSuccess: string;

@@ -84,6 +84,8 @@ export interface OptimizationResponseDTO {
     productName: string;
     quantity: number;
     reason: string;
+    unitPrice?: number | undefined;
+    marketName?: string | undefined;
   }[];
   parametersUsed: {
     userLocation: GeoCoordinate;
@@ -251,35 +253,44 @@ class CartServiceClass {
     // 4. Fetch Active Prices Across Candidate Markets
     let rawPrices = await CartRepository.getPricesForProductsAcrossMarkets(productIds, marketIds);
 
-    const marketsMap = new Map<number, { id: number; name: string; coordinate: GeoCoordinate }>();
+    const marketsMap = new Map<number, { id: number; name: string; coordinate: GeoCoordinate; distanceMeters?: number }>();
     for (const m of candidateMarkets) {
       marketsMap.set(m.id, m);
     }
 
-    // If candidate markets within radius carry none of the products,
-    // expand candidate markets to include markets that DO have active prices for these products
-    if (rawPrices.length === 0) {
-      const allProductPrices = await CartRepository.getPricesForProductsAcrossMarkets(productIds);
-      if (allProductPrices.length > 0) {
-        const activeMarketIds = Array.from(new Set(allProductPrices.map((p) => p.marketId)));
-        const allMarkets = await MarketRepository.getAllMarkets({ lat: userLocation.lat, lng: userLocation.lng });
-        const matchedMarkets = allMarkets.filter((m) => activeMarketIds.includes(Number(m.id)));
-        if (matchedMarkets.length > 0) {
-          candidateMarkets = matchedMarkets.slice(0, 10).map((m: any) => {
-            const loc = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
-            const coords = loc?.coordinates || [0, 0];
-            return {
-              id: Number(m.id),
-              name: String(m.name),
-              coordinate: { lat: Number(coords[1]), lng: Number(coords[0]) } as GeoCoordinate,
-              distanceMeters: Number(m.distance) || 0,
-            };
-          });
-          for (const m of candidateMarkets) {
-            marketsMap.set(m.id, m);
+    // Identify which products in the cart are missing prices from candidateMarkets
+    const coveredInCandidateMarkets = new Set(rawPrices.map((p) => p.productId));
+    const unpricedProductIds = productIds.filter((id) => !coveredInCandidateMarkets.has(id));
+
+    // If some or all products are missing prices in candidate markets, expand search across all markets
+    if (unpricedProductIds.length > 0) {
+      const extraProductPrices = await CartRepository.getPricesForProductsAcrossMarkets(unpricedProductIds);
+      if (extraProductPrices.length > 0) {
+        const extraMarketIds = Array.from(new Set(extraProductPrices.map((p) => p.marketId))).filter(
+          (mId) => !marketsMap.has(mId)
+        );
+
+        if (extraMarketIds.length > 0) {
+          const allMarkets = await MarketRepository.getAllMarkets({ lat: userLocation.lat, lng: userLocation.lng });
+          const matchedMarkets = allMarkets.filter((m) => extraMarketIds.includes(Number(m.id)));
+          if (matchedMarkets.length > 0) {
+            const extraCandidates = matchedMarkets.map((m: any) => {
+              const loc = typeof m.location === "string" ? JSON.parse(m.location) : m.location;
+              const coords = loc?.coordinates || [0, 0];
+              return {
+                id: Number(m.id),
+                name: String(m.name),
+                coordinate: { lat: Number(coords[1]), lng: Number(coords[0]) } as GeoCoordinate,
+                distanceMeters: Number(m.distance) || 0,
+              };
+            });
+            for (const m of extraCandidates) {
+              candidateMarkets.push(m);
+              marketsMap.set(m.id, m);
+            }
           }
-          rawPrices = allProductPrices.filter((p) => candidateMarkets.some((m) => m.id === p.marketId));
         }
+        rawPrices = [...rawPrices, ...extraProductPrices];
       }
     }
 
@@ -393,15 +404,30 @@ class CartServiceClass {
 
     // Only compute multi-store combinations if maxStops > 1 and candidate markets > 1
     if (maxStops > 1 && candidateMarkets.length > 1) {
-      // Filter markets that carry at least one item with a competitive price
-      const relevantMarkets = candidateMarkets.filter((m) => {
+      // Prioritize markets that carry unique products to ensure full cart coverage
+      const activeMarkets = candidateMarkets.filter((m) => {
         return Array.from(pricesByProduct.values()).some((pMap) => pMap.has(m.id));
-      }).slice(0, 8); // top 8 relevant markets to keep combinatorial search fast
+      });
+
+      const essentialMarketIds = new Set<number>();
+      for (const [, pMap] of pricesByProduct.entries()) {
+        const sortedMarketsForProd = Array.from(pMap.keys())
+          .map((mId) => marketsMap.get(mId))
+          .filter(Boolean)
+          .sort((a, b) => (a!.distanceMeters || 0) - (b!.distanceMeters || 0));
+        if (sortedMarketsForProd[0]) {
+          essentialMarketIds.add(sortedMarketsForProd[0]!.id);
+        }
+      }
+
+      const essentialList = activeMarkets.filter((m) => essentialMarketIds.has(m.id));
+      const nonEssentialList = activeMarkets.filter((m) => !essentialMarketIds.has(m.id));
+      const relevantMarkets = [...essentialList, ...nonEssentialList].slice(0, 10);
 
       const combinations: number[][] = [];
-      const stopLimits = Math.min(maxStops, 3);
+      const stopLimits = Math.min(maxStops, 4);
 
-      // Generate 2-store and 3-store combinations
+      // Generate 2-store, 3-store, and 4-store combinations
       for (let i = 0; i < relevantMarkets.length; i++) {
         const mI = relevantMarkets[i];
         if (!mI) continue;
@@ -414,6 +440,14 @@ class CartServiceClass {
               const mK = relevantMarkets[k];
               if (mK) {
                 combinations.push([mI.id, mJ.id, mK.id]);
+                if (stopLimits >= 4) {
+                  for (let l = k + 1; l < relevantMarkets.length; l++) {
+                    const mL = relevantMarkets[l];
+                    if (mL) {
+                      combinations.push([mI.id, mJ.id, mK.id, mL.id]);
+                    }
+                  }
+                }
               }
             }
           }
@@ -487,8 +521,30 @@ class CartServiceClass {
         const travelCost = calcTravelCost(route.totalDistanceKm);
         const combinedCost = Number((combGroceryCost + travelCost).toFixed(2));
 
-        const singleRefCost = bestSingle ? bestSingle.combinedCost : combGroceryCost;
-        const netSavings = Number((singleRefCost - combinedCost).toFixed(2));
+        let netSavings = 0;
+        if (bestSingle) {
+          if (combCovered === bestSingle.coveredCount) {
+            netSavings = Number((bestSingle.combinedCost - combinedCost).toFixed(2));
+          } else if (combCovered > bestSingle.coveredCount) {
+            // Covers more items than single store: calculate savings on shared items minus extra travel
+            let candidateCostForSharedItems = 0;
+            const singleCoveredItemIds = new Set(bestSingle.assignedItems.map((it) => it.productId));
+            for (const [, itemsList] of assignedByStore.entries()) {
+              for (const it of itemsList) {
+                if (singleCoveredItemIds.has(it.productId)) {
+                  candidateCostForSharedItems += it.subtotal;
+                }
+              }
+            }
+            const extraTravel = Math.max(0, travelCost - bestSingle.travelCost);
+            const grocerySavingsOnShared = bestSingle.groceryCost - candidateCostForSharedItems;
+            netSavings = Number((grocerySavingsOnShared - extraTravel).toFixed(2));
+          } else {
+            netSavings = Number((bestSingle.combinedCost - combinedCost).toFixed(2));
+          }
+        } else {
+          netSavings = 0;
+        }
 
         const candidateEval: MultiStoreEvaluation = {
           marketIds: activeMarketIds,
@@ -505,12 +561,16 @@ class CartServiceClass {
         if (!bestMulti) {
           bestMulti = candidateEval;
         } else {
-          // Prefer higher item coverage, then higher net savings
+          // Prefer higher item coverage, then higher net savings, then lower combined cost
           if (candidateEval.coveredCount > bestMulti.coveredCount) {
             bestMulti = candidateEval;
           } else if (candidateEval.coveredCount === bestMulti.coveredCount) {
             if (candidateEval.netSavingsVsSingle > bestMulti.netSavingsVsSingle) {
               bestMulti = candidateEval;
+            } else if (candidateEval.netSavingsVsSingle === bestMulti.netSavingsVsSingle) {
+              if (candidateEval.combinedCost < bestMulti.combinedCost) {
+                bestMulti = candidateEval;
+              }
             }
           }
         }
@@ -534,6 +594,7 @@ class CartServiceClass {
     } else {
       const extraStops = bestMulti.marketIds.length - 1;
       const netSavings = bestMulti.netSavingsVsSingle;
+      const multiCoversMore = bestMulti.coveredCount > bestSingle.coveredCount;
 
       if (strategy === "single_store") {
         // Only split if net savings beat convenience penalty threshold by more than double
@@ -545,8 +606,13 @@ class CartServiceClass {
           chosenPlan = bestSingle;
         }
       } else if (strategy === "balanced") {
-        // Multi-store split permitted only if net savings per extra stop exceeds convenience threshold
-        if (netSavings >= convenienceThreshold * extraStops && bestMulti.coveredCount >= bestSingle.coveredCount) {
+        // Multi-store split permitted if:
+        // 1) Multi-store covers MORE items than single store (fulfills more of the shopping list)
+        // 2) OR net savings per extra stop exceeds convenience threshold
+        if (multiCoversMore) {
+          recommendedType = "multi_store";
+          chosenPlan = bestMulti;
+        } else if (netSavings >= convenienceThreshold * extraStops && bestMulti.coveredCount >= bestSingle.coveredCount) {
           recommendedType = "multi_store";
           chosenPlan = bestMulti;
         } else {
@@ -554,8 +620,11 @@ class CartServiceClass {
           chosenPlan = bestSingle;
         }
       } else {
-        // max_savings: split whenever net savings > 0 and coverage is at least as good
-        if (netSavings > 0 && bestMulti.coveredCount >= bestSingle.coveredCount) {
+        // max_savings: split whenever multi-store covers more items OR net savings > 0
+        if (multiCoversMore) {
+          recommendedType = "multi_store";
+          chosenPlan = bestMulti;
+        } else if (netSavings > 0 && bestMulti.coveredCount >= bestSingle.coveredCount) {
           recommendedType = "multi_store";
           chosenPlan = bestMulti;
         } else {
@@ -611,12 +680,32 @@ class CartServiceClass {
 
     const unassignedItems = cartItems
       .filter((c) => !assignedProductIds.has(c.productId))
-      .map((c) => ({
-        productId: c.productId,
-        productName: c.productName || `Produto #${c.productId}`,
-        quantity: c.quantity,
-        reason: "Sem preço recente nos mercados candidatos dentro do raio.",
-      }));
+      .map((c) => {
+        const pMap = pricesByProduct.get(c.productId);
+        let bestPriceInfo: { marketName: string; value: number } | null = null;
+        if (pMap && pMap.size > 0) {
+          for (const [mId, p] of pMap.entries()) {
+            if (!bestPriceInfo || p.value < bestPriceInfo.value) {
+              const mName = marketsMap.get(mId)?.name || `Mercado #${mId}`;
+              bestPriceInfo = { marketName: mName, value: p.value };
+            }
+          }
+        }
+
+        let reason = "Sem preço recente nos mercados candidatos.";
+        if (bestPriceInfo) {
+          reason = `Disponível no ${bestPriceInfo.marketName} por R$ ${bestPriceInfo.value.toFixed(2).replace(".", ",")}`;
+        }
+
+        return {
+          productId: c.productId,
+          productName: c.productName || `Produto #${c.productId}`,
+          quantity: c.quantity,
+          reason,
+          unitPrice: bestPriceInfo ? bestPriceInfo.value : undefined,
+          marketName: bestPriceInfo ? bestPriceInfo.marketName : undefined,
+        };
+      });
 
     const totalGroceryCost = Number(storeGroups.reduce((sum, g) => sum + g.subtotalItems, 0).toFixed(2));
     const totalTravelCost =

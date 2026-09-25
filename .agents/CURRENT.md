@@ -7,6 +7,30 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Adição da Arara-Canindé e Folhas Tropicais em JavaScript/Canvas 2D (`src/landing`):**
+  1. **Renderização Procedural & Cinemática Vetorial:**
+     - [`monsteraLeaf.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/graphics/monsteraLeaf.ts): Módulo procedural Canvas 2D da Folha de Costela-de-Adão (*Monstera deliciosa*) desenhada estritamente a partir da ilustração de referência, com silhueta cordiforme, lobos profundos, fenestras internas (orifícios naturais recortados via `destination-out`), nervuras iluminadas, balanço orgânico ao vento e reação de paralaxe ao mouse.
+     - [`macaw.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/graphics/macaw.ts): Módulo cinemático e vetorial da Arara-Canindé (*Ara ararauna*) baseado na ilustração de referência, com bico curvo negro, máscara facial branca estriada, coroa verde, peito amarelo-ouro vibrante, asas bicolores azuis e amarelas, cauda longa graduada, bater de asas senoidal realista com flexão de penas, body bobbing e navegação por waypoints.
+     - [`TropicalFaunaFloraCanvas.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/TropicalFaunaFloraCanvas.tsx): Componente React Native Web com aceleração por hardware, 60 FPS, suporte a DPR/Retina e auto-pausa em aba oculta.
+  2. **Integração Cênica:**
+     - [`HeroSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HeroSection.tsx): Integrado o canvas como camada de fundo com `pointerEvents: "none"`, mantendo todos os CTAs e botões 100% clicáveis.
+  3. **Qualidade & Validação:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), 153 módulos compilados pelo Metro.
+- **Correção de Produtos Sem Preço e Otimização da Lista de Compras (`v1.3.8`):**
+  1. **Diagnóstico da Causa Raiz e Documentação Técnica:**
+     - Documento completo consolidado em [`docs/DIAGNOSTICO_PRECOS_CARRINHO.md`](file:///Users/aventureiromax/INI3A-EQ3/docs/DIAGNOSTICO_PRECOS_CARRINHO.md).
+     - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), a busca de preços limitava-se aos mercados no raio inicial (~15km) e só expandia para todos os mercados se nenhum produto do carrinho tivesse preço (`rawPrices.length === 0`). Se um produto tinha preço, os demais que estivessem fora do raio nunca tinham seus preços consultados.
+     - No cálculo de decisão multi-loja vs loja única, o backend comparava o custo da loja única (que só vendia parte dos itens) com o multi-loja (que vendia todos), gerando `netSavings` negativo e forçando `single_store` mesmo em `balanced` e `max_savings`, descartando os outros itens como "Itens sem preço recente".
+     - No frontend, o `handleAddToCart` não capturava valores numéricos ou de ocorrências como fallback, e o auto-heal do carrinho não preenchia o `estimatedPrice`.
+  2. **Implementação da Solução:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts): Identificação granular de produtos sem preço no raio (`unpricedProductIds`), expandindo a busca por preços em todos os mercados cadastrados e incorporando mercados com itens exclusivos às combinações multi-loja.
+     - Ajuste na regra de decisão: quando a rota multi-loja cobre mais itens que qualquer loja única (`bestMulti.coveredCount > bestSingle.coveredCount`), o sistema prioriza o atendimento completo do carrinho nos modos `balanced` e `max_savings`.
+     - Itens não atribuídos à rota (`unassignedItems`) agora são enriquecidos com `unitPrice`, `marketName` e mensagem explicativa ("Disponível no Mercado X por R$ Y,YY").
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx): Auto-heal aprimorado para recuperar `estimatedPrice` e exibição dinâmica de itens disponíveis fora da rota selecionada vs produtos verdadeiramente sem cotação.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx): Suporte a preços numéricos e fallback para a menor cotação em `occurrences`.
+     - Internacionalização nos 7 idiomas com as novas chaves `itemsOtherStores`, `itemsMixedUnassigned` e `noPriceRegistered`.
+  3. **Qualidade & Versionamento SemVer:**
+     - 17 testes de backend e 15 testes de integração/concorrência passando (32 no total), 0 erros de tipagem (`npm run typecheck`), SemVer incrementado para `v1.3.8` (`versionCode: 24`).
 - **Deploy e Hospedagem Completa do Servidor no Ambiente Oficial CTI (`ra2457045`):**
   1. **Configuração e Autenticação SSH/SFTP:**
      - Chave privada OpenSSH salva com permissões estritas `600` em [`deploy/cti.key`](file:///Users/aventureiromax/INI3A-EQ3/deploy/cti.key).

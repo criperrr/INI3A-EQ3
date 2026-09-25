@@ -267,14 +267,32 @@ export default function ProductDetails() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {}
     }
-    // Extract numeric price from product details (e.g. "R$ 2,00" -> 2.00)
+    // Extract numeric price from product details (e.g. "R$ 2,00" -> 2.00 or numeric value)
     let parsedPrice: number | undefined;
     const rawPrice = product.bestPrice || product.lastPrice || product.minPrice;
-    if (rawPrice && typeof rawPrice === "string") {
+    if (typeof rawPrice === "number" && rawPrice > 0) {
+      parsedPrice = rawPrice;
+    } else if (rawPrice && typeof rawPrice === "string") {
       const cleaned = rawPrice.replace(/[^\d.,]/g, "").replace(",", ".");
       const val = parseFloat(cleaned);
       if (!isNaN(val) && val > 0) {
         parsedPrice = val;
+      }
+    }
+
+    // Fallback: check occurrences if rawPrice was unparseable or absent
+    if (!parsedPrice && occurrences && occurrences.length > 0) {
+      const parsedValues = occurrences
+        .map((o) => {
+          if (typeof o.value === "number") return o.value;
+          const cleaned = String(o.value || "").replace(/[^\d.,]/g, "").replace(",", ".");
+          const val = parseFloat(cleaned);
+          return !isNaN(val) && val > 0 ? val : null;
+        })
+        .filter((v): v is number => v !== null && v > 0);
+
+      if (parsedValues.length > 0) {
+        parsedPrice = Math.min(...parsedValues);
       }
     }
 

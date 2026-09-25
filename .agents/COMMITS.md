@@ -3820,3 +3820,38 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/memory/MEMORY.md`
   - `.agents/memory/user-preferences.md`
 - **Impact / Next Steps:** Ensures full stability testing prior to frontend merges, drastically cuts CI execution times, and automates PR verification and merging via `gh`.
+
+## `2026-09-23 10:40` - `fix(cart)`: Resolve missing prices and unassigned items in shopping list optimizer
+
+- **Description:** Fixed shopping list optimization where products with existing prices appeared as unassigned or missing prices. Expanded market search when candidate markets do not cover all cart items, corrected relative multi-store savings calculations to prioritize full cart fulfillment, enhanced unassigned items with alternative store and price details, and improved frontend price auto-healing and fallback occurrence resolution.
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** All 32 automated tests passing, 0 TypeScript errors. Shopping list now accurately identifies prices across all markets and presents complete routes. Commits will be performed upon explicit user request.
+
+## `2026-09-23 10:47` - `feat(landing)`: Procedural JavaScript Arara-Canindé and Monstera Leaves Canvas 2D
+
+- **Description:** Implemented high-fidelity procedural vector rendering and cinematic animation in 100% JavaScript/TypeScript (HTML5 Canvas 2D) of the Arara-Canindé (blue-and-yellow macaw) and Monstera Deliciosa (costela-de-adão) leaves, based on the user's reference illustrations. Includes wing-flapping kinematics, wind sway physics, fenestration cutout clipping, mouse parallax, and non-blocking integration in the Landing Page Hero section.
+- **Files Modified:**
+  - `src/landing/graphics/monsteraLeaf.ts`
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/TropicalFaunaFloraCanvas.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page features lively, Brazilian biodiversity-themed interactive visuals at 60 FPS without external image overhead. Zero typecheck errors.

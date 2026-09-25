@@ -149,22 +149,41 @@ export default function CartScreen() {
         if (items.length > 0) {
           triggerOptimization(items, loadedSettings);
 
-          // Auto-heal any items that are missing real product names or named "Produto #..."
+          // Auto-heal any items that are missing real product names, prices or named "Produto #..."
           const itemsNeedingHeal = items.filter(
-            (it) => !it.name || it.name.trim() === "" || it.name.startsWith("Produto #")
+            (it) =>
+              !it.name ||
+              it.name.trim() === "" ||
+              it.name.startsWith("Produto #") ||
+              !it.estimatedPrice ||
+              it.estimatedPrice <= 0
           );
           if (itemsNeedingHeal.length > 0) {
             Promise.all(
               itemsNeedingHeal.map(async (item) => {
                 try {
                   const prod = await fetchProductById(item.productId);
-                  if (prod && prod.name) {
-                    item.name = prod.name;
+                  if (prod) {
+                    if (prod.name && (!item.name || item.name.startsWith("Produto #"))) {
+                      item.name = prod.name;
+                    }
                     if (!item.icon && (prod.icon || prod.imageUri)) {
                       item.icon = prod.icon || prod.imageUri || null;
                     }
                     if (!item.ean && (prod.ean || prod.barcode)) {
                       item.ean = prod.ean || prod.barcode || null;
+                    }
+                    if (!item.estimatedPrice || item.estimatedPrice <= 0) {
+                      const rawPrice = prod.bestPrice || prod.lastPrice || prod.minPrice;
+                      if (typeof rawPrice === "number" && rawPrice > 0) {
+                        item.estimatedPrice = rawPrice;
+                      } else if (rawPrice && typeof rawPrice === "string") {
+                        const cleaned = rawPrice.replace(/[^\d.,]/g, "").replace(",", ".");
+                        const val = parseFloat(cleaned);
+                        if (!isNaN(val) && val > 0) {
+                          item.estimatedPrice = val;
+                        }
+                      }
                     }
                   }
                 } catch {}
@@ -468,21 +487,34 @@ export default function CartScreen() {
               ))}
 
               {/* Unassigned / Missing items banner */}
-              {optimization.unassignedItems.length > 0 && (
-                <View style={[styles.unassignedBox, { backgroundColor: `${accent}10`, borderColor: accent }]}>
-                  <Ionicons name="alert-circle-outline" size={20} color={accent} />
-                  <View style={styles.unassignedTextCol}>
-                    <Text style={[styles.unassignedTitle, { color: semantic.colors.text.primary }]}>
-                      {t("cart.missingItems")} ({optimization.unassignedItems.length})
-                    </Text>
-                    {optimization.unassignedItems.map((it) => (
-                      <Text key={it.productId} style={[styles.unassignedItem, { color: semantic.colors.text.secondary }]}>
-                        • {it.quantity}x {it.productName}
+              {optimization.unassignedItems.length > 0 && (() => {
+                const allHaveAlternativePrice = optimization.unassignedItems.every((it) => it.unitPrice && it.unitPrice > 0);
+                const someHaveAlternativePrice = optimization.unassignedItems.some((it) => it.unitPrice && it.unitPrice > 0);
+                const bannerTitle = allHaveAlternativePrice
+                  ? t("cart.itemsOtherStores")
+                  : someHaveAlternativePrice
+                  ? t("cart.itemsMixedUnassigned")
+                  : t("cart.missingItems");
+
+                return (
+                  <View style={[styles.unassignedBox, { backgroundColor: `${accent}10`, borderColor: accent }]}>
+                    <Ionicons name="information-circle-outline" size={20} color={accent} />
+                    <View style={styles.unassignedTextCol}>
+                      <Text style={[styles.unassignedTitle, { color: semantic.colors.text.primary }]}>
+                        {bannerTitle} ({optimization.unassignedItems.length})
                       </Text>
-                    ))}
+                      {optimization.unassignedItems.map((it) => (
+                        <Text key={it.productId} style={[styles.unassignedItem, { color: semantic.colors.text.secondary }]}>
+                          • {it.quantity}x {it.productName}
+                          {it.unitPrice && it.unitPrice > 0
+                            ? ` — R$ ${it.unitPrice.toFixed(2).replace(".", ",")}${it.marketName ? ` (${it.marketName})` : ""}`
+                            : ` — ${t("cart.noPriceRegistered")}`}
+                        </Text>
+                      ))}
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              })()}
             </>
           ) : (
             /* Fallback Raw Items List (Offline or Pre-Optimization) */
