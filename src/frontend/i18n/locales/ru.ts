@@ -175,6 +175,7 @@ export const ru: TranslationSchema = {
     saveChanges: "Сохранить изменения",
     saving: "Сохранение...",
     adminActions: "Панель админа",
+    viewInGoogleMaps: "Показать в Google Maps",
     chartDays30: "Последние 30 дней",
     chartDays60: "Последние 60 дней",
     chartDays90: "Последние 90 дней",
@@ -530,6 +531,7 @@ export const ru: TranslationSchema = {
     hoursWithInfo: "С указанными часами",
     hoursUnknown: "Часы работы не указаны",
     open24Hours: "Открыто 24 часа",
+    searchOnGoogleMaps: "Найти в Google Maps",
   },
   help: {
     title: "Центр помощи",

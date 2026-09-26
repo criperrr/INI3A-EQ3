@@ -99,6 +99,7 @@ class ProductServiceClass {
       occurrencesCount: raw.occurrencesCount !== undefined ? Number(raw.occurrencesCount) : undefined,
       nearestMarketName: raw.nearestMarketName || null,
       nearestMarketDistance: raw.nearestMarketDistance !== undefined ? raw.nearestMarketDistance : null,
+      nearestMarketCoordinate: raw.nearestMarketCoordinate || null,
       formattedDistance,
       isPromotion: Boolean(raw.isPromotion),
       discountPercentage: raw.discountPercentage ? Number(raw.discountPercentage) : 0,

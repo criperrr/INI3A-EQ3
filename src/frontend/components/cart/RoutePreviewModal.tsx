@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -14,6 +14,13 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme";
 import { useI18n } from "../../content/i18nContext";
 import type { OptimizationResult } from "../../services/cartService";
+import {
+  openMarketInGoogleMaps,
+  buildGoogleMapsQuery,
+  buildGoogleMapsRouteUrl,
+  resolveAddressFromCoordinates,
+  shareCartList,
+} from "../../utils/mapNavigation";
 
 interface RoutePreviewModalProps {
   visible: boolean;
@@ -25,8 +32,28 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
+  const [userAddress, setUserAddress] = useState<string>("");
 
-  const handleOpenGps = () => {
+  useEffect(() => {
+    if (!visible) return;
+    const { userLocation } = optimization.parametersUsed;
+    if (userLocation && !isNaN(userLocation.lat) && !isNaN(userLocation.lng)) {
+      resolveAddressFromCoordinates(userLocation.lat, userLocation.lng).then((addr) => {
+        if (addr) setUserAddress(addr);
+      });
+    }
+  }, [visible, optimization]);
+
+  const handleShare = async () => {
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    await shareCartList(optimization);
+  };
+
+  const handleOpenGps = async () => {
     if (Platform.OS !== "web") {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -38,23 +65,49 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
 
     if (stores.length === 0) return;
 
-    if (stores.length === 1) {
-      const dest = stores[0]!.coordinate;
-      const url = `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lng}`;
-      Linking.openURL(url).catch(() => {});
-      return;
+    // Resolve nominal place queries for all stores along the shopping route
+    const storeQueries = await Promise.all(
+      stores.map((s) =>
+        buildGoogleMapsQuery({
+          marketName: s.marketName,
+          coordinate: { latitude: s.coordinate.lat, longitude: s.coordinate.lng },
+        })
+      )
+    );
+
+    // Resolve user's nominal street address so Google Maps does not drop an anonymous pin at return
+    let returnDestination = userAddress;
+    if (!returnDestination && userLocation && !isNaN(userLocation.lat) && !isNaN(userLocation.lng)) {
+      returnDestination = (await resolveAddressFromCoordinates(userLocation.lat, userLocation.lng)) || "";
     }
 
-    // Multi-stop route URL for Google Maps
-    const origin = `${userLocation.lat},${userLocation.lng}`;
-    const destination = `${stores[stores.length - 1]!.coordinate.lat},${stores[stores.length - 1]!.coordinate.lng}`;
-    const waypoints = stores
-      .slice(0, stores.length - 1)
-      .map((s) => `${s.coordinate.lat},${s.coordinate.lng}`)
-      .join("|");
+    if (!returnDestination && userLocation && !isNaN(userLocation.lat) && !isNaN(userLocation.lng)) {
+      returnDestination = `${userLocation.lat.toFixed(6)},${userLocation.lng.toFixed(6)}`;
+    }
 
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
-    Linking.openURL(url).catch(() => {});
+    // Round-trip route: omitting 'origin' instructs Google Maps to use live device "Sua localização"
+    // without dropping an origin pin, visiting all stores as waypoints, and returning to user's address
+    const url = buildGoogleMapsRouteUrl({
+      destination: returnDestination,
+      waypoints: storeQueries,
+      travelmode: "driving",
+    });
+
+    try {
+      await Linking.openURL(url);
+    } catch {
+      // Fallback: if external app rejects the round-trip or waypoints, navigate directly to the first stop
+      if (stores.length > 0) {
+        await openMarketInGoogleMaps({
+          marketName: stores[0]!.marketName,
+          coordinate: {
+            latitude: stores[0]!.coordinate.lat,
+            longitude: stores[0]!.coordinate.lng,
+          },
+          mode: "directions",
+        });
+      }
+    }
   };
 
   return (
@@ -74,9 +127,19 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
                 {t("cart.optimizedRoute")}
               </Text>
             </View>
-            <TouchableOpacity activeOpacity={0.7} onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={22} color={semantic.colors.icon.primary} />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                testID="modal-share-route-btn"
+                activeOpacity={0.7}
+                onPress={handleShare}
+                style={styles.iconBtn}
+              >
+                <Ionicons name="share-outline" size={20} color={semantic.colors.icon.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.7} onPress={onClose} style={styles.iconBtn}>
+                <Ionicons name="close" size={22} color={semantic.colors.icon.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Quick Metrics Bar */}
@@ -114,12 +177,30 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
                 <Text style={[styles.stepName, { color: semantic.colors.text.primary }]}>
                   Sua Localização Atual
                 </Text>
+                {userAddress ? (
+                  <Text style={[styles.stepMeta, { color: semantic.colors.text.secondary }]}>
+                    {userAddress}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
             {/* Stops */}
             {optimization.storeGroups.map((sg, index) => (
-              <View key={sg.marketId} style={styles.stepItem}>
+              <TouchableOpacity
+                key={sg.marketId}
+                style={styles.stepItem}
+                activeOpacity={0.7}
+                onPress={() => {
+                  openMarketInGoogleMaps({
+                    marketName: sg.marketName,
+                    coordinate: { latitude: sg.coordinate.lat, longitude: sg.coordinate.lng },
+                    mode: "search",
+                  });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`${sg.marketName} - ${t("productDetails.viewInGoogleMaps")}`}
+              >
                 <View style={styles.stepIndicatorCol}>
                   <View style={[styles.stopNumberBadge, { backgroundColor: accent }]}>
                     <Text style={styles.stopNumberText}>{sg.stopOrder}</Text>
@@ -127,9 +208,12 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
                   <View style={[styles.stepLine, { backgroundColor: semantic.colors.border.default }]} />
                 </View>
                 <View style={styles.stepInfo}>
-                  <Text style={[styles.stepLabel, { color: accent }]}>
-                    PARADA {sg.stopOrder} • {sg.items.length} {sg.items.length === 1 ? "item" : "itens"}
-                  </Text>
+                  <View style={styles.stepHeaderRow}>
+                    <Text style={[styles.stepLabel, { color: accent }]}>
+                      PARADA {sg.stopOrder} • {sg.items.length} {sg.items.length === 1 ? "item" : "itens"}
+                    </Text>
+                    <Ionicons name="open-outline" size={13} color={accent} style={{ marginLeft: 6 }} />
+                  </View>
                   <Text style={[styles.stepName, { color: semantic.colors.text.primary }]}>
                     {sg.marketName}
                   </Text>
@@ -138,7 +222,7 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
                     {sg.subtotalItems.toFixed(2).replace(".", ",")} em compras
                   </Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
 
             {/* Return / Destination */}
@@ -147,10 +231,15 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
                 <View style={[styles.stepDot, { backgroundColor: "#10B981" }]} />
               </View>
               <View style={styles.stepInfo}>
-                <Text style={[styles.stepLabel, { color: semantic.colors.text.tertiary }]}>DESTINO FINAL</Text>
+                <Text style={[styles.stepLabel, { color: semantic.colors.text.tertiary }]}>DESTINO FINAL (RETORNO)</Text>
                 <Text style={[styles.stepName, { color: semantic.colors.text.primary }]}>
-                  {optimization.parametersUsed.isRoundTrip ? "Retorno para casa" : "Último supermercado"}
+                  Ponto de Retorno (Local Inicial)
                 </Text>
+                {userAddress ? (
+                  <Text style={[styles.stepMeta, { color: semantic.colors.text.secondary }]}>
+                    {userAddress}
+                  </Text>
+                ) : null}
               </View>
             </View>
           </ScrollView>
@@ -199,8 +288,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  closeBtn: {
-    padding: 4,
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  iconBtn: {
+    padding: 6,
   },
   metricsBar: {
     flexDirection: "row",
@@ -263,6 +357,11 @@ const styles = StyleSheet.create({
   stepInfo: {
     flex: 1,
     paddingBottom: 10,
+  },
+  stepHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   stepLabel: {
     fontSize: 10,

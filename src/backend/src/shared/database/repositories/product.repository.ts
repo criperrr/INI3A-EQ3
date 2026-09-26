@@ -427,6 +427,26 @@ class ProductRepositoryClass {
             LIMIT 1
           ) AS nearest_market_name,
           (
+            SELECT ST_Y(m2.location::geometry)
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_lat,
+          (
+            SELECT ST_X(m2.location::geometry)
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_lng,
+          (
             SELECT m3.name
             FROM ocurrency o3
             JOIN market m3 ON o3.market_id = m3.id
@@ -468,6 +488,8 @@ class ProductRepositoryClass {
         ps.occurrences_count AS "occurrencesCount",
         ps.min_distance_meters AS "nearestMarketDistance",
         COALESCE(ps.best_market_name, ps.nearest_market_name) AS "nearestMarketName",
+        ps.nearest_market_lat AS "nearestMarketLat",
+        ps.nearest_market_lng AS "nearestMarketLng",
         ps.discount_percentage AS "discountPercentage",
         ps.is_promotion AS "isPromotion"
       FROM product p
@@ -494,6 +516,11 @@ class ProductRepositoryClass {
         occurrencesCount: Number(row.occurrencesCount || 0),
         nearestMarketDistance: row.nearestMarketDistance !== null && row.nearestMarketDistance !== undefined ? Math.round(Number(row.nearestMarketDistance)) : null,
         nearestMarketName: row.nearestMarketName ? String(row.nearestMarketName) : null,
+        nearestMarketCoordinate:
+          row.nearestMarketLat !== null && row.nearestMarketLat !== undefined &&
+          row.nearestMarketLng !== null && row.nearestMarketLng !== undefined
+            ? { latitude: Number(row.nearestMarketLat), longitude: Number(row.nearestMarketLng) }
+            : null,
         discountPercentage: row.discountPercentage ? Number(row.discountPercentage) : 0,
         isPromotion: Boolean(row.isPromotion),
       }));

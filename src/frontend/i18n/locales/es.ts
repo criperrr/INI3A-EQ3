@@ -175,6 +175,7 @@ export const es: TranslationSchema = {
     saveChanges: "Guardar Cambios",
     saving: "Guardando...",
     adminActions: "Acciones de Administrador",
+    viewInGoogleMaps: "Ver en Google Maps",
     chartDays30: "Últimos 30 días",
     chartDays60: "Últimos 60 días",
     chartDays90: "Últimos 90 días",
@@ -530,6 +531,7 @@ export const es: TranslationSchema = {
     hoursWithInfo: "Con Horario Informado",
     hoursUnknown: "Horario no especificado",
     open24Hours: "Abierto 24 horas",
+    searchOnGoogleMaps: "Buscar en Google Maps",
   },
   help: {
     title: "Centro de Ayuda",

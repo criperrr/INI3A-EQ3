@@ -30,6 +30,7 @@ export interface ProductData {
   occurrencesCount?: number;
   nearestMarketName?: string | null;
   nearestMarketDistance?: number | null;
+  nearestMarketCoordinate?: { latitude: number; longitude: number } | null;
   formattedDistance?: string | null;
   isPromotion?: boolean;
   discountPercentage?: number | null;

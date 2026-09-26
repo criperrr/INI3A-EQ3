@@ -175,6 +175,7 @@ export const zh: TranslationSchema = {
     saveChanges: "保存更改",
     saving: "保存中...",
     adminActions: "管理员操作",
+    viewInGoogleMaps: "在 Google 地图中查看",
     chartDays30: "近30天",
     chartDays60: "近60天",
     chartDays90: "近90天",
@@ -530,6 +531,7 @@ export const zh: TranslationSchema = {
     hoursWithInfo: "有营业时间信息",
     hoursUnknown: "未提供营业时间",
     open24Hours: "24小时营业",
+    searchOnGoogleMaps: "在 Google 地图中搜索",
   },
   help: {
     title: "帮助中心",
