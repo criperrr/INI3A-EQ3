@@ -7,6 +7,22 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Condicionamento do Botão "Mover de Mercado" à Existência do Produto no Banco (`v1.4.3`):**
+  1. **Diagnóstico da Causa Raiz:**
+     - Quando o otimizador dividia os produtos em múltiplos mercados (`storeGroups.length > 1`), o componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) renderizava o botão `[Mover de Mercado]` indiscriminadamente para todos os itens daquele supermercado, independentemente de o produto existir ou não nos outros mercados da rota.
+     - Além disso, a troca de loja mantinha o preço unitário e subtotal do mercado de origem, sem consultar o valor real registrado no mercado de destino.
+  2. **Implementação da Solução Completa:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts): Interface `OptimizedStoreItem` enriquecida com `availableMarkets?: { marketId: number; marketName?: string; unitPrice: number; isPromotion?: boolean }[]`. Na atribuição dos itens às lojas (tanto em `singleStoreEvals` quanto em `combinations`), mapeia-se cada mercado onde o produto possui ocorrência ativa no banco de dados.
+     - [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts): Tipagem `OptimizedItemDisplay` sincronizada com `availableMarkets` e suporte na simulação local de fallback.
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx):
+       - Função `getEligibleStoresForItem(item)` filtra `otherStores` apenas para os mercados onde o produto existe no banco (`availableMarkets`).
+       - O botão `[Mover de Mercado]` só é exibido se `eligibleStores.length > 0`.
+       - O modal de realocação exibe unicamente as lojas elegíveis com o preço unitário real do produto em cada destino.
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx): `handleReallocateItem` atualizado para receber `targetPrice` e recalcular `unitPrice`, `subtotal` e subtotais das paradas com a cotação real do mercado selecionado.
+  3. **Qualidade, Testes & Versionamento SemVer:**
+     - 48 testes unitários passando (19 backend + 29 raiz, incluindo novo teste em `cart.test.ts` e `cartOptimizer.test.ts`).
+     - 0 erros de tipagem no `npm run typecheck`.
+     - SemVer sincronizado para `v1.4.3` (`versionCode: 28`).
 - **Compartilhamento Universal de Lista e Trajeto no Google Maps (`v1.4.2`):**
   1. **Ajuste na Mensagem Compartilhada:**
      - Removido o termo "Otimizada" do título da mensagem de compartilhamento, agora padronizado como `🛒 *Minha Lista de Compras (Presco)*`.

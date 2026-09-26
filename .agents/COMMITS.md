@@ -3958,3 +3958,25 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `tests/mapNavigation.test.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Recipients and drivers can return precisely to the exact starting location.
+
+## `2026-09-26 10:35` - `feat(cart)`: Condicionar exibicao do botao Mover de Mercado a existencia do item em ambos os mercados
+
+- **Description:** 
+  - Adicionado o campo `availableMarkets` em `OptimizedStoreItem` e `OptimizedItemDisplay` a partir das cotações ativas consultadas no banco de dados.
+  - No componente `StoreGroupCard.tsx`, o botão `[Mover de Mercado]` agora só é renderizado para um item se ele possuir registros de preço em outros mercados candidatos da rota (`eligibleStores.length > 0`).
+  - O modal de realocação lista unicamente os supermercados onde o produto existe no banco de dados, exibindo o preço unitário correspondente de cada loja de destino.
+  - Ao mover o produto no carrinho (`cart.tsx`), o preço unitário e subtotal são recalculados com a cotação real do mercado de destino no banco de dados.
+  - Adicionados testes unitários no backend (`cart.test.ts`) e na suíte raiz (`cartOptimizer.test.ts`) validando a disponibilidade por mercado.
+  - Sincronização SemVer de versão para `v1.4.3` (`versionCode: 28`).
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `tests/cartOptimizer.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem. Alterações prontas na working tree aguardando solicitação explícita do usuário para commit/push.
