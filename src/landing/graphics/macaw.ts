@@ -1,7 +1,24 @@
 /**
  * Presco Landing Page - Procedural Arara-Canindé (Blue-and-Yellow Macaw)
  * 100% Canvas 2D Vector Rendering & Wing Flapping Kinematics
- * Based strictly on user's reference illustration.
+ *
+ * v3: redrawn directly against a reference photo of Ara ararauna in
+ * flight (wings fully spread, head turned down, banking). Key shape
+ * corrections vs. earlier passes:
+ *  - Wings are no longer single flat shapes: each wing is built from
+ *    individually rendered, tapered primary/secondary feathers fanned
+ *    out from a shoulder joint and a wrist joint (two-segment wing),
+ *    which is what actually reads as "feathers" instead of a blob.
+ *  - Color follows the photo, not a generic two-tone scheme: the far
+ *    (raised, upstroke) wing runs blue at the root into warm
+ *    golden-tan at the tips; the near (lowered, downstroke) wing runs
+ *    light cyan-blue at the root into near-black at the tips, with
+ *    thin dark separation lines between feathers.
+ *  - The tail keeps one elongated central feather that trails visibly
+ *    further than its neighbors, matching the single long streaming
+ *    feather visible in the photo.
+ *  - Head: larger bare white facial mask with denser fine striping,
+ *    bigger and more strongly hooked black beak, green-to-gold crown.
  */
 
 export interface MacawFlightState {
@@ -146,262 +163,362 @@ export class AnimatedMacaw {
     }
 }
 
+// ----------------------------------------------------------------------
+// Internal drawing helpers
+// ----------------------------------------------------------------------
+
+interface FeatherSpec {
+    off: number; // degrees, added to the wing/tail's base angle
+    len: number;
+    w: number;
+}
+
 /**
- * Draws the high-fidelity Arara-Canindé matching the reference illustration.
- * @param flap Wing flap progress from -1.0 (wings down) to +1.0 (wings high up)
+ * Draws ONE solid, continuous feather fan from a shared root: root ->
+ * tip 1 -> notch -> tip 2 -> notch -> ... -> tip N -> root. Because it
+ * is a single filled polygon (not N separate feather shapes), the base
+ * never shows gaps between feathers the way discrete shapes do - only
+ * the trailing edge is serrated, exactly like a real spread wing/tail.
+ * Individual shaft lines are drawn on top from the root to each tip to
+ * read as separate feathers without breaking up the silhouette.
+ *
+ * Angles are in degrees, 0 = local +x. Assumes the canvas is already
+ * translated to the fan's root joint (shoulder / wrist / tail base).
+ */
+function featherFan(
+    ctx: CanvasRenderingContext2D,
+    specs: FeatherSpec[],
+    baseAngleDeg: number,
+    colorNear: string,
+    colorFar: string,
+    shaftAlpha: number = 0.3,
+    notchDepth: number = 0.86,
+    colorMid?: string
+) {
+    const pts = specs.map((s) => {
+        const rad = ((baseAngleDeg + s.off) * Math.PI) / 180;
+        return { rad, len: s.len, x: Math.cos(rad) * s.len, y: Math.sin(rad) * s.len };
+    });
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    for (let i = 0; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+        if (i < pts.length - 1) {
+            const notchLen = Math.min(pts[i].len, pts[i + 1].len) * notchDepth;
+            const midRad = (pts[i].rad + pts[i + 1].rad) / 2;
+            ctx.lineTo(Math.cos(midRad) * notchLen, Math.sin(midRad) * notchLen);
+        }
+    }
+    ctx.closePath();
+
+    const mid = pts[Math.floor(pts.length / 2)];
+    const g = ctx.createLinearGradient(0, 0, mid.x, mid.y);
+    g.addColorStop(0, colorNear);
+    if (colorMid) g.addColorStop(0.6, colorMid);
+    g.addColorStop(1, colorFar);
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(3,10,26,0.3)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // shaft lines suggesting the separate vanes, without cutting gaps
+    ctx.strokeStyle = `rgba(3,10,26,${shaftAlpha})`;
+    ctx.lineWidth = 0.6;
+    for (const p of pts) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(p.x * 0.96, p.y * 0.96);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+/**
+ * Draws one full wing as a two-segment fan (secondaries off the
+ * shoulder, primaries off the wrist) so the spread reads as real
+ * feathers rather than a single paddle shape.
+ *
+ * @param rootX/rootY shoulder position, in body-local coordinates
+ * @param flap        -1 (down) .. +1 (up), same signal driving the body
+ * @param isFar        true for the back/upstroke wing (smaller, duller,
+ *                      gold-tipped); false for the dominant front wing
+ */
+function drawWing(
+    ctx: CanvasRenderingContext2D,
+    rootX: number,
+    rootY: number,
+    flap: number,
+    isFar: boolean
+) {
+    const scaleMul = isFar ? 0.74 : 1;
+
+    // The two wings are stylized as a soaring/banking silhouette (as in
+    // the reference): the far wing stays mostly UP (angle near 270 =
+    // straight up), the near wing stays mostly DOWN (angle near 90 =
+    // straight down), and `flap` nudges both together within a narrow
+    // band so the beat animates without ever swinging the wing all the
+    // way back to the tail's angle (~183deg) and colliding with it.
+    // (0deg = toward the head/+x, 90deg = straight down, 270deg = up.)
+    const rootAngleDeg = isFar ? 255 + flap * 16 : 108 + flap * 16;
+
+    // ONE continuous fan per wing (not a separate arm/hand pair) so the
+    // whole wing reads as a single connected surface: the base never
+    // shows gaps, only the trailing tips are serrated. Offsets sweep
+    // monotonically from the trailing secondaries (closest to the
+    // body/tail) to the long outer primaries (swept furthest from the
+    // body) - mirrored between the two wings since they open in
+    // opposite rotational directions.
+    const dir = isFar ? 1 : -1;
+    const specs: FeatherSpec[] = [
+        { off: dir * -50, len: 34 * scaleMul, w: 18 * scaleMul },
+        { off: dir * -38, len: 46 * scaleMul, w: 22 * scaleMul },
+        { off: dir * -26, len: 56 * scaleMul, w: 26 * scaleMul },
+        { off: dir * -14, len: 62 * scaleMul, w: 28 * scaleMul },
+        { off: dir * -2, len: 68 * scaleMul, w: 26 * scaleMul },
+        { off: dir * 10, len: 104 * scaleMul, w: 23 * scaleMul },
+        { off: dir * 22, len: 134 * scaleMul, w: 20 * scaleMul },
+        { off: dir * 34, len: 152 * scaleMul, w: 18 * scaleMul },
+        { off: dir * 46, len: 142 * scaleMul, w: 15 * scaleMul },
+        { off: dir * 58, len: 108 * scaleMul, w: 12 * scaleMul },
+    ];
+
+    // Colors: front (near) wing shows its topside - light cyan-blue at
+    // the root deepening to near-black at the tips, per the reference
+    // photo. Back (far) wing shows more of its underside - blue at the
+    // root warming into a golden-tan tip.
+    const colorA = isFar ? "#1f6fa0" : "#4fc3ec";
+    const colorB = isFar ? "#e0b559" : "#071b33";
+    const colorMid = isFar ? "#4fa0a0" : undefined; // bridges blue->gold without a muddy olive blend
+
+    ctx.save();
+    ctx.translate(rootX, rootY);
+    featherFan(ctx, specs, rootAngleDeg, colorA, colorB, isFar ? 0.22 : 0.32, 0.86, colorMid);
+    ctx.restore();
+}
+
+/**
+ * Draws the tail as a fan of individually tapered feathers with one
+ * elongated central feather trailing further than its neighbors,
+ * matching the single long streaming feather visible in the reference
+ * photo.
+ */
+function drawTail(ctx: CanvasRenderingContext2D, rootX: number, rootY: number) {
+    const baseAngle = 183; // ~straight back, very slight downward droop
+    const specs: FeatherSpec[] = [
+        { off: -20, len: 168, w: 15 },
+        { off: -10, len: 192, w: 16 },
+        { off: 0, len: 238, w: 15 }, // the long streaming central feather
+        { off: 10, len: 188, w: 16 },
+        { off: 20, len: 160, w: 15 },
+        { off: 29, len: 130, w: 14 },
+    ];
+    ctx.save();
+    ctx.translate(rootX, rootY);
+    featherFan(ctx, specs, baseAngle, "#34b0de", "#123a63", 0.3);
+    ctx.restore();
+}
+
+/**
+ * Draws a high-fidelity Arara-Canindé (Ara ararauna) in flight, facing +x
+ * (use ctx.scale(-1,1) upstream to flip, as AnimatedMacaw.render does).
+ *
+ * Coordinate frame: origin sits at the shoulder / wing root, roughly the
+ * bird's center of mass. +x = towards the head/chest, -x = towards the
+ * tail, +y = down.
+ *
+ * @param flap Wing flap progress from -1.0 (wings fully down) to +1.0
+ *             (wings raised high above the back)
  */
 export function drawAraraCaninde(ctx: CanvasRenderingContext2D, flap: number = 0) {
     ctx.save();
 
-    // 1. Far Wing (Left Wing, pointing upwards/backwards in reference)
-    // Flap modulates the wing elevation and tip flex
-    const farWingLift = flap * 24; // Wing flaps up and down
+    // ------------------------------------------------------------------
+    // 1. FAR WING (raised/upstroke side, partially behind the body) -
+    //    blue at the root warming to golden-tan at the tips
+    // ------------------------------------------------------------------
+    drawWing(ctx, 8, -20, flap, true);
+
+    // ------------------------------------------------------------------
+    // 2. TAIL
+    // ------------------------------------------------------------------
+    drawTail(ctx, -38, 6);
+
+    // ------------------------------------------------------------------
+    // 3. LEGS / TALONS (tucked under the belly, grey with black claws)
+    // ------------------------------------------------------------------
     ctx.save();
-    ctx.beginPath();
-    // Shoulder base
-    ctx.moveTo(10, -20);
-    // Upper contour reaching high
-    ctx.bezierCurveTo(30, -70 - farWingLift, 70, -130 - farWingLift * 1.3, 85, -170 - farWingLift * 1.5);
-    // Wing tip (primary flight feathers with characteristic serrated tips)
-    ctx.bezierCurveTo(90, -175 - farWingLift * 1.5, 75, -150 - farWingLift, 65, -135 - farWingLift);
-    ctx.bezierCurveTo(72, -125 - farWingLift, 55, -100 - farWingLift, 48, -85 - farWingLift);
-    ctx.bezierCurveTo(55, -75 - farWingLift, 35, -50, 25, -35);
-    // Trailing edge back to body
-    ctx.bezierCurveTo(15, -20, 5, -15, 0, -10);
-    ctx.closePath();
-
-    // Far wing gradient (Rich cobalt to vibrant azure)
-    const farWingGrad = ctx.createLinearGradient(10, -20, 85, -170);
-    farWingGrad.addColorStop(0, "#014f9e");
-    farWingGrad.addColorStop(0.5, "#0077b6");
-    farWingGrad.addColorStop(1, "#0096c7");
-    ctx.fillStyle = farWingGrad;
-    ctx.fill();
-
-    // Feather notches highlight on far wing
-    ctx.strokeStyle = "#00b4d8";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
-
-    // 2. Long Graduated Tail Feathers (Trailing back and down)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(-45, 15); // Tail root at back of pelvis
-    // Top blue curved line
-    ctx.bezierCurveTo(-100, 45, -170, 95, -240, 160);
-    // Tail tip (sharp tapered point)
-    ctx.bezierCurveTo(-238, 158, -210, 130, -180, 110);
-    // Lower yellow/gold underside edge
-    ctx.bezierCurveTo(-140, 80, -90, 45, -40, 30);
-    ctx.closePath();
-
-    // Dual gradient on tail: Blue on dorsal, yellow on ventral edge
-    const tailGrad = ctx.createLinearGradient(-45, 15, -240, 160);
-    tailGrad.addColorStop(0, "#0077b6");
-    tailGrad.addColorStop(0.4, "#023e8a");
-    tailGrad.addColorStop(0.7, "#ffa200");
-    tailGrad.addColorStop(1, "#ffb703");
-    ctx.fillStyle = tailGrad;
-    ctx.fill();
-
-    // Tail feather spine striations
-    ctx.beginPath();
-    ctx.moveTo(-45, 18);
-    ctx.bezierCurveTo(-110, 50, -180, 105, -235, 155);
-    ctx.strokeStyle = "#03045e";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Inner yellow tail feathers layer
-    ctx.beginPath();
-    ctx.moveTo(-40, 25);
-    ctx.bezierCurveTo(-90, 60, -140, 95, -185, 125);
-    ctx.bezierCurveTo(-160, 95, -110, 60, -42, 28);
-    ctx.fillStyle = "#ffb703";
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Talons / Feet (Tucked under belly in aerodynamic flight)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(-25, 38);
-    ctx.lineTo(-20, 52);
-    ctx.lineTo(-15, 48);
-    ctx.lineTo(-12, 54);
-    ctx.lineTo(-8, 45);
-    ctx.strokeStyle = "#7c5328";
-    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = "#6b7280";
+    ctx.lineWidth = 5;
     ctx.lineCap = "round";
-    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(-6, 34);
+    ctx.lineTo(-14, 50);
+    ctx.stroke();
+    ctx.strokeStyle = "#1f2937";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-14, 50); ctx.lineTo(-22, 58);
+    ctx.moveTo(-14, 50); ctx.lineTo(-13, 60);
+    ctx.moveTo(-14, 50); ctx.lineTo(-6, 56);
     ctx.stroke();
     ctx.restore();
 
-    // 4. Main Body: Golden Yellow Breast & Abdomen
+    // ------------------------------------------------------------------
+    // 4. BODY - compact rounded torso: blue mantle on top, golden chest
+    //    and belly below, narrowing to the tail base
+    // ------------------------------------------------------------------
     ctx.save();
     ctx.beginPath();
-    // Neck to chest curve
-    ctx.moveTo(35, -10);
-    // Bulging muscular breast
-    ctx.bezierCurveTo(65, 0, 75, 25, 60, 48);
-    // Belly line
-    ctx.bezierCurveTo(45, 65, 0, 65, -35, 42);
-    // Lower back / rump junction
-    ctx.bezierCurveTo(-45, 30, -40, 10, -25, -5);
-    // Back line up to nape
-    ctx.bezierCurveTo(-10, -15, 10, -18, 35, -10);
+    ctx.moveTo(38, -24); // base of neck / nape
+    ctx.bezierCurveTo(62, -18, 74, 4, 66, 30);
+    ctx.bezierCurveTo(60, 48, 40, 58, 18, 56);
+    ctx.bezierCurveTo(-2, 54, -20, 42, -34, 22);
+    ctx.bezierCurveTo(-40, 10, -38, -8, -26, -20);
+    ctx.bezierCurveTo(-10, -30, 18, -32, 38, -24);
     ctx.closePath();
 
-    // Vibrant Sunny Yellow / Amber body gradient
-    const bodyGrad = ctx.createLinearGradient(40, -10, 10, 60);
-    bodyGrad.addColorStop(0, "#ffe066");  // Highlight near throat
-    bodyGrad.addColorStop(0.3, "#ffb703"); // Golden yellow core
-    bodyGrad.addColorStop(0.8, "#fb8500"); // Warm amber shading
-    bodyGrad.addColorStop(1, "#d46b08");   // Shadow underside
+    const bodyGrad = ctx.createLinearGradient(40, -24, 10, 56);
+    bodyGrad.addColorStop(0, "#0069a8");
+    bodyGrad.addColorStop(0.28, "#ffe066");
+    bodyGrad.addColorStop(0.55, "#ffb703");
+    bodyGrad.addColorStop(0.85, "#fb8500");
+    bodyGrad.addColorStop(1, "#d46b08");
     ctx.fillStyle = bodyGrad;
     ctx.fill();
 
-    // Serrated feather contours on yellow chest
-    ctx.beginPath();
-    ctx.moveTo(35, 15);
-    ctx.quadraticCurveTo(42, 22, 38, 28);
-    ctx.quadraticCurveTo(46, 34, 40, 42);
-    ctx.strokeStyle = "#ea580c";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+    ctx.strokeStyle = "rgba(234,88,12,0.4)";
+    ctx.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(30 - i * 10, -2 + i * 10);
+        ctx.quadraticCurveTo(40 - i * 8, 4 + i * 10, 32 - i * 10, 14 + i * 10);
+        ctx.stroke();
+    }
     ctx.restore();
 
-    // 5. Near Wing (Right Wing - Dominant in foreground)
-    // In the reference, this wing spreads wide with golden-yellow under-coverts
-    // and brilliant blue flight feathers with serrated primary tips.
-    const nearWingFlap = flap * 18;
+    // ------------------------------------------------------------------
+    // 5. NEAR WING (lowered/downstroke side, dominant foreground wing) -
+    //    light cyan-blue at the root deepening to near-black tips, with
+    //    crisp dark lines separating each primary
+    // ------------------------------------------------------------------
+    drawWing(ctx, 26, -12, flap, false);
+
+    // ------------------------------------------------------------------
+    // 6. HEAD - small and round relative to the body, turned slightly
+    //    downward, with a large bare white facial mask and a heavy,
+    //    strongly hooked black beak
+    // ------------------------------------------------------------------
     ctx.save();
+    const headX = 56, headY = -28;
+    ctx.translate(headX, headY);
+    ctx.rotate(0.22); // slight downward tilt, matching the reference pose
+
+    // Throat / neck feathering
     ctx.beginPath();
-    ctx.moveTo(25, 0); // Shoulder
-    // Forward curve of the wing
-    ctx.bezierCurveTo(-10, 10 - nearWingFlap * 0.5, -60, 20 - nearWingFlap, -120, -10 - nearWingFlap * 1.4);
-    // Wing tip primaries (long flight feathers pointing back/left)
-    ctx.bezierCurveTo(-145, -20 - nearWingFlap * 1.5, -135, -5 - nearWingFlap, -115, 10 - nearWingFlap);
-    // Feather step 2
-    ctx.bezierCurveTo(-125, 18 - nearWingFlap, -105, 25 - nearWingFlap, -85, 30 - nearWingFlap * 0.5);
-    // Feather step 3
-    ctx.bezierCurveTo(-95, 36 - nearWingFlap * 0.3, -75, 42, -50, 40);
-    // Wing base back to body
-    ctx.bezierCurveTo(-25, 35, 5, 20, 25, 0);
-    ctx.closePath();
-
-    // Dual tone on near wing: Upper part yellow, outer edge brilliant blue
-    const nearWingGrad = ctx.createLinearGradient(20, 0, -120, 10);
-    nearWingGrad.addColorStop(0, "#ffb703");
-    nearWingGrad.addColorStop(0.4, "#ffa200");
-    nearWingGrad.addColorStop(0.75, "#0077b6");
-    nearWingGrad.addColorStop(1, "#023e8a");
-    ctx.fillStyle = nearWingGrad;
-    ctx.fill();
-
-    // Distinct Blue primary wing covert band
-    ctx.beginPath();
-    ctx.moveTo(15, -8);
-    ctx.bezierCurveTo(-20, -2, -70, -2, -120, -10 - nearWingFlap * 1.4);
-    ctx.bezierCurveTo(-95, 10 - nearWingFlap, -50, 10, 0, 5);
-    ctx.closePath();
-    ctx.fillStyle = "#0077b6";
-    ctx.fill();
-    ctx.restore();
-
-    // 6. Blue Mantle & Nape (Back of neck and shoulders)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(35, -10);
-    ctx.bezierCurveTo(45, -18, 55, -20, 70, -18); // Nape
-    ctx.bezierCurveTo(55, -8, 40, -5, 25, -2);
-    ctx.closePath();
-    ctx.fillStyle = "#0077b6";
-    ctx.fill();
-    ctx.restore();
-
-    // 7. Head, Face Mask, Green Forehead & Hooked Beak
-    ctx.save();
-    ctx.translate(65, -12); // Position at head center
-
-    // Head base (Golden yellow throat transition to white cheek)
-    ctx.beginPath();
-    ctx.moveTo(-10, 10);
-    ctx.bezierCurveTo(5, 18, 20, 15, 28, 8);
-    ctx.bezierCurveTo(32, 0, 30, -12, 18, -18);
-    ctx.bezierCurveTo(0, -20, -15, -12, -10, 10);
+    ctx.moveTo(-20, 18);
+    ctx.quadraticCurveTo(-4, 27, 10, 21);
+    ctx.quadraticCurveTo(-4, 11, -20, 18);
     ctx.fillStyle = "#ffb703";
     ctx.fill();
 
-    // White Cheek Patch (Distinctive bare skin mask of the macaw)
+    // Skull
     ctx.beginPath();
-    ctx.moveTo(8, 5);
-    ctx.bezierCurveTo(22, 10, 26, 0, 24, -8);
-    ctx.bezierCurveTo(18, -16, 5, -15, 2, -5);
-    ctx.bezierCurveTo(0, 0, 2, 4, 8, 5);
+    ctx.arc(0, 0, 21, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffb703";
+    ctx.fill();
+
+    // Green-to-gold crown patch
+    ctx.beginPath();
+    ctx.moveTo(-10, -17);
+    ctx.quadraticCurveTo(3, -25, 16, -16);
+    ctx.quadraticCurveTo(18, -9, 11, -8);
+    ctx.quadraticCurveTo(-2, -13, -10, -9);
     ctx.closePath();
-    ctx.fillStyle = "#f8f9fa";
-    ctx.fill();
-
-    // Characteristic fine black facial striations / lines on white mask
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(6, -2);
-    ctx.quadraticCurveTo(14, -1, 20, 2);
-    ctx.moveTo(8, -6);
-    ctx.quadraticCurveTo(15, -6, 21, -3);
-    ctx.moveTo(11, -10);
-    ctx.quadraticCurveTo(16, -10, 20, -7);
-    ctx.stroke();
-
-    // Eye (Dark iris with tiny white specular sparkle)
-    ctx.beginPath();
-    ctx.arc(14, -7, 2.8, 0, Math.PI * 2);
-    ctx.fillStyle = "#0f172a";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(15, -8, 0.9, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-
-    // Green Forehead Patch (Iconic emerald green crown of Arara-canindé)
-    ctx.beginPath();
-    ctx.moveTo(5, -14);
-    ctx.bezierCurveTo(12, -22, 22, -20, 26, -14);
-    ctx.bezierCurveTo(24, -10, 18, -12, 10, -12);
-    ctx.closePath();
-    const greenGrad = ctx.createLinearGradient(5, -20, 26, -12);
-    greenGrad.addColorStop(0, "#8ed428");
-    greenGrad.addColorStop(1, "#438c1b");
+    const greenGrad = ctx.createLinearGradient(-10, -22, 16, -8);
+    greenGrad.addColorStop(0, "#a3d92c");
+    greenGrad.addColorStop(1, "#3f7d17");
     ctx.fillStyle = greenGrad;
     ctx.fill();
 
-    // Large Hooked Black Beak (Upper culmen curved down sharply)
+    // Large bare white facial mask - covers cheek from crown down past
+    // the eye to the base of the beak, leaving crown/nape feathered
     ctx.beginPath();
-    ctx.moveTo(22, -14);
-    // Sharp curve of upper beak culmen
-    ctx.bezierCurveTo(34, -12, 42, -2, 40, 14);
-    // Hook tip curling down
-    ctx.bezierCurveTo(38, 18, 35, 18, 34, 12);
-    // Lower cutting edge
-    ctx.bezierCurveTo(32, 5, 26, 0, 22, -2);
+    ctx.moveTo(0, -9);
+    ctx.bezierCurveTo(13, -16, 23, -9, 24, 4);
+    ctx.bezierCurveTo(25, 14, 16, 20, 6, 16);
+    ctx.bezierCurveTo(-3, 12, -4, -3, 0, -9);
     ctx.closePath();
+    ctx.fillStyle = "#fdfbf6";
+    ctx.fill();
 
-    const beakGrad = ctx.createLinearGradient(22, -14, 40, 14);
-    beakGrad.addColorStop(0, "#2c333a");
-    beakGrad.addColorStop(0.5, "#181d22");
-    beakGrad.addColorStop(1, "#0a0c0e");
+    // Dense fine black facial feather-lines across the mask
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(2, -5); ctx.quadraticCurveTo(11, -4, 19, 0);
+    ctx.moveTo(1, 0);  ctx.quadraticCurveTo(10, 1, 18, 4);
+    ctx.moveTo(0, 5);  ctx.quadraticCurveTo(9, 6, 16, 8);
+    ctx.moveTo(1, 10); ctx.quadraticCurveTo(8, 11, 14, 12);
+    ctx.stroke();
+
+    // Eye - dark iris + white catch-light + thin pale ring
+    ctx.beginPath();
+    ctx.arc(10, -2, 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f172a";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(11, -3, 1, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(10, -2, 4.4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Cere (fleshy patch atop the beak, nostril)
+    ctx.beginPath();
+    ctx.ellipse(18, -9, 3.4, 2.4, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#4b5563";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(17.4, -9, 0.9, 0, Math.PI * 2);
+    ctx.fillStyle = "#111827";
+    ctx.fill();
+
+    // Large, deeply hooked black beak - upper mandible curls down
+    // sharply, almost forming a semicircle, matching the reference
+    ctx.beginPath();
+    ctx.moveTo(15, -14);
+    ctx.bezierCurveTo(29, -15, 41, -4, 39, 12);
+    ctx.bezierCurveTo(38, 22, 30, 27, 25, 19);
+    ctx.bezierCurveTo(29, 10, 26, -1, 17, -4);
+    ctx.closePath();
+    const beakGrad = ctx.createLinearGradient(15, -14, 39, 22);
+    beakGrad.addColorStop(0, "#3a3f45");
+    beakGrad.addColorStop(0.5, "#181c20");
+    beakGrad.addColorStop(1, "#040506");
     ctx.fillStyle = beakGrad;
     ctx.fill();
 
-    // Lower Mandible (Smaller black jaw below)
+    // Culmen ridge highlight
     ctx.beginPath();
-    ctx.moveTo(22, 2);
-    ctx.lineTo(29, 3);
-    ctx.bezierCurveTo(30, 8, 26, 12, 22, 10);
+    ctx.moveTo(17, -12);
+    ctx.quadraticCurveTo(31, -9, 35, 6);
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Lower mandible
+    ctx.beginPath();
+    ctx.moveTo(17, -1);
+    ctx.bezierCurveTo(24, 0, 28, 6, 26, 14);
+    ctx.bezierCurveTo(21, 16, 16, 12, 15, 5);
     ctx.closePath();
-    ctx.fillStyle = "#111417";
+    ctx.fillStyle = "#101418";
     ctx.fill();
 
     ctx.restore();
