@@ -31,6 +31,12 @@ export interface OptimizedItemDisplay {
   unitPrice: number;
   subtotal: number;
   isPromotion: boolean;
+  availableMarkets?: {
+    marketId: number;
+    marketName?: string;
+    unitPrice: number;
+    isPromotion?: boolean;
+  }[];
 }
 
 export interface OptimizedStoreGroupDisplay {
@@ -515,6 +521,10 @@ function generateLocalFallbackOptimization(
     const unitPrice = getItemPrice(it, 0.95);
     const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
     subtotal1 += subtotal;
+    const availableMarkets = [
+      { marketId: 1, marketName: "Supermercado Compre Bem", unitPrice, isPromotion: true },
+      { marketId: 2, marketName: "Atacadão das Ofertas", unitPrice: getItemPrice(it, 1.02), isPromotion: false },
+    ];
     return {
       productId: it.productId,
       productName: it.name,
@@ -524,6 +534,7 @@ function generateLocalFallbackOptimization(
       unitPrice,
       subtotal,
       isPromotion: true,
+      availableMarkets,
     };
   });
 
@@ -532,6 +543,10 @@ function generateLocalFallbackOptimization(
     const unitPrice = getItemPrice(it, 0.92);
     const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
     subtotal2 += subtotal;
+    const availableMarkets = [
+      { marketId: 2, marketName: "Atacadão das Ofertas", unitPrice, isPromotion: false },
+      { marketId: 1, marketName: "Supermercado Compre Bem", unitPrice: getItemPrice(it, 1.05), isPromotion: true },
+    ];
     return {
       productId: it.productId,
       productName: it.name,
@@ -541,6 +556,7 @@ function generateLocalFallbackOptimization(
       unitPrice,
       subtotal,
       isPromotion: false,
+      availableMarkets,
     };
   });
 

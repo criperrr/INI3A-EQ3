@@ -23,6 +23,7 @@ import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import TwoFactorModal from "../components/TwoFactorModal";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -872,9 +873,28 @@ export default function ProductDetails() {
                   <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
                     <View style={styles.occurrenceMainCol}>
                       <View style={styles.occurrenceMarketTitleRow}>
-                        <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
-                          {occ.marketName || t("products.selectMarket")}
-                        </Text>
+                        <TouchableOpacity
+                          style={styles.occurrenceMarketTouchable}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            if (occ.marketName) {
+                              openMarketInGoogleMaps({
+                                marketName: occ.marketName,
+                                coordinate: occ.marketCoordinate,
+                                mode: "search",
+                              });
+                            }
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("productDetails.viewInGoogleMaps")}
+                        >
+                          <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                            {occ.marketName || t("products.selectMarket")}
+                          </Text>
+                          {Boolean(occ.marketName) && (
+                            <Ionicons name="open-outline" size={12} color={accent} style={{ marginLeft: 4 }} />
+                          )}
+                        </TouchableOpacity>
                         {Boolean(occ.isPromotion) && (
                           <View style={[styles.promoOccurrenceBadge, { backgroundColor: accent }]}>
                             <Ionicons name="pricetag" size={10} color="#FFFFFF" />
@@ -2343,6 +2363,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexWrap: "wrap",
+  },
+  occurrenceMarketTouchable: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
   promoOccurrenceBadge: {
     flexDirection: "row",

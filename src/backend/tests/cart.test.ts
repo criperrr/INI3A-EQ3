@@ -213,4 +213,76 @@ test("CartService - single_store strategy provides singleStoreOptions and honors
   }
 });
 
+test("CartService - optimizeCart attaches availableMarkets indicating product presence across stores for market reallocation", async () => {
+  const { MarketRepository } = await import("../src/shared/database/repositories/market.repository.ts");
+  const { CartRepository } = await import("../src/shared/database/repositories/cart.repository.ts");
+
+  const origGetMarketsByRadius = MarketRepository.getMarketsByRadius;
+  const origGetAllMarkets = MarketRepository.getAllMarkets;
+  const origGetPrices = CartRepository.getPricesForProductsAcrossMarkets;
+
+  try {
+    (MarketRepository as any).getMarketsByRadius = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+      { id: 2, name: "Mercado Norte", location: { coordinates: [-46.64, -23.56] }, distance: 3000 },
+    ];
+    (MarketRepository as any).getAllMarkets = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+      { id: 2, name: "Mercado Norte", location: { coordinates: [-46.64, -23.56] }, distance: 3000 },
+    ];
+
+    (CartRepository as any).getPricesForProductsAcrossMarkets = async (pIds: number[], mIds?: number[]) => {
+      const allPrices = [
+        // Product 201 exists ONLY in Mercado 1 (Sul)
+        { productId: 201, marketId: 1, marketName: "Mercado Sul", productName: "Café Especial", value: 15.0, isPromotion: false, createdAt: new Date().toISOString() },
+        // Product 202 exists in BOTH Mercado 1 (Sul) and Mercado 2 (Norte)
+        { productId: 202, marketId: 1, marketName: "Mercado Sul", productName: "Leite Integral", value: 25.0, isPromotion: false, createdAt: new Date().toISOString() },
+        { productId: 202, marketId: 2, marketName: "Mercado Norte", productName: "Leite Integral", value: 5.0, isPromotion: true, createdAt: new Date().toISOString() },
+      ];
+      return allPrices.filter((p) => pIds.includes(p.productId) && (!mIds || mIds.includes(p.marketId)));
+    };
+
+    const result = await CartService.optimizeCart({
+      items: [
+        { productId: 201, quantity: 1, productName: "Café Especial" },
+        { productId: 202, quantity: 1, productName: "Leite Integral" },
+      ],
+      preferences: { strategy: "max_savings", maxStops: 3 },
+    });
+
+    assert.equal(result.recommendedType, "multi_store");
+    assert.equal(result.storeGroups.length, 2);
+
+    const groupSul = result.storeGroups.find((g) => g.marketId === 1);
+    const groupNorte = result.storeGroups.find((g) => g.marketId === 2);
+    assert.ok(groupSul);
+    assert.ok(groupNorte);
+
+    // Product 201 (assigned to Sul because only Sul has it):
+    const item201 = groupSul.items.find((it) => it.productId === 201);
+    assert.ok(item201);
+    assert.ok(item201.availableMarkets);
+    assert.equal(item201.availableMarkets.length, 1);
+    assert.equal(item201.availableMarkets[0]?.marketId, 1);
+    // Product 201 does NOT have Mercado 2 in availableMarkets, so it cannot be moved to Mercado 2
+    assert.equal(item201.availableMarkets.some((m) => m.marketId === 2), false);
+
+    // Product 202 (assigned to Norte because cheaper at 4.8):
+    const item202 = groupNorte.items.find((it) => it.productId === 202);
+    assert.ok(item202);
+    assert.ok(item202.availableMarkets);
+    assert.equal(item202.availableMarkets.length, 2);
+    // Product 202 exists in BOTH markets (Sul and Norte), so it CAN be moved to Mercado 1 (Sul)
+    assert.ok(item202.availableMarkets.some((m) => m.marketId === 1));
+    assert.ok(item202.availableMarkets.some((m) => m.marketId === 2));
+    const sulPrice = item202.availableMarkets.find((m) => m.marketId === 1)?.unitPrice;
+    assert.equal(sulPrice, 25.0);
+  } finally {
+    (MarketRepository as any).getMarketsByRadius = origGetMarketsByRadius;
+    (MarketRepository as any).getAllMarkets = origGetAllMarkets;
+    (CartRepository as any).getPricesForProductsAcrossMarkets = origGetPrices;
+  }
+});
+
+
 

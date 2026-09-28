@@ -21,6 +21,7 @@ import { fetchMarkets } from "../services/marketService";
 import { getUserLocation } from "../utils/userLocation";
 import { hasSeenTutorial } from "../utils/tutorialStorage";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 const { width } = Dimensions.get("window");
@@ -45,6 +46,7 @@ type GridItemType = {
   discountPercentage?: number | null;
   formattedDistance?: string | null;
   nearestMarketName?: string | null;
+  nearestMarketCoordinate?: { latitude: number; longitude: number } | null;
 };
 
 function hasValidPrice(price?: string | null): boolean {
@@ -190,6 +192,7 @@ export default function HomeScreen() {
           discountPercentage: p.discountPercentage,
           formattedDistance: p.formattedDistance,
           nearestMarketName: p.nearestMarketName,
+          nearestMarketCoordinate: p.nearestMarketCoordinate,
         }));
         setRealProducts(mapped);
       } else {
@@ -749,7 +752,22 @@ const ItemsGrid = memo(function ItemsGrid({
             ) : null}
 
             {isProductView && item.formattedDistance && (
-              <View style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}>
+              <TouchableOpacity
+                style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}
+                activeOpacity={item.nearestMarketName ? 0.7 : 1}
+                onPress={(e) => {
+                  if (item.nearestMarketName) {
+                    e.stopPropagation();
+                    openMarketInGoogleMaps({
+                      marketName: item.nearestMarketName,
+                      coordinate: item.nearestMarketCoordinate,
+                      mode: "search",
+                    });
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={item.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${item.nearestMarketName}` : undefined}
+              >
                 <Ionicons name="location" size={11} color={accent} />
                 <Text
                   style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
@@ -758,7 +776,10 @@ const ItemsGrid = memo(function ItemsGrid({
                 >
                   {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
                 </Text>
-              </View>
+                {Boolean(item.nearestMarketName) && (
+                  <Ionicons name="open-outline" size={10} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
+                )}
+              </TouchableOpacity>
             )}
           </TouchableOpacity>
         ))}

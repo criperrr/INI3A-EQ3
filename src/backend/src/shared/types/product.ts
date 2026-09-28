@@ -53,6 +53,7 @@ export interface ProductDTO {
   occurrencesCount?: number | undefined;
   nearestMarketName?: string | null | undefined;
   nearestMarketDistance?: number | null | undefined;
+  nearestMarketCoordinate?: { latitude: number; longitude: number } | null | undefined;
   formattedDistance?: string | null | undefined;
   isPromotion?: boolean | undefined;
   discountPercentage?: number | null | undefined;

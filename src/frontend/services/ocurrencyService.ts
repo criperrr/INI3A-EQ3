@@ -16,6 +16,7 @@ export interface PriceOccurrence {
   isPromotion?: boolean;
   createdAt: string;
   userVote?: boolean | null;
+  marketCoordinate?: { latitude: number; longitude: number } | null;
 }
 
 export interface SubmitOccurrenceResult {

@@ -14,13 +14,14 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../../theme";
 import { useI18n } from "../../content/i18nContext";
 import type { OptimizedStoreGroupDisplay, OptimizedItemDisplay } from "../../services/cartService";
+import { openMarketInGoogleMaps } from "../../utils/mapNavigation";
 
 interface StoreGroupCardProps {
   group: OptimizedStoreGroupDisplay;
   otherStores?: { marketId: number; marketName: string }[];
   onUpdateItemQty: (productId: number, qty: number) => void;
   onRemoveItem: (productId: number) => void;
-  onReallocateItem?: (productId: number, targetMarketId: number) => void;
+  onReallocateItem?: (productId: number, targetMarketId: number, targetPrice?: number) => void;
 }
 
 export const StoreGroupCard = memo(function StoreGroupCard({
@@ -50,14 +51,23 @@ export const StoreGroupCard = memo(function StoreGroupCard({
     }
   };
 
-  const handleReallocateSelect = (targetMarketId: number) => {
+  const getEligibleStoresForItem = (item: OptimizedItemDisplay) => {
+    if (!otherStores || otherStores.length === 0) return [];
+    if (item.availableMarkets && item.availableMarkets.length > 0) {
+      const availableIds = new Set(item.availableMarkets.map((m) => m.marketId));
+      return otherStores.filter((os) => availableIds.has(os.marketId));
+    }
+    return otherStores;
+  };
+
+  const handleReallocateSelect = (targetMarketId: number, targetPrice?: number) => {
     if (reallocatingItem && onReallocateItem) {
       if (Platform.OS !== "web") {
         try {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {}
       }
-      onReallocateItem(reallocatingItem.productId, targetMarketId);
+      onReallocateItem(reallocatingItem.productId, targetMarketId, targetPrice);
     }
     setReallocatingItem(null);
   };
@@ -78,14 +88,36 @@ export const StoreGroupCard = memo(function StoreGroupCard({
     >
       {/* Store Header */}
       <View style={[styles.header, { borderBottomColor: semantic.colors.border.default }]}>
-        <View style={styles.headerLeft}>
+        <TouchableOpacity
+          style={styles.headerLeft}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (group.coordinate) {
+              openMarketInGoogleMaps({
+                marketName: group.marketName,
+                coordinate: { latitude: group.coordinate.lat, longitude: group.coordinate.lng },
+                mode: "search",
+              });
+            } else {
+              openMarketInGoogleMaps({
+                marketName: group.marketName,
+                mode: "search",
+              });
+            }
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={`${group.marketName} - ${t("productDetails.viewInGoogleMaps")}`}
+        >
           <View style={[styles.stopBadge, { backgroundColor: accent }]}>
             <Text style={styles.stopBadgeText}>#{group.stopOrder}</Text>
           </View>
           <View style={styles.storeDetails}>
-            <Text style={[styles.storeName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
-              {group.marketName}
-            </Text>
+            <View style={styles.storeNameRow}>
+              <Text style={[styles.storeName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
+                {group.marketName}
+              </Text>
+              <Ionicons name="open-outline" size={13} color={accent} style={{ marginLeft: 5 }} />
+            </View>
             <View style={styles.storeMetricsRow}>
               <View style={styles.tag}>
                 <Ionicons name="navigate-outline" size={12} color={semantic.colors.text.secondary} />
@@ -107,84 +139,86 @@ export const StoreGroupCard = memo(function StoreGroupCard({
               </View>
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Items List */}
       <View style={styles.itemsList}>
-        {group.items.map((item) => (
-          <View
-            key={item.productId}
-            style={[
-              styles.itemRow,
-              { borderBottomColor: semantic.colors.surface.input },
-            ]}
-          >
-            {/* Top Zone: Product Image + Info + Subtotal */}
-            <View style={styles.itemMainRow}>
-              {/* Product Image */}
-              <View
-                style={[
-                  styles.imageBox,
-                  { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
-                ]}
-              >
-                {item.productIcon ? (
-                  <Image
-                    source={{ uri: item.productIcon }}
-                    style={styles.productImg}
-                    contentFit="contain"
-                    transition={150}
-                  />
-                ) : (
-                  <Ionicons name="cube-outline" size={22} color={semantic.colors.icon.secondary} />
-                )}
-              </View>
-
-              {/* Product Info */}
-              <View style={styles.itemInfo}>
-                <Text style={[styles.itemName, { color: semantic.colors.text.primary }]} numberOfLines={2}>
-                  {item.productName}
-                </Text>
-                <View style={styles.priceRow}>
-                  <Text style={[styles.unitPrice, { color: semantic.colors.text.secondary }]}>
-                    R$ {item.unitPrice.toFixed(2).replace(".", ",")} / un.
-                  </Text>
-                  {item.isPromotion && (
-                    <View style={[styles.promoChip, { backgroundColor: `${accent}20` }]}>
-                      <Text style={[styles.promoText, { color: accent }]}>Oferta</Text>
-                    </View>
+        {group.items.map((item) => {
+          const eligibleStores = getEligibleStoresForItem(item);
+          return (
+            <View
+              key={item.productId}
+              style={[
+                styles.itemRow,
+                { borderBottomColor: semantic.colors.surface.input },
+              ]}
+            >
+              {/* Top Zone: Product Image + Info + Subtotal */}
+              <View style={styles.itemMainRow}>
+                {/* Product Image */}
+                <View
+                  style={[
+                    styles.imageBox,
+                    { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
+                  ]}
+                >
+                  {item.productIcon ? (
+                    <Image
+                      source={{ uri: item.productIcon }}
+                      style={styles.productImg}
+                      contentFit="contain"
+                      transition={150}
+                    />
+                  ) : (
+                    <Ionicons name="cube-outline" size={22} color={semantic.colors.icon.secondary} />
                   )}
+                </View>
+
+                {/* Product Info */}
+                <View style={styles.itemInfo}>
+                  <Text style={[styles.itemName, { color: semantic.colors.text.primary }]} numberOfLines={2}>
+                    {item.productName}
+                  </Text>
+                  <View style={styles.priceRow}>
+                    <Text style={[styles.unitPrice, { color: semantic.colors.text.secondary }]}>
+                      R$ {item.unitPrice.toFixed(2).replace(".", ",")} / un.
+                    </Text>
+                    {item.isPromotion && (
+                      <View style={[styles.promoChip, { backgroundColor: `${accent}20` }]}>
+                        <Text style={[styles.promoText, { color: accent }]}>Oferta</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+
+                {/* Item Subtotal on Right */}
+                <View style={styles.subtotalWrap}>
+                  <Text style={[styles.subtotalLabel, { color: semantic.colors.text.tertiary }]}>
+                    Total ({item.quantity}x)
+                  </Text>
+                  <Text style={[styles.itemSubtotal, { color: semantic.colors.text.primary }]}>
+                    R$ {item.subtotal.toFixed(2).replace(".", ",")}
+                  </Text>
                 </View>
               </View>
 
-              {/* Item Subtotal on Right */}
-              <View style={styles.subtotalWrap}>
-                <Text style={[styles.subtotalLabel, { color: semantic.colors.text.tertiary }]}>
-                  Total ({item.quantity}x)
-                </Text>
-                <Text style={[styles.itemSubtotal, { color: semantic.colors.text.primary }]}>
-                  R$ {item.subtotal.toFixed(2).replace(".", ",")}
-                </Text>
-              </View>
-            </View>
-
-            {/* Bottom Action Row: Reallocate Button & Quantity Stepper */}
-            <View style={styles.itemActionRow}>
-              {otherStores.length > 0 ? (
-                <TouchableOpacity
-                  style={[styles.reallocBtn, { backgroundColor: `${accent}15` }]}
-                  activeOpacity={0.7}
-                  onPress={() => setReallocatingItem(item)}
-                >
-                  <Ionicons name="swap-horizontal" size={13} color={accent} />
-                  <Text style={[styles.reallocText, { color: accent }]}>
-                    {t("cart.reallocate")}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <View />
-              )}
+              {/* Bottom Action Row: Reallocate Button & Quantity Stepper */}
+              <View style={styles.itemActionRow}>
+                {eligibleStores.length > 0 ? (
+                  <TouchableOpacity
+                    style={[styles.reallocBtn, { backgroundColor: `${accent}15` }]}
+                    activeOpacity={0.7}
+                    onPress={() => setReallocatingItem(item)}
+                  >
+                    <Ionicons name="swap-horizontal" size={13} color={accent} />
+                    <Text style={[styles.reallocText, { color: accent }]}>
+                      {t("cart.reallocate")}
+                    </Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View />
+                )}
 
               <View
                 style={[
@@ -218,8 +252,9 @@ export const StoreGroupCard = memo(function StoreGroupCard({
               </View>
             </View>
           </View>
-        ))}
-      </View>
+        );
+      })}
+    </View>
 
       {/* Card Footer Summary */}
       <View
@@ -295,23 +330,34 @@ export const StoreGroupCard = memo(function StoreGroupCard({
             </Text>
 
             <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
-              {otherStores.map((os) => (
-                <TouchableOpacity
-                  key={os.marketId}
-                  style={[
-                    styles.storeOptionRow,
-                    { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => handleReallocateSelect(os.marketId)}
-                >
-                  <Ionicons name="storefront-outline" size={18} color={accent} />
-                  <Text style={[styles.storeOptionName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
-                    {os.marketName}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color={semantic.colors.icon.secondary} />
-                </TouchableOpacity>
-              ))}
+              {reallocatingItem &&
+                getEligibleStoresForItem(reallocatingItem).map((os) => {
+                  const targetPrice = reallocatingItem.availableMarkets?.find((m) => m.marketId === os.marketId)?.unitPrice;
+                  return (
+                    <TouchableOpacity
+                      key={os.marketId}
+                      style={[
+                        styles.storeOptionRow,
+                        { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
+                      ]}
+                      activeOpacity={0.7}
+                      onPress={() => handleReallocateSelect(os.marketId, targetPrice)}
+                    >
+                      <Ionicons name="storefront-outline" size={18} color={accent} />
+                      <View style={{ flex: 1, marginLeft: 8 }}>
+                        <Text style={[styles.storeOptionName, { color: semantic.colors.text.primary }]} numberOfLines={1}>
+                          {os.marketName}
+                        </Text>
+                        {targetPrice != null && (
+                          <Text style={{ fontSize: 12, color: semantic.colors.text.secondary, marginTop: 2 }}>
+                            R$ {targetPrice.toFixed(2).replace(".", ",")} / un.
+                          </Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={semantic.colors.icon.secondary} />
+                    </TouchableOpacity>
+                  );
+                })}
             </ScrollView>
           </View>
         </View>
@@ -351,11 +397,16 @@ const styles = StyleSheet.create({
   storeDetails: {
     flex: 1,
   },
+  storeNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
   storeName: {
     fontSize: 15,
     fontWeight: "700",
     marginBottom: 5,
     lineHeight: 20,
+    flexShrink: 1,
   },
   storeMetricsRow: {
     flexDirection: "row",

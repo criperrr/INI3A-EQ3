@@ -298,3 +298,48 @@ test("AC 2: Balanced Mode respects convenience threshold parameter", () => {
   });
   assert.equal(resB.decision, "single_store");
 });
+
+test("Store Reallocation: Item only has [Mover de Mercado] option if it exists in candidate destination stores", () => {
+  interface StoreItem {
+    productId: number;
+    name: string;
+    availableMarkets?: { marketId: number; unitPrice: number }[];
+  }
+
+  const otherStores = [
+    { marketId: 2, marketName: "Atacadão" },
+    { marketId: 3, marketName: "Tauste" },
+  ];
+
+  const getEligibleStores = (item: StoreItem) => {
+    if (!item.availableMarkets || item.availableMarkets.length === 0) return otherStores;
+    const availableIds = new Set(item.availableMarkets.map((m) => m.marketId));
+    return otherStores.filter((os) => availableIds.has(os.marketId));
+  };
+
+  // Item 1: Exists only in current store (marketId: 1)
+  const itemExclusive: StoreItem = {
+    productId: 101,
+    name: "Cerveja Artesanal Exclusiva",
+    availableMarkets: [{ marketId: 1, unitPrice: 18.9 }],
+  };
+
+  // Item 2: Exists in current store (1) and in Atacadão (2)
+  const itemInBoth: StoreItem = {
+    productId: 102,
+    name: "Arroz 5kg",
+    availableMarkets: [
+      { marketId: 1, unitPrice: 24.5 },
+      { marketId: 2, unitPrice: 22.9 },
+    ],
+  };
+
+  const eligibleForExclusive = getEligibleStores(itemExclusive);
+  assert.equal(eligibleForExclusive.length, 0, "Exclusive item must not have reallocation options");
+
+  const eligibleForBoth = getEligibleStores(itemInBoth);
+  assert.equal(eligibleForBoth.length, 1, "Item in both markets must have Atacadão as valid reallocation destination");
+  assert.equal(eligibleForBoth[0]?.marketId, 2);
+  assert.equal(eligibleForBoth[0]?.marketName, "Atacadão");
+});
+

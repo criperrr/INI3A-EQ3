@@ -26,6 +26,7 @@ import {
 } from "../services/cartService";
 import { fetchProductById } from "../services/productService";
 import { getUserLocation } from "../utils/userLocation";
+import { shareCartList } from "../utils/mapNavigation";
 import { SavingsHeroCard } from "../components/cart/SavingsHeroCard";
 import { OptimizationStrategyControl } from "../components/cart/OptimizationStrategyControl";
 import { StoreGroupCard } from "../components/cart/StoreGroupCard";
@@ -364,31 +365,22 @@ export default function CartScreen() {
 
   const handleShareList = async () => {
     if (!optimization) return;
-    try {
-      let message = `🛒 *Minha Lista de Compras Otimizada (Presco)*\n\n`;
-      optimization.storeGroups.forEach((g) => {
-        message += `🏪 *${g.marketName}* (~${g.distanceKm} km | Combustível: R$ ${g.fuelCost.toFixed(2)})\n`;
-        g.items.forEach((it) => {
-          message += `   • ${it.quantity}x ${it.productName} — R$ ${it.unitPrice.toFixed(2)} un (R$ ${it.subtotal.toFixed(2)})\n`;
-        });
-        message += `   Subtotal: R$ ${g.subtotalItems.toFixed(2)}\n\n`;
-      });
-      message += `💰 *Gasto Total:* R$ ${optimization.totalCombinedCost.toFixed(2)} (Itens + R$ ${optimization.totalTravelCost.toFixed(2)} de combustível)\n`;
-      if (optimization.netSavingsVsSingleStore > 0) {
-        message += `✨ *Economia:* R$ ${optimization.netSavingsVsSingleStore.toFixed(2)}\n`;
-      }
-      await Share.share({ message });
-    } catch {}
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      } catch {}
+    }
+    await shareCartList(optimization);
   };
 
   // Reallocation override handler
-  const handleReallocateItem = (productId: number, targetMarketId: number) => {
+  const handleReallocateItem = (productId: number, targetMarketId: number, targetPrice?: number) => {
     if (!optimization) return;
     let targetItem: any = null;
     const newGroups = optimization.storeGroups.map((g) => {
       const remainingItems = g.items.filter((it) => {
         if (it.productId === productId) {
-          targetItem = it;
+          targetItem = { ...it };
           return false;
         }
         return true;
@@ -405,6 +397,10 @@ export default function CartScreen() {
     if (targetItem) {
       const targetGroup = newGroups.find((g) => g.marketId === targetMarketId);
       if (targetGroup) {
+        if (targetPrice != null && targetPrice > 0) {
+          targetItem.unitPrice = targetPrice;
+          targetItem.subtotal = Number((targetPrice * targetItem.quantity).toFixed(2));
+        }
         targetGroup.items.push(targetItem);
         targetGroup.subtotalItems = Number((targetGroup.subtotalItems + targetItem.subtotal).toFixed(2));
         targetGroup.totalWithTravel = Number((targetGroup.subtotalItems + targetGroup.fuelCost).toFixed(2));

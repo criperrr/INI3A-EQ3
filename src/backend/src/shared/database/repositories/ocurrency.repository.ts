@@ -140,6 +140,8 @@ class OcurrencyRepositoryClass {
       isPromotion: Ocurrency.isPromotion,
       createdAt: Ocurrency.createdAt,
       distanceMeters: distanceExpr,
+      marketLat: sql<number | null>`ST_Y(${Market.location}::geometry)`,
+      marketLng: sql<number | null>`ST_X(${Market.location}::geometry)`,
     };
 
     let rows = [];
@@ -227,7 +229,13 @@ class OcurrencyRepositoryClass {
           isoCreatedAt = parsed.toISOString();
         }
       }
-      return { ...r, createdAt: isoCreatedAt, formattedDistance };
+      const marketCoordinate =
+        r.marketLat !== null && r.marketLat !== undefined &&
+        r.marketLng !== null && r.marketLng !== undefined &&
+        !isNaN(Number(r.marketLat)) && !isNaN(Number(r.marketLng))
+          ? { latitude: Number(r.marketLat), longitude: Number(r.marketLng) }
+          : null;
+      return { ...r, createdAt: isoCreatedAt, formattedDistance, marketCoordinate };
     });
   }
 

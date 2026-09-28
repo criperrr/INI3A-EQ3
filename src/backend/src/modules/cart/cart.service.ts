@@ -46,6 +46,12 @@ export interface OptimizedStoreItem {
   unitPrice: number;
   subtotal: number;
   isPromotion: boolean;
+  availableMarkets?: {
+    marketId: number;
+    marketName?: string | undefined;
+    unitPrice: number;
+    isPromotion?: boolean | undefined;
+  }[];
 }
 
 export interface OptimizedStoreGroup {
@@ -373,6 +379,22 @@ class CartServiceClass {
           coveredCount++;
           const sub = Number((priceInfo.value * cartItem.quantity).toFixed(2));
           groceryCost += sub;
+          const availableMarkets: {
+            marketId: number;
+            marketName?: string | undefined;
+            unitPrice: number;
+            isPromotion?: boolean | undefined;
+          }[] = [];
+          if (pMap) {
+            for (const [mId, price] of pMap.entries()) {
+              availableMarkets.push({
+                marketId: mId,
+                marketName: marketsMap.get(mId)?.name || `Mercado #${mId}`,
+                unitPrice: price.value,
+                isPromotion: price.isPromotion,
+              });
+            }
+          }
           assigned.push({
             productId: cartItem.productId,
             productName: cartItem.productName || priceInfo.productName || `Produto #${cartItem.productId}`,
@@ -381,6 +403,7 @@ class CartServiceClass {
             unitPrice: priceInfo.value,
             subtotal: sub,
             isPromotion: priceInfo.isPromotion,
+            availableMarkets,
           });
         }
       }
@@ -589,6 +612,22 @@ class CartServiceClass {
             combCovered++;
             const sub = Number((lowestPrice.value * cartItem.quantity).toFixed(2));
             combGroceryCost += sub;
+            const availableMarkets: {
+              marketId: number;
+              marketName?: string | undefined;
+              unitPrice: number;
+              isPromotion?: boolean | undefined;
+            }[] = [];
+            if (pMap) {
+              for (const [mId, price] of pMap.entries()) {
+                availableMarkets.push({
+                  marketId: mId,
+                  marketName: marketsMap.get(mId)?.name || `Mercado #${mId}`,
+                  unitPrice: price.value,
+                  isPromotion: price.isPromotion,
+                });
+              }
+            }
             assignedByStore.get(lowestPrice.marketId)!.push({
               productId: cartItem.productId,
               productName: cartItem.productName || lowestPrice.productName || `Produto #${cartItem.productId}`,
@@ -597,6 +636,7 @@ class CartServiceClass {
               unitPrice: lowestPrice.value,
               subtotal: sub,
               isPromotion: lowestPrice.isPromotion,
+              availableMarkets,
             });
           }
         }

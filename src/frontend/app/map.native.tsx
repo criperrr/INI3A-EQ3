@@ -19,6 +19,7 @@ import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchMarkets } from "../services/marketService";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -114,6 +115,7 @@ interface MarketMarker {
     openingHours?: string;
     isBackendMarket?: boolean;
     shopType?: string;
+    address?: string;
 }
 
 const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
@@ -695,6 +697,7 @@ export default function MapScreen() {
             const name = el.tags?.name || el.name || "Supermercado";
             const markerId = String(el.id).startsWith("here_") ? String(el.id) : `here_${el.id}`;
             const cachedRoute = HERE_DISTANCE_CACHE.get(`${locKey}_${markerId}`);
+            const address = el.tags?.address || (typeof el.address === "string" ? el.address : el.address?.label);
 
             hereMarkers.push({
                 id: markerId,
@@ -704,6 +707,7 @@ export default function MapScreen() {
                 routeDistance: cachedRoute ?? safeDist,
                 openingHours: el.tags?.opening_hours,
                 shopType: shop,
+                address: address ? String(address) : undefined,
             });
         }
 
@@ -848,9 +852,17 @@ export default function MapScreen() {
         }
     };
 
-    const navigateToMarket = (market: MarketMarker) => {
-        const url = `https://www.google.com/maps/dir/?api=1&destination=${market.coordinate.latitude},${market.coordinate.longitude}`;
-        Linking.openURL(url).catch(() => alert(t("errors.networkError")));
+    const navigateToMarket = async (market: MarketMarker) => {
+        try {
+            await openMarketInGoogleMaps({
+                marketName: market.title,
+                address: market.address,
+                coordinate: market.coordinate,
+                mode: "search",
+            });
+        } catch {
+            alert(t("errors.networkError"));
+        }
     };
 
     const getFilterLabel = (filterType: "type" | "distance" | "hours") => {
@@ -1248,13 +1260,21 @@ const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, a
                             {formatOpeningHours(market.openingHours, t)}
                         </Text>
                     </View>
+                    {Boolean(market.address) && (
+                        <View style={styles.marketInfoRow}>
+                            <Ionicons name="location-outline" size={22} color={accentColor} />
+                            <Text style={[styles.marketInfoText, themeStyles.text]} numberOfLines={2}>
+                                {market.address}
+                            </Text>
+                        </View>
+                    )}
                     <TouchableOpacity
                         style={[styles.routesButton, { backgroundColor: accentColor }]}
                         activeOpacity={0.8}
                         onPress={() => onNavigate(market)}
                     >
-                        <Ionicons name="map" size={20} color="#fff" />
-                        <Text style={styles.routesButtonText}>{t("map.viewOnMap")}</Text>
+                        <Ionicons name="search" size={18} color="#fff" style={{ marginRight: 6 }} />
+                        <Text style={styles.routesButtonText}>{t("map.searchOnGoogleMaps")}</Text>
                     </TouchableOpacity>
                 </Pressable>
             </Pressable>
