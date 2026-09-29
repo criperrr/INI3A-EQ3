@@ -1,24 +1,30 @@
 /**
- * Presco Landing Page - Procedural Arara-Canindé (Blue-and-Yellow Macaw)
+ * Presco Landing Page - Procedural Arara-Canindé (Ara ararauna)
  * 100% Canvas 2D Vector Rendering & Wing Flapping Kinematics
  *
- * v3: redrawn directly against a reference photo of Ara ararauna in
- * flight (wings fully spread, head turned down, banking). Key shape
- * corrections vs. earlier passes:
- *  - Wings are no longer single flat shapes: each wing is built from
- *    individually rendered, tapered primary/secondary feathers fanned
- *    out from a shoulder joint and a wrist joint (two-segment wing),
- *    which is what actually reads as "feathers" instead of a blob.
- *  - Color follows the photo, not a generic two-tone scheme: the far
- *    (raised, upstroke) wing runs blue at the root into warm
- *    golden-tan at the tips; the near (lowered, downstroke) wing runs
- *    light cyan-blue at the root into near-black at the tips, with
- *    thin dark separation lines between feathers.
- *  - The tail keeps one elongated central feather that trails visibly
- *    further than its neighbors, matching the single long streaming
- *    feather visible in the photo.
- *  - Head: larger bare white facial mask with denser fine striping,
- *    bigger and more strongly hooked black beak, green-to-gold crown.
+ * v4: anatomia refeita a partir de fotos de araras-canindé em voo e de fichas
+ * de biometria (comprimento total ~76-86 cm, envergadura ~104-115 cm, cauda
+ * ~metade do comprimento total, garganta preta, face branca com linhas de
+ * penugem preta, íris amarela, bico preto fortemente curvo, vent e
+ * sub-caudais azuis, face inferior da cauda amarelo-oliva).
+ *
+ * Mudanças em relação à v3:
+ *  - Corpo: silhueta alongada (torpedo) em vez de oval; dorso azul-turquesa
+ *    com borda "escamada" de penas sobre peito/ventre dourado-alaranjado;
+ *    obliquamente afilado até a base da cauda, onde as tectrizes caudais
+ *    azuis fazem a transição para a cauda (nada de "bocal de turbina").
+ *  - Asas: esqueleto de 3 juntas (ombro -> cotovelo -> punho -> mão) com
+ *    defasagem (lag) entre as juntas durante o batimento, e camadas de
+ *    penas individuais: terciárias, secundárias, 10 primárias com pontas
+ *    separadas (efeito "dedos"), coberteiras maiores/médias/menores e alula.
+ *    A asa distante mostra a face inferior (dourado/oliva, pontas quase
+ *    pretas); a asa próxima mostra o dorso (turquesa -> azul-real -> marinho).
+ *  - Cauda: longa, estreita e graduada - penas quase paralelas que convergem
+ *    para uma ponta fina, com ondulação suave que segue o batimento e uma
+ *    faixa dourado-oliva na face inferior.
+ *  - Cabeça: máscara facial branca, linhas pontilhadas de penugem, babador
+ *    preto, íris amarela, cere/narina, testa verde -> nuca turquesa e bico
+ *    preto muito curvo (maxila com ponta em gancho sobre a mandíbula).
  */
 
 export interface MacawFlightState {
@@ -33,6 +39,14 @@ export interface MacawFlightState {
     targetY: number;
     state: "cruising" | "swooping" | "gliding";
     direction: 1 | -1; // 1 = facing right, -1 = facing left
+}
+
+/** Informações extras da pose, usadas para a cinemática secundária (lag das juntas, ondulação da cauda). */
+export interface MacawPose {
+    /** Fase do batimento em radianos (a mesma que gera `flap = sin(phase)`). */
+    phase?: number;
+    /** Planando: asas abertas e paradas, cauda quase reta. */
+    gliding?: boolean;
 }
 
 export class AnimatedMacaw {
@@ -157,371 +171,876 @@ export class AnimatedMacaw {
         ctx.scale(this.direction * this.scale, this.scale);
         ctx.rotate(this.bankAngle * 0.7);
 
-        drawAraraCaninde(ctx, flapSin);
+        drawAraraCaninde(ctx, flapSin, { phase: this.flapPhase, gliding: this.gliding });
 
         ctx.restore();
     }
 }
 
 // ----------------------------------------------------------------------
-// Internal drawing helpers
+// Utilidades
 // ----------------------------------------------------------------------
 
-interface FeatherSpec {
-    off: number; // degrees, added to the wing/tail's base angle
-    len: number;
-    w: number;
+const DEG = Math.PI / 180;
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+function parseHex(hex: string): [number, number, number] {
+    const h = hex.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
+/** Mistura duas cores #rrggbb (t = 0 -> a, t = 1 -> b). Retorna rgb(). */
+function mixHex(a: string, b: string, t: number): string {
+    const [ar, ag, ab] = parseHex(a);
+    const [br, bg, bb] = parseHex(b);
+    return `rgb(${Math.round(lerp(ar, br, t))},${Math.round(lerp(ag, bg, t))},${Math.round(lerp(ab, bb, t))})`;
+}
+
+// ----------------------------------------------------------------------
+// Geometria-base (referencial do corpo: origem no centro do tronco,
+// +x = cabeça, -x = cauda, +y = para baixo). Comprimento total ~ 380 u.
+// ----------------------------------------------------------------------
+
+const SHOULDER_NEAR = { x: 17, y: -12 };
+const SHOULDER_FAR = { x: 15, y: -20 };
+const HEAD = { x: 82, y: -10 };
+const TAIL_ROOT = { x: -64, y: 1 };
+
+// ----------------------------------------------------------------------
+// Pena individual
+// ----------------------------------------------------------------------
+
 /**
- * Draws ONE solid, continuous feather fan from a shared root: root ->
- * tip 1 -> notch -> tip 2 -> notch -> ... -> tip N -> root. Because it
- * is a single filled polygon (not N separate feather shapes), the base
- * never shows gaps between feathers the way discrete shapes do - only
- * the trailing edge is serrated, exactly like a real spread wing/tail.
- * Individual shaft lines are drawn on top from the root to each tip to
- * read as separate feathers without breaking up the silhouette.
- *
- * Angles are in degrees, 0 = local +x. Assumes the canvas is already
- * translated to the fan's root joint (shoulder / wrist / tail base).
+ * Perfil de largura de uma pena (0..1) ao longo do comprimento (t = 0..1).
+ * Base estreita (escondida sob as coberteiras), corpo quase paralelo e ponta
+ * arredondada/elíptica controlada por `r` (quanto maior, mais pontuda).
  */
-function featherFan(
+function featherProfile(t: number, r: number): number {
+    const tp = 1 - r;
+    if (t < tp) {
+        const k = t / tp;
+        return 0.55 + 0.45 * Math.sin(Math.min(1, k * 1.6) * Math.PI * 0.5);
+    }
+    const k = (t - tp) / r;
+    return Math.pow(Math.max(0, 1 - k * k), 0.55);
+}
+
+interface FeatherOpts {
+    /** Lado da asa (1 = asa próxima / baixa, -1 = asa distante / alta): define qual vane é o estreito. */
+    side: 1 | -1;
+    /** Deslocamento lateral da ponta, como fração do comprimento (eixo y local). */
+    bend?: number;
+    /** Fração final do comprimento ocupada pelo arredondamento da ponta. */
+    tipRound?: number;
+    /** Assimetria dos vanes (0 = simétrica). */
+    asym?: number;
+    /** Cor do eixo (ráquis). Sem valor = sem eixo. */
+    shaft?: string;
+    edge?: string;
+}
+
+/** Desenha UMA pena com origem em (x, y), direção `ang` (rad), gradiente base -> ponta. */
+function drawFeather(
     ctx: CanvasRenderingContext2D,
-    specs: FeatherSpec[],
-    baseAngleDeg: number,
-    colorNear: string,
-    colorFar: string,
-    shaftAlpha: number = 0.3,
-    notchDepth: number = 0.86,
-    colorMid?: string
+    x: number,
+    y: number,
+    ang: number,
+    len: number,
+    width: number,
+    base: string,
+    tip: string,
+    o: FeatherOpts
 ) {
-    const pts = specs.map((s) => {
-        const rad = ((baseAngleDeg + s.off) * Math.PI) / 180;
-        return { rad, len: s.len, x: Math.cos(rad) * s.len, y: Math.sin(rad) * s.len };
-    });
+    const N = 12;
+    const tipR = o.tipRound ?? 0.3;
+    const asym = o.asym ?? 0.2;
+    const bend = o.bend ?? 0;
 
     ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(ang);
+
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    for (let i = 0; i < pts.length; i++) {
-        ctx.lineTo(pts[i].x, pts[i].y);
-        if (i < pts.length - 1) {
-            const notchLen = Math.min(pts[i].len, pts[i + 1].len) * notchDepth;
-            const midRad = (pts[i].rad + pts[i + 1].rad) / 2;
-            ctx.lineTo(Math.cos(midRad) * notchLen, Math.sin(midRad) * notchLen);
-        }
+    for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const hw = featherProfile(t, tipR) * width * 0.5;
+        const px = t * len;
+        const py = bend * len * t * t - hw * (1 - o.side * asym);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    for (let i = N - 1; i >= 0; i--) {
+        const t = i / N;
+        const hw = featherProfile(t, tipR) * width * 0.5;
+        ctx.lineTo(t * len, bend * len * t * t + hw * (1 + o.side * asym));
     }
     ctx.closePath();
 
-    const mid = pts[Math.floor(pts.length / 2)];
-    const g = ctx.createLinearGradient(0, 0, mid.x, mid.y);
-    g.addColorStop(0, colorNear);
-    if (colorMid) g.addColorStop(0.6, colorMid);
-    g.addColorStop(1, colorFar);
+    const g = ctx.createLinearGradient(0, 0, len, bend * len);
+    g.addColorStop(0, base);
+    g.addColorStop(1, tip);
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.strokeStyle = "rgba(3,10,26,0.3)";
-    ctx.lineWidth = 1;
+
+    ctx.lineWidth = 0.7;
+    ctx.strokeStyle = o.edge ?? "rgba(4,12,30,0.36)";
     ctx.stroke();
 
-    // shaft lines suggesting the separate vanes, without cutting gaps
-    ctx.strokeStyle = `rgba(3,10,26,${shaftAlpha})`;
-    ctx.lineWidth = 0.6;
-    for (const p of pts) {
+    if (o.shaft) {
         ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(p.x * 0.96, p.y * 0.96);
+        ctx.moveTo(len * 0.04, 0);
+        ctx.quadraticCurveTo(len * 0.5, bend * len * 0.25, len * 0.93, bend * len * 0.87);
+        ctx.strokeStyle = o.shaft;
+        ctx.lineWidth = 0.6;
         ctx.stroke();
     }
     ctx.restore();
 }
 
+// ----------------------------------------------------------------------
+//Asa
+// ----------------------------------------------------------------------
+interface WingPalette {
+
+    lesser: [string, string];
+    median: [string, string];
+    greater: [string, string];
+    secondary: [string, string];
+    primary: [string, string];
+    tertial: [string, string];
+    shoulder: [string, string];
+    shaft: string;
+}
+
+/** Dorso da asa (asa próxima): turquesa nas coberteiras -> azul-real -> marinho nas pontas. */
+const WING_TOP: WingPalette = {
+    lesser: ["#54d0e6", "#2aa9d8"],
+    median: ["#33bfe0", "#1f93d0"],
+    greater: ["#22a3d8", "#1a76c4"],
+    secondary: ["#2384d2", "#14449a"],
+    primary: ["#2a6ccc", "#0e2a72"],
+    tertial: ["#2ab0dc", "#1d70c0"],
+    shoulder: ["#8fd06a", "#2bb3c6"],
+    shaft: "rgba(2,10,34,0.30)",
+};
+
+/** Face inferior da asa (asa distante): coberteiras douradas, penas de voo oliva -> quase pretas. */
+const WING_UNDER: WingPalette = {
+    lesser: ["#f6cc44", "#e2a91f"],
+    median: ["#eebb30", "#cf9820"],
+    greater: ["#d8a428", "#b08420"],
+    secondary: ["#9a7f24", "#2b3020"],
+    primary: ["#7d7422", "#111c26"],
+    tertial: ["#d0a02a", "#9a7a1e"],
+    shoulder: ["#f8d24a", "#e0a81e"],
+    shaft: "rgba(20,14,0,0.35)",
+};
+
+const PRIMARY_LEN = [66, 76, 86, 95, 102, 108, 112, 113, 106, 92];
+const PRIMARY_W = [15, 15, 15, 15, 14.5, 14, 13.5, 13, 12, 10.5];
+
 /**
- * Draws one full wing as a two-segment fan (secondaries off the
- * shoulder, primaries off the wrist) so the spread reads as real
- * feathers rather than a single paddle shape.
+ * Asa completa como cadeia de 3 segmentos (braço, antebraço, mão) com penas
+ * individuais em camadas.
  *
- * @param rootX/rootY shoulder position, in body-local coordinates
- * @param flap        -1 (down) .. +1 (up), same signal driving the body
- * @param isFar        true for the back/upstroke wing (smaller, duller,
- *                      gold-tipped); false for the dominant front wing
+ * @param f     -1 (baixo) .. +1 (alto)
+ * @param vel   derivada de f na fase (cos(fase)): > 0 = subida (asa dobra e as
+ *              primárias se fecham); < 0 = descida (asa estendida e aberta).
+ * @param side  1 = asa próxima/baixa (dorso visível), -1 = asa distante/alta
+ *              (face inferior visível)
  */
 function drawWing(
     ctx: CanvasRenderingContext2D,
-    rootX: number,
-    rootY: number,
-    flap: number,
-    isFar: boolean
+    sx: number,
+    sy: number,
+    f: number,
+    vel: number,
+    side: 1 | -1,
+    pal: WingPalette,
+    size: number,
+    shoulderPatch: boolean
 ) {
-    const scaleMul = isFar ? 0.74 : 1;
+    const s = side;
+    const up = Math.max(0, vel);
 
-    // The two wings are stylized as a soaring/banking silhouette (as in
-    // the reference): the far wing stays mostly UP (angle near 270 =
-    // straight up), the near wing stays mostly DOWN (angle near 90 =
-    // straight down), and `flap` nudges both together within a narrow
-    // band so the beat animates without ever swinging the wing all the
-    // way back to the tail's angle (~183deg) and colliding with it.
-    // (0deg = toward the head/+x, 90deg = straight down, 270deg = up.)
-    const rootAngleDeg = isFar ? 255 + flap * 16 : 108 + flap * 16;
+    // Ângulos: 0 = +x (frente), 90 = baixo, 180 = trás, 270 = cima.
+    // Asa baixa ~102 graus, asa alta ~252 graus; `f` as move juntas e cada
+    // junta "atrasa" em relação à anterior na direção oposta ao movimento.
+    const th0 = (s === 1 ? 106 : 252) + f * 22;
+    const a1 = (th0 - s * 12 - vel * 4) * DEG; // braço (úmero): levemente à frente
+    const a2 = (th0 - vel * 8) * DEG; // antebraço
+    const a3 = (th0 + s * 4 - vel * 15) * DEG; // mão: varre um pouco para trás e atrasa mais
 
-    // ONE continuous fan per wing (not a separate arm/hand pair) so the
-    // whole wing reads as a single connected surface: the base never
-    // shows gaps, only the trailing tips are serrated. Offsets sweep
-    // monotonically from the trailing secondaries (closest to the
-    // body/tail) to the long outer primaries (swept furthest from the
-    // body) - mirrored between the two wings since they open in
-    // opposite rotational directions.
-    const dir = isFar ? 1 : -1;
-    const specs: FeatherSpec[] = [
-        { off: dir * -50, len: 34 * scaleMul, w: 18 * scaleMul },
-        { off: dir * -38, len: 46 * scaleMul, w: 22 * scaleMul },
-        { off: dir * -26, len: 56 * scaleMul, w: 26 * scaleMul },
-        { off: dir * -14, len: 62 * scaleMul, w: 28 * scaleMul },
-        { off: dir * -2, len: 68 * scaleMul, w: 26 * scaleMul },
-        { off: dir * 10, len: 104 * scaleMul, w: 23 * scaleMul },
-        { off: dir * 22, len: 134 * scaleMul, w: 20 * scaleMul },
-        { off: dir * 34, len: 152 * scaleMul, w: 18 * scaleMul },
-        { off: dir * 46, len: 142 * scaleMul, w: 15 * scaleMul },
-        { off: dir * 58, len: 108 * scaleMul, w: 12 * scaleMul },
-    ];
+    const La = 34 * size;
+    const Lf = 48 * size;
+    const Lh = 36 * size;
+    const ex = sx + Math.cos(a1) * La;
+    const ey = sy + Math.sin(a1) * La;
+    const wx = ex + Math.cos(a2) * Lf;
+    const wy = ey + Math.sin(a2) * Lf;
+    const hx = wx + Math.cos(a3) * Lh;
+    const hy = wy + Math.sin(a3) * Lh;
 
-    // Colors: front (near) wing shows its topside - light cyan-blue at
-    // the root deepening to near-black at the tips, per the reference
-    // photo. Back (far) wing shows more of its underside - blue at the
-    // root warming into a golden-tan tip.
-    const colorA = isFar ? "#1f6fa0" : "#4fc3ec";
-    const colorB = isFar ? "#e0b559" : "#071b33";
-    const colorMid = isFar ? "#4fa0a0" : undefined; // bridges blue->gold without a muddy olive blend
+    const spread = 1 - 0.28 * up; // leque das primárias fecha na subida
+    const lm = size * (1 - 0.08 * up); // asa encurta levemente ao dobrar
+    const bendF = -s * (0.05 + 0.03 * up); // pontas curvam para o bordo de ataque
+    const perp = s * (Math.PI / 2);
+    const shaft = pal.shaft;
 
-    ctx.save();
-    ctx.translate(rootX, rootY);
-    featherFan(ctx, specs, rootAngleDeg, colorA, colorB, isFar ? 0.22 : 0.32, 0.86, colorMid);
-    ctx.restore();
-}
+    // Ponto/direção ao longo do bordo de ataque: u em [0,1) braço, [1,2) antebraço, [2,3] mão.
+    const seg = (u: number) => {
+        if (u < 1) return { x: lerp(sx, ex, u), y: lerp(sy, ey, u), a: a1 };
+        if (u < 2) return { x: lerp(ex, wx, u - 1), y: lerp(ey, wy, u - 1), a: a2 };
+        const t = clamp(u - 2, 0, 1);
+        return { x: lerp(wx, hx, t), y: lerp(wy, hy, t), a: a3 };
+    };
+    const dirAt = (u: number) => {
+        const p = seg(u);
+        const off = u < 1 ? 84 : u < 2 ? lerp(82, 76, u - 1) : (4 + 72 * Math.pow(1 - clamp(u - 2, 0, 1), 1.1)) * spread;
+        return p.a + s * off * DEG;
+    };
 
-/**
- * Draws the tail as a fan of individually tapered feathers with one
- * elongated central feather trailing further than its neighbors,
- * matching the single long streaming feather visible in the reference
- * photo.
- */
-function drawTail(ctx: CanvasRenderingContext2D, rootX: number, rootY: number) {
-    const baseAngle = 183; // ~straight back, very slight downward droop
-    const specs: FeatherSpec[] = [
-        { off: -20, len: 168, w: 15 },
-        { off: -10, len: 192, w: 16 },
-        { off: 0, len: 238, w: 15 }, // the long streaming central feather
-        { off: 10, len: 188, w: 16 },
-        { off: 20, len: 160, w: 15 },
-        { off: 29, len: 130, w: 14 },
-    ];
-    ctx.save();
-    ctx.translate(rootX, rootY);
-    featherFan(ctx, specs, baseAngle, "#34b0de", "#123a63", 0.3);
-    ctx.restore();
-}
+    // ---- Penas de voo ------------------------------------------------
+    // Terciárias (junto ao corpo)
+    for (let i = 0; i < 3; i++) {
+        const p = seg(0.25 + i * 0.3);
+        drawFeather(ctx, p.x, p.y, a1 + s * 84 * DEG, (50 - i * 5) * lm, 20 * size, pal.tertial[0], pal.tertial[1], {
+            side: s,
+            bend: bendF * 0.5,
+            tipRound: 0.34,
+            asym: 0.12,
+            shaft,
+        });
+    }
 
-/**
- * Draws a high-fidelity Arara-Canindé (Ara ararauna) in flight, facing +x
- * (use ctx.scale(-1,1) upstream to flip, as AnimatedMacaw.render does).
- *
- * Coordinate frame: origin sits at the shoulder / wing root, roughly the
- * bird's center of mass. +x = towards the head/chest, -x = towards the
- * tail, +y = down.
- *
- * @param flap Wing flap progress from -1.0 (wings fully down) to +1.0
- *             (wings raised high above the back)
- */
-export function drawAraraCaninde(ctx: CanvasRenderingContext2D, flap: number = 0) {
-    ctx.save();
+    // Secundárias (9), do cotovelo ao punho
+    for (let i = 0; i < 9; i++) {
+        const k = i / 8;
+        const p = seg(1 + (i + 0.5) / 9);
+        drawFeather(
+            ctx,
+            p.x,
+            p.y,
+            a2 + s * lerp(82, 76, k) * DEG,
+            lerp(54, 72, k) * lm,
+            19 * size,
+            mixHex(pal.secondary[0], pal.greater[0], 0.45 * (1 - k)),
+            pal.secondary[1],
+            { side: s, bend: bendF * 0.6, tipRound: 0.2, asym: 0.15, shaft }
+        );
+    }
 
-    // ------------------------------------------------------------------
-    // 1. FAR WING (raised/upstroke side, partially behind the body) -
-    //    blue at the root warming to golden-tan at the tips
-    // ------------------------------------------------------------------
-    drawWing(ctx, 8, -20, flap, true);
+    // Primárias (10): pontas se separam como "dedos"; a mais externa vai por último.
+    for (let j = 0; j < 10; j++) {
+        const t = j / 9;
+        const p = seg(2 + t);
+        const outer = t;
+        drawFeather(
+            ctx,
+            p.x,
+            p.y,
+            dirAt(2 + t),
+            PRIMARY_LEN[j] * lm,
+            PRIMARY_W[j] * size,
+            mixHex(pal.primary[0], pal.secondary[0], 0.35 * (1 - t)),
+            pal.primary[1],
+            { side: s, bend: bendF * (0.8 + outer * 0.9), tipRound: lerp(0.3, 0.46, outer), asym: lerp(0.15, 0.36, outer), shaft }
+        );
+    }
 
-    // ------------------------------------------------------------------
-    // 2. TAIL
-    // ------------------------------------------------------------------
-    drawTail(ctx, -38, 6);
-
-    // ------------------------------------------------------------------
-    // 3. LEGS / TALONS (tucked under the belly, grey with black claws)
-    // ------------------------------------------------------------------
-    ctx.save();
-    ctx.strokeStyle = "#6b7280";
-    ctx.lineWidth = 5;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(-6, 34);
-    ctx.lineTo(-14, 50);
-    ctx.stroke();
-    ctx.strokeStyle = "#1f2937";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(-14, 50); ctx.lineTo(-22, 58);
-    ctx.moveTo(-14, 50); ctx.lineTo(-13, 60);
-    ctx.moveTo(-14, 50); ctx.lineTo(-6, 56);
-    ctx.stroke();
-    ctx.restore();
-
-    // ------------------------------------------------------------------
-    // 4. BODY - compact rounded torso: blue mantle on top, golden chest
-    //    and belly below, narrowing to the tail base
-    // ------------------------------------------------------------------
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(38, -24); // base of neck / nape
-    ctx.bezierCurveTo(62, -18, 74, 4, 66, 30);
-    ctx.bezierCurveTo(60, 48, 40, 58, 18, 56);
-    ctx.bezierCurveTo(-2, 54, -20, 42, -34, 22);
-    ctx.bezierCurveTo(-40, 10, -38, -8, -26, -20);
-    ctx.bezierCurveTo(-10, -30, 18, -32, 38, -24);
-    ctx.closePath();
-
-    const bodyGrad = ctx.createLinearGradient(40, -24, 10, 56);
-    bodyGrad.addColorStop(0, "#0069a8");
-    bodyGrad.addColorStop(0.28, "#ffe066");
-    bodyGrad.addColorStop(0.55, "#ffb703");
-    bodyGrad.addColorStop(0.85, "#fb8500");
-    bodyGrad.addColorStop(1, "#d46b08");
-    ctx.fillStyle = bodyGrad;
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(234,88,12,0.4)";
-    ctx.lineWidth = 1.2;
-    for (let i = 0; i < 4; i++) {
+    // ---- Coberteiras (cobrem a base das penas de voo) -----------------
+    // Base contínua sob as coberteiras: evita "furos" entre as penas e dá uma
+    // superfície lisa em vez de um mosaico de escamas.
+    {
+        const lead = 12 * size;
         ctx.beginPath();
-        ctx.moveTo(30 - i * 10, -2 + i * 10);
-        ctx.quadraticCurveTo(40 - i * 8, 4 + i * 10, 32 - i * 10, 14 + i * 10);
+        const K = 14;
+        for (let i = 0; i <= K; i++) {
+            const u = 0.5 + (i / K) * 2.48;
+            const p = seg(u);
+            const x = p.x + Math.cos(p.a - perp) * lead;
+            const y = p.y + Math.sin(p.a - perp) * lead;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        for (let i = K; i >= 0; i--) {
+            const u = 0.5 + (i / K) * 2.48;
+            const p = seg(u);
+            const reach = (u < 1 ? 16 : u < 2 ? 30 : 12 + 30 * (1 - clamp(u - 2, 0, 1) * 0.6)) * lm;
+            const a = dirAt(u);
+            ctx.lineTo(p.x + Math.cos(a) * reach, p.y + Math.sin(a) * reach);
+        }
+        ctx.closePath();
+        const ug = ctx.createLinearGradient(sx, sy, hx, hy);
+        ug.addColorStop(0, pal.median[0]);
+        ug.addColorStop(1, pal.greater[1]);
+        ctx.fillStyle = ug;
+        ctx.fill();
+    }
+    const softEdge = "rgba(4,12,30,0.10)";
+    // Maiores: uma por secundária e uma por primária
+    for (let i = 0; i < 9; i++) {
+        const k = i / 8;
+        const u = 1 + (i + 0.5) / 9;
+        const p = seg(u);
+        drawFeather(ctx, p.x, p.y, dirAt(u), 38 * lm, 18 * size, mixHex(pal.greater[0], pal.greater[1], 0.5 * k), pal.greater[1], {
+            side: s,
+            bend: bendF * 0.4,
+            tipRound: 0.4,
+            asym: 0.1,
+            edge: softEdge,
+        });
+    }
+    for (let j = 0; j < 10; j++) {
+        const t = j / 9;
+        const p = seg(2 + t);
+        drawFeather(ctx, p.x, p.y, dirAt(2 + t), PRIMARY_LEN[j] * 0.42 * lm, 15 * size, mixHex(pal.greater[0], pal.greater[1], 0.4 + 0.5 * t), pal.greater[1], {
+            side: s,
+            bend: bendF * 0.4,
+            tipRound: 0.42,
+            asym: 0.1,
+            edge: softEdge,
+        });
+    }
+
+    // Médias e menores: fileiras curtas em direção ao bordo de ataque
+    const coverRow = (n: number, u0: number, u1: number, shift: number, len: number, w: number, pair: [string, string]) => {
+        for (let i = 0; i < n; i++) {
+            const k = i / (n - 1);
+            const u = lerp(u0, u1, k);
+            const p = seg(u);
+            const lx = Math.cos(p.a - perp) * shift * size;
+            const ly = Math.sin(p.a - perp) * shift * size;
+            drawFeather(ctx, p.x + lx, p.y + ly, dirAt(u), len * lm, w * size, mixHex(pair[0], pair[1], 0.55 * k), pair[1], {
+                side: s,
+                bend: bendF * 0.3,
+                tipRound: 0.5,
+                asym: 0.05,
+                edge: softEdge,
+            });
+        }
+    };
+    coverRow(16, 0.9, 2.95, 8, 30, 13, pal.median);
+    coverRow(16, 0.15, 2.9, 15, 22, 11, pal.lesser);
+
+    // Alula (penas pequenas no punho)
+    for (let i = 0; i < 2; i++) {
+        const lx = Math.cos(a3 - perp) * 7 * size;
+        const ly = Math.sin(a3 - perp) * 7 * size;
+        drawFeather(ctx, wx + lx, wy + ly, a3 - s * (6 + i * 7) * DEG, (20 - i * 5) * lm, 6 * size, pal.greater[0], mixHex(pal.greater[1], pal.primary[0], 0.5), {
+            side: s,
+            tipRound: 0.5,
+            asym: 0.1,
+            edge: softEdge,
+        });
+    }
+
+    // Escapulares verde-limão -> turquesa sobre a raiz da asa (só na asa próxima)
+    if (shoulderPatch) {
+        for (let i = 0; i < 7; i++) {
+            const ang = (170 + (i - 3) * 9) * DEG;
+            drawFeather(ctx, sx + 2, sy - 3 + (i - 3) * 2.2, ang, (36 - Math.abs(i - 3) * 3.5) * size, 13 * size, pal.shoulder[0], pal.shoulder[1], {
+                side: s,
+                tipRound: 0.4,
+                asym: 0.05,
+                edge: softEdge,
+            });
+        }
+    }
+}
+
+// ----------------------------------------------------------------------
+// Cauda
+// ----------------------------------------------------------------------
+
+/**
+ * Cauda longa, estreita e graduada: 7 penas quase paralelas que convergem
+ * para uma ponta fina (a central é a mais longa). A ondulação viaja da raiz
+ * para a ponta acompanhando a fase do batimento.
+ */
+function drawTail(ctx: CanvasRenderingContext2D, rx: number, ry: number, phase: number, gliding: boolean) {
+    const L = 190;
+    const lens = [0.8, 0.89, 0.96, 1.0, 0.96, 0.89, 0.8];
+    const offs = [-7.6, -5.1, -2.5, 0, 2.5, 5.1, 7.6];
+    const order = [0, 6, 1, 5, 2, 4, 3]; // externas primeiro, central por cima
+    const droop = 10;
+    const waveAmp = gliding ? 2.5 : 7;
+    const ph = gliding ? 0 : phase;
+    const W0 = 4.9;
+
+    const spine = (t: number) => ({
+        x: -L * t,
+        y: droop * t * t + waveAmp * Math.sin(ph - 3.2 * t) * Math.pow(t, 1.5),
+    });
+
+    ctx.save();
+    ctx.translate(rx, ry);
+
+    for (const k of order) {
+        const M = 26;
+        const top: [number, number][] = [];
+        const bot: [number, number][] = [];
+        for (let i = 0; i <= M; i++) {
+            const u = i / M;
+            const t = u * lens[k];
+            const c = spine(t);
+            const c2 = spine(t + 0.01);
+            const dx = c2.x - c.x;
+            const dy = c2.y - c.y;
+            const l = Math.hypot(dx, dy) || 1;
+            const nx = dy / l;
+            const ny = -dx / l;
+            const conv = 1 - 0.78 * Math.pow(t, 0.9);
+            const off = offs[k] * conv;
+            const hw = W0 * featherProfile(u, 0.14) * (1 - 0.35 * u);
+            top.push([c.x + nx * (off - hw), c.y + ny * (off - hw)]);
+            bot.push([c.x + nx * (off + hw), c.y + ny * (off + hw)]);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(top[0][0], top[0][1]);
+        for (let i = 1; i <= M; i++) ctx.lineTo(top[i][0], top[i][1]);
+        for (let i = M; i >= 0; i--) ctx.lineTo(bot[i][0], bot[i][1]);
+        ctx.closePath();
+
+        // Face superior azul; as penas de baixo revelam a face inferior dourado-oliva.
+        const w = k > 3 ? ((k - 3) / 3) * 0.85 : 0;
+        const g = ctx.createLinearGradient(0, 0, -L, 0);
+        g.addColorStop(0, mixHex("#35b7e3", "#d9b53c", w));
+        g.addColorStop(0.5, mixHex("#1f86cf", "#a8912e", w));
+        g.addColorStop(1, mixHex("#173f93", "#4d5a2e", w));
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = "rgba(3,10,26,0.32)";
         ctx.stroke();
+
+        // Ráquis
+        ctx.beginPath();
+        for (let i = 1; i <= M - 2; i++) {
+            const u = i / M;
+            const c = spine(u * lens[k]);
+            const conv = 1 - 0.78 * Math.pow(u * lens[k], 0.9);
+            const c2 = spine(u * lens[k] + 0.01);
+            const l = Math.hypot(c2.x - c.x, c2.y - c.y) || 1;
+            const px = c.x + ((c2.y - c.y) / l) * offs[k] * conv;
+            const py = c.y + (-(c2.x - c.x) / l) * offs[k] * conv;
+            if (i === 1) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+        }
+        ctx.strokeStyle = "rgba(3,12,32,0.26)";
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // Brilho na borda superior das penas de cima
+        if (k >= 1 && k <= 3) {
+            ctx.beginPath();
+            for (let i = 2; i <= M - 4; i++) {
+                if (i === 2) ctx.moveTo(top[i][0], top[i][1] + 0.9);
+                else ctx.lineTo(top[i][0], top[i][1] + 0.9);
+            }
+            ctx.strokeStyle = "rgba(255,255,255,0.16)";
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+        }
     }
     ctx.restore();
+}
 
-    // ------------------------------------------------------------------
-    // 5. NEAR WING (lowered/downstroke side, dominant foreground wing) -
-    //    light cyan-blue at the root deepening to near-black tips, with
-    //    crisp dark lines separating each primary
-    // ------------------------------------------------------------------
-    drawWing(ctx, 26, -12, flap, false);
+// ----------------------------------------------------------------------
+// Pernas / patas (recolhidas sob o ventre, cinza-escuro com garras pretas)
+// ----------------------------------------------------------------------
 
-    // ------------------------------------------------------------------
-    // 6. HEAD - small and round relative to the body, turned slightly
-    //    downward, with a large bare white facial mask and a heavy,
-    //    strongly hooked black beak
-    // ------------------------------------------------------------------
+function drawLegs(ctx: CanvasRenderingContext2D) {
     ctx.save();
-    const headX = 56, headY = -28;
-    ctx.translate(headX, headY);
-    ctx.rotate(0.22); // slight downward tilt, matching the reference pose
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
 
-    // Throat / neck feathering
-    ctx.beginPath();
-    ctx.moveTo(-20, 18);
-    ctx.quadraticCurveTo(-4, 27, 10, 21);
-    ctx.quadraticCurveTo(-4, 11, -20, 18);
-    ctx.fillStyle = "#ffb703";
-    ctx.fill();
+    const foot = (ox: number, oy: number, tarsus: string, toe: string) => {
+        ctx.strokeStyle = tarsus;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(-28 + ox, 16 + oy);
+        ctx.lineTo(-38 + ox, 31 + oy);
+        ctx.stroke();
 
-    // Skull
-    ctx.beginPath();
-    ctx.arc(0, 0, 21, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffb703";
-    ctx.fill();
+        const toes: [number, number][] = [
+            [-56, 36],
+            [-52, 43],
+            [-42, 44],
+            [-32, 39],
+        ];
+        ctx.strokeStyle = toe;
+        ctx.lineWidth = 3.4;
+        ctx.beginPath();
+        for (const [tx, ty] of toes) {
+            ctx.moveTo(-38 + ox, 31 + oy);
+            ctx.lineTo(tx + ox, ty + oy);
+        }
+        ctx.stroke();
 
-    // Green-to-gold crown patch
+        ctx.strokeStyle = "#171a1f";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (const [tx, ty] of toes) {
+            const dx = tx + 38;
+            const dy = ty - 31;
+            const l = Math.hypot(dx, dy);
+            ctx.moveTo(tx + ox, ty + oy);
+            ctx.lineTo(tx + ox + (dx / l) * 4, ty + oy + (dy / l) * 4);
+        }
+        ctx.stroke();
+    };
+
+    foot(8, -3, "#454c56", "#3b414a"); // pata do lado distante
+    foot(0, 0, "#5b626d", "#565d68"); // pata próxima
+    ctx.restore();
+}
+
+// ----------------------------------------------------------------------
+// Corpo
+// ----------------------------------------------------------------------
+
+/** Silhueta alongada (torpedo): pescoço + peito cheio, afinando até a base da cauda. */
+function bodyPath(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
-    ctx.moveTo(-10, -17);
-    ctx.quadraticCurveTo(3, -25, 16, -16);
-    ctx.quadraticCurveTo(18, -9, 11, -8);
-    ctx.quadraticCurveTo(-2, -13, -10, -9);
+    ctx.moveTo(64, -22); // nuca
+    ctx.bezierCurveTo(46, -27, 22, -27, 0, -24); // dorso
+    ctx.bezierCurveTo(-22, -21, -46, -16, -70, -9); // garupa até a base da cauda
+    ctx.lineTo(-68, 10);
+    ctx.bezierCurveTo(-50, 15, -26, 23, -2, 25); // ventre
+    ctx.bezierCurveTo(24, 28, 52, 27, 72, 16); // peito
+    ctx.bezierCurveTo(80, 11, 88, 5, 90, -2); // garganta
+    ctx.bezierCurveTo(86, -10, 76, -17, 64, -22);
     ctx.closePath();
-    const greenGrad = ctx.createLinearGradient(-10, -22, 16, -8);
-    greenGrad.addColorStop(0, "#a3d92c");
-    greenGrad.addColorStop(1, "#3f7d17");
-    ctx.fillStyle = greenGrad;
-    ctx.fill();
+}
 
-    // Large bare white facial mask - covers cheek from crown down past
-    // the eye to the base of the beak, leaving crown/nape feathered
+/** Adiciona ao caminho atual uma borda com pequenos arcos (penas sobrepostas). */
+function scallopedEdge(ctx: CanvasRenderingContext2D, pts: [number, number][], step: number, depth: number) {
+    const dense: [number, number][] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, ay] = pts[i];
+        const [bx, by] = pts[i + 1];
+        const n = Math.max(1, Math.round(Math.hypot(bx - ax, by - ay) / step));
+        for (let k = 0; k < n; k++) dense.push([lerp(ax, bx, k / n), lerp(ay, by, k / n)]);
+    }
+    dense.push(pts[pts.length - 1]);
+    for (let i = 0; i < dense.length - 1; i++) {
+        const [ax, ay] = dense[i];
+        const [bx, by] = dense[i + 1];
+        const dx = bx - ax;
+        const dy = by - ay;
+        const l = Math.hypot(dx, dy) || 1;
+        ctx.quadraticCurveTo((ax + bx) / 2 + (dy / l) * depth * 2, (ay + by) / 2 + (-dx / l) * depth * 2, bx, by);
+    }
+}
+
+function drawBody(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    bodyPath(ctx);
+
+    // Base dourado -> laranja
+    const base = ctx.createLinearGradient(0, -26, 0, 27);
+    base.addColorStop(0, "#ffd84a");
+    base.addColorStop(0.4, "#ffbb22");
+    base.addColorStop(0.75, "#f9990b");
+    base.addColorStop(1, "#e27c08");
+    ctx.fillStyle = base;
+    ctx.fill();
+    ctx.clip();
+
+    // Luz no peito
+    const hl = ctx.createRadialGradient(56, 4, 2, 56, 4, 34);
+    hl.addColorStop(0, "rgba(255,243,150,0.55)");
+    hl.addColorStop(1, "rgba(255,243,150,0)");
+    ctx.fillStyle = hl;
+    ctx.fillRect(10, -30, 90, 62);
+
+    // Sombra no ventre
+    const sh = ctx.createLinearGradient(0, 4, 0, 27);
+    sh.addColorStop(0, "rgba(150,60,0,0)");
+    sh.addColorStop(1, "rgba(150,60,0,0.24)");
+    ctx.fillStyle = sh;
+    ctx.fillRect(-72, 4, 168, 26);
+
+    // Escamas de pena no peito e no ventre
+    ctx.strokeStyle = "rgba(196,92,0,0.2)";
+    ctx.lineWidth = 0.9;
+    for (let r = 0; r < 4; r++) {
+        for (let x = 74 - (r % 2) * 4; x > -46; x -= 8) {
+            ctx.beginPath();
+            ctx.arc(x, r * 7 - 1, 4.2, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.stroke();
+        }
+    }
+
+    // Manto azul-turquesa (dorso, nuca, garupa e sub-caudais) com borda escamada
+    const mantle: [number, number][] = [
+        [92, -16],
+        [58, -12],
+        [36, -8],
+        [12, -5],
+        [-14, -2],
+        [-38, 3],
+        [-54, 11],
+        [-66, 24],
+    ];
     ctx.beginPath();
-    ctx.moveTo(0, -9);
-    ctx.bezierCurveTo(13, -16, 23, -9, 24, 4);
-    ctx.bezierCurveTo(25, 14, 16, 20, 6, 16);
-    ctx.bezierCurveTo(-3, 12, -4, -3, 0, -9);
+    ctx.moveTo(96, -40);
+    ctx.lineTo(mantle[0][0], mantle[0][1]);
+    scallopedEdge(ctx, mantle, 7.5, 3);
+    ctx.lineTo(-92, 26);
+    ctx.lineTo(-92, -40);
     ctx.closePath();
-    ctx.fillStyle = "#fdfbf6";
+    const mg = ctx.createLinearGradient(90, 0, -80, 0);
+    mg.addColorStop(0, "#28b8c8");
+    mg.addColorStop(0.2, "#2aa6dc");
+    mg.addColorStop(0.6, "#2b8ed6");
+    mg.addColorStop(1, "#35b6e6");
+    ctx.fillStyle = mg;
     ctx.fill();
-
-    // Dense fine black facial feather-lines across the mask
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(2, -5); ctx.quadraticCurveTo(11, -4, 19, 0);
-    ctx.moveTo(1, 0);  ctx.quadraticCurveTo(10, 1, 18, 4);
-    ctx.moveTo(0, 5);  ctx.quadraticCurveTo(9, 6, 16, 8);
-    ctx.moveTo(1, 10); ctx.quadraticCurveTo(8, 11, 14, 12);
-    ctx.stroke();
-
-    // Eye - dark iris + white catch-light + thin pale ring
-    ctx.beginPath();
-    ctx.arc(10, -2, 3.2, 0, Math.PI * 2);
-    ctx.fillStyle = "#0f172a";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(11, -3, 1, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(10, -2, 4.4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.6)";
+    ctx.strokeStyle = "rgba(6,50,110,0.28)";
     ctx.lineWidth = 0.8;
     ctx.stroke();
 
-    // Cere (fleshy patch atop the beak, nostril)
+    // Marcas de pena no manto
+    ctx.strokeStyle = "rgba(255,255,255,0.13)";
+    ctx.lineWidth = 0.8;
+    for (let r = 0; r < 2; r++) {
+        for (let x = 60 - r * 4; x > -50; x -= 9) {
+            ctx.beginPath();
+            ctx.arc(x, -19 + r * 7 + (x < -20 ? (-20 - x) * 0.12 : 0), 4.4, 0.15 * Math.PI, 0.85 * Math.PI);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
+
+    // Tectrizes caudais: penas estreitas e quase paralelas à cauda, nascendo
+    // dentro do corpo e cobrindo a base das retrizes (transição suave, sem "abas").
+    const coverStyle: FeatherOpts = { side: 1, tipRound: 0.45, asym: 0.05, shaft: "rgba(2,20,60,0.2)", edge: "rgba(4,12,30,0.18)" };
+    for (let i = 0; i < 3; i++) {
+        drawFeather(ctx, -30 - i * 9, 6 + i * 1.6, (179 - i * 0.6) * DEG, 62 - i * 4, 9, "#2f9fd8", "#1f6fbf", coverStyle);
+    }
+    for (let i = 0; i < 4; i++) {
+        drawFeather(ctx, -26 - i * 9, -9 + i * 2.2, (181 + i * 1.2) * DEG, 76 - i * 6, 9.5, "#3ab9e6", "#1f86cf", coverStyle);
+    }
+}
+
+// ----------------------------------------------------------------------
+// Cabeça
+// ----------------------------------------------------------------------
+
+/**
+ * Cabeça e rosto: testa verde -> nuca turquesa, máscara branca com linhas
+ * pontilhadas de penugem preta, babador preto, íris amarela, cere e bico preto
+ * fortemente curvo (a ponta da maxila passa por baixo da mandíbula).
+ */
+function drawHead(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    ctx.translate(HEAD.x, HEAD.y);
+    ctx.rotate(0.12); // cabeça levemente inclinada para baixo
+
+    // Crânio / laterais amarelo-alaranjadas
     ctx.beginPath();
-    ctx.ellipse(18, -9, 3.4, 2.4, -0.3, 0, Math.PI * 2);
-    ctx.fillStyle = "#4b5563";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(17.4, -9, 0.9, 0, Math.PI * 2);
-    ctx.fillStyle = "#111827";
+    ctx.ellipse(0, 0, 20, 18, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffb51f";
     ctx.fill();
 
-    // Large, deeply hooked black beak - upper mandible curls down
-    // sharply, almost forming a semicircle, matching the reference
+    // Coroa: verde na testa -> turquesa na nuca
     ctx.beginPath();
-    ctx.moveTo(15, -14);
-    ctx.bezierCurveTo(29, -15, 41, -4, 39, 12);
-    ctx.bezierCurveTo(38, 22, 30, 27, 25, 19);
-    ctx.bezierCurveTo(29, 10, 26, -1, 17, -4);
+    ctx.moveTo(17, -9);
+    ctx.bezierCurveTo(14, -18, 4, -20.5, -6, -19);
+    ctx.bezierCurveTo(-15, -17.5, -20, -10, -19.5, -3);
+    ctx.bezierCurveTo(-13, -8, -4, -9, 3, -10.5);
+    ctx.bezierCurveTo(8, -11, 13, -10.5, 17, -9);
     ctx.closePath();
-    const beakGrad = ctx.createLinearGradient(15, -14, 39, 22);
-    beakGrad.addColorStop(0, "#3a3f45");
-    beakGrad.addColorStop(0.5, "#181c20");
-    beakGrad.addColorStop(1, "#040506");
-    ctx.fillStyle = beakGrad;
+    const crown = ctx.createLinearGradient(17, -10, -19, -6);
+    crown.addColorStop(0, "#8bc53f");
+    crown.addColorStop(0.5, "#3f9c5a");
+    crown.addColorStop(1, "#22a7b8");
+    ctx.fillStyle = crown;
     ctx.fill();
 
-    // Culmen ridge highlight
+    // Babador / garganta preta (contorna a pele nua)
     ctx.beginPath();
-    ctx.moveTo(17, -12);
-    ctx.quadraticCurveTo(31, -9, 35, 6);
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.lineWidth = 1.2;
+    ctx.moveTo(18, 8);
+    ctx.bezierCurveTo(14, 14, 6, 17, -3, 15.5);
+    ctx.bezierCurveTo(-8, 14, -11, 10, -10, 6);
+    ctx.bezierCurveTo(-6, 9.5, -3, 11, 0, 11.5);
+    ctx.bezierCurveTo(7, 12.5, 13, 11, 18, 8);
+    ctx.closePath();
+    ctx.fillStyle = "#0e1116";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(20, 10);
+    ctx.bezierCurveTo(16, 20, 6, 22, -2, 17);
+    ctx.bezierCurveTo(4, 16, 12, 14, 20, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    // Máscara facial branca (pele nua)
+    ctx.beginPath();
+    ctx.moveTo(17, -8);
+    ctx.bezierCurveTo(14, -14, 5, -13, -1, -9);
+    ctx.bezierCurveTo(-6, -5, -6, 3, -3, 8);
+    ctx.bezierCurveTo(0, 12, 8, 13, 13, 11);
+    ctx.bezierCurveTo(16, 10, 18, 8, 18, 4);
+    ctx.bezierCurveTo(19, 0, 19, -4, 17, -8);
+    ctx.closePath();
+    const mask = ctx.createRadialGradient(6, -2, 1, 6, 0, 17);
+    mask.addColorStop(0, "#fbf8f1");
+    mask.addColorStop(0.7, "#f1ebe0");
+    mask.addColorStop(1, "#ddd5c8");
+    ctx.fillStyle = mask;
+    ctx.fill();
+    ctx.strokeStyle = "rgba(60,50,40,0.25)";
+    ctx.lineWidth = 0.6;
     ctx.stroke();
 
-    // Lower mandible
+    // Linhas pontilhadas de penugem preta ("costuradas") ao redor do olho
+    ctx.save();
+    ctx.setLineDash([1.6, 1.3]);
+    ctx.strokeStyle = "#1a1d24";
+    ctx.lineWidth = 1.1;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(17, -1);
-    ctx.bezierCurveTo(24, 0, 28, 6, 26, 14);
-    ctx.bezierCurveTo(21, 16, 16, 12, 15, 5);
-    ctx.closePath();
-    ctx.fillStyle = "#101418";
+    ctx.moveTo(15, 1);
+    ctx.quadraticCurveTo(6, 2.5, -2, -1);
+    ctx.moveTo(14, 4.5);
+    ctx.quadraticCurveTo(5, 7, -3, 3);
+    ctx.moveTo(12.5, 8);
+    ctx.quadraticCurveTo(4, 10.5, -4, 7);
+    ctx.moveTo(14, -6);
+    ctx.quadraticCurveTo(8, -9, 2, -8.5);
+    ctx.stroke();
+    ctx.restore();
+
+    // Olho: pele clara ao redor, íris amarela, pupila preta e reflexo
+    ctx.beginPath();
+    ctx.arc(5, -3.5, 4.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#efe6d2";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.25)";
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(5, -3.5, 3.4, 0, Math.PI * 2);
+    ctx.fillStyle = "#f2d770";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(5.2, -3.5, 1.9, 0, Math.PI * 2);
+    ctx.fillStyle = "#0b0d10";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(6, -4.4, 0.8, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
     ctx.fill();
 
+    // Bico: escala 0.92 ancorada na base para não dominar o rosto
+    ctx.save();
+    ctx.translate(14, 0);
+    ctx.scale(0.92, 0.92);
+    ctx.translate(-14, 0);
+
+    // Mandíbula (por baixo da maxila)
+    ctx.beginPath();
+    ctx.moveTo(14, 4);
+    ctx.bezierCurveTo(20, 5, 26, 7, 28, 11);
+    ctx.bezierCurveTo(28.5, 14.5, 26, 17, 22, 17);
+    ctx.bezierCurveTo(17, 17, 13, 14, 11, 9);
+    ctx.closePath();
+    const lower = ctx.createLinearGradient(14, 4, 24, 17);
+    lower.addColorStop(0, "#2a2e34");
+    lower.addColorStop(1, "#14171b");
+    ctx.fillStyle = lower;
+    ctx.fill();
+
+    // Maxila: culmen arqueado e ponta em gancho descendo além da mandíbula
+    ctx.beginPath();
+    ctx.moveTo(14, -12);
+    ctx.bezierCurveTo(24, -14, 36, -8, 38, 5);
+    ctx.bezierCurveTo(39.5, 12, 37, 20, 31, 22);
+    ctx.bezierCurveTo(32, 15, 30, 10, 26, 8);
+    ctx.bezierCurveTo(22, 6.5, 17, 6, 13, 6.5);
+    ctx.bezierCurveTo(12, 0, 12, -6, 14, -12);
+    ctx.closePath();
+    const upper = ctx.createLinearGradient(14, -14, 38, 22);
+    upper.addColorStop(0, "#4a5058");
+    upper.addColorStop(0.5, "#15181c");
+    upper.addColorStop(1, "#07080a");
+    ctx.fillStyle = upper;
+    ctx.fill();
+
+    // Brilho do culmen
+    ctx.beginPath();
+    ctx.moveTo(17, -11);
+    ctx.bezierCurveTo(27, -12.5, 35, -7, 36.5, 3);
+    ctx.strokeStyle = "rgba(255,255,255,0.16)";
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+
+    // Cere e narina + cerdas da testa
+    ctx.beginPath();
+    ctx.ellipse(17, -8.5, 3.6, 2.6, -0.3, 0, Math.PI * 2);
+    ctx.fillStyle = "#20242a";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(17.4, -8.8, 0.9, 0, Math.PI * 2);
+    ctx.fillStyle = "#050607";
+    ctx.fill();
+    ctx.strokeStyle = "#0e1116";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+        ctx.moveTo(13 + i * 1.6, -11 - i * 0.2);
+        ctx.lineTo(16 + i * 1.8, -14 - i * 0.6);
+    }
+    ctx.stroke();
+
+    ctx.restore(); // fim da escala do bico
     ctx.restore();
+}
+
+// ----------------------------------------------------------------------
+// Composição final
+// ----------------------------------------------------------------------
+
+/**
+ * Desenha a Arara-Canindé (Ara ararauna) em voo, virada para +x (use
+ * ctx.scale(-1, 1) por fora para espelhar, como AnimatedMacaw.render faz).
+ *
+ * Referencial: origem no centro do tronco; +x = cabeça, -x = cauda, +y = baixo.
+ *
+ * @param flap  Progresso do batimento de -1.0 (asas embaixo) a +1.0 (asas no alto)
+ * @param pose  Fase do batimento e estado de planeio (para lag das juntas e ondulação da cauda)
+ */
+export function drawAraraCaninde(ctx: CanvasRenderingContext2D, flap: number = 0, pose: MacawPose = {}) {
+    const gliding = pose.gliding ?? false;
+    const f = clamp(flap, -1, 1);
+    const phase = pose.phase ?? Math.asin(f);
+    const vel = gliding ? 0 : Math.cos(phase);
+
+    ctx.save();
+
+    // 1. Asa distante (alta): mostra a face inferior, atrás do corpo
+    drawWing(ctx, SHOULDER_FAR.x, SHOULDER_FAR.y, f, vel, -1, WING_UNDER, 0.8, false);
+
+    // 2. Cauda
+    drawTail(ctx, TAIL_ROOT.x, TAIL_ROOT.y, phase, gliding);
+
+    // 3. Patas recolhidas
+    drawLegs(ctx);
+
+    // 4. Corpo (com tectrizes caudais sobre a base da cauda)
+    drawBody(ctx);
+
+    // 5. Asa próxima (baixa): dorso azul, à frente do corpo
+    drawWing(ctx, SHOULDER_NEAR.x, SHOULDER_NEAR.y, f, vel, 1, WING_TOP, 0.92, true);
+
+    // 6. Cabeça
+    drawHead(ctx);
 
     ctx.restore();
 }
