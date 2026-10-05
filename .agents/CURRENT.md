@@ -7,6 +7,19 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Pipeline de Deploy Multi-Ambiente da Landing Page no GitHub Pages (`v1.4.3`):**
+  1. **Arquitetura de Hospedagem Multi-Branch:**
+     - `main` (Produção): Hospeda a landing page na raiz do GitHub Pages (`https://criperrr.github.io/INI3A-EQ3/`) com `baseUrl: /INI3A-EQ3`.
+     - `dev` (Desenvolvimento): Hospeda em subdiretório isolado (`https://criperrr.github.io/INI3A-EQ3/dev/`) com `baseUrl: /INI3A-EQ3/dev`.
+     - Feature & PR Branches (Testes & Previews): Cada modificação ou branch de testes (`feat/**`, `fix/**`, `test/**` ou PRs) gera uma prévia isolada em `https://criperrr.github.io/INI3A-EQ3/preview/<slug>/` com `keep_files: true` preservando os demais ambientes intactos.
+  2. **Configuração Técnica & Otimização do Metro Expo Web:**
+     - [`app.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/app.config.js): Injeção dinâmica de `experiments.baseUrl` a partir da variável `EXPO_BASE_URL`.
+     - [`metro.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/metro.config.js): Exportação SPA (`output: "single"`) com suporte a bundling estático pelo Metro.
+     - [`Header.tsx`](file:///Users/criper/INI3A-EQ3/src/landing/components/Header.tsx): Badge dinâmico de identificação de ambiente (`DEV`, `TEST` ou limpo em produção) e sincronização SemVer `v1.4.3`.
+     - [`.github/workflows/deploy-landing.yml`](file:///Users/criper/INI3A-EQ3/.github/workflows/deploy-landing.yml): Workflow com concorrência segura (`deploy-gh-pages`), publicação na branch `gh-pages` com `.nojekyll`, habilitação automática da API do Pages e comentário com link no Pull Request.
+  3. **Qualidade & Validação:**
+     - 48 testes unitários passando (19 backend + 29 raiz).
+     - 0 erros de tipagem no `npm run typecheck`.
 - **Condicionamento do Botão "Mover de Mercado" à Existência do Produto no Banco (`v1.4.3`):**
   1. **Diagnóstico da Causa Raiz:**
      - Quando o otimizador dividia os produtos em múltiplos mercados (`storeGroups.length > 1`), o componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) renderizava o botão `[Mover de Mercado]` indiscriminadamente para todos os itens daquele supermercado, independentemente de o produto existir ou não nos outros mercados da rota.

@@ -1,0 +1,165 @@
+name: Deploy Landing Page (GitHub Pages)
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - "feat/**"
+      - "fix/**"
+      - "test/**"
+    paths:
+      - "src/landing/**"
+      - ".github/workflows/deploy-landing.yml"
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "src/landing/**"
+      - ".github/workflows/deploy-landing.yml"
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: "Ambiente para forçar (auto, main, dev, preview)"
+        required: false
+        default: "auto"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: deploy-gh-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy-landing:
+    name: Build & Deploy Landing Page
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Código-Fonte
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: "src/landing/package-lock.json"
+
+      - name: Determinar Ambiente de Publicação
+        id: env_detector
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          EVENT_NAME="${{ github.event_name }}"
+          REF_NAME="${{ github.ref_name }}"
+          OVERRIDE_ENV="${{ github.event.inputs.target_env }}"
+
+          if [ "${OVERRIDE_ENV}" == "main" ] || ( [ "${OVERRIDE_ENV}" == "auto" ] && [ "${REF_NAME}" == "main" ] && [ "${EVENT_NAME}" != "pull_request" ] ); then
+            BASE_URL="/${REPO_NAME}"
+            DEST_DIR=""
+            ENV_LABEL="Produção (main)"
+            IS_PR="false"
+          elif [ "${OVERRIDE_ENV}" == "dev" ] || ( [ "${OVERRIDE_ENV}" == "auto" ] && [ "${REF_NAME}" == "dev" ] && [ "${EVENT_NAME}" != "pull_request" ] ); then
+            BASE_URL="/${REPO_NAME}/dev"
+            DEST_DIR="dev"
+            ENV_LABEL="Desenvolvimento (dev)"
+            IS_PR="false"
+          elif [ "${EVENT_NAME}" == "pull_request" ]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            SLUG="pr-${PR_NUM}"
+            BASE_URL="/${REPO_NAME}/preview/${SLUG}"
+            DEST_DIR="preview/${SLUG}"
+            ENV_LABEL="Pull Request #${PR_NUM}"
+            IS_PR="true"
+          else
+            # Branch de feature, fix ou testes isolada
+            SLUG=$(echo "${REF_NAME}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            BASE_URL="/${REPO_NAME}/preview/${SLUG}"
+            DEST_DIR="preview/${SLUG}"
+            ENV_LABEL="Preview Branch (${SLUG})"
+            IS_PR="false"
+          fi
+
+          DEPLOY_URL="https://${{ github.repository_owner }}.github.io${BASE_URL}/"
+
+          echo "BASE_URL=${BASE_URL}" >> $GITHUB_ENV
+          echo "DEST_DIR=${DEST_DIR}" >> $GITHUB_ENV
+          echo "ENV_LABEL=${ENV_LABEL}" >> $GITHUB_ENV
+          echo "IS_PR=${IS_PR}" >> $GITHUB_ENV
+          echo "DEPLOY_URL=${DEPLOY_URL}" >> $GITHUB_ENV
+
+          echo "::notice title=Landing Page Target::Ambiente: ${ENV_LABEL} | Base URL: ${BASE_URL} | URL Final: ${DEPLOY_URL}"
+
+      - name: Instalar Dependências da Landing Page
+        run: |
+          npm --prefix src/landing install --no-audit --fund=false
+
+      - name: Exportar Aplicação Web Estática (Expo Metro)
+        env:
+          EXPO_BASE_URL: ${{ env.BASE_URL }}
+        run: |
+          npm --prefix src/landing run build
+
+      - name: Garantir Arquivo .nojekyll
+        run: |
+          touch src/landing/dist/.nojekyll
+
+      - name: Deploy para GitHub Pages (branch gh-pages)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./src/landing/dist
+          destination_dir: ${{ env.DEST_DIR }}
+          keep_files: true
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_message: "deploy(landing): ${{ env.ENV_LABEL }} [skip ci]"
+
+      - name: Garantir GitHub Pages Habilitado no Repositório
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/pages" \
+            -f "source[branch]=gh-pages" \
+            -f "source[path]=/" || echo "Pages já configurado ou ativo."
+
+      - name: Resumo do Deploy no GitHub Actions
+        run: |
+          echo "## 🚀 Landing Page Publicada com Sucesso!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Propriedade | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Ambiente** | \`${{ env.ENV_LABEL }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **URL Pública** | [${{ env.DEPLOY_URL }}](${{ env.DEPLOY_URL }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Subpasta no Pages** | \`${{ env.DEST_DIR || '/' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Disparado por** | \`${{ github.event_name }}\` (\`${{ github.ref_name }}\`) |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notificar Link de Preview no Pull Request
+        if: env.IS_PR == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.issue.number;
+            const deployUrl = process.env.DEPLOY_URL;
+            const envLabel = process.env.ENV_LABEL;
+            const commitSha = context.sha.substring(0, 7);
+
+            const body = `### 🌐 Preview da Landing Page Disponível!\n\nEsta alteração foi compilada e hospedada de forma isolada no GitHub Pages:\n\n👉 **[Acessar Preview da Landing Page](${deployUrl})**\n\n- **Ambiente:** \`${envLabel}\`\n- **Commit:** \`${commitSha}\`\n\n*Atualizado automaticamente pelo fluxo de CI/CD.*`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: body
+            });

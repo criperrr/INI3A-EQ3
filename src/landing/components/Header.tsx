@@ -29,6 +29,19 @@ export const Header: React.FC<HeaderProps> = ({
     const { width } = Dimensions.get("window");
     const isDesktop = width >= 920;
 
+    const getEnvironmentBadge = () => {
+        if (typeof window !== "undefined" && window.location) {
+            const path = window.location.pathname;
+            if (path.includes("/dev")) return { label: "DEV", color: "#F59E0B" };
+            if (path.includes("/preview/")) {
+                const match = path.match(/\/preview\/([^/]+)/);
+                return { label: match ? match[1] : "TEST", color: "#3B82F6" };
+            }
+        }
+        return null;
+    };
+    const envBadge = getEnvironmentBadge();
+
     const logoSource = theme.isDark
         ? require("../assets/logo-darkmode.png")
         : require("../assets/logo-presco.png");
@@ -66,9 +79,25 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                         <View style={[styles.pulseDot, { backgroundColor: theme.accent }]} />
                         <Text style={[styles.versionText, { color: theme.accent }]}>
-                            v1.3.5
+                            v1.4.3
                         </Text>
                     </View>
+                    {envBadge && (
+                        <View
+                            style={[
+                                styles.versionBadge,
+                                {
+                                    backgroundColor: envBadge.color + "20",
+                                    borderColor: envBadge.color + "60",
+                                    marginLeft: 6,
+                                },
+                            ]}
+                        >
+                            <Text style={[styles.versionText, { color: envBadge.color, fontWeight: "700" }]}>
+                                {envBadge.label}
+                            </Text>
+                        </View>
+                    )}
                 </TouchableOpacity>
 
                 {/* ClickUp-style Desktop Navigation Links */}
