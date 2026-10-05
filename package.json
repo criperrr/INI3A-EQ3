@@ -20,6 +20,8 @@
     "ios": "npm run --prefix src/frontend ios",
     "prebuild": "npm run --prefix src/frontend prebuild",
     "build": "turbo run build",
+    "landing:build": "npm --prefix src/landing run build",
+    "landing:start": "npm --prefix src/landing run start",
     "lint": "npm run --prefix src/frontend lint",
     "typecheck": "npm run --prefix src/backend typecheck && npm run --prefix src/frontend typecheck",
     "test": "npm run --prefix src/backend test && tsx --test tests/*.test.ts tests/concurrency/*.test.ts",

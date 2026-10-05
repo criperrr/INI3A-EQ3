@@ -3980,3 +3980,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `src/frontend/app.json`
 - **Impact / Next Steps:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem. Alterações prontas na working tree aguardando solicitação explícita do usuário para commit/push.
+
+## `2026-10-05 11:39` - `ci(landing)`: Pipeline multi-ambiente de deploy no GitHub Pages para main, dev e previews
+
+- **Description:** Implementação da arquitetura de deploy multi-ambiente da landing page no GitHub Pages. Configurado suporte a base URLs dinâmicas pelo Expo Metro Web via app.config.js, exportação estática SPA no modo single, workflow de CI/CD em .github/workflows/deploy-landing.yml com publicação isolada para main (raiz), dev (/dev/) e branches de preview/teste (/preview/<slug>/) preservando arquivos existentes com keep_files, badge de ambiente no cabeçalho e scripts de build na raiz e no pacote landing.
+- **Files Modified:**
+  - `.github/workflows/deploy-landing.yml`
+  - `src/landing/app.config.js`
+  - `src/landing/metro.config.js`
+  - `src/landing/app.json`
+  - `src/landing/package.json`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `package.json`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page 100% pronta para publicação contínua no GitHub Pages com separação estrita de ambientes para main, dev e feature branches.
