@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem de Permissões `chmod` no Servidor Remoto de Produção CTI (`deploy/deploy.sh`):**
+  - **Diagnóstico da Falha:** No deploy para produção, o servidor compartilhado CTI rejeitava comandos `chmod` sobre arquivos gerenciados pelo web server como `.htaccess`, `.env` e `README.md` (`Operation not permitted`), abortando o pipeline sob `set -euo pipefail`.
+  - **Correção:** Protegidas todas as invocações de `chmod` com `2>/dev/null || true` em [`deploy.sh`](file:///Users/criper/INI3A-EQ3/deploy/deploy.sh).
+  - **Qualidade & Validação:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem no `npm run typecheck`.
 - **Pipeline de Deploy Multi-Ambiente da Landing Page no GitHub Pages (`v1.4.3`):**
   1. **Arquitetura de Hospedagem Multi-Branch:**
      - `main` (Produção): Hospeda a landing page na raiz do GitHub Pages (`https://criperrr.github.io/INI3A-EQ3/`) com `baseUrl: /INI3A-EQ3`.

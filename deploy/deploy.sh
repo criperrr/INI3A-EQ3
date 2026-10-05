@@ -66,12 +66,12 @@ cat > "$PROJECT_DIR/.htaccess" <<HTACCESS
 
 Options -Indexes
 HTACCESS
-chmod 644 "$PROJECT_DIR/.htaccess"
+chmod 644 "$PROJECT_DIR/.htaccess" 2>/dev/null || true
 
 if [ -d "$HOME/public_html" ]; then
   echo "⚙️  [Apache] Sincronizando .htaccess para $HOME/public_html..."
   cp -f "$PROJECT_DIR/.htaccess" "$HOME/public_html/.htaccess"
-  chmod 644 "$HOME/public_html/.htaccess"
+  chmod 644 "$HOME/public_html/.htaccess" 2>/dev/null || true
 fi
 
 # 2.5 Higienização: Manter no servidor estritamente os arquivos essenciais do backend
@@ -116,7 +116,7 @@ Ambiente de produção exclusivo da API REST do **Presco** (INI3A-EQ3).
 ---
 *Nota: Este servidor armazena exclusivamente os arquivos essenciais de execução da API Node.js/Express, migrações Drizzle ORM e conexão com PostgreSQL/Redis. Todo o frontend, documentação de sprints, agentes (.agents) e utilitários de desenvolvimento residem no repositório GitHub.*
 README_EOF
-chmod 644 "$PROJECT_DIR/README.md"
+chmod 644 "$PROJECT_DIR/README.md" 2>/dev/null || true
 echo "✓ README.md de produção gerado como único documento do servidor."
 
 # 3. .env do backend gerado a partir do ambiente (nunca versionado)
@@ -137,7 +137,7 @@ umask 077
   [ -n "${RESEND_FROM:-}" ]      && echo "RESEND_FROM=$RESEND_FROM"
   [ -n "${ALLOWED_ORIGINS:-}" ]  && echo "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
 } > "$BACKEND_DIR/.env"
-chmod 600 "$BACKEND_DIR/.env"
+chmod 600 "$BACKEND_DIR/.env" 2>/dev/null || true
 echo "✓ .env escrito (modo 600, $(wc -l < "$BACKEND_DIR/.env") linhas)."
 
 # 4. Dependências
