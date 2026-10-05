@@ -3996,3 +3996,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.gitignore`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Landing page 100% pronta para publicação contínua no GitHub Pages com separação estrita de ambientes para main, dev e feature branches.
+
+
+## `2026-10-05 12:33` - `fix(deploy)`: Blindagem de permissoes chmod no servidor remoto
+
+- **Description:** Adicionada protecao com `2>/dev/null || true` nas chamadas de `chmod` em `deploy/deploy.sh` (.htaccess, README.md e .env) para prevenir falha no script sob `set -e` em ambientes de hospedagem compartilhada como CTI.
+- **Files Modified:**
+  - `deploy/deploy.sh`
+- **Impact / Next Steps:** Previne falhas de permissao durante deploys em producao e staging no servidor remoto.
