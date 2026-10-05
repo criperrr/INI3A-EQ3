@@ -61,7 +61,7 @@ jobs:
           REPO_NAME="${{ github.event.repository.name }}"
           EVENT_NAME="${{ github.event_name }}"
           REF_NAME="${{ github.ref_name }}"
-          OVERRIDE_ENV="${{ github.event.inputs.target_env }}"
+          OVERRIDE_ENV="${{ github.event.inputs.target_env || 'auto' }}"
 
           if [ "${OVERRIDE_ENV}" == "main" ] || ( [ "${OVERRIDE_ENV}" == "auto" ] && [ "${REF_NAME}" == "main" ] && [ "${EVENT_NAME}" != "pull_request" ] ); then
             BASE_URL="/${REPO_NAME}"
