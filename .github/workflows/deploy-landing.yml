@@ -3,21 +3,14 @@ name: Deploy Landing Page (GitHub Pages)
 on:
   push:
     branches:
-      - main
-      - dev
-      - "feat/**"
-      - "fix/**"
-      - "test/**"
-    paths:
-      - "src/landing/**"
-      - ".github/workflows/deploy-landing.yml"
+      - "**"
+    branches-ignore:
+      - "gh-pages"
   pull_request:
     branches:
-      - main
-      - dev
-    paths:
-      - "src/landing/**"
-      - ".github/workflows/deploy-landing.yml"
+      - "**"
+    branches-ignore:
+      - "gh-pages"
   workflow_dispatch:
     inputs:
       target_env:
