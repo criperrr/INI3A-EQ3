@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - "**"
-    branches-ignore:
-      - "gh-pages"
+      - "!gh-pages"
   pull_request:
     branches:
       - "**"
-    branches-ignore:
-      - "gh-pages"
+      - "!gh-pages"
   workflow_dispatch:
     inputs:
       target_env:
