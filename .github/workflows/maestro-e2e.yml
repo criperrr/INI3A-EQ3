@@ -121,8 +121,8 @@ jobs:
       - name: Configurar Ambiente do Frontend
         run: |
           cat << 'EOF' > src/frontend/.env
-          APP_VARIANT=development
-          EXPO_PUBLIC_APP_VARIANT=development
+          APP_VARIANT=production
+          EXPO_PUBLIC_APP_VARIANT=production
           EXPO_PUBLIC_API_URL=http://localhost:3333
           EXPO_PUBLIC_HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
           GOOGLE_MAPS_API_KEY=AIzaSyAAK_y1iiS6uYUPai5nK_Weue_B8Aaluvc
@@ -131,13 +131,13 @@ jobs:
       - name: Gerar Projeto Nativo Android (Expo Prebuild)
         working-directory: src/frontend
         env:
-          APP_VARIANT: development
+          APP_VARIANT: production
         run: npx expo prebuild --platform android --clean
 
       - name: Compilar APK Android Debug
         working-directory: src/frontend/android
         env:
-          APP_VARIANT: development
+          APP_VARIANT: production
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
         run: |
           chmod +x gradlew
