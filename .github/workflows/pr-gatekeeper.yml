@@ -25,6 +25,11 @@ jobs:
         run: |
           BRANCH_NAME="${{ github.head_ref }}"
           echo "Validando branch: $BRANCH_NAME"
+          # Permite branch 'dev' para PRs de promoção/release apontando para 'main'
+          if [[ "${{ github.base_ref }}" == "main" && "$BRANCH_NAME" == "dev" ]]; then
+            echo "✅ Promoção de release de 'dev' para 'main' autorizada."
+            exit 0
+          fi
           # Permite branches seguindo a regex: ^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$
           REGEX="^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$"
           if [[ ! "$BRANCH_NAME" =~ $REGEX ]]; then
