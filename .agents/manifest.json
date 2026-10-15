@@ -484,6 +484,19 @@
   },
   "schemaVersion": "1.0.0",
   "skills": {
+    "add-service": {
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Grep",
+        "Glob",
+        "Bash"
+      ],
+      "path": "skills/add-service/SKILL.md",
+      "scripts": [],
+      "version": "1.0.0"
+    },
     "api-patterns": {
       "allowedTools": [
         "Read",
@@ -853,6 +866,30 @@
       "scripts": [],
       "version": "1.0.0"
     },
+    "semantic-versioning": {
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash"
+      ],
+      "path": "skills/semantic-versioning/SKILL.md",
+      "scripts": [],
+      "version": "1.0.0"
+    },
+    "semver": {
+      "allowedTools": [
+        "Read",
+        "Write",
+        "Edit",
+        "Bash"
+      ],
+      "path": "skills/semver/SKILL.md",
+      "scripts": [
+        "skills/semver/scripts/validate_semver.py"
+      ],
+      "version": "1.0.0"
+    },
     "server-management": {
       "allowedTools": [
         "Read",
@@ -1082,22 +1119,21 @@
     },
     "enhance": {
       "artifactOutputs": [
-        "change-plan",
         "changed-files",
         "verification-report"
       ],
       "path": "workflows/enhance.md",
       "requires": {
         "agents": [
-          "code-archaeologist"
+          "mobile-developer",
+          "backend-specialist"
         ],
         "skills": [
-          "simplify-code",
           "clean-code",
           "verify-changes"
         ]
       },
-      "version": "1.0.0"
+      "version": "2.0.0"
     },
     "orchestrate": {
       "artifactOutputs": [

@@ -81,6 +81,9 @@ export default function Footer({ activeTab }: FooterProps) {
           return (
             <TouchableOpacity
               key={tab.key}
+              testID={`tab-${tab.key}`}
+              accessibilityRole="button"
+              accessibilityLabel="Escanear produto"
               style={styles.centerItem}
               activeOpacity={0.8}
               onPress={() => handleTabPress(tab, isActive)}
@@ -108,6 +111,9 @@ export default function Footer({ activeTab }: FooterProps) {
         return (
           <TouchableOpacity
             key={tab.key}
+            testID={`tab-${tab.key}`}
+            accessibilityRole="button"
+            accessibilityLabel={tab.key}
             style={styles.navItem}
             activeOpacity={0.7}
             onPress={() => handleTabPress(tab, isActive)}

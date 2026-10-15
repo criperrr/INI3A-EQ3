@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
+import TwoFactorModal from "../components/TwoFactorModal";
 import type { BadgeItem } from "../services/auth";
 import {
   fetchCustomizationCatalog,
@@ -70,10 +71,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
   const { t } = useI18n();
-  const { user, profile, isAdmin, isAuthenticated, refreshProfile, loginAsTestUser, logout } = useAuth();
+  const { user, profile, isAdmin, isAuthenticated, isTwoFactorVerified, refreshProfile, loginAsTestUser, logout } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [connectingRole, setConnectingRole] = useState<string | null>(null);
+  const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
 
   // Customization Shop State
   const [shopModalVisible, setShopModalVisible] = useState(false);
@@ -230,6 +232,61 @@ export default function ProfileScreen() {
 
         {isAdmin && <AdminPrivilegesBanner accent={accent} themeStyles={themeStyles} t={t} />}
 
+        {isAuthenticated && (
+          <View
+            style={[
+              styles.twoFactorBanner,
+              themeStyles.card,
+              themeStyles.border,
+              {
+                borderColor: isTwoFactorVerified
+                  ? "#10B98150"
+                  : accent + "50",
+              },
+            ]}
+          >
+            <View style={styles.twoFactorBannerLeft}>
+              <View
+                style={[
+                  styles.twoFactorIconWrap,
+                  {
+                    backgroundColor: isTwoFactorVerified
+                      ? "#10B98120"
+                      : accent + "20",
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={isTwoFactorVerified ? "shield-checkmark" : "shield-outline"}
+                  size={20}
+                  color={isTwoFactorVerified ? "#10B981" : accent}
+                />
+              </View>
+              <View style={styles.twoFactorTextCol}>
+                <Text style={[styles.twoFactorTitle, themeStyles.text]}>
+                  {isTwoFactorVerified
+                    ? "Verificação em 2 Etapas Ativa"
+                    : "Verificação de 2 Etapas Pendente"}
+                </Text>
+                <Text style={[styles.twoFactorSubtitle, themeStyles.subText]}>
+                  {isTwoFactorVerified
+                    ? "Sua conta está protegida por e-mail e habilitada para postagens e avaliações."
+                    : "Confirme seu e-mail para poder publicar ofertas e interagir com a comunidade."}
+                </Text>
+              </View>
+            </View>
+            {!isTwoFactorVerified && (
+              <TouchableOpacity
+                style={[styles.twoFactorVerifyBtn, { backgroundColor: accent }]}
+                activeOpacity={0.8}
+                onPress={() => setIsTwoFactorModalVisible(true)}
+              >
+                <Text style={styles.twoFactorVerifyBtnText}>Verificar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Customization Store & Points Action Button */}
         <CustomizationBar
           points={userPoints}
@@ -280,6 +337,16 @@ export default function ProfileScreen() {
         onRefreshProfile={refreshProfile}
         setCatalog={setCatalog}
         t={t}
+      />
+
+      <TwoFactorModal
+        visible={isTwoFactorModalVisible}
+        onClose={() => setIsTwoFactorModalVisible(false)}
+        onSuccess={() => {
+          setIsTwoFactorModalVisible(false);
+          refreshProfile();
+        }}
+        actionDescription="Confirme o código enviado para seu e-mail para ativar a segurança em 2 etapas."
       />
     </View>
   );
@@ -561,6 +628,7 @@ const CustomizationBar = memo(function CustomizationBar({
 }) {
   return (
     <TouchableOpacity
+      testID="profile-shop-btn"
       style={[styles.customizationBar, themeStyles.card, { borderColor: accent + "50" }]}
       activeOpacity={0.8}
       onPress={onPress}
@@ -1308,7 +1376,15 @@ function CustomizationShopModal({
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity
+              testID="shop-modal-close-btn"
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="shop-modal-close-btn"
+              style={styles.closeBtn}
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
               <Ionicons name="close" size={24} color={themeStyles.text.color} />
             </TouchableOpacity>
           </View>
@@ -1762,6 +1838,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
 
         <View style={styles.quickConnectButtons}>
           <TouchableOpacity
+            testID="profile-quick-login-user"
             style={[styles.quickUserBtn, { backgroundColor: accent }]}
             activeOpacity={0.8}
             onPress={() => onQuickConnect("user")}
@@ -1786,6 +1863,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="profile-quick-login-admin"
             style={[
               styles.quickAdminBtn,
               themeStyles.inputBg,
@@ -1819,6 +1897,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
       {/* Standard Actions */}
       <View style={styles.standardActions}>
         <TouchableOpacity
+          testID="profile-login-other-btn"
           style={[styles.loginBtn, themeStyles.inputBg, themeStyles.border]}
           activeOpacity={0.8}
           onPress={onGoToLogin}
@@ -1853,6 +1932,7 @@ const LogoutButton = memo(function LogoutButton({
   const { themeStyles, isDark } = useTheme();
   return (
     <TouchableOpacity
+      testID="profile-logout-btn"
       style={[
         styles.logoutButton,
         themeStyles.card,
@@ -2093,13 +2173,15 @@ const styles = StyleSheet.create({
   },
   badgeFilterRow: {
     flexDirection: "row",
-    gap: 8,
+    flexWrap: "wrap",
+    gap: 10,
+    rowGap: 8,
     marginBottom: 14,
   },
   badgeFilterChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
@@ -2535,13 +2617,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
   },
-  categoryTabsScroll: { gap: 8, paddingVertical: 2 },
+  categoryTabsScroll: { gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
   categoryTabChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
     borderRadius: 18,
     borderWidth: 1,
   },
@@ -2683,4 +2765,53 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionBadgeText: { fontSize: 11, fontWeight: "600" },
+  twoFactorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    gap: 12,
+  },
+  twoFactorBannerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  twoFactorIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  twoFactorTextCol: {
+    flex: 1,
+  },
+  twoFactorTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  twoFactorSubtitle: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  twoFactorVerifyBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  twoFactorVerifyBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });

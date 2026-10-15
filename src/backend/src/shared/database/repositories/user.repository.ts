@@ -27,6 +27,7 @@ class UserRepositoryClass {
         name: User.name,
         email: User.email,
         roleId: User.roleId,
+        twoFactorVerified: User.twoFactorVerified,
         createdAt: User.createdAt,
       });
   }
@@ -52,6 +53,7 @@ class UserRepositoryClass {
         name: User.name,
         email: User.email,
         roleId: User.roleId,
+        twoFactorVerified: User.twoFactorVerified,
         updatedAt: User.updatedAt,
       })
       .where(eq(User.id, Number(id)));
@@ -93,6 +95,7 @@ class UserRepositoryClass {
         equippedAvatarFrameId: User.equippedAvatarFrameId,
         equippedLevelFrameId: User.equippedLevelFrameId,
         equippedTitleId: User.equippedTitleId,
+        twoFactorVerified: User.twoFactorVerified,
         createdAt: User.createdAt,
         updatedAt: User.updatedAt,
         roleName: schema.role.name,

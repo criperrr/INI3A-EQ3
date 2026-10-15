@@ -1,0 +1,106 @@
+appId: com.presco.app
+name: "10 - Comprehensive End-to-End User Simulation Flow"
+tags:
+  - e2e
+  - regression
+  - full-journey
+---
+# ==========================================
+# Presco Comprehensive E2E User Simulation
+# ==========================================
+
+# 1. Launch App cleanly
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# 2. Authenticate using 1-tap Quick Login
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_admin.yaml"
+
+# 3. Explore Home Screen
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 8000
+
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# 4. Search & Discovery
+- tapOn:
+    id: "tab-search"
+
+- extendedWaitUntil:
+    visible:
+      id: "search-input"
+    timeout: 8000
+
+- tapOn:
+    id: "search-input"
+- inputText: "Leite"
+- hideKeyboard
+
+- waitForAnimationToEnd:
+    timeout: 2500
+
+# 5. Open Product Details
+- tapOn:
+    point: "50%, 35%"
+
+- extendedWaitUntil:
+    visible:
+      id: "btn-register-price"
+    timeout: 8000
+
+- scroll
+- back
+
+# 6. Profile & Gamification
+- tapOn:
+    id: "tab-profile"
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-shop-btn"
+    timeout: 8000
+
+- tapOn:
+    id: "profile-shop-btn"
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+- back
+
+# 7. Settings, Theming & Maintenance
+- tapOn:
+    id: "header-settings-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "theme-dark-switch"
+    timeout: 8000
+
+# Toggle Theme
+- tapOn:
+    id: "theme-dark-switch"
+- waitForAnimationToEnd:
+    timeout: 1000
+- tapOn:
+    id: "theme-dark-switch"
+
+- back
+
+# 8. Clean Logout
+- runFlow:
+    file: "../subflows/logout.yaml"
+
+- assertVisible:
+    id: "login-submit-btn"

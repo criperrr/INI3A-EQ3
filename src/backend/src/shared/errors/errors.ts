@@ -74,3 +74,11 @@ export class TooManyRequestsError extends AppError {
     super("TOO_MANY_REQUESTS", message, 429);
   }
 }
+
+export class TwoFactorRequiredError extends AppError {
+  constructor(
+    message: string = "Verificação de duas etapas por e-mail necessária para realizar publicações e interações.",
+  ) {
+    super("TWO_FACTOR_REQUIRED", message, 403);
+  }
+}

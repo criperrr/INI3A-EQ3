@@ -43,7 +43,7 @@ export default function OnboardingTutorialModal({
   const { t } = useI18n();
 
   const [currentStep, setCurrentStep] = useState(0);
-  const totalSteps = 6;
+  const totalSteps = 7;
   const [containerWidth, setContainerWidth] = useState(SCREEN_WIDTH - 40);
 
   // Animação horizontal contínua de trilha de carrossel
@@ -288,7 +288,83 @@ export default function OnboardingTutorialModal({
         );
 
       case 2:
-        // Tela 3: Mapa de Mercados
+        // Tela 3: Lista de Compras Inteligente & Rota
+        return (
+          <View style={styles.mockupContainer}>
+            {/* Washi tape com ícone de carrinho */}
+            <View style={[styles.washiTape, { backgroundColor: colors.washiTape }]} />
+
+            {/* Card artesanal da Lista de Compras */}
+            <View style={[styles.sketchCartCard, { backgroundColor: colors.surfaceCard, borderColor: colors.cardBorder }]}>
+              {/* Cabeçalho da Lista */}
+              <View style={styles.cartHeaderRow}>
+                <View style={styles.cartTitleWrapper}>
+                  <Ionicons name="cart" size={16} color={colors.emerald} />
+                  <Text style={[styles.cartHeaderTitle, { color: colors.textPrimary }]}>
+                    Lista (4 itens)
+                  </Text>
+                </View>
+                <View style={[styles.strategyBadge, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
+                  <Ionicons name="flash" size={11} color={colors.emeraldDark} />
+                  <Text style={[styles.strategyBadgeText, { color: colors.emeraldDark }]}>
+                    Máxima Economia
+                  </Text>
+                </View>
+              </View>
+
+              {/* Lojas divididas no trajeto */}
+              <View style={styles.storeDivisionContainer}>
+                {/* Loja 1 */}
+                <View style={[styles.storeMiniRow, { borderColor: colors.cardBorder, backgroundColor: colors.craftPaper }]}>
+                  <View style={styles.storeNameGroup}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.emerald} />
+                    <Text style={[styles.storeMiniName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Mercado Central (2)
+                    </Text>
+                  </View>
+                  <Text style={[styles.storeMiniPrice, { color: colors.emerald }]}>R$ 23,80</Text>
+                </View>
+
+                {/* Loja 2 */}
+                <View style={[styles.storeMiniRow, { borderColor: colors.cardBorder, backgroundColor: colors.craftPaper }]}>
+                  <View style={styles.storeNameGroup}>
+                    <Ionicons name="checkmark-circle" size={14} color={colors.emerald} />
+                    <Text style={[styles.storeMiniName, { color: colors.textPrimary }]} numberOfLines={1}>
+                      Hiper Sul (2)
+                    </Text>
+                  </View>
+                  <Text style={[styles.storeMiniPrice, { color: colors.emerald }]}>R$ 38,90</Text>
+                </View>
+              </View>
+
+              {/* Banner de Rota & Combustível */}
+              <View style={styles.fuelRouteBanner}>
+                <Ionicons name="car-outline" size={13} color={colors.amberDark} />
+                <Text style={[styles.fuelRouteText, { color: colors.textSecondary }]}>
+                  4.2 km • Combustível: R$ 3,10
+                </Text>
+              </View>
+
+              {/* Selo/Carimbo de Economia Líquida */}
+              <View style={[styles.netSavingsStamp, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight }]}>
+                <Ionicons name="sparkles" size={13} color={colors.emeraldDark} />
+                <Text style={[styles.netSavingsStampText, { color: colors.emeraldDark }]}>
+                  Economia Líquida: R$ 28,60
+                </Text>
+              </View>
+            </View>
+
+            {/* Post-it amarelo explicativo */}
+            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-1.8deg" }] }]}>
+              <Text style={[styles.postItText, { color: colors.postItText }]}>
+                ⛽ O Presco calcula se dividir lojas compensa a gasolina!
+              </Text>
+            </View>
+          </View>
+        );
+
+      case 3:
+        // Tela 4: Mapa de Mercados
         return (
           <View style={styles.mockupContainer}>
             {/* Mapa ilustrado com ruas e pinos orgânicos */}
@@ -331,8 +407,8 @@ export default function OnboardingTutorialModal({
           </View>
         );
 
-      case 3:
-        // Tela 4: Registrar Preços (+15 XP / +25 XP)
+      case 4:
+        // Tela 5: Registrar Preços (+15 XP / +25 XP)
         return (
           <View style={styles.mockupContainer}>
             {/* Card com formulário e anotação */}
@@ -365,8 +441,8 @@ export default function OnboardingTutorialModal({
           </View>
         );
 
-      case 4:
-        // Tela 5: Auditoria Comunitária (+5 XP)
+      case 5:
+        // Tela 6: Auditoria Comunitária (+5 XP)
         return (
           <View style={styles.mockupContainer}>
             {/* Card de verificação com botões Upvote e Downvote */}
@@ -407,8 +483,8 @@ export default function OnboardingTutorialModal({
           </View>
         );
 
-      case 5:
-        // Tela 6: Subir de Nível, Loja & Mascote
+      case 6:
+        // Tela 7: Subir de Nível, Loja & Mascote
         return (
           <View style={styles.mockupContainer}>
             {/* Card com barra de XP e Mascote */}
@@ -475,37 +551,41 @@ export default function OnboardingTutorialModal({
   const stepTitles = [
     t("onboarding.screen1Title") || "Buscar & Comparar",
     t("onboarding.screen2Title") || "Leitor de Gôndola EAN",
-    t("onboarding.screen3Title") || "Mapa de Mercados",
-    t("onboarding.screen4Title") || "Registrar Preços",
-    t("onboarding.screen5Title") || "Auditoria Comunitária",
-    t("onboarding.screen6Title") || "Níveis & Customização",
+    t("onboarding.screen3Title") || "Lista de Compras & Rota",
+    t("onboarding.screen4Title") || "Mapa de Mercados",
+    t("onboarding.screen5Title") || "Registrar Preços",
+    t("onboarding.screen6Title") || "Auditoria Comunitária",
+    t("onboarding.screen7Title") || "Níveis & Customização",
   ];
 
   const stepSubtitles = [
     t("onboarding.screen1Subtitle") || "Encontre qualquer produto pelo nome ou categorias para comparar preços entre mercados.",
     t("onboarding.screen2Subtitle") || "Aponte a câmera para o código de barras na prateleira e descubra se há preços menores.",
-    t("onboarding.screen3Subtitle") || "Localize supermercados em até 15 km com as melhores ofertas e trajetos rápidos.",
-    t("onboarding.screen4Subtitle") || "Reporte os preços que encontrar nas lojas e acumule experiência para subir de nível.",
-    t("onboarding.screen5Subtitle") || "Vote com upvote ou downvote nas ofertas registradas para manter os dados 100% confiáveis.",
-    t("onboarding.screen6Subtitle") || "Acumule XP, ganhe insígnias exclusivas e resgate molduras e banners personalizados na Loja.",
+    t("onboarding.screen3Subtitle") || "Monte sua lista e deixe o Presco dividir os itens entre mercados para economizar até no combustível.",
+    t("onboarding.screen4Subtitle") || "Localize supermercados em até 15 km com as melhores ofertas e trajetos rápidos.",
+    t("onboarding.screen5Subtitle") || "Reporte os preços que encontrar nas lojas e acumule experiência para subir de nível.",
+    t("onboarding.screen6Subtitle") || "Vote com upvote ou downvote nas ofertas registradas para manter os dados 100% confiáveis.",
+    t("onboarding.screen7Subtitle") || "Acumule XP, ganhe insígnias exclusivas e resgate molduras e banners personalizados na Loja.",
   ];
 
   const stepBadges = [
     t("onboarding.screen1Badge") || "Economia",
     t("onboarding.screen2Badge") || "Leitura Rápida",
-    t("onboarding.screen3Badge") || "15 km GPS",
-    t("onboarding.screen4Badge") || "+15 XP",
-    t("onboarding.screen5Badge") || "+5 XP",
-    t("onboarding.screen6Badge") || "Gamificação",
+    t("onboarding.screen3Badge") || "Multilojas & GPS",
+    t("onboarding.screen4Badge") || "15 km GPS",
+    t("onboarding.screen5Badge") || "+15 XP",
+    t("onboarding.screen6Badge") || "+5 XP",
+    t("onboarding.screen7Badge") || "Gamificação",
   ];
 
   const stepTips = [
     t("onboarding.screen1Tip") || "Dica: Veja o histórico de preços para checar se a promoção é real.",
     t("onboarding.screen2Tip") || "Dica: Funciona integrado com a base local e OpenFoodFacts.",
-    t("onboarding.screen3Tip") || "Dica: Filtre por menor preço e distância para economizar combustível.",
-    t("onboarding.screen4Tip") || "Dica: Cadastre produtos novos para faturar +25 XP bônus!",
-    t("onboarding.screen5Tip") || "Dica: Sua avaliação ajuda milhares de pessoas a economizarem.",
-    t("onboarding.screen6Tip") || "Dica: Equipe molduras raras no seu perfil para se destacar no ranking.",
+    t("onboarding.screen3Tip") || "Dica: Escolha entre Economia Máxima, Modo Balanceado ou Loja Única.",
+    t("onboarding.screen4Tip") || "Dica: Filtre por menor preço e distância para economizar combustível.",
+    t("onboarding.screen5Tip") || "Dica: Cadastre produtos novos para faturar +25 XP bônus!",
+    t("onboarding.screen6Tip") || "Dica: Sua avaliação ajuda milhares de pessoas a economizarem.",
+    t("onboarding.screen7Tip") || "Dica: Equipe molduras raras no seu perfil para se destacar no ranking.",
   ];
 
   return (
@@ -625,6 +705,8 @@ export default function OnboardingTutorialModal({
                   activeOpacity={0.6}
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   style={styles.skipTextButton}
+                  accessibilityLabel="Pular tutorial"
+                  testID="dismiss-tutorial-button"
                 >
                   <Text style={[styles.skipTextBottom, { color: colors.textSecondary }]}>
                     {t("onboarding.skip") || "Pular"}
@@ -636,6 +718,7 @@ export default function OnboardingTutorialModal({
                 onPress={handleNext}
                 activeOpacity={0.85}
                 style={styles.whiteNextButton}
+                testID="next-tutorial-button"
               >
                 <Text style={styles.whiteNextButtonText} numberOfLines={1}>
                   {currentStep === totalSteps - 1
@@ -833,6 +916,102 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "700",
     fontStyle: "italic",
+  },
+  sketchCartCard: {
+    width: "92%",
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cartHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  cartTitleWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  cartHeaderTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  strategyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  strategyBadgeText: {
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  storeDivisionContainer: {
+    gap: 6,
+    marginBottom: 6,
+  },
+  storeMiniRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  storeNameGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  storeMiniName: {
+    fontSize: 11,
+    fontWeight: "600",
+    flex: 1,
+  },
+  storeMiniPrice: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  fuelRouteBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  fuelRouteText: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+  netSavingsStamp: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    marginTop: 2,
+  },
+  netSavingsStampText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   postItNote: {
     paddingHorizontal: 12,

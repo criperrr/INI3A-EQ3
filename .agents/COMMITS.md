@@ -2939,6 +2939,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Banco remoto limpo de produtos com sucesso; seleção de mercados agora é resiliente a localização e sempre disponibiliza Trigal.
 
+<<<<<<< HEAD
+## `2026-09-10 12:36` - `fix(ui)`: Filter out products without price on home screen
+
+- **Description:** Adiciona função `hasValidPrice` e filtragem no grid da tela inicial (`index.tsx`) para descartar qualquer produto cujo preço não esteja informado ou esteja sob consulta, garantindo que apenas ofertas e produtos com preço real e válido sejam exibidos.
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** A tela inicial do app agora só renderiza produtos que possuem preço real válido.
+=======
 ## 2026-09-10 12:34 - feat(scripts): Add CMake-style progressive build indicator with percentage and ETA
 
 - **Description:** Updated scripts/android.ts with real-time progressive build tracking during Gradle compilation: displays percentage [XX%], objects completed [N/1021], dynamic ETA calculation, ANSI color progress bar, and active task name with TTY cursor rewriting and CI linear logging fallback.
@@ -2948,6 +2961,9 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Developers have clear, deterministic visibility into compilation progress without verbose Gradle log spam.
 
+<<<<<<< HEAD
+>>>>>>> 73c341dbed7cbf2a4c5bb2d1e6bdfa16227d8926
+=======
 
 ## `2026-09-10 13:21` - `fix(markets)`: Correct Oba Hortifruti coordinates and sanitize market locations
 
@@ -2968,7 +2984,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## 2026-09-10 13:59 - feat(scanner): barcode similarity match (>=65%) and printed digits confirmation
 
-- **Description:** Implementado algoritmo de similaridade de c�digo de barras no backend com limiar de 65% (0.65), priorizando produtos com imagem quando n�o houver correspond�ncia 100% exata. Atualizada a tela de confirma��o do scanner (scannerConfirmation.tsx) para exibir card de compatibilidade com porcentagem calculada e bloco de confer�ncia dos d�gitos lidos pela c�mera vs n�mero oficial do produto f�sico impresso abaixo das barras. Atualizados dicion�rios de i18n em 7 idiomas. Bump de vers�o para 1.0.4 (versionCode 5).
+- **Description:** Implementado algoritmo de similaridade de c�digo de barras no backend com limiar de 65% (0.65), priorizando produtos com imagem quando n�o houver correspond�ncia 100% exata. Atualizada a tela de confirma��o do scanner (scannerConfirmation.tsx) para exibir card de compatibilidade com porcentagem calculada e bloco de confer�ncia dos d�gitos lidos pela c�mera vs n�mero oficial do produto f�sico impresso abaixo das barras. Atualizados dicion�rios de i18n em 7 idiomas. Bump de vers�o para 1.0.4 (versionCode 5).
 - **Files Modified:**
   - src/backend/src/shared/types/product.ts
   - src/backend/src/shared/database/repositories/product.repository.ts
@@ -2990,7 +3006,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - src/frontend/package.json
   - src/frontend/app.json
   - .agents/CURRENT.md
-- **Impact / Next Steps:** O usu�rio tem seguran�a contra erros de leitura �ptica de c�digo de barras ou varia��es menores de d�gitos, podendo conferir visualmente a imagem e os n�meros impressos na embalagem antes de submeter o pre�o.
+- **Impact / Next Steps:** O usu�rio tem seguran�a contra erros de leitura �ptica de c�digo de barras ou varia��es menores de d�gitos, podendo conferir visualmente a imagem e os n�meros impressos na embalagem antes de submeter o pre�o.
 
 ## 2026-09-10 16:30 - fix(ci): Resolucao de erro de sintaxe Swift 6.0 no ExpoModulesJSI da build iOS
 
@@ -3231,3 +3247,898 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `src/frontend/app.json`
 - **Impact / Next Steps:** Servidor remoto 100% limpo e higienizado com apenas 1 arquivo markdown e apenas arquivos essenciais do backend. Deploy testado com sucesso com retorno HTTP 200 na API e healthcheck.
+>>>>>>> 4d2edc36b06fc6f701d01ffc94fab54fb51764bf
+
+##  - : Initial scaffolding for product landing page
+
+- **Description:** Criada estrutura inicial de diretório e arquivos base da landing page institucional do aplicativo Presco em `src/landing` (`index.html`, `styles.css`, `script.js` e pasta `assets/`). Incrementada versão SemVer para 1.0.6.
+- **Files Modified:**
+  - `src/landing/index.html`
+  - `src/landing/styles.css`
+  - `src/landing/script.js`
+  - `src/landing/assets/`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Pronta para receber a implementação de layout, conteúdo, QR code para download do APK/app e informações institucionais.
+
+## `2026-09-21 11:46` - `feat(landing)`: Initial scaffolding for product landing page
+
+- **Description:** Criada estrutura inicial de diretório e arquivos base da landing page institucional do aplicativo Presco em \`src/landing\` (\`index.html\`, \`styles.css\`, \`script.js\` e pasta \`assets/\`). Incrementada versão SemVer para 1.0.6.
+- **Files Modified:**
+  - `src/landing/index.html`
+  - `src/landing/styles.css`
+  - `src/landing/script.js`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Pronta para receber a implementação de layout, conteúdo, QR code para download do APK/app e informações institucionais.
+
+## 2026-09-21 12:04 - feat(api): endpoint de purge de produtos e suspensao de catalogo pre-cadastrado no seed
+
+- **Description:** Implementada rota administrativa POST /products/purge-all com remocao em cascata das tabelas vinculadas (cart_product, product_report, ocurrency, product) e invalidacao de cache. Suspensao do loop de catalogo de produtos no seed.ts para evitar repopulacao automatica. Bump de versao para v1.0.7 (versionCode 8).
+- **Files Modified:**
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+- **Impact / Next Steps:** Disparar deploy via CI/CD no GitHub Actions e executar o comando de limpeza de produtos no servidor de producao.
+
+## `2026-09-21 12:04` - `docs(context)`: Consolidacao de memoria em .agents e expurgo de markdowns da raiz
+
+- **Description:** Consolidacao das informacoes uteis e decisoes tecnicas dos 17 arquivos markdown de planejamento e alteracoes temporarias da raiz para os arquivos canonicos em `.agents/` (`tech-decisions.md`, `MEMORY.md`, `CURRENT.md` e `.agents/DESIGN.md`). Arquivamento preventivo em `docs/archive/` e remocao completa dos markdowns redundantes da raiz do projeto.
+- **Files Modified:**
+  - `.agents/memory/tech-decisions.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/DESIGN.md`
+  - `.agents/COMMITS.md`
+  - `docs/archive/*`
+- **Impact / Next Steps:** Raiz do projeto higienizada com apenas `README.md` e `DESIGN.md`. Contexto integro preservado para modelos e desenvolvedores.
+
+
+## `2026-09-21 12:16` - `feat(product)`: Sincronização dinâmica de fotos do OpenFoodFacts no scan
+
+- **Description:** Implementada consulta e atualização automática da foto do produto a partir do OpenFoodFacts toda vez que um código de barras é escaneado. Se o produto estava sem foto ou se o OpenFoodFacts possui uma imagem nova, o registro no PostgreSQL é atualizado imediatamente, o cache Redis é invalidado e o DTO com a nova imagem é retornado ao fluxo de confirmação do scanner.
+- **Files Modified:**
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/tests/productBarcodeSync.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Produtos previamente sem foto ou com fotos atualizadas no OpenFoodFacts agora recebem a imagem automaticamente no primeiro scan subsequente sem intervenção manual.
+
+## `2026-09-21 12:29` - `feat(admin)`: Aba de Status OpenFoodFacts Upptime nas Configurações
+
+- **Description:** Implementada nova aba exclusiva para administradores na tela de Configurações para monitorar o status e latência em tempo real dos serviços do Open Food Facts via Upptime, com destaque para a consulta de EAN e o servidor de fotos/imagens.
+- **Files Modified:**
+  - `src/frontend/services/upptimeService.ts`
+  - `src/frontend/components/OpenFoodFactsStatusTab.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `tests/upptimeService.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Administradores agora têm visibilidade total sobre a integridade da API externa do Open Food Facts diretamente no aplicativo, identificando imediatamente oscilações na consulta de códigos de barras ou no carregamento de imagens.
+
+## `2026-09-21 12:36` - `feat(auth)`: 2FA email verification with Resend and guest price shielding
+
+- **Description:** Implemented 2FA verification code flow via Resend API, guarded product creation and voting routes with requireTwoFactor, protected price comparisons from unauthenticated guests, and created interactive TwoFactorModal.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0003_add_two_factor_verified.sql`
+  - `src/backend/src/shared/services/email.service.ts`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/auth/auth.controller.ts`
+  - `src/frontend/components/TwoFactorModal.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+- **Impact / Next Steps:** Complete 2FA enforcement and guest price protection live on tests branch.
+
+## `2026-09-21 23:28` - `feat(test)`: Comprehensive Maestro Mobile E2E and Grafana k6 Load Testing Suites
+
+- **Description:** Implementada infraestrutura completa e profunda de testes automatizados móveis ponta a ponta com Maestro e testes de carga, estresse e simulação de jornadas do usuário com Grafana k6. Adicionada instrumentação de testID determinística em todos os componentes e telas essenciais do React Native Expo (Footer, Header, login, busca, cadastro customizado, registro de preços, detalhes, perfil e configurações). Construídos 9 cenários modulares no k6 cobrindo 100% dos módulos do backend, 3 jornadas realistas de usuários, testes de estresse (até 100 VUs) e picos de tráfego, orquestrador principal com setup de pré-autenticação resiliente ao rate limiter e gerador de relatórios HTML. Criados 10 fluxos completos de E2E no Maestro com subfluxos reutilizáveis de autenticação rápida, runner executável e documentação completa. Incrementada versão do projeto para v1.2.0 (versionCode 12).
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/components/Footer.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `tests/k6/main.js`
+  - `tests/k6/README.md`
+  - `tests/k6/config/environments.js`
+  - `tests/k6/config/thresholds.js`
+  - `tests/k6/helpers/auth.js`
+  - `tests/k6/helpers/generator.js`
+  - `tests/k6/helpers/http.js`
+  - `tests/k6/scenarios/01_health_and_system.js`
+  - `tests/k6/scenarios/02_auth_lifecycle.js`
+  - `tests/k6/scenarios/03_catalog_and_search.js`
+  - `tests/k6/scenarios/04_contributions_and_prices.js`
+  - `tests/k6/scenarios/05_custom_products.js`
+  - `tests/k6/scenarios/06_markets_and_geospatial.js`
+  - `tests/k6/scenarios/07_gamification_and_shop.js`
+  - `tests/k6/scenarios/08_admin_moderation.js`
+  - `tests/k6/scenarios/09_image_optimization.js`
+  - `tests/k6/user_journeys/anonymous_browser.js`
+  - `tests/k6/user_journeys/active_collaborator.js`
+  - `tests/k6/user_journeys/power_shopper.js`
+  - `tests/k6/stress_and_soak/stress_test.js`
+  - `tests/k6/stress_and_soak/spike_test.js`
+  - `tests/maestro/config.yaml`
+  - `tests/maestro/README.md`
+  - `tests/maestro/run_maestro.sh`
+  - `tests/maestro/subflows/quick_login_admin.yaml`
+  - `tests/maestro/subflows/quick_login_user.yaml`
+  - `tests/maestro/subflows/logout.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `tests/maestro/flows/01_auth_flow.yaml`
+  - `tests/maestro/flows/02_catalog_and_search_flow.yaml`
+  - `tests/maestro/flows/03_product_details_and_voting_flow.yaml`
+  - `tests/maestro/flows/04_register_price_occurrence_flow.yaml`
+  - `tests/maestro/flows/05_custom_product_creation_flow.yaml`
+  - `tests/maestro/flows/06_profile_and_gamification_flow.yaml`
+  - `tests/maestro/flows/07_settings_and_preferences_flow.yaml`
+  - `tests/maestro/flows/08_map_and_market_discovery_flow.yaml`
+  - `tests/maestro/flows/09_admin_moderation_flow.yaml`
+  - `tests/maestro/flows/10_full_e2e_user_journey.yaml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Aplicação agora dispõe de suíte completa de qualidade industrial cobrindo ponta a ponta a experiência móvel e a escalabilidade/robustez do backend.
+
+## 2026-09-21 23:35 - feat(skills): Adicionar e padronizar skill SemVer conforme especificacao Agent Skills
+
+- **Description:** Auditado o repositorio aberto agentskills/agentskills (especificacao aberta do ecossistema Agent Skills) e criada a skill oficial semver em .agents/skills/semver/ estritamente conforme aos padroes de metadados (SKILL.md, when_to_use, allowed-tools, version: 1.0.0, compatibility) e as diretrizes do monorepo Presco (SemVer 2.0.0, Conventional Commits, sincronizacao multi-pacote de package.json, src/backend, src/frontend e app.json, e pipeline de release no GitHub Actions). Adicionados scripts executaveis (scripts/bump.sh e scripts/validate_semver.py), referencias e template de release notes. Saneado o frontmatter de .agents/skills/semantic-versioning/SKILL.md, expurgados arquivos deslocados, atualizado o inventario de componentes em ARCHITECTURE.md (44 skills, 15 scripts), e sincronizados manifest.json e manifest.lock.json.
+- **Files Modified:**
+  - `.agents/skills/semver/SKILL.md`
+  - `.agents/skills/semver/scripts/bump.sh`
+  - `.agents/skills/semver/scripts/validate_semver.py`
+  - `.agents/skills/semver/references/semver-spec.md`
+  - `.agents/skills/semver/references/conventional-commits.md`
+  - `.agents/skills/semver/references/presco-release-policy.md`
+  - `.agents/skills/semver/templates/release-notes.md`
+  - `.agents/skills/semantic-versioning/SKILL.md`
+  - `.agents/ARCHITECTURE.md`
+  - `.agents/manifest.json`
+  - `.agents/manifest.lock.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Suporte completo e oficial para ativacao de versionamento semantico tanto via @semver quanto via @semantic-versioning em conformidade com o padrao Agent Skills e com as regras do Presco.
+
+## `2026-09-21 23:42` - `feat(devops)`: Governança de Branches, GitHub Rulesets, Blindagem de Testes e Multi-Ambiente
+
+- **Description:** Implementada a governança integral de branches e infraestrutura de CI/CD em 4 camadas no repositório. Configurados remotamente via GitHub CLI (`gh`): autodelete de branches pós-merge (`delete-branch-on-merge = true`), merge estrito via auto-merge e squash, criação da branch remota `dev`, ruleset de proteção (`protect-main-and-dev`) para `main` e `dev` com bloqueio de deleções/force-pushes e exigência de PR/squash, e configuração dos environments `staging` e `production` com políticas estritas de branch. Atualizado `AGENTS.md` e criado `.cursorrules` com axiomas de commits, criação de branches a partir de `dev`, merge autônomo via PR/squash e blindagem de testes (anti-tautologia, barreira de 80% e zonas protegidas). Criadas as 4 camadas de pipelines no GitHub Actions: `pr-gatekeeper.yml`, `staging.yml` (devFlavor APK), `production.yml` (prodFlavor APK & deploy) e `nightly-audit.yml` (k6 load, mutação e auto-issue). Implementada suíte de testes de concorrência em `tests/concurrency/race_conditions.test.ts` (4 cenários) e configurados flavors mobile em `src/frontend/app.config.js`.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.github/workflows/nightly-audit.yml`
+  - `tests/concurrency/race_conditions.test.ts`
+  - `src/frontend/app.config.js`
+  - `package.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Repositório completamente blindado contra regressões, com governança remota no GitHub, segregação de builds mobile e esteira de CI/CD em 4 camadas orientada a custo, velocidade e rigor.
+
+## `2026-09-21 23:54` - `ci(actions)`: Hardening de runners, acúmulo de métricas no nightly audit e expurgo da branch tests
+
+- **Description:** Implementado acúmulo sistemático de relatórios e métricas no workflow noturno (`nightly-audit.yml`) com salvamento de histórico JSON (`benchmark_history.json`), relatórios HTML e logs com retenção de 90 dias. Corrigida a configuração de SDK Android em `staging.yml` e `production.yml` usando o path nativo do Ubuntu runner. Restringido o `deploy.yml` exclusivamente à branch `main`. Comprovado que a branch `tests` foi 100% incorporada à `dev` e expurgada do repositório remoto e local, consolidando a esteira com `main` e `dev`.
+- **Files Modified:**
+  - `.github/workflows/nightly-audit.yml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.github/workflows/deploy.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Repositório operando exclusivamente com as branches `main` e `dev`, relatórios de performance acumulados de forma autônoma e workflows resilientes.
+
+## `2026-09-22 08:16` - `feat(cart)`: Implement smart multi-store shopping list and travel cost optimizer
+
+- **Description:** Implemented the full Smart Multi-Store Shopping List & Travel Cost Optimizer feature across backend, database, and frontend. Added quantity column to cartProduct in Drizzle schema with migration, CartRepository with atomic cart management and multi-market price aggregation, RoutingService with HERE Routing API v8 and TSP multi-stop optimization, and CartService with financial trade-off calculations ($\Delta P > \Delta C_{\text{travel}} + P_{\text{convenience}}$). Implemented offline-first frontend cartService with AsyncStorage, interactive Cart screen (/cart), SavingsHeroCard, OptimizationStrategyControl, StoreGroupCard with quantity steppers and manual reallocation, TravelSettingsModal, and RoutePreviewModal with GPS launcher. Integrated shopping list button in productDetails and header cart icon with live badge. Sized and validated with 100% passing tests and SemVer minor bump to v1.3.0.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0004_add_cart_product_quantity.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/shared/database/repositories/cart.repository.ts`
+  - `src/backend/src/shared/services/routing.service.ts`
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/src/modules/cart/cart.controller.ts`
+  - `src/backend/src/modules/cart/cart.routes.ts`
+  - `src/backend/src/app.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `tests/cartOptimizer.test.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/SavingsHeroCard.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/cart/TravelSettingsModal.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/Header.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Ready for user testing and review. Feature ready to be committed atomically when requested by the user.
+
+## `2026-09-22 08:26` - `fix(cart)`: Resolve infinite loading loop and add offline fallback list in cart screen
+
+- **Description:** Fixed issue where the shopping cart screen (/cart) failed to load. Diagnosed root causes: (1) an unstable `useCallback` dependency array on `runOptimization` containing `[cartItems, settings]` re-triggered the mount `useEffect`, infinitely re-invoking `setLoading(true)` on every state change; (2) `setLoading(false)` was unnecessarily blocked awaiting network optimization and GPS location rather than unblocking immediately upon reading local AsyncStorage; (3) when optimization returned null (e.g., offline mode or server disconnected), `cart.tsx` rendered null instead of displaying the items. Resolved by decoupling local data loading from background optimization, stabilizing references with `useRef`, implementing an offline fallback items list with quantity steppers and delete buttons, and adding an informative offline banner with manual retry.
+- **Files Modified:**
+  - `src/frontend/app/cart.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Cart items now load instantly (<5ms) from local storage, with graceful background route optimization and full offline resilience.
+
+## `2026-09-22 08:50` - `fix(ui): resolve layout overlapping and offline fallback in cart`
+
+- **Description:** Fixed double header with duplicate back buttons and safe-area padding in cart screen, fixed bottom bar collision with root footer, made strategy controls responsive with text truncation, and added local simulation fallback for when the remote backend returns HTTP 404 (feature awaiting deployment).
+- **Files Modified:**
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Cart UI renders cleanly without overlaps; smart optimization runs either against deployed backend or via local fallback simulation when 404 occurs.
+
+## `2026-09-22 09:20` - `feat(ui)`: expand home carousel banners with interactive routing and full i18n
+
+- **Description:** Added 3 new rich banners to the home screen carousel (Smart Cart Optimizer, Barcode Scanner, and Achievements & Rewards), doubling the carousel items to 6. Transformed banner cards into interactive touch targets with light haptic feedback (`Haptics.impactAsync`) and direct routing (`/cart`, `/scannerProduct`, `/profile`, `/search`, `/registerProduct`, `/map`). Added complete localized strings across all 7 supported languages. Synchronized SemVer to `v1.3.2` (Android versionCode 18).
+- **Files Modified:**
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** The home carousel now provides a more comprehensive overview of Presco features with direct 1-tap navigation and smooth auto-rotation.
+
+## `2026-09-22 09:30` - `feat(ui)`: add smart shopping list step to onboarding tutorial
+
+- **Description:** Refactored Presco's guided onboarding tutorial from 6 to 7 steps, adding the Smart Shopping List & Multi-Store Travel Optimizer as step 3. Designed a dedicated handcrafted doodle mockup showcasing multi-market distribution, fuel cost calculation, and net savings stamp. Fully integrated with theme tokens and localized into 7 languages. Bumped SemVer patch version to 1.3.3 (versionCode 19).
+- **Files Modified:**
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Tutorial now fully covers the newly launched shopping list and route optimization feature for first-time users and settings replay. All 30 unit/concurrency tests passing and 0 typecheck errors.
+
+## `2026-09-22 09:31` - `fix(cart)`: Disambiguate unit price vs subtotal and preserve estimated price
+
+- **Description:** Fixed price display confusion where 10 units of an item at R$ 2,00 appeared as "20 reais a unidade". Added explicit `/ un.` suffix to unit price and `Total (10x): R$ 20,00` label above the stepper in `StoreGroupCard.tsx`. Preserved real product price (`product.bestPrice` / `product.lastPrice`) when adding to cart from `productDetails.tsx`, storing `estimatedPrice` in `CartProductItem`. Replaced mathematical pseudo-random prices in `generateLocalFallbackOptimization` with `item.estimatedPrice`. Enhanced backend `CartService.optimizeCart` to expand candidate markets when local 15km radius lacks occurrences, preventing unnecessary `NotFoundError` fallback.
+- **Files Modified:**
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/src/shared/database/repositories/cart.repository.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Zero visual ambiguity between unit price and total cost. Real prices preserved consistently across online and fallback modes. Ready for commit upon user request.
+
+## `2026-09-22 10:46` - `docs(agents)`: Add strict per-chat isolation policy for git commits and pushes
+
+- **Description:** Added strict policy across all agent guidelines, memory indexes, and rules requiring that whenever a commit or push is requested by the user in a chat, the AI must strictly stage, commit, and push only the files modified or created within that specific chat session, completely ignoring and preserving changes from other chats or tasks in the working tree. Banned git add . and indiscriminate staging.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Agents will now execute surgical commits only for the scope of the active chat, avoiding accidental inclusion of parallel chat changes.
+
+## `2026-09-22 11:03` - `fix(cart)`: Desencavala layout de lista e restaura nomes de produtos
+
+- **Description:** Redesenhado o layout de itens da lista de compras e grupos de supermercados eliminando a colisão vertical e horizontal de textos; corrigido payload de otimização e backend para carregar os nomes reais de produtos via ProductRepository e auto-healing em vez de exibir "Produto #ID".
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/cart/SavingsHeroCard.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Lista de compras espaçosa, sem sobreposições visuais e com nomes e fotos reais de produtos. Testes e typecheck 100% aprovados.
+
+## `2026-09-22 11:07` - `feat(landing)`: Complete Presco landing page refactor with app aesthetics, phone mockup and policy system
+
+- **Description:** Refactored the entire institutional landing page in `src/landing`, strictly aligning the visual design with the Presco mobile app tokens (Emerald, Dark, AMOLED, and Light modes), integrating official logos/icons and an interactive smartphone mockup showcasing live app screens (Shopping Optimizer, Lowest Price, EAN Scanner, PostGIS Radar). Added the comprehensive Security & Protection architecture and interactive Policy Modal (Terms of Service, Privacy/LGPD, Community Guidelines, Local Storage) along with a compliant consent banner and QR code download hub.
+- **Files Modified:**
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/DownloadSection.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/components/PolicyModal.tsx`
+  - `src/landing/components/ConsentBanner.tsx`
+  - `src/landing/components/Footer.tsx`
+  - `src/landing/theme/colors.ts`
+  - `src/landing/theme/typography.ts`
+  - `src/landing/theme/index.ts`
+  - `src/landing/assets/`
+- **Impact / Next Steps:** Landing page is production-grade, highly responsive, and fully compliant with design standards and privacy policies. Available for local testing at http://localhost:8082.
+
+## `2026-09-22 11:17` - `feat(landing)`: Switch accent to Presco yellow and add app screenshots gallery
+
+- **Description:** Updated the landing page accent color from emerald to Presco's official signature golden yellow (`#FFB703` / `#F5B731`) across themes, buttons, badges, glows, and interactive cards. Integrated authentic high-resolution app prints of the Presco mobile application (`print-cart.jpg`, `print-scanner.jpg`, `print-product.jpg`) into `PhoneMockup.tsx` and created the new `ScreenshotsGallerySection.tsx` showcase section.
+- **Files Modified:**
+  - `src/landing/theme/colors.ts`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/assets/prints/`
+- **Impact / Next Steps:** Landing page aesthetics now feature the vibrant Presco yellow branding and showcase authentic mobile application UI screenshots. Live and bundled on http://localhost:8082.
+
+## `2026-09-22 11:18` - `fix(ui)`: Espacamento e respiracao visual nos filtros e chips para idiomas extensos
+
+- **Description:** Aumentado o gap e padding horizontal/vertical de chips e barras de filtros no frontend para evitar encavalamento de textos em idiomas extensos como alemao, russo, portugues e espanhol.
+- **Files Modified:**
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/components/OpenFoodFactsStatusTab.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Filtros legiveis e confortaveis em todas as 7 linguas suportadas pelo Presco, sem compressao visual.
+
+## `2026-09-22 11:34` - `refactor(ui)`: Filtros de estrategia empilhados verticalmente para suporte a idiomas extensos
+
+- **Description:** Transformado o seletor de estrategias de otimizacao em cards empilhados verticalmente (um em cima do outro) de largura total com indicadores visuais de selecao, evitando corte de texto ou encavalamento em alemao, russo e outras linguas longas.
+- **Files Modified:**
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Nomes de estrategias e filtros 100% visiveis e legiveis em todas as linguas sem truncagem ou sobreposicao.
+
+## `2026-09-22 11:34` - `feat(landing)`: Redesign landing page with ClickUp SaaS structure and Too Good To Go aesthetics
+
+- **Description:** Redesigned the institutional landing page in `src/landing` by fusing ClickUp's high-conversion interactive product tour structure with Too Good To Go's warm, food-centric, and community-driven aesthetics. Integrated a deep forest slate dark mode (`#0A1612`), a warm cream/ivory light mode (`#FBF9F4`), the signature Presco golden yellow (`#FFB703`), a 3-step consumer journey section (`HowItWorksSection.tsx`), an impact metric counter strip (`ImpactStatsSection.tsx`), real app prints in the interactive product showcase and gallery, and sticky navigation.
+- **Files Modified:**
+  - `src/landing/theme/colors.ts`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/ImpactStatsSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/LandingPage.tsx`
+- **Impact / Next Steps:** Landing page delivers top-tier SaaS elegance and community food warmth, bundled and live on http://localhost:8082.
+
+## `2026-09-22 12:08` - `fix(cart)`: Corrigir encavalamento e alinhamento do menu de métricas nos cards de supermercado
+
+- **Description:** No componente StoreGroupCard, a barra inferior de métricas agrupava os subtotais e custos de deslocamento sem flex: 1, fazendo com que rótulos longos colidissem horizontalmente ("SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P..."). O footer foi reestruturado com colunas flex: 1 balanceadas, divisores verticais sutis, labels com minHeight e quebra em até 2 linhas centralizadas, mantendo todos os valores perfeitamente nivelados na horizontal. Adicionada também a chave de tradução i18n stopTotal nos 7 idiomas suportados e alinhamento equivalente nas métricas do SavingsHeroCard.
+- **Files Modified:**
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/cart/SavingsHeroCard.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Eliminação total do encavalamento e cortes de texto no carrinho. Layout perfeitamente simétrico e espaçado em qualquer resolução e idioma.
+
+## `2026-09-22 12:08` - `feat(landing)`: Integrate user-uploaded authentic mobile app prints across landing page
+
+- **Description:** Integrated newly uploaded authentic screenshots of the Presco mobile application directly into the landing page components. Added `print-home.jpg` (Home feed with 15km radar and smart grocery deals), `print-profile.jpg` (Gamified profile with Offer Detective level 3, 460 XP, achievements and GitHub-style contribution heatmap), and `print-settings.jpg` (Native settings verifying 2FA, private profile, AMOLED mode, and LGPD data deletion). Updated `PhoneMockup.tsx` with 6 interactive tabs defaulting to Home, expanded `ScreenshotsGallerySection.tsx` to a responsive 6-card grid, embedded step previews into `HowItWorksSection.tsx`, and added verifiable settings proof into `SecurityProtectionSection.tsx`.
+- **Files Modified:**
+  - `src/landing/assets/prints/print-home.jpg`
+  - `src/landing/assets/prints/print-profile.jpg`
+  - `src/landing/assets/prints/print-settings.jpg`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page now showcases authentic, real-world user interface screenshots throughout the entire page experience.
+
+## `2026-09-22 12:25` - `feat(landing)`: Adapt landing page components to ultra high-resolution screenshots
+
+- **Description:** Renamed and standardized the user's high-resolution screenshots into semantic descriptive filenames (`print-home.jpg`, `print-cart.png`, `print-product.jpg`, `print-profile.jpg`, `print-search.jpg`, `print-settings.jpg`). Cropped the stitching tool watermark from `print-cart.png` using Swift `NSImage`/`CGImage` to maintain a clean native UI without distortion. Adapted `PhoneMockup.tsx`, `ScreenshotsGallerySection.tsx`, `HowItWorksSection.tsx`, and `SecurityProtectionSection.tsx` to display all 7 authentic application screens in crisp quality.
+- **Files Modified:**
+  - `src/landing/assets/prints/print-home.jpg`
+  - `src/landing/assets/prints/print-cart.png`
+  - `src/landing/assets/prints/print-product.jpg`
+  - `src/landing/assets/prints/print-profile.jpg`
+  - `src/landing/assets/prints/print-search.jpg`
+  - `src/landing/assets/prints/print-settings.jpg`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Complete visual fidelity across all landing sections with zero typecheck errors and full responsiveness. No spontaneous commit performed per Rule 6.1.
+
+## 2026-09-22 12:35 - feat(deploy): hospedar servidor no ambiente cti ra2457045
+
+- **Description:** Configuração e implantação completa do servidor backend Presco no ambiente de desenvolvimento do CTI sob o RA 2457045. Autenticação via chave SSH ed25519 na porta 4026, vinculação à porta exclusiva 59057 monitorada pelo portal CTI, proxy reverso Apache via .htaccess em public_html, conexão com PostgreSQL (banco 26-presco com PostGIS) e Redis Upstash, daemonização contínua via PM2 com persistência e adição de rota raiz informativa.
+- **Files Modified:**
+  - `deploy/cti.key`
+  - `deploy/.env.deploy`
+  - `deploy/deploy.sh`
+  - `ecosystem.config.cjs`
+  - `src/backend/src/app.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Servidor 100% operacional respondendo publicamente com HTTPS na URL oficial http://ra.projetoscti.com.br/2457045.
+
+## `2026-09-22 11:50` - `docs(agents)`: enforce mandatory PR creation, CI test verification and gh CLI merge
+
+- **Description:** Established absolute rule across AGENTS.md, .cursorrules, code-rules.md, and memory files requiring agents to create Pull Requests to dev, actively monitor CI test checks (Gatekeeper), and autonomously execute squash merge via user's gh CLI upon test success. If gh CLI is unauthenticated or missing, the agent is mandated to halt and instruct the user to configure gh auth login.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Ensures 100% test-verified merges with strict GitHub CLI integration, preventing unvalidated code landing in dev or broken PRs remaining unmonitored.
+
+## `2026-09-22 11:55` - `perf(ci)`: decouple full apk gradle builds to manual workflow dispatch
+
+- **Description:** Optimized GitHub Actions staging.yml and production.yml pipelines to drastically cut CI execution times. Full Android Gradle APK builds are now manual-only via workflow_dispatch with gradle/actions/setup-gradle caching. Automated push runs on dev and main focus strictly on fast, robust validation: strict typechecks, full unit tests, concurrency suites, and backend deployment.
+- **Files Modified:**
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Push workflows on dev now finish in under 2 minutes instead of 15-40 minutes, while preserving full test robustness.
+
+## `2026-09-22 12:05` - `test(maestro)`: add comprehensive stability suite, docker support and pre-push requirement
+
+- **Description:** Created full-application stability test flow in Maestro (11_full_app_stability_suite.yaml) covering onboarding 7 steps, auth, carrossel, search, product details, voting, smart shopping list & travel optimizer, map, profile/shop, and settings. Added Docker service in docker-compose.yml and Dockerfile with ADB integration. Updated run_maestro.sh and npm scripts (test:maestro:full, test:maestro:docker). Enforced strict rule across AGENTS.md, .cursorrules, and code-rules.md requiring agents to run Maestro tests before committing/pushing frontend modifications.
+- **Files Modified:**
+  - `tests/maestro/flows/11_full_app_stability_suite.yaml`
+  - `tests/maestro/Dockerfile`
+  - `tests/maestro/run_maestro.sh`
+  - `docker-compose.yml`
+  - `package.json`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Developers and AI agents now have an automated, reproducible Docker-capable end-to-end test suite verifying complete mobile UI stability before any remote push.
+
+## 2026-09-22 12:22 - test(maestro): add docker stability suite, fast ci and mandatory pr merge rules
+
+- **Description:** Encapsulated Maestro UI testing 100% into a standalone Docker container (`presco_maestro`) with host ADB networking, created comprehensive 11-step end-to-end stability flow covering all screens and modals, decoupled heavy Gradle APK builds in GitHub Actions to manual `workflow_dispatch` only (< 2 min CI), and codified the absolute rule for agents to verify PR checks and squash-merge via `gh` CLI.
+- **Files Modified:**
+  - `docker-compose.yml`
+  - `package.json`
+  - `tests/maestro/Dockerfile`
+  - `tests/maestro/run_maestro.sh`
+  - `tests/maestro/flows/11_full_app_stability_suite.yaml`
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/production.yml`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/components/cart/OptimizationStrategyControl.tsx`
+  - `.agents/AGENTS.md`
+  - `.cursorrules`
+  - `.agents/rules/code-rules.md`
+  - `.agents/CURRENT.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+- **Impact / Next Steps:** Ensures full stability testing prior to frontend merges, drastically cuts CI execution times, and automates PR verification and merging via `gh`.
+
+## `2026-09-23 10:40` - `fix(cart)`: Resolve missing prices and unassigned items in shopping list optimizer
+
+- **Description:** Fixed shopping list optimization where products with existing prices appeared as unassigned or missing prices. Expanded market search when candidate markets do not cover all cart items, corrected relative multi-store savings calculations to prioritize full cart fulfillment, enhanced unassigned items with alternative store and price details, and improved frontend price auto-healing and fallback occurrence resolution.
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** All 32 automated tests passing, 0 TypeScript errors. Shopping list now accurately identifies prices across all markets and presents complete routes. Commits will be performed upon explicit user request.
+
+## `2026-09-23 10:47` - `feat(landing)`: Procedural JavaScript Arara-Canindé and Monstera Leaves Canvas 2D
+
+- **Description:** Implemented high-fidelity procedural vector rendering and cinematic animation in 100% JavaScript/TypeScript (HTML5 Canvas 2D) of the Arara-Canindé (blue-and-yellow macaw) and Monstera Deliciosa (costela-de-adão) leaves, based on the user's reference illustrations. Includes wing-flapping kinematics, wind sway physics, fenestration cutout clipping, mouse parallax, and non-blocking integration in the Landing Page Hero section.
+- **Files Modified:**
+  - `src/landing/graphics/monsteraLeaf.ts`
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/TropicalFaunaFloraCanvas.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page features lively, Brazilian biodiversity-themed interactive visuals at 60 FPS without external image overhead. Zero typecheck errors.
+
+## `2026-09-25 07:58` - `fix(cart)`: Single-store incomplete warning, product prioritization and multi-store route fix
+
+- **Description:** Fixed cart optimizer incorrectly forcing single_store mode and marking other items as unpriced when multi-store strategies were active. Implemented warning card with 1-tap switch to multi-store route, priority product chip selector, and alternative candidate store selection when single-store strategy is chosen and no market carries all cart items.
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/pt.ts`
+  - `src/frontend/i18n/locales/en.ts`
+  - `src/frontend/i18n/locales/es.ts`
+  - `src/frontend/i18n/locales/de.ts`
+  - `src/frontend/i18n/locales/ru.ts`
+  - `src/frontend/i18n/locales/zh.ts`
+  - `src/frontend/i18n/locales/ja.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Cart optimization properly routes multi-store trips across available markets and provides complete user controls in single-store mode. Ready for review or user-requested commit.
+
+## `2026-09-25 08:40` - `feat(maps)`: Resolve market nominal address and open Google Maps via place search
+
+- **Description:** Implemented nominal address resolution and place search query construction for Google Maps navigation across market listings, product search, product occurrences and route previews. Prevents Google Maps from dropping anonymous "Dropped Pins" by searching the official business listing with establishment name and address.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/i18n/types.ts`
+  - `src/frontend/i18n/locales/*.ts`
+  - `tests/mapNavigation.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Seamless UX where tapping on any market or product's nearest market opens Google's official business profile and search list with photos, ratings and hours instead of an anonymous coordinate pin.
+
+## 2026-09-25 08:58 - feat(maps): multi-address waypoints encoding and branch disambiguation
+
+- **Description:** Fixed multi-stop route generation in Google Maps by escaping intermediate waypoints with %7C (preventing URL parser failure on unencoded pipe characters), added buildGoogleMapsRouteUrl utility with unit tests, enabled clicking individual store cards in StoreGroupCard to search specific supermarkets, and enriched backend spatial queries with nearestMarketCoordinate and marketCoordinate to disambiguate supermarket chains with multiple addresses in the same city.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** All 42 tests passing and 0 typecheck errors. Multi-stop routes and multi-address lists resolve cleanly without dropped pins or broken intent URLs.
+
+## 2026-09-25 09:10 - feat(cart): round-trip route starting and ending at user location
+
+- **Description:** Updated RoutePreviewModal handleOpenGps to configure full round-trip route in Google Maps starting from the user's location, visiting all selected supermarkets as intermediate waypoints with resolved nominal addresses, and concluding back at the user's starting point (origin = destination = userLocation). Updated itinerary card destination step to display "Sua Localização Atual (Retorno)" and added unit test verifying round-trip URL generation.
+- **Files Modified:**
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 43 tests passing, 0 typecheck errors. Full shopping loop supported natively in Google Maps.
+
+## 2026-09-25 09:15 - feat(maps): omit origin to activate native Sua Localizacao in Google Maps
+
+- **Description:** Updated RoutePreviewModal handleOpenGps to omit the origin parameter from buildGoogleMapsRouteUrl. Following Google Maps Universal Cross-Platform URL specifications, omitting origin causes Google Maps to automatically activate the user's native live GPS position ("Sua localização" / pulsing blue dot) as the starting point instead of placing an anonymous "Dropped Pin" (alfinete inserido). Destination at return is resolved to the user's nominal street address. Added unit test.
+- **Files Modified:**
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 44 tests passing, 0 typecheck errors. No dropped pin at route start; device location is natively selected.
+
+## `2026-09-25 12:25` - `feat(frontend)`: Universal cart sharing without fuel costs and with Google Maps route link
+
+- **Description:** Updated cart sharing message to remove the word 'Otimizada' from the title and eliminate personal fuel/distance calculations since recipients open the link from other locations. Added an open Google Maps navigation route link starting from the recipient's live device location ("Sua localização") and traversing all stores. Added a quick share button to RoutePreviewModal header.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Recipients receive clean, universal shopping lists with total product costs and direct Google Maps route navigation from their current location. All 46 tests passing and 0 typecheck errors.
+
+## `2026-09-25 12:33` - `feat(frontend)`: Precise return location address in shared cart and navigation route
+
+- **Description:** Added precise return address resolution and display for both the shared cart message text and Google Maps route navigation. In RoutePreviewModal, displays the resolved street address under starting and return destinations. In the shared text and universal Google Maps link, sets the precise return location as final destination with all stores as waypoints.
+- **Files Modified:**
+  - `src/frontend/utils/mapQueryBuilder.ts`
+  - `src/frontend/utils/mapNavigation.ts`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `tests/mapNavigation.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Recipients and drivers can return precisely to the exact starting location.
+
+## `2026-09-26 10:35` - `feat(cart)`: Condicionar exibicao do botao Mover de Mercado a existencia do item em ambos os mercados
+
+- **Description:** 
+  - Adicionado o campo `availableMarkets` em `OptimizedStoreItem` e `OptimizedItemDisplay` a partir das cotações ativas consultadas no banco de dados.
+  - No componente `StoreGroupCard.tsx`, o botão `[Mover de Mercado]` agora só é renderizado para um item se ele possuir registros de preço em outros mercados candidatos da rota (`eligibleStores.length > 0`).
+  - O modal de realocação lista unicamente os supermercados onde o produto existe no banco de dados, exibindo o preço unitário correspondente de cada loja de destino.
+  - Ao mover o produto no carrinho (`cart.tsx`), o preço unitário e subtotal são recalculados com a cotação real do mercado de destino no banco de dados.
+  - Adicionados testes unitários no backend (`cart.test.ts`) e na suíte raiz (`cartOptimizer.test.ts`) validando a disponibilidade por mercado.
+  - Sincronização SemVer de versão para `v1.4.3` (`versionCode: 28`).
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/services/cartService.ts`
+  - `tests/cartOptimizer.test.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem. Alterações prontas na working tree aguardando solicitação explícita do usuário para commit/push.
+
+## `2026-10-05 11:39` - `ci(landing)`: Pipeline multi-ambiente de deploy no GitHub Pages para main, dev e previews
+
+- **Description:** Implementação da arquitetura de deploy multi-ambiente da landing page no GitHub Pages. Configurado suporte a base URLs dinâmicas pelo Expo Metro Web via app.config.js, exportação estática SPA no modo single, workflow de CI/CD em .github/workflows/deploy-landing.yml com publicação isolada para main (raiz), dev (/dev/) e branches de preview/teste (/preview/<slug>/) preservando arquivos existentes com keep_files, badge de ambiente no cabeçalho e scripts de build na raiz e no pacote landing.
+- **Files Modified:**
+  - `.github/workflows/deploy-landing.yml`
+  - `src/landing/app.config.js`
+  - `src/landing/metro.config.js`
+  - `src/landing/app.json`
+  - `src/landing/package.json`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `package.json`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page 100% pronta para publicação contínua no GitHub Pages com separação estrita de ambientes para main, dev e feature branches.
+
+
+## `2026-10-05 12:33` - `fix(deploy)`: Blindagem de permissoes chmod no servidor remoto
+
+- **Description:** Adicionada protecao com `2>/dev/null || true` nas chamadas de `chmod` em `deploy/deploy.sh` (.htaccess, README.md e .env) para prevenir falha no script sob `set -e` em ambientes de hospedagem compartilhada como CTI.
+- **Files Modified:**
+  - `deploy/deploy.sh`
+- **Impact / Next Steps:** Previne falhas de permissao durante deploys em producao e staging no servidor remoto.
+
+## `2026-10-13 08:29` - `chore(android)`: Run project on Android emulator with x86_64 native build
+
+- **Description:** Configured JDK 17, Gradle 9.3.1, NDK 27.1, and Android SDK Build-Tools 36. Compiled and launched the native Android debug app (`x86_64`) on emulator-5554, verifying UI and onboarding flow.
+- **Files Modified:**
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Presco app is running and responsive on the emulator for interactive testing and Maestro flows.
+
+## `2026-10-13 09:37` - `test(maestro)`: Autonomous quick smoke test suite for Android emulator
+
+- **Description:** Added autonomous fast smoke test flow `smoke_suite.yaml`, testIDs in `profile.tsx`, and `run_maestro_quick.ts` targeting emulator with automatic permission granting and popup handling. Verified end-to-end execution with `npm run test:maestro:quick`.
+- **Files Modified:**
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/frontend/app/profile.tsx`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Developers and CI can run fast UI validation in ~25 seconds with zero manual intervention.
+
+## `2026-10-14 23:22` - `test(maestro)`: Deep frontend quality audit suite and testID hardening
+
+- **Description:** Added comprehensive Maestro frontend quality audit suite covering 12 phases and 20 visual checkpoints. Hardened UI components with deterministic testIDs and accessibility attributes across 13 screens. Fixed React ref mutations during render in cart screen. Sourced SemVer v1.4.4.
+- **Files Modified:**
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `tests/maestro/subflows/logout.yaml`
+  - `tests/maestro/subflows/quick_login_user.yaml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/cart/TravelSettingsModal.tsx`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** End-to-end automated UI quality assurance passing cleanly in 4m 14s with zero flakiness.
+
+## `2026-10-14 23:38` - `ci(maestro)`: Cloud E2E testing workflow with KVM and Android emulator
+
+- **Description:** Created GitHub Actions workflow `maestro-e2e.yml` running Maestro on headless Android emulator with hardware acceleration (KVM), automated database/redis provisioning, Expo Prebuild, APK build, and test report upload.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Enables continuous end-to-end frontend regression verification on GitHub Actions for PRs against dev and main.
+
+## `2026-10-14 23:57` - `docs(agents)`: Strengthen branch creation priority, gh setup and autonomous CI log download
+
+- **Description:** Updated system guidelines in AGENTS.md, MEMORY.md, and user-preferences.md to enforce mandatory prior branch creation from dev, gh CLI verification and installation guidance, and autonomous CI error artifact download via gh run download.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Solidifies AI governance protocols preventing unbranched work and empowering remote headless debugging.
+
+## `2026-10-15 01:54` - `fix(ci)`: Resilient Maestro Dev Launcher Connection & Bundle Pre-warming
+
+- **Description:** Fixed headless Android emulator Dev Client screen stall during GitHub Actions Maestro CI run. Implemented Metro bundle pre-warming (`curl ... index.bundle`), set Metro host binding to LAN (`--host lan`), configured `stopApp: false` in Maestro flows to preserve background intent state, added `openLink` deep-linking and fallback `inputText` in `dismiss_tutorial.yaml`, increased timeout thresholds, and applied strict path-filtering on `test/**` branch pushes.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/ci_run_maestro.sh`
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+- **Impact / Next Steps:** Awaiting GitHub Actions run `38683885066` completion. Upon successful green check, open PR to `dev`, verify checks, merge via `gh pr merge --squash`, and perform requested clean system shutdown.
+
+## `2026-10-15 14:25` - `feat(backend)`: Hardening Estrutural Fase 1 (V-01, V-03, V-06) e Auditoria Anti-Slop Aprovada
+
+- **Description:** Implementação completa e auditoria pericial independente das três primeiras blindagens estruturais do backend do Presco (INI3A-EQ3):
+  1. V-01 (Limites de Preço, Cold Start & Variance Floor): Constraint PostgreSQL [0.10, 15000.00] com migration 0005, isolamento de Cold Start (cotações provisórias suspensas e 0 XP até corroboração por 2º usuário em ±20%), estabilização de variância MAD_eff = max(mad, 0.05 * median) prevenindo divisão por zero, parser de moeda pt-BR, defesa contra outlier via PUT e idempotência no admin approve.
+  2. V-03 (Custódia de Produtos & Authentication Shield): Persistência de `created_by_user_id` na tabela `product` com FK e índice, fail-closed na criação de produto sem usuário, bloqueio em tempo real de contas com `dangerFlag === true` no `requireAuth` e `requireTwoFactor` (HTTP 403), e otimização de I/O eliminando query duplicada no PostgreSQL.
+  3. V-06 (Erradicação do Marco Zero & Validação Espacial): Fim do fallback silencioso da Praça da Sé, validação de coordenadas no envelope brasileiro [-34.0, 5.5] / [-74.0, -34.5], e zona de exclusão de 50 metros ao redor do marco zero para criação e edição de mercados.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 100% dos 3 auditores aprovaram as implementações sem ressalvas ou slop. Suíte de testes passando com 39/39 e 0 erros no typecheck. Pronto para commit atômico e push mediante autorização do usuário.
+
+
+## `2026-10-15 15:05` - `fix(backend)`: Blindagem estrutural de limites de preço, cold start, custódia e marco zero (Fase 1)
+
+- **Description:** Implementada e auditada a blindagem estrutural da Fase 1 do backend Presco:
+  1. **V-01 (Limites de Preço & Cold Start):** Constraint no PostgreSQL `[0.10, 15000.00]`, isolamento de cotações pioneiras em quarentena provisória sem contaminação do carrinho, corroboração multiusuário ($\pm 20\%$), variance floor `MAD_eff = max(mad, 0.05 * median)`, parser de moeda pt-BR e reavaliação de outliers no `PUT /ocurrency/:id`.
+  2. **V-03 (Custódia & Authentication Shield):** Adição de `created_by_user_id` com FK e índice na tabela `product`, fail-closed no `createCustomProduct` e checagem real-time de `dangerFlag === true` em `requireAuth` e `requireTwoFactor` retornando HTTP 403.
+  3. **V-06 (Erradicação do Marco Zero & Validação Espacial):** Erradicado totalmente o fallback da Praça da Sé em `market.service.ts`, validação estrita do envelope brasileiro `[-34.0, 5.5]` / `[-74.0, -34.5]` e exclusão de raio de 50m do marco zero.
+  4. **Migration 0005:** Gerada e registrada em `meta/_journal.json`.
+  5. **SemVer:** Versão sincronizada para `1.4.5` (Android `versionCode: 30`).
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** 39/39 testes do backend passando, 0 erros no typecheck. Pronto para push e abertura de PR para `dev`.

@@ -310,6 +310,7 @@ export default function HelpScreen() {
         ]}
       >
         <TouchableOpacity
+          testID="help-back-btn"
           style={[styles.backButton, themeStyles.inputBg]}
           activeOpacity={0.7}
           onPress={() => {
@@ -915,14 +916,14 @@ const styles = StyleSheet.create({
   },
   categoriesContainer: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 10,
   },
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1,
   },

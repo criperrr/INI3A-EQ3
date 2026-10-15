@@ -37,4 +37,6 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
   ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS,
   HERE_API_KEY: process.env.HERE_API_KEY || "",
+  RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+  RESEND_FROM: process.env.RESEND_FROM || "Presco <onboarding@resend.dev>",
 };

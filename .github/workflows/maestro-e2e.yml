@@ -1,0 +1,174 @@
+name: Maestro E2E Quality Audit (Mobile Frontend)
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "src/frontend/**"
+      - "tests/maestro/**"
+      - "scripts/*maestro*"
+      - ".github/workflows/maestro-e2e.yml"
+  push:
+    branches:
+      - "test/**"
+    paths:
+      - "src/frontend/**"
+      - "tests/maestro/**"
+      - "scripts/*maestro*"
+      - ".github/workflows/maestro-e2e.yml"
+  workflow_dispatch:
+    inputs:
+      test_suite:
+        description: "Test suite to run (quality or quick)"
+        required: false
+        default: "quality"
+        type: choice
+        options:
+          - "quality"
+          - "quick"
+
+concurrency:
+  group: maestro-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro_e2e:
+    name: Maestro Android E2E Quality Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout Repositório
+        uses: actions/checkout@v4
+
+      - name: Habilitar Aceleração KVM de Hardware
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -la /dev/kvm
+          echo "✅ KVM habilitado com sucesso no runner."
+
+      - name: Configurar Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Configurar Java 17 (JDK)
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Configurar Cache do Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Configurar Android SDK
+        run: |
+          echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> $GITHUB_ENV
+          echo "/usr/local/lib/android/sdk/platform-tools" >> $GITHUB_PATH
+          echo "/usr/local/lib/android/sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Instalar Dependências do Monorepo
+        run: npm ci
+
+      - name: Instalar Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> $GITHUB_PATH
+          $HOME/.maestro/bin/maestro --version
+
+      - name: Subir Infraestrutura de Backend (PostgreSQL + Redis)
+        run: |
+          docker compose up -d postgres redis
+          echo "Aguardando estabilização dos serviços..."
+          sleep 4
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres -d presco_db; do sleep 1; done'
+          timeout 20 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
+
+      - name: Configurar e Inicializar Backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
+          SERVER_PORT: 3333
+          SERVER_HOST: 0.0.0.0
+          JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          NODE_ENV: development
+          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+        run: |
+          mkdir -p src/backend
+          cat << 'EOF' > src/backend/.env
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL=redis://127.0.0.1:6380
+          SERVER_PORT=3333
+          SERVER_HOST=0.0.0.0
+          JWT_SECRET=3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          NODE_ENV=development
+          HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+          EOF
+          cp src/backend/.env .env
+
+          echo "Executando migrações e seed com retry..."
+          for i in {1..6}; do
+            npm run --prefix src/backend db:migrate && break || (echo "Tentando migração novamente em 2s..." && sleep 2)
+          done
+
+          for i in {1..6}; do
+            npm run --prefix src/backend db:seed && break || (echo "Tentando seed novamente em 2s..." && sleep 2)
+          done
+
+          echo "Iniciando servidor backend em segundo plano..."
+          npm run --prefix src/backend start &
+          timeout 30 bash -c 'until curl -s http://localhost:3333/health; do sleep 1; done'
+          echo "✅ Backend respondendo com sucesso em http://localhost:3333"
+
+      - name: Configurar Ambiente do Frontend
+        run: |
+          cat << 'EOF' > src/frontend/.env
+          APP_VARIANT=production
+          EXPO_PUBLIC_APP_VARIANT=production
+          EXPO_PUBLIC_API_URL=http://localhost:3333
+          EXPO_PUBLIC_HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+          GOOGLE_MAPS_API_KEY=AIzaSyAAK_y1iiS6uYUPai5nK_Weue_B8Aaluvc
+          EOF
+
+      - name: Gerar Projeto Nativo Android (Expo Prebuild)
+        working-directory: src/frontend
+        env:
+          APP_VARIANT: production
+        run: npx expo prebuild --platform android --clean
+
+      - name: Compilar APK Android Debug
+        working-directory: src/frontend/android
+        env:
+          APP_VARIANT: production
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 -x lint -x test --no-daemon
+
+      - name: Executar Emulador Android e Suíte Maestro
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          ram-size: 3072M
+          disk-size: 8192M
+          emulator-boot-timeout: 900
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
+          script: ./scripts/ci_run_maestro.sh "${{ github.event.inputs.test_suite || 'quality' }}"
+
+      - name: Upload de Relatórios e Screenshots do Maestro
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-e2e-audit-reports
+          path: |
+            reports/maestro/
+            ~/.maestro/tests/
+          retention-days: 14
+          if-no-files-found: ignore

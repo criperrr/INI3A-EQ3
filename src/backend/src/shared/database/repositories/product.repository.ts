@@ -1,7 +1,7 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
-import { market, ocurrency, product, productReport } from "../schema";
+import { cartProduct, market, ocurrency, product, productReport } from "../schema";
 import { and, asc, desc, eq, gte, ilike, inArray, or, sql, isNotNull } from "drizzle-orm";
 
 export function calculateBarcodeSimilarity(codeA: string, codeB: string): number {
@@ -67,7 +67,8 @@ class ProductRepositoryClass {
 
     const digitsOnly = cleanBarcode.replace(/\D/g, "");
     const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
-    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, cleanBarcode].filter(Boolean)));
+    const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
+    const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, pad13, cleanBarcode].filter(Boolean)));
 
     const fetchUrl = async (url: string, timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
       try {
@@ -426,6 +427,26 @@ class ProductRepositoryClass {
             LIMIT 1
           ) AS nearest_market_name,
           (
+            SELECT ST_Y(m2.location::geometry)
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_lat,
+          (
+            SELECT ST_X(m2.location::geometry)
+            FROM ocurrency o2
+            JOIN market m2 ON o2.market_id = m2.id
+            WHERE o2.product_id = p.id 
+              AND o2.is_suspended = false
+              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+            LIMIT 1
+          ) AS nearest_market_lng,
+          (
             SELECT m3.name
             FROM ocurrency o3
             JOIN market m3 ON o3.market_id = m3.id
@@ -467,6 +488,8 @@ class ProductRepositoryClass {
         ps.occurrences_count AS "occurrencesCount",
         ps.min_distance_meters AS "nearestMarketDistance",
         COALESCE(ps.best_market_name, ps.nearest_market_name) AS "nearestMarketName",
+        ps.nearest_market_lat AS "nearestMarketLat",
+        ps.nearest_market_lng AS "nearestMarketLng",
         ps.discount_percentage AS "discountPercentage",
         ps.is_promotion AS "isPromotion"
       FROM product p
@@ -493,6 +516,11 @@ class ProductRepositoryClass {
         occurrencesCount: Number(row.occurrencesCount || 0),
         nearestMarketDistance: row.nearestMarketDistance !== null && row.nearestMarketDistance !== undefined ? Math.round(Number(row.nearestMarketDistance)) : null,
         nearestMarketName: row.nearestMarketName ? String(row.nearestMarketName) : null,
+        nearestMarketCoordinate:
+          row.nearestMarketLat !== null && row.nearestMarketLat !== undefined &&
+          row.nearestMarketLng !== null && row.nearestMarketLng !== undefined
+            ? { latitude: Number(row.nearestMarketLat), longitude: Number(row.nearestMarketLng) }
+            : null,
         discountPercentage: row.discountPercentage ? Number(row.discountPercentage) : 0,
         isPromotion: Boolean(row.isPromotion),
       }));
@@ -633,7 +661,10 @@ class ProductRepositoryClass {
     return Number(res[0]?.count || 0);
   }
 
-  async createProduct(data: CreateProductDTO) {
+  async createProduct(
+    data: CreateProductDTO & { createdByUserId?: number | undefined },
+    createdByUserId?: number,
+  ) {
     this.categoryCache = null;
     const safeName = data.name.trim().slice(0, 195);
     const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
@@ -641,12 +672,15 @@ class ProductRepositoryClass {
       : (data.description || data.category || "");
     const safeDescription = categoryStr.trim().slice(0, 250);
 
-    const payload: any = {
+    const userId = createdByUserId !== undefined ? createdByUserId : data.createdByUserId;
+
+    const payload: typeof product.$inferInsert = {
       ean: data.ean?.trim() || null,
       ncm: data.ncm?.trim() || null,
       name: safeName,
       description: safeDescription,
       icon: data.icon?.trim() || "",
+      createdByUserId: userId !== undefined ? userId : null,
     };
 
     if (data.createdAt) {
@@ -690,8 +724,20 @@ class ProductRepositoryClass {
 
   async deleteProduct(id: number) {
     this.categoryCache = null;
+    await db.delete(cartProduct).where(eq(cartProduct.productId, id)).catch(() => {});
+    await db.delete(productReport).where(eq(productReport.productId, id)).catch(() => {});
+    await db.delete(ocurrency).where(eq(ocurrency.productId, id)).catch(() => {});
     const res = await db.delete(product).where(eq(product.id, id));
     return (res.rowCount ?? 0) > 0;
+  }
+
+  async purgeAllProducts() {
+    this.categoryCache = null;
+    await db.execute(sql`DELETE FROM cart_product;`);
+    await db.execute(sql`DELETE FROM product_report;`);
+    await db.execute(sql`DELETE FROM ocurrency;`);
+    const res = await db.execute(sql`DELETE FROM product;`);
+    return { purged: true, rowCount: res.rowCount ?? 0 };
   }
 
   async getPredefinedCategories() {
@@ -882,8 +928,19 @@ class ProductRepositoryClass {
         description: description || null,
       })
       .returning();
-
     return created;
+  }
+
+  async getProductsBasicInfo(ids: number[]): Promise<{ id: number; name: string; icon: string | null }[]> {
+    if (!ids || ids.length === 0) return [];
+    return db
+      .select({
+        id: product.id,
+        name: product.name,
+        icon: product.icon,
+      })
+      .from(product)
+      .where(inArray(product.id, ids));
   }
 }
 

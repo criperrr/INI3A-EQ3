@@ -28,6 +28,7 @@ export async function seedDatabase() {
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_avatar_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_level_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
     ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_title_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
+    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS two_factor_verified BOOLEAN DEFAULT FALSE;
 
     CREATE TABLE IF NOT EXISTS user_customization (
       user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
@@ -729,6 +730,7 @@ export async function seedDatabase() {
         equippedAvatarFrameId: 16, // Coroa Mítica
         equippedLevelFrameId: 25, // Soberano Supremo
         equippedTitleId: 50, // Administrador Master
+        twoFactorVerified: true,
       })
       .returning();
 
@@ -762,6 +764,32 @@ export async function seedDatabase() {
     for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
       await db.insert(userCustomization).values({ userId: existingAdmin.id, itemId }).onConflictDoNothing();
     }
+  }
+
+  // 5.1 Ensure aventureiromax1 is always Admin
+  const targetAdmin = await db.query.user.findFirst({
+    where: (table, { or, eq }) => or(eq(table.name, "aventureiromax1"), eq(table.email, "aventureiromax1@test.com"), eq(table.email, "aventureiromax1@presco.com")),
+  });
+  if (targetAdmin) {
+    await db
+      .update(user)
+      .set({
+        roleId: 5,
+        points: targetAdmin.points ?? 0,
+        equippedBannerId: targetAdmin.equippedBannerId || 6,
+        equippedAvatarFrameId: targetAdmin.equippedAvatarFrameId || 16,
+        equippedLevelFrameId: targetAdmin.equippedLevelFrameId || 25,
+        equippedTitleId: targetAdmin.equippedTitleId || 50,
+      })
+      .where(eq(user.id, targetAdmin.id));
+
+    for (const b of defaultBadges) {
+      await db.insert(userBadge).values({ userId: targetAdmin.id, badgeId: b.id }).onConflictDoNothing();
+    }
+    for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
+      await db.insert(userCustomization).values({ userId: targetAdmin.id, itemId }).onConflictDoNothing();
+    }
+    console.log("✅ [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
   }
 
   // 6. Seed Regular Test User: usuario@presco.com / user123
@@ -1445,72 +1473,8 @@ export async function seedDatabase() {
     availableMarkets = await db.select().from(market).limit(10);
   }
 
-  let insertedProductCount = 0;
-  let insertedOccurrencesCount = 0;
-
-  for (const item of catalogProducts) {
-    let targetProduct = await db.query.product.findFirst({
-      where: (table, { eq }) => eq(table.ean, item.ean),
-    });
-
-    if (!targetProduct) {
-      const [newProduct] = await db
-        .insert(product)
-        .values({
-          ean: item.ean,
-          name: item.name,
-          description: item.description,
-          icon: item.icon,
-          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
-        })
-        .returning();
-      targetProduct = newProduct;
-      insertedProductCount++;
-    } else {
-      // Ensure description/category and icon are synchronized
-      await db
-        .update(product)
-        .set({
-          name: item.name,
-          description: item.description,
-          icon: item.icon,
-          ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
-        })
-        .where(eq(product.id, targetProduct.id));
-    }
-
-    if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
-      for (let i = 0; i < item.prices.length; i++) {
-        const p = item.prices[i];
-        const assignedMarket = availableMarkets[i % availableMarkets.length];
-        if (!assignedMarket) continue;
-
-        const existingOcc = await db.query.ocurrency.findFirst({
-          where: (table, { and, eq }) =>
-            and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
-        });
-
-        if (!existingOcc) {
-          await db.insert(ocurrency).values({
-            userId: adminUserId,
-            marketId: assignedMarket.id,
-            productId: targetProduct.id,
-            value: p.value,
-            trustFlag: p.trustFlag ?? true,
-            isPromotion: Boolean(p.isPromotion),
-            upvoteCount: p.upvotes ?? 0,
-            downvoteCount: p.downvotes ?? 0,
-            ...(p.createdAt ? { createdAt: new Date(p.createdAt).toISOString() } : {}),
-          });
-          insertedOccurrencesCount++;
-        }
-      }
-    }
-  }
-
-  console.log(
-    `✅ [Seed] Catalog synchronized: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} price occurrences seeded).`
-  );
+  // Purged catalog: Do not auto-seed predefined products to keep database clean as requested by user.
+  console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }
 

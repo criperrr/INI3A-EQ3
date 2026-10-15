@@ -22,6 +22,8 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
+import TwoFactorModal from "../components/TwoFactorModal";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -41,6 +43,7 @@ import {
 import { getUserLocation } from "../utils/userLocation";
 import CategorySelector from "../components/CategorySelector";
 import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { cartService } from "../services/cartService";
 import {
   formatDisplayDate,
   formatFullDisplayDate,
@@ -66,7 +69,7 @@ export default function ProductDetails() {
   const router = useRouter();
   const { themeStyles, accent, tokens } = useTheme();
   const { semantic } = tokens;
-  const { isAdmin, user, isAuthenticated, loginAsTestUser, refreshProfile } = useAuth();
+  const { isAdmin, user, isAuthenticated, isTwoFactorVerified, loginAsTestUser, refreshProfile } = useAuth();
   const { t, language } = useI18n();
 
   const [product, setProduct] = useState<ProductDetailData | null>(null);
@@ -85,6 +88,14 @@ export default function ProductDetails() {
   const [reportDescription, setReportDescription] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
   const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
+
+  const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
+  const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
+  const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
+
+  const [isInCart, setIsInCart] = useState(false);
+  const [cartQuantity, setCartQuantity] = useState(1);
+  const [cartAddedSuccess, setCartAddedSuccess] = useState(false);
 
   const targetId = params.id ? Number(params.id) : null;
   const targetBarcode = params.barcode || params.ean;
@@ -238,6 +249,69 @@ export default function ProductDetails() {
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
   };
 
+  useEffect(() => {
+    if (product?.id) {
+      cartService.isProductInCart(product.id).then(setIsInCart);
+    }
+    const unsub = cartService.subscribe((items) => {
+      if (product?.id) {
+        setIsInCart(items.some((it) => it.productId === product.id));
+      }
+    });
+    return unsub;
+  }, [product?.id]);
+
+  const handleAddToCart = async () => {
+    if (!product || !product.id) return;
+    if (Platform.OS !== "web") {
+      try {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {}
+    }
+    // Extract numeric price from product details (e.g. "R$ 2,00" -> 2.00 or numeric value)
+    let parsedPrice: number | undefined;
+    const rawPrice = product.bestPrice || product.lastPrice || product.minPrice;
+    if (typeof rawPrice === "number" && rawPrice > 0) {
+      parsedPrice = rawPrice;
+    } else if (rawPrice && typeof rawPrice === "string") {
+      const cleaned = rawPrice.replace(/[^\d.,]/g, "").replace(",", ".");
+      const val = parseFloat(cleaned);
+      if (!isNaN(val) && val > 0) {
+        parsedPrice = val;
+      }
+    }
+
+    // Fallback: check occurrences if rawPrice was unparseable or absent
+    if (!parsedPrice && occurrences && occurrences.length > 0) {
+      const parsedValues = occurrences
+        .map((o) => {
+          if (typeof o.value === "number") return o.value;
+          const cleaned = String(o.value || "").replace(/[^\d.,]/g, "").replace(",", ".");
+          const val = parseFloat(cleaned);
+          return !isNaN(val) && val > 0 ? val : null;
+        })
+        .filter((v): v is number => v !== null && v > 0);
+
+      if (parsedValues.length > 0) {
+        parsedPrice = Math.min(...parsedValues);
+      }
+    }
+
+    await cartService.addToCart(
+      {
+        id: product.id,
+        name: product.name,
+        icon: product.icon || product.imageUri || null,
+        ean: product.ean || product.barcode || null,
+        estimatedPrice: parsedPrice,
+      },
+      cartQuantity
+    );
+    setIsInCart(true);
+    setCartAddedSuccess(true);
+    setTimeout(() => setCartAddedSuccess(false), 2500);
+  };
+
   const handleRegisterPrice = () => {
     if (isCooldownActive) {
       try {
@@ -250,18 +324,41 @@ export default function ProductDetails() {
       return;
     }
 
-    router.push({
-      pathname: "/registerProduct",
-      params: {
-        id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
-        barcode: product?.barcode || targetBarcode,
-        ean: product?.ean || product?.barcode || targetBarcode,
-        name: product?.name || params.name,
-        category: product?.category || params.category,
-        imageUri: product?.imageUri || params.imageUri,
-        lastPrice: product?.lastPrice || params.lastPrice,
-      },
-    });
+    if (!isAuthenticated) {
+      Alert.alert(
+        t("auth.loginRequired") || "Autenticação Necessária",
+        "Você precisa estar conectado para registrar preços e ganhar XP. Deseja fazer login agora?",
+        [
+          { text: t("common.cancel") || "Cancelar", style: "cancel" },
+          { text: t("navigation.login") || "Fazer Login", onPress: () => router.push("/login") },
+        ],
+      );
+      return;
+    }
+
+    const navigateToRegister = () => {
+      router.push({
+        pathname: "/registerProduct",
+        params: {
+          id: product?.id ? String(product.id) : targetId ? String(targetId) : undefined,
+          barcode: product?.barcode || targetBarcode,
+          ean: product?.ean || product?.barcode || targetBarcode,
+          name: product?.name || params.name,
+          category: product?.category || params.category,
+          imageUri: product?.imageUri || params.imageUri,
+          lastPrice: product?.lastPrice || params.lastPrice,
+        },
+      });
+    };
+
+    if (!isTwoFactorVerified) {
+      setTwoFactorActionDescription("Para registrar preços e contribuir com ofertas, confirme o código enviado para seu e-mail.");
+      setPending2FAAction(() => navigateToRegister);
+      setIsTwoFactorModalVisible(true);
+      return;
+    }
+
+    navigateToRegister();
   };
 
   const handleVote = async (occId: number, verdict: boolean) => {
@@ -272,22 +369,18 @@ export default function ProductDetails() {
         [
           { text: t("common.cancel"), style: "cancel" },
           {
-            text: t("auth.quickConnect"),
-            onPress: async () => {
-              try {
-                await loginAsTestUser("user");
-                await handleVote(occId, verdict);
-              } catch (err: any) {
-                Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
-              }
-            },
-          },
-          {
             text: t("navigation.login"),
             onPress: () => router.push("/login"),
           },
         ]
       );
+      return;
+    }
+
+    if (!isTwoFactorVerified) {
+      setTwoFactorActionDescription("Para votar na precisão dos preços e ganhar XP, confirme o código enviado para seu e-mail.");
+      setPending2FAAction(() => () => handleVote(occId, verdict));
+      setIsTwoFactorModalVisible(true);
       return;
     }
 
@@ -326,6 +419,13 @@ export default function ProductDetails() {
       if (product?.id) loadOccurrences(product.id);
       refreshProfile();
     } catch (err: any) {
+      if (err?.code === "TWO_FACTOR_REQUIRED" || String(err?.message).includes("duas etapas")) {
+        setTwoFactorActionDescription("Verificação de duas etapas necessária para interagir com ofertas.");
+        setPending2FAAction(() => () => handleVote(occId, verdict));
+        setIsTwoFactorModalVisible(true);
+        return;
+      }
+
       const isAuthError =
         err?.status === 401 ||
         err?.code === "UNAUTHORIZED" ||
@@ -338,17 +438,6 @@ export default function ProductDetails() {
           t("auth.loginToVote"),
           [
             { text: t("common.cancel"), style: "cancel" },
-            {
-              text: t("auth.quickConnect"),
-              onPress: async () => {
-                try {
-                  await loginAsTestUser("user");
-                  await handleVote(occId, verdict);
-                } catch (e: any) {
-                  Alert.alert(t("common.error"), e?.message || t("errors.genericError"));
-                }
-              },
-            },
             {
               text: t("navigation.login"),
               onPress: () => router.push("/login"),
@@ -587,7 +676,7 @@ export default function ProductDetails() {
   const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
+    <View testID="product-details-screen" style={[styles.container, themeStyles.bg]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
@@ -681,13 +770,35 @@ export default function ProductDetails() {
 
           <View style={[styles.divider, { backgroundColor: semantic.colors.border.divider || semantic.colors.border.default }]} />
 
-          {/* Last Price Highlight */}
-          <View style={styles.priceHighlightBox}>
-            <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
-            <Text style={[styles.lastPriceValue, { color: accent }]}>
-              {product.lastPrice || t("productDetails.noOccurrences")}
-            </Text>
-          </View>
+          {!isAuthenticated ? (
+            <View style={[styles.lockedPriceContainer, themeStyles.card, themeStyles.border]}>
+              <View style={[styles.lockedPriceIconCircle, { backgroundColor: accent + "20" }]}>
+                <Ionicons name="lock-closed" size={32} color={accent} />
+              </View>
+              <Text style={[styles.lockedPriceTitle, themeStyles.text]}>
+                Faça login para ver os preços mais baratos
+              </Text>
+              <Text style={[styles.lockedPriceSubtitle, themeStyles.subText]}>
+                Cadastre-se ou acesse sua conta para ver onde encontrar este produto pelo menor preço, conferir a média da região e comparar valores nos mercados.
+              </Text>
+              <TouchableOpacity
+                style={[styles.lockedPriceLoginBtn, { backgroundColor: accent }]}
+                activeOpacity={0.85}
+                onPress={() => router.push("/login")}
+              >
+                <Ionicons name="log-in-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.lockedPriceLoginBtnText}>Entrar ou Criar Conta</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              {/* Last Price Highlight */}
+              <View style={styles.priceHighlightBox}>
+                <Text style={[styles.lastPriceLabel, themeStyles.subText]} numberOfLines={1}>{t("productDetails.lastPrice")}</Text>
+                <Text style={[styles.lastPriceValue, { color: accent }]}>
+                  {product.lastPrice || t("productDetails.noOccurrences")}
+                </Text>
+              </View>
 
           {/* Price Statistics Grid */}
           {Boolean(product.minPrice || product.maxPrice || product.avgPrice) ? (
@@ -762,9 +873,28 @@ export default function ProductDetails() {
                   <View key={occ.id} style={[styles.occurrenceItem, themeStyles.inputBg, themeStyles.border]}>
                     <View style={styles.occurrenceMainCol}>
                       <View style={styles.occurrenceMarketTitleRow}>
-                        <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
-                          {occ.marketName || t("products.selectMarket")}
-                        </Text>
+                        <TouchableOpacity
+                          style={styles.occurrenceMarketTouchable}
+                          activeOpacity={0.7}
+                          onPress={() => {
+                            if (occ.marketName) {
+                              openMarketInGoogleMaps({
+                                marketName: occ.marketName,
+                                coordinate: occ.marketCoordinate,
+                                mode: "search",
+                              });
+                            }
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("productDetails.viewInGoogleMaps")}
+                        >
+                          <Text style={[styles.occurrenceMarketName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+                            {occ.marketName || t("products.selectMarket")}
+                          </Text>
+                          {Boolean(occ.marketName) && (
+                            <Ionicons name="open-outline" size={12} color={accent} style={{ marginLeft: 4 }} />
+                          )}
+                        </TouchableOpacity>
                         {Boolean(occ.isPromotion) && (
                           <View style={[styles.promoOccurrenceBadge, { backgroundColor: accent }]}>
                             <Ionicons name="pricetag" size={10} color="#FFFFFF" />
@@ -860,10 +990,81 @@ export default function ProductDetails() {
               })
             )}
           </View>
+          </>
+          )}
 
           {/* Action Buttons */}
           <View style={styles.actionsContainer}>
+            {/* Add to Shopping List Button with Stepper */}
+            <View style={styles.cartActionRow}>
+              <View style={[styles.cartStepperBox, themeStyles.inputBg, themeStyles.border]}>
+                <TouchableOpacity
+                  style={styles.cartStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (cartQuantity > 1) {
+                      try {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      } catch {}
+                      setCartQuantity(cartQuantity - 1);
+                    }
+                  }}
+                >
+                  <Ionicons name="remove" size={16} color={semantic.colors.icon.primary} />
+                </TouchableOpacity>
+
+                <Text style={[styles.cartStepQty, themeStyles.text]}>{cartQuantity}</Text>
+
+                <TouchableOpacity
+                  style={styles.cartStepBtn}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    try {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    } catch {}
+                    setCartQuantity(cartQuantity + 1);
+                  }}
+                >
+                  <Ionicons name="add" size={16} color={semantic.colors.icon.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                testID="btn-add-to-cart"
+                style={[
+                  styles.addToCartBtn,
+                  cartAddedSuccess
+                    ? { backgroundColor: "#10B981" }
+                    : isInCart
+                    ? [themeStyles.inputBg, themeStyles.border, { borderColor: accent }]
+                    : { backgroundColor: `${accent}20`, borderColor: accent, borderWidth: 1 },
+                ]}
+                activeOpacity={0.8}
+                onPress={handleAddToCart}
+              >
+                <Ionicons
+                  name={cartAddedSuccess ? "checkmark-circle" : isInCart ? "cart" : "cart-outline"}
+                  size={20}
+                  color={cartAddedSuccess ? "#FFFFFF" : accent}
+                />
+                <Text
+                  style={[
+                    styles.addToCartText,
+                    { color: cartAddedSuccess ? "#FFFFFF" : accent, fontWeight: "700" },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {cartAddedSuccess
+                    ? t("cart.addedSuccess")
+                    : isInCart
+                    ? `${t("productDetails.inCart")}`
+                    : t("productDetails.addToCart")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
+              testID="btn-register-price"
               style={[
                 styles.primaryActionBtn,
                 isCooldownActive
@@ -908,6 +1109,7 @@ export default function ProductDetails() {
               <View style={styles.secondaryActionsRow}>
                 {Boolean(product.id) ? (
                   <TouchableOpacity
+                    testID="btn-admin-edit"
                     style={[styles.secondaryActionBtn, themeStyles.inputBg, themeStyles.border]}
                     activeOpacity={0.8}
                     onPress={handleOpenEdit}
@@ -921,6 +1123,7 @@ export default function ProductDetails() {
 
                 {Boolean(product.id) ? (
                   <TouchableOpacity
+                    testID="btn-admin-delete"
                     style={[styles.secondaryActionBtn, styles.deleteActionBtn, themeStyles.border]}
                     activeOpacity={0.8}
                     onPress={handleDeleteProduct}
@@ -1128,6 +1331,21 @@ export default function ProductDetails() {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+
+      <TwoFactorModal
+        visible={isTwoFactorModalVisible}
+        onClose={() => {
+          setIsTwoFactorModalVisible(false);
+          setPending2FAAction(null);
+        }}
+        onSuccess={() => {
+          setIsTwoFactorModalVisible(false);
+          const action = pending2FAAction;
+          setPending2FAAction(null);
+          if (action) action();
+        }}
+        actionDescription={twoFactorActionDescription}
+      />
     </View>
   );
 }
@@ -1503,6 +1721,51 @@ const styles = StyleSheet.create({
     width: "100%",
     marginBottom: 16,
   },
+  lockedPriceContainer: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginBottom: 20,
+  },
+  lockedPriceIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  lockedPriceTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  lockedPriceSubtitle: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+    marginBottom: 20,
+    paddingHorizontal: 8,
+  },
+  lockedPriceLoginBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    width: "100%",
+    maxWidth: 280,
+  },
+  lockedPriceLoginBtnText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
   priceHighlightBox: {
     alignItems: "center",
     marginBottom: 16,
@@ -1576,13 +1839,13 @@ const styles = StyleSheet.create({
   periodChipsContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
     paddingVertical: 2,
-    paddingHorizontal: 1,
+    paddingHorizontal: 2,
   },
   periodChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     borderRadius: 14,
     borderWidth: 1,
   },
@@ -1722,6 +1985,44 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     gap: 12,
+  },
+  cartActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  cartStepperBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 4,
+  },
+  cartStepBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cartStepQty: {
+    fontSize: 14,
+    fontWeight: "700",
+    minWidth: 20,
+    textAlign: "center",
+  },
+  addToCartBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 48,
+    borderRadius: 14,
+    gap: 8,
+    paddingHorizontal: 12,
+  },
+  addToCartText: {
+    fontSize: 14,
   },
   primaryActionBtn: {
     flexDirection: "row",
@@ -2062,6 +2363,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     flexWrap: "wrap",
+  },
+  occurrenceMarketTouchable: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
   promoOccurrenceBadge: {
     flexDirection: "row",

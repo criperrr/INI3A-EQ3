@@ -14,10 +14,14 @@
 
 - [project] Algoritmo de compatibilidade de código de barras (>= 65%) com confirmação na UI → tech-decisions.md
 - [project] Pipeline de compilação de IPA iOS sem assinatura via GitHub Actions e Sideloadly → tech-decisions.md
+- [project] Anti-spam de preços (cooldown 5 min) e sistema comunitário de denúncia de produtos → tech-decisions.md
+- [project] Onboarding educativo em 6 etapas com feedback háptico e Reanimated 4 → tech-decisions.md
+- [project] Busca de mercados por proximidade espacial PostGIS (15km) e fallback ordenado → tech-decisions.md
+- [project] Pipeline de release e distribuição oficial do APK standalone no GitHub Releases → tech-decisions.md
 
 ## User Preferences
 - [user] Prioridade para execucao cirurgica e conservacao de contexto de tokens → user-preferences.md
-- [user] Política estrita de Git: NUNCA dar git push ou commit automaticamente; somente sob solicitação explícita; manter trabalho em tests sem tocar na main → user-preferences.md
+- [user] Política estrita de Git: criação OBRIGATÓRIA e prévia de branch a partir de dev antes de tocar no código (proibido alterar main ou dev diretamente); isolamento cirúrgico por chat; NUNCA dar push/commit automaticamente; regra de PR para dev, validar testes no CI, mergear via gh CLI da máquina, exigir gh instalado e autenticado (gh auth login), e realizar download e diagnóstico autônomo de logs/artefatos (gh run download / log-failed) se o CI falhar → user-preferences.md
 
 ## Feedback
 - [feedback] Impedir auto-votacao de precos e corrigir consultas geograficas no backend → feedback-history.md

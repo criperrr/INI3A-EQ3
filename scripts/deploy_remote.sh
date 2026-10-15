@@ -56,7 +56,7 @@ fi
 echo "🔐 Entregando segredos ao servidor (arquivo temporário 600, apagado após uso)..."
 {
   printf 'PROJECT_DIR=%s\n' "$REMOTE_TARGET_DIR"
-  for k in DATABASE_URL REDIS_URL JWT_SECRET HERE_API_KEY ALLOWED_ORIGINS \
+  for k in DATABASE_URL REDIS_URL JWT_SECRET HERE_API_KEY RESEND_API_KEY RESEND_FROM ALLOWED_ORIGINS \
            SERVER_PORT SERVER_HOST NODE_ENV PUBLIC_URL REWRITE_BASE; do
     v="${!k:-}"
     if [ -n "$v" ]; then printf '%s=%s\n' "$k" "$v"; fi

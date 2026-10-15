@@ -112,6 +112,7 @@ export const user = pgTable(
     equippedAvatarFrameId: integer("equipped_avatar_frame_id"),
     equippedLevelFrameId: integer("equipped_level_frame_id"),
     equippedTitleId: integer("equipped_title_id"),
+    twoFactorVerified: boolean("two_factor_verified").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -255,7 +256,7 @@ export const ocurrency = pgTable(
       foreignColumns: [product.id],
       name: "ocurrency_product_id_fkey",
     }),
-    check("ocurrency_value_check", sql`value > (0)::numeric`),
+    check("ocurrency_value_check", sql`value >= 0.10 AND value <= 15000.00`),
     check("ocurrency_upvote_count_check", sql`upvote_count >= 0`),
     check("ocurrency_downvote_count_check", sql`downvote_count >= 0`),
   ],
@@ -289,6 +290,7 @@ export const product = pgTable(
     name: varchar({ length: 200 }).notNull(),
     description: text(),
     icon: text(),
+    createdByUserId: integer("created_by_user_id"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
@@ -304,6 +306,15 @@ export const product = pgTable(
     index("idx_product_ncm").using(
       "btree",
       table.ncm.asc().nullsLast().op("text_ops"),
+    ),
+    foreignKey({
+      columns: [table.createdByUserId],
+      foreignColumns: [user.id],
+      name: "product_created_by_user_id_fkey",
+    }).onDelete("set null"),
+    index("idx_product_created_by").using(
+      "btree",
+      table.createdByUserId.asc().nullsLast().op("int4_ops"),
     ),
   ],
 );
@@ -382,6 +393,7 @@ export const cartProduct = pgTable(
   {
     cartId: integer("cart_id").notNull(),
     productId: integer("product_id").notNull(),
+    quantity: integer("quantity").default(1).notNull(),
     addedAt: timestamp("added_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),

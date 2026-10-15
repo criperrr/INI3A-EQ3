@@ -18,6 +18,7 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { DesignSystemTokens } from "../theme/types";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
 import {
   findCategoryDefinition,
@@ -27,6 +28,7 @@ import {
 } from "../constants/productCategories";
 import { getUserLocation } from "../utils/userLocation";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 
 export default function SearchScreen() {
   const { tokens, accent, isDark } = useTheme();
@@ -238,6 +240,7 @@ export default function SearchScreen() {
         </View>
 
         <TouchableOpacity
+          testID="search-add-custom-btn"
           style={[
             styles.addCustomBtn,
             {
@@ -384,6 +387,7 @@ const SearchBar = memo(function SearchBar({
     >
       <Ionicons name="search-outline" size={20} color={accent} style={styles.searchIcon} />
       <TextInput
+        testID="search-input"
         style={[
           styles.searchInput,
           {
@@ -461,6 +465,7 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
           return (
             <TouchableOpacity
               key={cat}
+              testID="search-category-chip"
               style={[
                 styles.categoryChip,
                 {
@@ -516,6 +521,7 @@ const ProductCardItem = memo(function ProductCardItem({
   t: (key: any) => string;
 }) {
   const { semantic } = tokens;
+  const { isAuthenticated } = useAuth();
   const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 280, 70);
 
   const isUnquoted =
@@ -530,6 +536,7 @@ const ProductCardItem = memo(function ProductCardItem({
 
   return (
     <TouchableOpacity
+      testID="search-product-card"
       style={[
         styles.productCard,
         {
@@ -620,9 +627,18 @@ const ProductCardItem = memo(function ProductCardItem({
 
         <View style={styles.priceSlot}>
           {hasPrice ? (
-            <Text style={[styles.productPrice, { color: accent }]} numberOfLines={1}>
-              {displayPrice}
-            </Text>
+            isAuthenticated ? (
+              <Text style={[styles.productPrice, { color: accent }]} numberOfLines={1}>
+                {displayPrice}
+              </Text>
+            ) : (
+              <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
+                <Ionicons name="lock-closed" size={10} color={accent} />
+                <Text style={[styles.lockedPriceText, { color: accent }]}>
+                  Ver preço
+                </Text>
+              </View>
+            )
           ) : (
             <View
               style={[
@@ -643,7 +659,7 @@ const ProductCardItem = memo(function ProductCardItem({
 
         <View style={styles.distanceSlot}>
           {Boolean(product.formattedDistance) ? (
-            <View
+            <TouchableOpacity
               style={[
                 styles.distancePill,
                 {
@@ -652,6 +668,19 @@ const ProductCardItem = memo(function ProductCardItem({
                   borderRadius: semantic.radius.badge,
                 },
               ]}
+              activeOpacity={product.nearestMarketName ? 0.7 : 1}
+              onPress={(e) => {
+                if (product.nearestMarketName) {
+                  e.stopPropagation();
+                  openMarketInGoogleMaps({
+                    marketName: product.nearestMarketName,
+                    coordinate: product.nearestMarketCoordinate,
+                    mode: "search",
+                  });
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={product.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${product.nearestMarketName}` : undefined}
             >
               <Ionicons name="location" size={10} color={accent} />
               <Text
@@ -662,7 +691,10 @@ const ProductCardItem = memo(function ProductCardItem({
                 {product.formattedDistance}
                 {product.nearestMarketName ? ` • ${product.nearestMarketName}` : ""}
               </Text>
-            </View>
+              {Boolean(product.nearestMarketName) && (
+                <Ionicons name="open-outline" size={9} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
+              )}
+            </TouchableOpacity>
           ) : null}
         </View>
       </View>
@@ -834,16 +866,16 @@ const styles = StyleSheet.create({
   },
   categoriesScroll: {
     paddingHorizontal: 16,
-    gap: 8,
+    gap: 10,
     alignItems: "center",
   },
   categoryChip: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderWidth: 1,
-    gap: 6,
+    gap: 8,
   },
   categoryChipEmoji: {
     fontSize: 13,
@@ -949,6 +981,20 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 15,
     fontWeight: "bold",
+  },
+  lockedPricePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  lockedPriceText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   noPricePill: {
     flexDirection: "row",

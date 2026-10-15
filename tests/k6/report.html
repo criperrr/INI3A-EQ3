@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório de Testes k6 - Presco API</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0F172A; color: #F8FAFC; margin: 0; padding: 24px; }
+    .card { background: #1E293B; border-radius: 12px; padding: 24px; margin-bottom: 20px; border: 1px solid #334155; }
+    h1 { color: #38BDF8; margin-top: 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+    .metric-card { background: #0F172A; border-radius: 8px; padding: 16px; border: 1px solid #334155; }
+    .metric-value { font-size: 28px; font-weight: bold; color: #10B981; }
+    .metric-label { font-size: 13px; color: #94A3B8; text-transform: uppercase; margin-top: 4px; }
+    .status-ok { color: #10B981; }
+    .status-warn { color: #F59E0B; }
+    .status-error { color: #EF4444; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>📊 Relatório de Testes de Carga & Funcionais - Presco (Grafana k6)</h1>
+    <p>Ambiente: <strong>Remote CTI Production/Staging Server</strong> (https://eq.projetoscti.com.br/26-presco)</p>
+    <p>Data do teste: <strong>2026-09-22T02:26:56.582Z</strong></p>
+    
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-value">53</div>
+        <div class="metric-label">Total de Requisições</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value status-error">16.98%</div>
+        <div class="metric-label">Taxa de Falhas</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">314.66 ms</div>
+        <div class="metric-label">Latência Média</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value status-warn">1146.26 ms</div>
+        <div class="metric-label">Latência p(95)</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  

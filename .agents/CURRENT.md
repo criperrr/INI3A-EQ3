@@ -7,6 +7,482 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem Estrutural & Auditoria de Código da Fase 1 (`fix/structural-hardening-phase1`):**
+  - **V-01 (Limites de Preço, Cold Start & Variance Floor):**
+    - Implementada constraint no banco e validação no service para a faixa realista de preços [R$ 0,10, R$ 15.000,00], erradicando o "Tomate de 10 Bilhões".
+    - Isolamento estrito de Cold Start (`stats.count === 0`): cotações nascem como provisórias (`isSuspended: true, isResolved: false, trustFlag: false`) e com 0 XP, sendo isoladas do otimizador de carrinho e das buscas até dupla corroboração independente (faixa ±20%).
+    - Estabilização estatística de variância: `MAD_eff = Math.max(mad, 0.05 * median)` eliminando divisões por zero e Z-scores infinitos.
+    - Saneamento pericial: parser de moeda pt-BR (`parseCurrencyValue`), reavaliação de outliers no `PUT /ocurrency/:id` com auto-suspensão e idempotência no `service.approve` (fim do farm de XP).
+    - Gerada e registrada a migration física `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`.
+  - **V-03 (Custódia de Produtos & Authentication Shield):**
+    - Persistência de autoria: coluna `created_by_user_id` adicionada à tabela `product` com chave estrangeira `ON DELETE SET NULL` e índice B-Tree dedicado `idx_product_created_by`.
+    - Fail-closed no service: `productService.createCustomProduct` rejeita requisições sem `userId` com `UnauthorizedError`.
+    - Authentication Shield: validação de `dangerFlag === true` no `requireAuth` e `requireTwoFactor` retornando HTTP 403 Forbidden imediato. Otimização de I/O com anexação das flags em `req.user`, eliminando consulta duplicada ao PostgreSQL.
+  - **V-06 (Erradicação do Marco Zero & Validação Espacial de Mercados):**
+    - Erradicado totalmente o fallback silencioso para a Praça da Sé (`-23.55052, -46.633308`) em `market.service.ts` e `market.repository.ts`.
+    - Validação de entrada: `createMarket` e `updateMarket` exigem coordenadas numéricas válidas dentro do envelope territorial brasileiro (lat: [-34.0, +5.5], lng: [-74.0, -34.5]) e barram qualquer ponto a ≤ 50m do marco zero da Praça da Sé via fórmula geodésica de Haversine.
+  - **Auditoria Independente Anti-Slop (3 Auditores Adversariais):**
+    - V-01 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO E ENDURECIDO]**
+    - V-03 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+    - V-06 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+  - **Qualidade & Blindagem de Testes:** 39 testes unitários e de integração passando com 100% de sucesso (`npm run test:backend`), 0 erros no typecheck (`npm run typecheck`) e SemVer sincronizado para `v1.4.5` (`versionCode: 30`).
+  - **Dossiê Dialético V-08 Concluído:** Finalizado o ciclo de 4 rodadas adversariais para Google OAuth, 2FA Real (TOTP) e Trust Ramp, homologado com [APROVAÇÃO DEFINITIVA INTEGRAL] e documentado no compêndio.
+- **Blindagem do Pipeline CI de E2E no GitHub Actions (`maestro-e2e.yml`):**
+  - **Resolução do Dev Client & Modal de Onboarding:** Diagnosticado e resolvido o fluxo de carregamento headless no emulador Android: implementado pré-aquecimento do bundle JS via `curl` no Metro, inicialização em `--host lan`, preservação do estado via `stopApp: false`, priorização do dismiss do modal de tutorial (`dismiss-tutorial-button`, `Pular tutorial`, `Skip`) e espera determinística em `extendedWaitUntil: ".*(dismiss-tutorial-button|tab-home).*"` para transição segura à Home.
+  - **Filtro Estrito de Caminhos (*Path Filtering*):** Aplicado filtro cirúrgico em branches `test/**` e PRs (`src/frontend/**`, `tests/maestro/**`, `scripts/*maestro*`), impedindo compilação de APK e testes de emulador desnecessários em alterações de backend ou docs.
+- **Blindagem de Governança de Branches, Pré-requisito do `gh` e Diagnóstico Autônomo de CI:**
+  - **Criação Prévia Mandatória de Branches:** O modelo deve obrigatoriamente criar uma branch temática a partir de `dev` antes de tocar em qualquer arquivo do projeto, sendo estritamente proibido alterar diretamente em `main` ou `dev`.
+  - **Onboarding e Verificação do GitHub CLI (`gh`):** Instrução mandatória para o agente verificar a presença (`which gh`) e autenticação (`gh auth status`) da CLI do GitHub, orientando a instalação ou solicitando `gh auth login` se ausente.
+  - **Diagnóstico Autônomo de Falhas na Nuvem:** O modelo foi capacitado e instruído a inspecionar logs de erro (`gh run view <run-id> --log-failed`) e baixar os artefatos de teste (`gh run download <run-id> -n maestro-e2e-audit-reports`) diretamente via terminal para debugar sem onerar a máquina do desenvolvedor.
+- **Pipeline de CI/CD para Testes E2E com Maestro no GitHub Actions (`maestro-e2e.yml`):**
+  - **Automação Completa na Nuvem:** Criado o workflow [`.github/workflows/maestro-e2e.yml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/.github/workflows/maestro-e2e.yml) para rodar a suíte completa de auditoria E2E do Maestro no GitHub Actions (`ubuntu-latest`) utilizando aceleração de hardware KVM (`/dev/kvm`), Node 22, Java 17, Gradle Cache, containers Docker (Postgres + Redis) e emulador Android (API 31, x86_64 via `reactivecircus/android-emulator-runner@v2`).
+  - **Filtro Cirúrgico de Caminhos (*Path Filtering*):** Acionado automaticamente em PRs para `dev` e `main` quando houver alterações em `src/frontend/**`, `tests/maestro/**` ou scripts de teste, preservando o tempo de PRs de backend/docs intactos.
+  - **Suporte a Execução Manual e Pré-PR:** Gatilhos via `workflow_dispatch` e em branches `test/**` para validação prévia na nuvem antes da abertura de PRs.
+- **Auditoria Profunda de Qualidade Frontend com Maestro (`v1.4.4`):**
+  - **Suíte de Auditoria Completa:** Implementado o fluxo [`frontend_quality_audit.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/frontend_quality_audit.yaml) cobrindo 12 fases do app (Boot, Autenticação, Onboarding, Busca, Detalhes de Produto, Carrinho com Múltiplas Paradas, Rota no Mapa, Modais, Perfil Gamificado, Loja de Customizações, Temas Dinâmicos Claro/Escuro/AMOLED, Monet e Logout Limpo).
+  - **Blindagem de Seletores e Acessibilidade:** Inseridos `testID`s determinísticos e `accessibilityRole="button"` em 13 componentes e telas (`cart.tsx`, `RoutePreviewModal.tsx`, `TravelSettingsModal.tsx`, `login.tsx`, `profile.tsx`, `registerUser.tsx`, `search.tsx`, `settings.tsx`, `productDetails.tsx`, `index.tsx`, `help.tsx`, `about.tsx`, `adminModeration.tsx`).
+  - **Correção de Linter & Render Ref:** Sincronização de referências de estado no carrinho (`cartItemsRef`, `settingsRef`) movida para `useEffect`, eliminando erros de mutação de refs durante o render no React.
+  - **Execução & Validação:** 100% dos testes aprovados (`1/1 Flow Passed in 4m 14s`), 20 screenshots capturados e arquivados em relatórios.
+  - **Qualidade & SemVer:** 48 testes unitários passando, 0 erros no typecheck e linting aprovado com código 0. Versão sincronizada para `v1.4.4` (`versionCode: 29`).
+- **Execução Autônoma do Maestro com Testes Rápidos (`test:maestro:quick`):**
+  - **Identificação e Resolução de Bloqueios:** Resolvido o modal bloqueante do Expo Dev Menu e o popup inicial de tutorial, além de garantir o direcionamento explícito ao emulador (`--device emulator-5554`) mesmo na presença de dispositivos USB físicos conectados.
+  - **Suíte Rápida Autônoma:** Criado o fluxo [`smoke_suite.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/smoke_suite.yaml) e o orquestrador [`run_maestro_quick.ts`](file:///home/criper/Documentos/projetos/INI3A-EQ3/scripts/run_maestro_quick.ts).
+  - **Validação de Execução:** Executado com sucesso via `npm run test:maestro:quick`, validando boot limpo, Home, navegação por abas (Busca, Mapa, Perfil), 1-Tap Dev Login e retorno à Home em menos de 30 segundos.
+- **Execução do Aplicativo no Emulador Android (`emulator-5554`):**
+  - **Ambiente & Dependências:** Configurado Amazon Corretto JDK 17 (`~/.local/jdks/temurin17`), Gradle 9.3.1, NDK 27.1 (`x86_64`) e Android SDK Build-Tools 36.
+  - **Compilação & Execução:** Build nativo em modo debug (`npm run android:debug`) compilado e empacotado com sucesso para a arquitetura `x86_64` do emulador.
+  - **Validação Visual:** Aplicativo `com.presco.app` inicializado com sucesso (PID ativo, onboarding exibido e renderizado com UI do Presco).
+- **Blindagem de Permissões `chmod` no Servidor Remoto de Produção CTI (`deploy/deploy.sh`):**
+  - **Diagnóstico da Falha:** No deploy para produção, o servidor compartilhado CTI rejeitava comandos `chmod` sobre arquivos gerenciados pelo web server como `.htaccess`, `.env` e `README.md` (`Operation not permitted`), abortando o pipeline sob `set -euo pipefail`.
+  - **Correção:** Protegidas todas as invocações de `chmod` com `2>/dev/null || true` em [`deploy.sh`](file:///Users/criper/INI3A-EQ3/deploy/deploy.sh).
+  - **Qualidade & Validação:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem no `npm run typecheck`.
+- **Pipeline de Deploy Multi-Ambiente da Landing Page no GitHub Pages (`v1.4.3`):**
+  1. **Arquitetura de Hospedagem Multi-Branch:**
+     - `main` (Produção): Hospeda a landing page na raiz do GitHub Pages (`https://criperrr.github.io/INI3A-EQ3/`) com `baseUrl: /INI3A-EQ3`.
+     - `dev` (Desenvolvimento): Hospeda em subdiretório isolado (`https://criperrr.github.io/INI3A-EQ3/dev/`) com `baseUrl: /INI3A-EQ3/dev`.
+     - Feature & PR Branches (Testes & Previews): Cada modificação ou branch de testes (`feat/**`, `fix/**`, `test/**` ou PRs) gera uma prévia isolada em `https://criperrr.github.io/INI3A-EQ3/preview/<slug>/` com `keep_files: true` preservando os demais ambientes intactos.
+  2. **Configuração Técnica & Otimização do Metro Expo Web:**
+     - [`app.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/app.config.js): Injeção dinâmica de `experiments.baseUrl` a partir da variável `EXPO_BASE_URL`.
+     - [`metro.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/metro.config.js): Exportação SPA (`output: "single"`) com suporte a bundling estático pelo Metro.
+     - [`Header.tsx`](file:///Users/criper/INI3A-EQ3/src/landing/components/Header.tsx): Badge dinâmico de identificação de ambiente (`DEV`, `TEST` ou limpo em produção) e sincronização SemVer `v1.4.3`.
+     - [`.github/workflows/deploy-landing.yml`](file:///Users/criper/INI3A-EQ3/.github/workflows/deploy-landing.yml): Workflow com concorrência segura (`deploy-gh-pages`), publicação na branch `gh-pages` com `.nojekyll`, habilitação automática da API do Pages e comentário com link no Pull Request.
+  3. **Qualidade & Validação:**
+     - 48 testes unitários passando (19 backend + 29 raiz).
+     - 0 erros de tipagem no `npm run typecheck`.
+- **Condicionamento do Botão "Mover de Mercado" à Existência do Produto no Banco (`v1.4.3`):**
+  1. **Diagnóstico da Causa Raiz:**
+     - Quando o otimizador dividia os produtos em múltiplos mercados (`storeGroups.length > 1`), o componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) renderizava o botão `[Mover de Mercado]` indiscriminadamente para todos os itens daquele supermercado, independentemente de o produto existir ou não nos outros mercados da rota.
+     - Além disso, a troca de loja mantinha o preço unitário e subtotal do mercado de origem, sem consultar o valor real registrado no mercado de destino.
+  2. **Implementação da Solução Completa:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts): Interface `OptimizedStoreItem` enriquecida com `availableMarkets?: { marketId: number; marketName?: string; unitPrice: number; isPromotion?: boolean }[]`. Na atribuição dos itens às lojas (tanto em `singleStoreEvals` quanto em `combinations`), mapeia-se cada mercado onde o produto possui ocorrência ativa no banco de dados.
+     - [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts): Tipagem `OptimizedItemDisplay` sincronizada com `availableMarkets` e suporte na simulação local de fallback.
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx):
+       - Função `getEligibleStoresForItem(item)` filtra `otherStores` apenas para os mercados onde o produto existe no banco (`availableMarkets`).
+       - O botão `[Mover de Mercado]` só é exibido se `eligibleStores.length > 0`.
+       - O modal de realocação exibe unicamente as lojas elegíveis com o preço unitário real do produto em cada destino.
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx): `handleReallocateItem` atualizado para receber `targetPrice` e recalcular `unitPrice`, `subtotal` e subtotais das paradas com a cotação real do mercado selecionado.
+  3. **Qualidade, Testes & Versionamento SemVer:**
+     - 48 testes unitários passando (19 backend + 29 raiz, incluindo novo teste em `cart.test.ts` e `cartOptimizer.test.ts`).
+     - 0 erros de tipagem no `npm run typecheck`.
+     - SemVer sincronizado para `v1.4.3` (`versionCode: 28`).
+- **Compartilhamento Universal de Lista e Trajeto no Google Maps (`v1.4.2`):**
+  1. **Ajuste na Mensagem Compartilhada:**
+     - Removido o termo "Otimizada" do título da mensagem de compartilhamento, agora padronizado como `🛒 *Minha Lista de Compras (Presco)*`.
+     - Removido o custo de combustível (`g.fuelCost` e `optimization.totalTravelCost`) e quilometragem do remetente da mensagem compartilhada, visto que o destinatário pode abrir a lista em outro local e com veículo próprio.
+     - Preservado o subtotal por estabelecimento, o `💰 *Total dos Produtos:* R$ X,XX` e a `✨ *Economia:* R$ X,XX`.
+     - Adicionado o campo preciso de retorno `🏁 *Local de Retorno:* <endereço nominal completo ou coordenadas>` na mensagem compartilhada para orientar exatamente o ponto de término da viagem.
+  2. **Link Universal e Traçado do Trajeto no Google Maps:**
+     - [`mapNavigation.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapNavigation.ts) & [`mapQueryBuilder.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts): Implementados `buildCartRouteShareUrl`, `buildCartShareText` e `shareCartList`.
+     - O traçado do trajeto define o endereço nominal de retorno como destino final e todos os supermercados como waypoints intermediários, com `origin` omitido para sair da "Sua localização" em tempo real e retornar com precisão ao ponto de partida.
+     - [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx): Exibe o endereço nominal completo sob "PONTO DE PARTIDA" e "DESTINO FINAL (RETORNO)", além do botão de compartilhamento no cabeçalho.
+  3. **Qualidade e Testes:**
+     - 46 testes unitários passando (18 backend + 28 raiz incluindo testes de formatação de compartilhamento, rotas universais e 'Sua localização').
+     - 0 erros de tipagem no `npm run typecheck`.
+- **Busca por Nome e Endereço de Estabelecimentos no Google Maps e Suporte a Múltiplos Endereços (`v1.4.2`):**
+  1. **Diagnóstico dos Cenários de Múltiplos Endereços:**
+     - **Rotas com Múltiplas Paradas (`stores.length > 1`):** A URL do Google Maps gerava o separador `|` não codificado (`join("|")`), violando o padrão RFC 3986 e causando rejeição ou truncamento pelo intent parser no Android e no iOS.
+     - **Redes de Supermercados com Múltiplas Filiais:** Ao buscar um produto ou abrir uma ocorrência cujo mercado é uma rede com várias lojas na mesma cidade (ex: Confiança, Tauste, Pão de Açúcar), enviar apenas o nome e cidade fazia o Google Maps exibir uma lista genérica ou não abrir a filial correta por falta das coordenadas exatas.
+     - **Cards de Supermercado no Carrinho:** Os cabeçalhos de lojas em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) não eram clicáveis para consulta direta no Google Maps.
+  2. **Implementação da Solução Completa:**
+     - [`mapQueryBuilder.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts): Implementada a função [`buildGoogleMapsRouteUrl`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapQueryBuilder.ts#L78-L109) com escape estrito de waypoints via `%7C`, parâmetros padronizados de rotas universais e testes unitários dedicados.
+     - [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx): Omissão de `origin` para que o Google Maps utilize a "Sua localização" nativa via GPS em tempo real (sem alfinete inserido), visitas a todos os mercados da lista como waypoints intermediários e retorno resolvido para o endereço nominal do usuário.
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx): Cabeçalho de supermercado agora é interativo com ícone `open-outline`, disparando busca nominal georreferenciada no Google Maps para cada mercado da lista.
+     - [`product.repository.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/product.repository.ts) & [`product.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.service.ts): Enriquecimento da busca espacial de produtos com `nearestMarketCoordinate: { latitude, longitude }`.
+     - [`ocurrency.repository.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/ocurrency.repository.ts): Extração de `marketCoordinate: { latitude, longitude }` para todas as ocorrências de preços de produtos.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx), [`search.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/search.tsx) e [`index.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/index.tsx): Propagação das coordenadas exatas nas chamadas [`openMarketInGoogleMaps`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/utils/mapNavigation.ts#L108), garantindo geocodificação reversa de logradouro e número mesmo para redes com dezenas de filiais na cidade.
+  3. **Qualidade, Testes & Versionamento SemVer:**
+     - 44 testes unitários passando (18 backend + 26 raiz incluindo testes de waypoints, rotas multi-paradas, 'Sua localização' e circuito fechado).
+     - 0 erros de tipagem no `npm run typecheck` (backend + frontend).
+     - SemVer sincronizado para `v1.4.2` (`versionCode: 27`).
+- **Aviso de Loja Única Incompleta, Seletor de Priorização e Correção de Rota Multiloja (`v1.4.1`):**
+  1. **Diagnóstico do Bloqueio de Rota Multilojas e Falso "Sem Preço Recente":**
+     - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), nos modos `balanced` e `max_savings`, a rota multi-loja estava sendo descartada pelo cálculo de conveniência quando a loja única vendia apenas parte dos itens (comparando custo parcial de 1 item vs custo total de deslocamento de 2 lojas), forçando erroneamente o retorno de `single_store` mesmo sem o usuário ter selecionado "Loja Única".
+     - Itens disponíveis em outros mercados eram marcados como sem preço ou descartados da rota.
+  2. **Implementação da Solução no Backend:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts):
+       - Nos modos `balanced` e `max_savings`, se a melhor loja única não cobre todos os itens (`coveredCount < cartItems.length`) e existe rota multi-loja, o sistema **NUNCA** força `single_store`, garantindo que todos os itens disponíveis sejam alocados em seus respectivos mercados.
+       - Aumentado o piso de paradas para `Math.max(2, maxStops)` quando a estratégia for multilojas.
+       - Adicionado o payload `singleStoreOptions` com `hasCompleteStore`, `bestStoreCoveredCount`, `totalCartItemsCount` e listagem de `stores` candidatas com `coveredCount`, `totalCount`, `groceryCost` e `distanceKm`.
+       - Suporte aos parâmetros de preferência `selectedMarketId` e `prioritizedProductId` para desempate e escolha explícita do usuário.
+       - Enriquecimento integral de `unassignedItems` com `unitPrice` e `marketName` de alternativas existentes.
+  3. **Implementação no Frontend & Experiência do Usuário (UX):**
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx):
+       - Inserido card de alerta proeminente (`singleStoreWarningCard`) quando a estratégia selecionada for "Loja Única" e nenhum supermercado tiver 100% da lista de compras.
+       - Botão com 1 toque para alternar para "Rota Multilojas" e comprar todos os itens divididos entre os melhores mercados.
+       - Seletor interativo em chips para priorizar um produto específico (qual produto o usuário faz questão de encontrar na visita única).
+       - Carrossel de supermercados alternativos para o usuário escolher manualmente em qual loja deseja comprar a sua lista parcial.
+     - [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts): Tipagens `SingleStoreOption`, `SingleStoreOptionsSummary` e propagação de preferências ao backend e fallback local.
+     - Internacionalização nos 7 idiomas do Presco (`pt`, `en`, `es`, `de`, `ru`, `zh`, `ja`) com as novas chaves `singleStoreIncompleteTitle`, `singleStoreIncompleteDesc`, `switchToMultiStore`, `chooseProductToPrioritize`, `chooseMarket`, `allProductsOption`.
+  4. **Qualidade, Testes & Versionamento SemVer:**
+     - 18 testes unitários de backend passando (`src/backend/tests/cart.test.ts`), 15 testes de integração/concorrência passando (33 testes no total).
+     - 0 erros de tipagem (`npm run typecheck` backend + frontend).
+     - SemVer sincronizado para `v1.4.1` (`versionCode: 26`).
+- **Adição da Arara-Canindé e Folhas Tropicais em JavaScript/Canvas 2D (`src/landing`):**
+  1. **Renderização Procedural & Cinemática Vetorial:**
+     - [`monsteraLeaf.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/graphics/monsteraLeaf.ts): Módulo procedural Canvas 2D da Folha de Costela-de-Adão (*Monstera deliciosa*) desenhada estritamente a partir da ilustração de referência, com silhueta cordiforme, lobos profundos, fenestras internas (orifícios naturais recortados via `destination-out`), nervuras iluminadas, balanço orgânico ao vento e reação de paralaxe ao mouse.
+     - [`macaw.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/graphics/macaw.ts): Módulo cinemático e vetorial da Arara-Canindé (*Ara ararauna*) baseado na ilustração de referência, com bico curvo negro, máscara facial branca estriada, coroa verde, peito amarelo-ouro vibrante, asas bicolores azuis e amarelas, cauda longa graduada, bater de asas senoidal realista com flexão de penas, body bobbing e navegação por waypoints.
+     - [`TropicalFaunaFloraCanvas.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/TropicalFaunaFloraCanvas.tsx): Componente React Native Web com aceleração por hardware, 60 FPS, suporte a DPR/Retina e auto-pausa em aba oculta.
+  2. **Integração Cênica:**
+     - [`HeroSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HeroSection.tsx): Integrado o canvas como camada de fundo com `pointerEvents: "none"`, mantendo todos os CTAs e botões 100% clicáveis.
+  3. **Qualidade & Validação:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), 153 módulos compilados pelo Metro.
+- **Correção de Produtos Sem Preço e Otimização da Lista de Compras (`v1.3.8`):**
+  1. **Diagnóstico da Causa Raiz e Documentação Técnica:**
+     - Documento completo consolidado em [`docs/DIAGNOSTICO_PRECOS_CARRINHO.md`](file:///Users/aventureiromax/INI3A-EQ3/docs/DIAGNOSTICO_PRECOS_CARRINHO.md).
+     - No backend ([`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts)), a busca de preços limitava-se aos mercados no raio inicial (~15km) e só expandia para todos os mercados se nenhum produto do carrinho tivesse preço (`rawPrices.length === 0`). Se um produto tinha preço, os demais que estivessem fora do raio nunca tinham seus preços consultados.
+     - No cálculo de decisão multi-loja vs loja única, o backend comparava o custo da loja única (que só vendia parte dos itens) com o multi-loja (que vendia todos), gerando `netSavings` negativo e forçando `single_store` mesmo em `balanced` e `max_savings`, descartando os outros itens como "Itens sem preço recente".
+     - No frontend, o `handleAddToCart` não capturava valores numéricos ou de ocorrências como fallback, e o auto-heal do carrinho não preenchia o `estimatedPrice`.
+  2. **Implementação da Solução:**
+     - [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts): Identificação granular de produtos sem preço no raio (`unpricedProductIds`), expandindo a busca por preços em todos os mercados cadastrados e incorporando mercados com itens exclusivos às combinações multi-loja.
+     - Ajuste na regra de decisão: quando a rota multi-loja cobre mais itens que qualquer loja única (`bestMulti.coveredCount > bestSingle.coveredCount`), o sistema prioriza o atendimento completo do carrinho nos modos `balanced` e `max_savings`.
+     - Itens não atribuídos à rota (`unassignedItems`) agora são enriquecidos com `unitPrice`, `marketName` e mensagem explicativa ("Disponível no Mercado X por R$ Y,YY").
+     - [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx): Auto-heal aprimorado para recuperar `estimatedPrice` e exibição dinâmica de itens disponíveis fora da rota selecionada vs produtos verdadeiramente sem cotação.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx): Suporte a preços numéricos e fallback para a menor cotação em `occurrences`.
+     - Internacionalização nos 7 idiomas com as novas chaves `itemsOtherStores`, `itemsMixedUnassigned` e `noPriceRegistered`.
+  3. **Qualidade & Versionamento SemVer:**
+     - 17 testes de backend e 15 testes de integração/concorrência passando (32 no total), 0 erros de tipagem (`npm run typecheck`), SemVer incrementado para `v1.3.8` (`versionCode: 24`).
+- **Deploy e Hospedagem Completa do Servidor no Ambiente Oficial CTI (`ra2457045`):**
+  1. **Configuração e Autenticação SSH/SFTP:**
+     - Chave privada OpenSSH salva com permissões estritas `600` em [`deploy/cti.key`](file:///Users/aventureiromax/INI3A-EQ3/deploy/cti.key).
+     - Conexão autenticada com sucesso via porta `4026` em `projetoscti.com.br` para o usuário `ra2457045`.
+  2. **Parametrização de Portas e Proxy Reverso Apache:**
+     - Identificada a porta exclusiva primária `59057` via ferramenta oficial do CTI (`https://vitor.projetoscti.com.br/portas.php?ra=2457045`), agora confirmada como `EM USO (Por você)`.
+     - [`ecosystem.config.cjs`](file:///Users/aventureiromax/INI3A-EQ3/ecosystem.config.cjs): Parametrizado para ler `SERVER_PORT` dinamicamente do ambiente, subindo o backend em `127.0.0.1:59057`.
+     - [`deploy/deploy.sh`](file:///Users/aventureiromax/INI3A-EQ3/deploy/deploy.sh): Sincronização automática do arquivo `.htaccess` para `/home/ra2457045/public_html/.htaccess` com proxy reverso transparente (`RewriteRule ^(.*)$ http://127.0.0.1:59057/$1 [P,L]`).
+  3. **Conexão de Banco de Dados, Redis e Migrações:**
+     - Backend conectado com sucesso ao banco de dados PostgreSQL com PostGIS ativo (`26-presco` na porta `54432`).
+     - Migrações, seeds idempotentes e realocação de 193 mercados executadas com sucesso.
+     - Sessões e cache conectados ao Upstash Redis com fallback seguro para `InMemoryStore`.
+  4. **Rotas e Validação Pública:**
+     - Adicionada rota raiz em [`src/backend/src/app.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/app.ts) atendendo `/`, `/index.html` e `/index.php` com metadados e diretório da API.
+     - Endpoints públicos testados e 100% funcionais em HTTPS:
+       - `https://ra.projetoscti.com.br/2457045/` (200 OK, metadados da API)
+       - `https://ra.projetoscti.com.br/2457045/health` (200 OK, `database: connected`, `redis: connected`)
+       - `https://ra.projetoscti.com.br/2457045/products` (200 OK, listagem de produtos)
+       - `https://ra.projetoscti.com.br/2457045/markets` (200 OK, catálogo geodésico)
+       - `https://ra.projetoscti.com.br/2457045/api/v1` (200 OK)
+     - Gerenciador de processos PM2 daemonizado e persistido com `pm2 save`.
+- **Integração de Capturas de Tela Oficiais em Alta Resolução (`src/landing`):**
+  1. **Padronização e Otimização de Nomes dos Ativos:**
+     - Arquivos brutos em ultra resolução renomeados com nomenclatura semântica descritiva:
+       - `print-home.jpg` (1206x3644): Feed inicial com radar geodésico de 15km e ofertas inteligentes.
+       - `print-cart.png` (1206x4423): Otimizador multilojas e cálculo de combustível, higienizado via script Swift (`NSImage`/`CGImage`) para remover marca d'água externa de costura ("Tailor 3 Screenshots Stitched") mantendo intacta a navegação nativa.
+       - `print-search.jpg` (1206x4393): Catálogo de produtos com busca dinâmica e categorias.
+       - `print-product.jpg` (1206x5336): Detalhes de produto, comparativo entre redes, histórico de preços e votos da comunidade.
+       - `print-profile.jpg` (1206x3877): Perfil gamificado com nível 3 Detetive de Ofertas, 460 XP, conquistas e heatmap semanal.
+       - `print-settings.jpg` (1206x6436): Central de segurança e privacidade com 2FA ativo, modo AMOLED, perfil anônimo e exclusão LGPD.
+       - `print-scanner.jpg`: Scanner óptico EAN-13 via câmera.
+  2. **Adaptação Completa dos Componentes da Landing Page:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx): Adicionada a aba interativa de Catálogo (`search`) e mapa completo das 7 telas em alta definição.
+     - [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx): Grade responsiva atualizada com `print-cart.png` e `print-search.jpg`.
+     - [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx): Passo 03 agora referencia `print-cart.png` em alta definição.
+     - [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx): Moldura de configurações alimentada com `print-settings.jpg`.
+  3. **Qualidade & Validação:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor Metro ativo e respondendo na porta 8082.
+- **Correção de Encavalamento e Alinhamento no Rodapé/Menu dos Cards da Lista de Compras (`v1.3.7`):**
+  1. **Diagnóstico do Encavalamento Horizontal:**
+     - No componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), a barra inferior de métricas (`cardFooter`) continha três colunas sem `flex: 1` e sem delimitadores (`footerCol`), fazendo com que textos em caixa alta extensos ("SUBTOTAL DE PRODUTOS" e "CUSTO DE DESLOCAMENTO") colidissem sem qualquer espaçamento horizontal (`SUBTOTAL DE PRODUTOSCUSTO DE DESLOCAMENTOTOTAL DA P...`), empurrando a terceira coluna ("TOTAL DA PARADA" e o valor "R$ 10,14") para fora da tela.
+  2. **Refatoração para Distribuição Balanceada, Divisores e Alinhamento Simétrico:**
+     - [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx): `footerCol` atualizado com `flex: 1`, `alignItems: "center"`, `justifyContent: "center"`, `paddingHorizontal: 4` e `gap: 4`.
+     - Inseridos divisores verticais (`footerDivider`) de 28px de altura com `semantic.colors.border.default` entre as colunas, estabelecendo uma separação límpida e harmônica.
+     - `footerLabel` recebeu `textAlign: "center"`, `numberOfLines={2}` e `minHeight: 26` com `lineHeight: 13`. Isso garante que rótulos de 1 ou 2 linhas ocupem rigorosamente a mesma altura vertical, alinhando todos os valores numéricos (`footerValue` e `footerValueTotal`) na exata mesma linha horizontal.
+     - [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx): Aplicado o mesmo padrão de alinhamento com `numberOfLines={2}`, `minHeight: 26` e `paddingHorizontal: 4` nas colunas de métricas superiores.
+     - Internacionalização: Adicionada a chave `stopTotal` em `types.ts` e nos 7 idiomas do projeto (`pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`), eliminando o texto hardcoded em português.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.7` (`versionCode: 23`).
+- **Redesign da Landing Page: Fusão ClickUp (SaaS & Interatividade) + Too Good To Go (Comunidade & Alimentação) (`src/landing`):**
+  1. **Atmosfera Visual Deep Forest & Warm Cream com Amarelo Oficial:**
+     - Paleta combinando **Deep Forest Slate** (`#0A1612`, `#112620`, `#1D3F35`), **Modo AMOLED puro** (`#000000`, `#07120E`) e o **Modo Claro em tom Marfim/Creme acolhedor** (`#FBF9F4`, `#F2EDE3`, `#0D211A`), inspirado no Too Good To Go.
+     - Destaque vibrante com o **Amarelo e Ouro Presco Oficial** (`#FFB703` / `#F5B731`) em botões de ação (CTAs), badges luminosos, abas ativas e realces.
+  2. **Showcase Interativo Central Estilo ClickUp Product Tour:**
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) e [`HeroSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HeroSection.tsx) reformulados com seletor superior de abas dinâmicas permitindo explorar interativamente os prints reais do app: Carrinho e Rotas de Combustível, Scanner de Gôndola EAN-13, Menor Preço Local e Radar PostGIS de 15km.
+  3. **Jornada do Consumidor em 3 Passos (Too Good To Go):**
+     - Criado componente [`HowItWorksSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/HowItWorksSection.tsx) estruturando os 3 passos de valor: 01. Descubra no Radar 15km ➔ 02. Aponte na Gôndola (OpenFoodFacts) ➔ 03. Economize no Caixa & na Gasolina (Otimizador Multilojas).
+  4. **Ticker de Impacto Comunitário:**
+     - Criado componente [`ImpactStatsSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ImpactStatsSection.tsx) com cartões elegantes destacando: R$ 38,70 de economia média semanal, 15km de cobertura PostGIS, 100% de código aberto e 2FA via Resend.
+  5. **Navegação & Estabilidade:**
+     - [`Header.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/Header.tsx) atualizado com links estilo pílula SaaS (`Como Funciona`, `Telas do App`, `Recursos`, `Proteção & LGPD`, `FAQ`), botão de tema e CTA amarelo.
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`), servidor ativo em `http://localhost:8082`.
+- **Filtros de Estratégia Empilhados Verticalmente ("Um em Cima do Outro") para Idiomas Extensos (`v1.3.6`):**
+  1. **Diagnóstico da Truncagem e Falta de Espaço Horizontal:**
+     - No componente [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx), as 3 estratégias de otimização ("Máxima Economia", "Equilibrado", "Loja Única") eram dispostas horizontalmente dividindo a largura da tela em 3 partes de ~100px.
+     - Em idiomas com palavras extensas (como alemão "Maximale Ersparnis" / "Ausgewogene Route" / "Einzelnes Geschäft", ou russo "Максимальная экономия" / "Сбалансированный"), o texto ficava truncado com reticências (`ellipsizeMode="tail"`) ou colidia com os ícones.
+  2. **Refatoração para Layout Vertical Stacked:**
+     - [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx): `strategyPillContainer` transformado em `flexDirection: "column"` com `gap: 6` e `padding: 6`.
+     - Cada opção de estratégia agora é um card de largura total (`width: "100%"`), com ícone à esquerda, texto com largura completa (`flexShrink: 1` e sem truncagem artificial) e indicador de seleção à direita (`checkmark-circle` quando ativo e `ellipse-outline` quando inativo).
+     - Na linha de paradas máximas (`controlsRow`), adicionado `flexWrap: "wrap"` e `gap: 8` para evitar colisão de títulos longos com as pílulas numéricas.
+     - Em [`profile.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/profile.tsx): `badgeFilterRow` recebeu `flexWrap: "wrap"` e `rowGap: 8` para garantir que filtros de conquistas também quebrem em pilha vertical confortavelmente quando traduzidos.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.6` (`versionCode: 22`).
+- **Espaçamento e Respiração Visual nos Filtros e Chips para Suporte a Múltiplos Idiomas (`v1.3.5`):**
+  1. **Diagnóstico da Compressão em Idiomas Longos:**
+     - Em idiomas com palavras extensas (como alemão, russo e expressões longas em português e espanhol), chips e seletores de categorias ficavam encavalados horizontal e verticalmente devido a `gap: 8` e `paddingHorizontal: 10~12`, causando sensação de texto amontoado e quebras desconfortáveis.
+  2. **Ajustes de Espaçamento e Margem Interna:**
+     - [`search.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/search.tsx): `categoriesScroll` ampliado para `gap: 10`, `categoryChip` com `paddingHorizontal: 14`, `paddingVertical: 8` e `gap: 8` entre emoji e texto.
+     - [`CategorySelector.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/CategorySelector.tsx): `horizontalScroll` ampliado para `gap: 10`, `chip` com `paddingHorizontal: 14`, `paddingVertical: 9`, `selectedScroll` com `gap: 8` e `selectedPill` com `paddingHorizontal: 12`, `paddingVertical: 6` e `gap: 6`.
+     - [`help.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/help.tsx): `categoriesContainer` com `gap: 10` e `categoryChip` com `paddingHorizontal: 14`, `paddingVertical: 9` e `gap: 8`.
+     - [`profile.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/profile.tsx): `badgeFilterRow` com `gap: 10`, `badgeFilterChip` com `paddingHorizontal: 14`, `paddingVertical: 7`, `categoryTabsScroll` com `gap: 10` e `categoryTabChip` com `paddingHorizontal: 14`, `paddingVertical: 8` e `gap: 8`.
+     - [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx): `periodChipsContainer` com `gap: 10` e `periodChip` com `paddingHorizontal: 16` e `paddingVertical: 7`.
+     - [`registerProduct.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/registerProduct.tsx): `marketsScroll` com `gap: 10` e `marketChip` com `paddingHorizontal: 14` e `paddingVertical: 8`.
+     - [`OpenFoodFactsStatusTab.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OpenFoodFactsStatusTab.tsx): `filterPillsRow` com `gap: 10`, `rowGap: 8`, `flexWrap: "wrap"` e `filterPill` com `paddingHorizontal: 14`, `paddingVertical: 7`.
+     - [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx): `strategyPillContainer` com `gap: 4` e `strategyTab` com `paddingHorizontal: 6`, `paddingVertical: 7` e `gap: 5`.
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de testes passando (`30 passing`), SemVer incrementado para `v1.3.5` (`versionCode: 21`).
+- **Transição para Amarelo Oficial do Presco (`#FFB703`) e Galeria de Prints Reais do App (`src/landing`):**
+  1. **Substituição da Cor de Destaque para o Amarelo/Gold Oficial:**
+     - Atualizados os tokens em [`colors.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/theme/colors.ts) para utilizar o amarelo característico do app (`brand.yellow500` `#FFB703`, `yellow600` `#F59E0B` e `goldAccent` `#F5B731`), presente no `DEFAULT_ACCENT_DARK` do app e na identidade visual.
+     - Botões primários de ação, badges, realces luminosos, indicador do radar, laser do scanner e sombras agora irradiam o amarelo oficial do Presco.
+  2. **Inclusão de Prints Reais do Aplicativo Móvel:**
+     - Gerados e salvos em `src/landing/assets/prints/` os prints oficiais do Presco no Android:
+       - `print-cart.jpg`: Otimizador Multilojas de Carrinho com divisão entre Atacadão e Assaí, hero card de economia e cálculo de combustível.
+       - `print-scanner.jpg`: HUD da câmera com laser amarelo lendo código de barras de gôndola e produto reconhecido via OpenFoodFacts.
+       - `print-product.jpg`: Tela de menor preço com gráfico de variação histórica, comparativo entre mercados e selo 2FA.
+     - [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) atualizado para carregar diretamente as capturas reais de tela do app na moldura interativa.
+     - Criada a nova seção [`ScreenshotsGallerySection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ScreenshotsGallerySection.tsx) expondo o design das telas em alta resolução com cards detalhados.
+  3. **Qualidade e Estabilidade:**
+     - 0 erros no typecheck (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`).
+- **Refatoração Completa da Landing Page com Identidade Presco, Mockup Interativo e Políticas (`src/landing`):**
+  1. **Harmonização Fiel com o Design System Oficial (`DESIGN.md`):**
+     - Substituídas cores e estilos anteriores por tokens oficiais do Presco: paleta `brand.emerald` (`#10B981`, `#059669`, `#2E7D32`), superfícies `darkPalette` (`#0D1117`), `amoledPalette` (`#000000`), `lightPalette` (`#F5F7F2`) e tipografia responsiva.
+     - Adicionado alternador dinâmico de temas na barra superior com memorização da preferência do usuário em `localStorage`.
+  2. **Ativos Reais e Mockup Interativo de Smartphone:**
+     - Integrados os logos oficiais em alta resolução (`logo-darkmode.png`, `logo-presco.png`), ícones e banners em `src/landing/assets/`.
+     - Criado componente [`PhoneMockup.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PhoneMockup.tsx) com moldura realista de smartphone que permite navegar de forma interativa por 4 telas reais do aplicativo: Otimizador de Carrinho e Rota de Combustível, Menor Preço Local com Quórum de Confirmação, Leitor de Gôndola EAN-13 e Radar PostGIS de Proximidade (15km).
+  3. **Sistema Completo de Proteção e Central de Políticas (LGPD/Termos):**
+     - Criada seção [`SecurityProtectionSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/SecurityProtectionSection.tsx) detalhando o Quórum Comunitário Anti-Fraude, 2FA com códigos OTP via Resend, Geofencing PostGIS e conformidade estrita com a LGPD.
+     - Criado modal interativo [`PolicyModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/PolicyModal.tsx) com 4 abas completas: Termos de Uso, Política de Privacidade e LGPD (Lei 13.709/2018), Diretrizes da Comunidade / Moderação de Preços e Política de Armazenamento Local.
+     - Criado banner de consentimento [`ConsentBanner.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/ConsentBanner.tsx) para LGPD e armazenamento local.
+  4. **Hub de Download e FAQ:**
+     - Criada área de download [`DownloadSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/DownloadSection.tsx) com QR Code para leitura por câmera e download do APK `v1.3.3`.
+     - Criado accordion de perguntas frequentes [`FaqSection.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/FaqSection.tsx) e rodapé completo [`Footer.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/components/Footer.tsx).
+  5. **Qualidade e Estabilidade:**
+     - 0 erros no typecheck da landing (`npx tsc --noEmit --project src/landing/tsconfig.json`) e 0 erros no typecheck global (`npm run typecheck`). Metro bundler compila 100% com sucesso em `http://localhost:8082`.
+- **Resolução do Design Encavalado na Lista e Recuperação de Nomes Reais de Produtos (`v1.3.4`):**
+  1. **Diagnóstico e Resolução do Design Encavalado (Textos Muito Próximos):**
+     - Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), os cards empilhavam `subtotalWrap` ("Total (10x) R$ 20,00"), o stepper `[-] 10 [+]` e o botão "Trocar loja" em uma coluna estreita à direita com apenas 4px de gap e 0px de margem interna, comprimindo a coluna do título do produto para menos de 150px e fazendo os textos colidirem verticalmente.
+     - Implementado layout espaçoso em duas zonas: Zona Superior com Imagem (48x48 rounded-xl), Informações do Produto (`flex: 1` com título em `fontSize: 14`, `lineHeight: 19` e badge de oferta) e Subtotal à direita com etiqueta e valor destacados; Zona Inferior de Ações com linha dedicada contendo o seletor de supermercado ("Trocar loja") e o stepper com botões confortáveis e 30px de altura.
+     - Ajustados `header` (margem no título e wrap nas métricas) e `cardFooter` (espaçamento e `lineHeight` confortáveis).
+     - Em [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) e [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx), corrigidos os espaçamentos das listas brutas (`rawItemCard`), banners de itens não atribuídos (`unassignedBox`) e métricas comparativas com `lineHeight` e margens de respiração entre 4px e 8px.
+  2. **Diagnóstico e Resolução de Produtos Exibidos como "Produto #70":**
+     - **Causa Raiz 1 (Frontend):** O método `cartService.optimizeCart` mapeava os itens apenas com `{ productId, quantity }`, descartando `name` e `icon` do payload enviado ao endpoint de otimização.
+     - **Causa Raiz 2 (Backend):** Em [`cart.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts), quando o produto não possuía ocorrência recente de preço nos mercados do raio, o backend recorria a `c.productName || \`Produto #${c.productId}\``, gerando "Produto #70".
+     - **Correção no Backend:** Criado método `getProductsBasicInfo` em [`ProductRepository`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/product.repository.ts). Antes da otimização, o backend detecta qualquer produto sem nome ou com fallback e busca o nome e ícone oficiais diretamente na tabela `product`.
+     - **Correção no Frontend:** [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts) agora envia `productName`, `productIcon` e `estimatedPrice`. Além disso, [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) enriquece a resposta da otimização mapeando os nomes reais dos itens ativos e executa auto-healing consultando `fetchProductById` para regenerar qualquer item do storage legado que estivesse salvo com o texto "Produto #...".
+  3. **Qualidade & Versionamento SemVer:**
+     - 0 erros de tipagem (`npm run typecheck`), 100% de aprovação na suíte completa de testes (`30 passing`), versão sincronizada para `v1.3.4` (`versionCode: 20`).
+- **Suíte Abrangente de Estabilidade Mobile com Maestro (Nativo & Docker) & Blindagem Pré-Push:**
+  1. **Suíte Completa de Ponta a Ponta (`11_full_app_stability_suite.yaml`):**
+     - Criado fluxo automatizado abrangente que percorre 100% da aplicação: Onboarding em 7 etapas (incluindo a nova etapa de carrinho inteligente), login 1-tap dev, exploração da home e carrossel de 6 banners, busca com debounce, detalhes de produto, votação de preços, otimizador de rota e compras multilojas (`/cart`), troca de estratégias, modais de viagem e rota, mapa PostGIS, perfil com loja de cosméticos, configurações, abas do admin, troca de temas Monet e logout limpo.
+  2. **Suporte a Execução em Docker & Scripts NPM:**
+     - Adicionado serviço `maestro` no [`docker-compose.yml`](file:///Users/aventureiromax/INI3A-EQ3/docker-compose.yml) baseado no [`tests/maestro/Dockerfile`](file:///Users/aventureiromax/INI3A-EQ3/tests/maestro/Dockerfile) com suporte a rede do host (`network_mode: host`) e comunicação direta via ADB.
+     - Atualizado runner [`run_maestro.sh`](file:///Users/aventureiromax/INI3A-EQ3/tests/maestro/run_maestro.sh) com detecção automática de ambiente nativo vs Docker.
+     - Scripts npm adicionados: `npm run test:maestro` (execução padrão), `npm run test:maestro:full` (suíte completa de estabilidade) e `npm run test:maestro:docker` (execução autocontida no Docker).
+  3. **Axioma de Teste Mandatório com Maestro para Frontend:**
+     - Estabelecido nas diretrizes de governança ([`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) e preferências) que qualquer alteração que infira no frontend mobile (`src/frontend/**`) **DEVE obrigatoriamente ser testada via Maestro antes do commit e push para o remoto**.
+- **Otimização dos Workflows de CI/CD & Desacoplamento de Builds de APK:**
+  1. **Redução Drástica do Tempo de Execução no GitHub Actions:**
+     - A compilação completa de APKs Android via Gradle (`build_staging_apk` em `staging.yml` e `build_production_apk` em `production.yml`) foi desacoplada de pushes automáticos, preservando a esteira rápida e focada em garantir que o commit não quebre o projeto.
+     - A esteira automática em `dev` executa validação estrita de tipos (`typecheck`), suíte completa de testes unitários e testes de concorrência. Em `main`, executa testes de contrato, suíte completa e deploy seguro do backend.
+     - Compilações completas de APK Android (`devFlavor` e `prodFlavor`) passam a ser acionadas estritamente de forma manual sob demanda via `workflow_dispatch` com input `build_apk: true` e aceleração com `gradle/actions/setup-gradle@v4`.
+- **Regra Absoluta de Abertura de PR, Validação de CI e Merge via GitHub CLI (`gh`):**
+  1. **Axioma do Ciclo Completo de PR:**
+     - O agente NUNCA deve dar uma tarefa por concluída apenas subindo a branch.
+     - O agente DEVE obrigatoriamente abrir o Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
+     - O agente DEVE acompanhar e validar ativamente a execução dos testes no CI (`gh pr checks <PR> --watch`).
+  2. **Merge via CLI `gh`:**
+     - Se os testes passarem (`SUCCESS`), o agente DEVE utilizar a CLI `gh` da máquina do usuário para realizar o merge em `dev` (`gh pr merge --squash`).
+     - Se os testes falharem, o agente DEVE investigar a causa raiz, corrigir o código e revalidar.
+  3. **Pré-requisito Obrigatório de Autenticação (`gh auth status`):**
+     - O agente deve verificar se o GitHub CLI está autenticado. Caso o `gh` não esteja configurado, o agente DEVE pausar a automação e solicitar ao usuário que execute `gh auth login`.
+  4. **Atualização da Governança Multi-Agente & Memória:**
+     - Atualizados [`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md) (Seção 8.3), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules) (Seção 3), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) (Seção 6), [`.agents/memory/user-preferences.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/user-preferences.md) e [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md).
+- **Política de Isolamento Estrito de Escopo por Chat para Commits e Push:**
+  1. **Regra de Isolamento Cirúrgico:**
+     - Quando o usuário solicitar comandos de commit ou push (ex: "commita", "dá push", "faça commit e push"), o agente deve comitar e subir **estritamente e exclusivamente os arquivos modificados ou criados na sessão do chat em que a ordem foi dada**.
+     - É terminantemente proibido o uso de `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
+     - O agente deve inspecionar os arquivos manipulados no chat atual e fazer `git add <arquivo1> <arquivo2> ...` apenas para esses arquivos específicos.
+     - Quaisquer alterações pendentes na working tree pertencentes a outros chats, sessões concorrentes ou tarefas paralelas devem permanecer ignoradas e intocadas (unstaged).
+  2. **Atualização da Governança Multi-Agente & Memória:**
+     - Atualizados [`.agents/AGENTS.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/AGENTS.md) (Seções 6.1 e 8.1), [`.cursorrules`](file:///Users/aventureiromax/INI3A-EQ3/.cursorrules) (Seção 1), [`.agents/rules/code-rules.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/rules/code-rules.md) (Seção 4), [`.agents/memory/user-preferences.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/user-preferences.md) e [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md).
+- **Correção da Exibição de Preço Unitário vs Subtotal no Carrinho & Preservação do Preço Cadastrado (`v1.3.4`):**
+  1. **Diagnóstico da Causa Raiz do "Preço a R$ 20,00 a unidade":**
+     - **Ambiguidade Visual no Card:** Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), o subtotal multiplicado (R$ 20,00 para 10 unidades de R$ 2,00) era exibido diretamente em negrito acima do seletor numérico `[-] 10 [+]` sem nenhum rótulo textual de "Total" ou "Subtotal", e o preço unitário na coluna esquerda não possuía o sufixo `/ un.`. O cérebro do usuário lia o destaque numérico `R$ 20,00` colado ao `10` como se fosse o preço por unidade.
+     - **Preço Fictício no Fallback de Simulação:** Quando o GPS demorava para obter coordenadas ou o endpoint remoto não encontrava ocorrências no raio estrito de 15 km da localização padrão de São Paulo, o fallback gerava um preço pseudo-aleatório via fórmula matemática `((productId * 13) % 18) + 6.5` que para produtos com ID 65 resultava literalmente em R$ ~20,00 a unidade!
+     - **Perda do Preço no Adicionar ao Carrinho:** O método `addToCart` em [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx) descartava o preço real (`product.bestPrice` / `product.lastPrice`) e não gravava o valor estimado no AsyncStorage.
+  2. **Solução Implementada no Frontend:**
+     - **Clareza Visual Inconfundível:** Em [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx), o preço unitário agora exibe expressamente `R$ 2,00 / un.`, e o valor da direita possui o rótulo `Total (10x): R$ 20,00` posicionado acima do stepper.
+     - **Lista de Itens Brutos:** Em [`cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx), a lista de itens exibe o preço estimado unitário `R$ 2,00 / un.`.
+     - **Preservação do Preço Estimado:** `CartProductItem` agora armazena `estimatedPrice?: number`. Ao adicionar pelo [`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx), o preço cadastrado é convertido numericamente e salvo.
+     - **Prioridade no Fallback:** A simulação local em [`cartService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/cartService.ts) agora prioriza `it.estimatedPrice` em vez de fórmulas matemáticas arbitrárias.
+  3. **Aprimoramento no Backend (`cart.service.ts` e `cart.repository.ts`):**
+     - O repositório agora faz `innerJoin(Product)` retornando nome e ícone reais nas ocorrências.
+     - Caso os mercados no raio estrito de 15 km da localização do usuário não possuam ofertas para os produtos adicionados, o otimizador expande a busca para os mercados que possuem preços registrados para tais itens em vez de lançar `NotFoundError`, evitando quedas artificiais no fallback.
+- **Refatoração do Tutorial Inicial com Lista de Compras Inteligente & Otimizador Multilojas (`v1.3.3`):**
+  1. **Expansão do Fluxo Guiado para 7 Etapas:**
+     - O tutorial inicial ([`OnboardingTutorialModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OnboardingTutorialModal.tsx)) foi expandido de 6 para 7 etapas interativas.
+     - A etapa **Lista de Compras Inteligente & Rota Econômica** foi introduzida na posição 3 (entre Leitor de Gôndola EAN e Mapa de Mercados).
+     - Sequência completa: 1. Buscar & Comparar → 2. Leitor de Gôndola EAN → 3. Lista de Compras & Rota (NOVO) → 4. Mapa de Mercados → 5. Registrar Preços → 6. Auditoria Comunitária → 7. Níveis & Customização.
+  2. **Mockup Doodle Artesanal com Tematização Monet:**
+     - Criado card doodle estilizado (`case 2`) representando o carrinho inteligente: cabeçalho com selo "Máxima Economia", divisão visual entre supermercados com checkmarks e preços comparativos, banner de rota veicular com combustível e carimbo destacado de economia líquida.
+     - Estilo 100% harmonizado com os tokens de design do Presco (`useTheme()`) suportando Light Mode, Dark Mode e AMOLED.
+     - Acessibilidade reforçada: adicionados `accessibilityLabel="Pular tutorial"` e `testID="dismiss-tutorial-button"`.
+  3. **Internacionalização Completa em 7 Idiomas:**
+     - Chaves tipadas `screen7Title`, `screen7Subtitle`, `screen7Badge` e `screen7Tip` adicionadas ao namespace `onboarding` em [`types.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/i18n/types.ts).
+     - Sincronização e tradução contextual nos 7 idiomas do Presco: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN` e `ja-JP`.
+     - Atualizada a chave `replayTutorialDesc` na tela de configurações para mencionar a lista de compras.
+  4. **Qualidade & Versionamento SemVer:**
+     - Sincronização SemVer de versão para `v1.3.3` (`versionCode: 19`), 0 erros no typecheck (`npm run typecheck`), 0 erros de lint (`npm run lint`) e 100% de aprovação na suíte de testes unitários e de concorrência (`30 passing`).
+- **Expansão dos Banners do Carrossel da Home com Navegação Interativa e i18n Completo (`v1.3.2`):**
+  1. **Novos Banners Adicionados:**
+     - **Banner 4 (Otimizador de Carrinho):** Destaque para a funcionalidade de otimização de compras e combustível, com rota direta para `/cart`.
+     - **Banner 5 (Leitor de Código de Barras):** Destaque para a consulta instantânea por câmera de códigos EAN-13, com rota direta para `/scannerProduct`.
+     - **Banner 6 (Conquistas e Recompensas):** Destaque para o sistema de gamificação comunitária, XP e cosméticos, com rota direta para `/profile`.
+  2. **Interatividade & Feedback Háptico:**
+     - Os cards do carrossel foram tornados tocáveis (`TouchableOpacity` com `activeOpacity: 0.88`), integrados a feedback háptico leve (`Haptics.impactAsync`) e roteamento dinâmico via Expo Router.
+     - Adicionado indicador visual de ação (`bannerActionRow` com ícone de seta/chevron contextual na cor de destaque `accent`).
+  3. **Internacionalização (i18n) em 7 Idiomas:**
+     - Chaves adicionadas em `src/frontend/i18n/types.ts` e traduzidas nos 7 idiomas suportados: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`.
+  4. **Qualidade & Versionamento:**
+     - Sincronização SemVer de versão para `v1.3.2` (`versionCode: 18`), 0 erros no typecheck e 100% de aprovação na suíte de testes unitários e de concorrência.
+- **Correção de Layout ("Design Encavalado") e Simulação de Fallback Offline no Carrinho (`v1.3.1`):**
+  1. **Diagnóstico da Causa do Erro "Offline":**
+     - O servidor remoto em `https://eq.projetoscti.com.br/26-presco` está online e saudável (`/health` retorna 200 OK com banco e Redis operacionais).
+     - No entanto, a nova API do otimizador (`POST /cart/optimize`) foi implementada localmente nesta branch e **ainda não foi publicada no servidor remoto de produção**.
+     - A requisição do app para o servidor retornava `HTTP 404 Not Found (Cannot POST /cart/optimize)`, o que disparava a mensagem de banner "Modo Local (Offline)".
+     - Implementado gerador automático de simulação local no `cartService.ts` com base nos itens do carrinho, calculando rotas, divisões em supermercados e economia estimada mesmo quando o servidor remoto ainda estiver rodando a versão anterior (404) ou sem rede.
+  2. **Diagnóstico e Resolução do Design "Encavalado" (Sobreposições e Conflitos Visuais):**
+     - **Header Duplo:** O layout raiz `_layout.tsx` já renderiza o `<Header />` global com botão voltar, logo, ícone do carrinho e configurações. A tela `cart.tsx` possuía uma segunda barra de navegação com `paddingTop: insets.top + 8` e outro botão de voltar, criando dois headers empilhados e duplicados. O header duplicado foi removido, sendo substituído por um cabeçalho contextual elegante dentro do próprio `ScrollView`.
+     - **Colisão do Rodapé (BottomBar vs Footer):** A `bottomBar` possuía `position: "absolute", bottom: 0` e `paddingBottom: insets.bottom`, colidindo com o componente `<Footer />` já renderizado globalmente pelo `_layout.tsx`. Foi convertida para posicionamento normal ancorado no rodapé da visualização flex, com espaçamento limpo acima do `Footer`.
+     - **Controle de Estratégias Responsivo:** Em telas compactas (< 375px), o container de estratégia (`OptimizationStrategyControl.tsx`) tinha overflow de largura. Adicionado `flexWrap: "wrap"` no topo e `numberOfLines={1}` com `ellipsizeMode="tail"` nas abas para eliminar quebras de linha irregulares.
+     - **Itens Rápidos:** Ajustado espaçamento no card de produto para telas estreitas.
+- **Resolução de Loop Infinito de Carregamento e Fallback Offline do Carrinho (`v1.3.1`):**
+  1. **Diagnóstico da Causa Raiz:** A função `runOptimization` possuía `[cartItems, settings]` como dependências e estava presente na lista de dependências do `useEffect` principal. Ao carregar itens locais, `setCartItems` gerava uma nova referência de array, que recriava `runOptimization`, disparando novamente o `useEffect`, o qual executava `setLoading(true)`, prendendo o componente em loop infinito de carregamento ("Carregando sua lista..."). Além disso, o término de `loading` aguardava a requisição de rede e GPS da otimização, e não havia renderização de fallback caso a otimização retornasse nula (offline/servidor inacessível).
+  2. **Correção de Arquitetura & UX Offline-First:**
+     - Desacoplado o carregamento local inicial (`setLoading(false)` imediato em < 5ms a partir do `AsyncStorage`), permitindo exibição instantânea dos itens.
+     - `triggerOptimization` estabilizado com referências atômicas (`useRef`), executando em background sem travar a interface e sem re-renderizações cíclicas.
+     - Implementada lista de itens de fallback (`fallbackListContainer`) renderizada caso o servidor esteja desconectado ou a otimização esteja pendente, permitindo alterar quantidades, excluir itens e tentar re-otimizar com 1 toque.
+     - Versão corrigida para `v1.3.1` (`versionCode: 17`), com 0 erros no typecheck e 100% de testes passando.
+- **Smart Multi-Store Shopping List & Travel Cost Optimizer (`v1.3.0`):**
+  1. **Motor de Otimização Multilojas & Custo de Viagem:**
+     - Implementado algoritmo de decisão de alocação de itens com trade-off financeiro estrito: $\Delta P > \Delta C_{\text{travel}} + P_{\text{convenience}}$.
+     - Suporte a 3 estratégias de otimização: Economia Máxima (`max_savings`), Modo Balanceado (`balanced` com limiar de conveniência configurável em R$) e Loja Única (`single_store`).
+     - Integração com a HERE Routing API v8 (`router.hereapi.com/v8/routes`) para cálculo da rota veicular real (distância em metros e tempo em segundos), com fallback geodésico Haversine e tortuosidade urbana de 1.35x.
+     - Suporte a múltiplos stops com ordenação ótima heurística TSP (Travelling Salesperson Problem) e circuito fechado de ida e volta (round-trip) para modelagem realista de combustível.
+  2. **Camada de Banco de Dados & Backend (Express 5 / Drizzle ORM):**
+     - Adicionado campo `quantity: integer("quantity").default(1).notNull()` na tabela `cart_product` com migração Drizzle `0004_add_cart_product_quantity.sql`.
+     - Criado [`CartRepository`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/cart.repository.ts) com suporte a criação/recuperação atômica de carrinho por usuário, agregação com fotos e nomes de produtos, e consulta analítica de menores preços cruzados em supermercados ativos.
+     - Criados serviço [`CartService`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.service.ts), controlador [`cart.controller.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.controller.ts) e rotas em [`cart.routes.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/cart/cart.routes.ts) montadas em `/cart` no `app.ts` (`GET /cart`, `POST /cart/items`, `PUT /cart/items/:productId`, `DELETE /cart/items/:productId`, `DELETE /cart`, `POST /cart/optimize`).
+  3. **Interface Mobile (React Native / Expo SDK 57 / Monet Design Tokens):**
+     - Criada tela completa do carrinho [`app/cart.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/cart.tsx) com lista interativa de produtos, pull-to-refresh, cards agrupados por supermercado, badge dinâmico de economia líquida e atalhos rápidos.
+     - Componentes dedicados: [`SavingsHeroCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/SavingsHeroCard.tsx) (comparativo dinâmico de loja única vs multilojas), [`OptimizationStrategyControl.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/OptimizationStrategyControl.tsx) (seleção háptica de estratégia), [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) (stepper de quantidade, realocação manual entre lojas, visualização de subtotal e distância), [`TravelSettingsModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/TravelSettingsModal.tsx) (autonomia km/L, preço combustível R$/L, raio máx, ida e volta) e [`RoutePreviewModal.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/RoutePreviewModal.tsx) (ordem dos stops, distância total e launcher para Google Maps / Waze / Apple Maps).
+     - Integrações no Header ([`Header.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/Header.tsx)) com ícone do carrinho e contador badge em tempo real, e na tela de detalhes ([`productDetails.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/productDetails.tsx)) com stepper de quantidade e botão "Adicionar à Lista".
+     - Suporte a internacionalização completa nos 7 idiomas do Presco (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
+  4. **Testes Automatizados & Versionamento:**
+     - Criada suíte unitária do otimizador em [`tests/cartOptimizer.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/tests/cartOptimizer.test.ts) e testes de integração em [`src/backend/tests/cart.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/tests/cart.test.ts) validando todos os Critérios de Aceitação.
+     - 100% de aprovação nos testes e 0 erros no typecheck. Versão sincronizada para `v1.3.0` (`versionCode: 16`).
+- **Governança de Branches, Automação via GitHub CLI, Blindagem de Testes e Multi-Ambiente Mobile:**
+  1. **Governança Remota no GitHub (`gh`):**
+     - Habilitada exclusão automática de branches pós-merge (`delete-branch-on-merge = true`).
+     - Habilitado merge estrito via auto-merge e squash (`allow_auto_merge = true`, `allow_squash_merge = true`, `allowed_merge_methods: ["squash"]`).
+     - Criada branch remota `dev` a partir de `tests`.
+     - Criado Ruleset de Proteção (`protect-main-and-dev` / ID 23801428) para `main` e `dev` bloqueando deleções, force-pushes (`non_fast_forward`) e exigindo Pull Request obrigatório com resolução de threads e método squash.
+     - Ambientes GitHub configurados com políticas estritas de deploy: `production` restrito à branch `main`; `staging` restrito às branches `dev` e `tests`.
+  2. **Endurecimento de `AGENTS.md` e `.cursorrules` (Axiomas Inegociáveis):**
+     - **Axioma de Commits:** Sintaxe obrigatória `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+     - **Axioma de Criação de Branches:** Toda task nasce de `dev` sob `^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$`. Proibido ramificar de `main` (exceto hotfix de prod).
+     - **Axioma de Merge Autônomo:** Agentes nunca executam `git merge` local; ciclo exclusivo via `gh pr create` e `gh pr merge --auto --squash`.
+     - **Blindagem Anti-Tautologia & Zonas Protegidas:** Proibidos testes sem verificação de estado real ou mocks disfarçados; barreira de 80% de cobertura; diretórios estruturais de teste (`tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/`, `.github/workflows/`) protegidos contra relaxamento de thresholds ou asserções.
+  3. **Esteira de CI/CD em 4 Camadas no GitHub Actions (`.github/workflows/`):**
+     - **Camada 1 (`pr-gatekeeper.yml`):** SLA < 3 min. Lint de regex de branch, validação de commits, `npm run typecheck`, SAST com Semgrep e barreira de testes unitários.
+     - **Camada 2 (`staging.yml`):** Acionado por push em `dev`. Validação rápida e robusta de tipagem e suíte completa de testes (unitários e concorrência). A compilação completa do APK Android (`devFlavor`) foi otimizada para acionamento estritamente manual via `workflow_dispatch` com cache do Gradle, economizando tempo e recursos da esteira.
+     - **Camada 3 (`production.yml`):** Acionado por push em `main`. Validação de contrato, typecheck e testes de produção, com deploy autônomo e seguro no servidor remoto via `scripts/deploy_remote.sh`. A compilação completa do APK de produção (`prodFlavor`) foi otimizada para acionamento estritamente manual via `workflow_dispatch`.
+     - **Camada 4 (`nightly-audit.yml`):** Cron diário às 02:00 UTC na branch `dev`. Executa testes em ambiente autocontido via Docker (independente do servidor CTI), simulação de carga real k6 com think time, testes de concorrência/resiliência, **acúmulo histórico de métricas de performance (`benchmark_history.json`)**, upload de artefatos com retenção de 90 dias (`report.html`, `summary.json`, logs) e abertura automática de Issue em caso de falha.
+  4. **Padronização e Higienização de Branches no Repositório Remoto:**
+     - Comprovado que 100% dos commits de `tests` foram incorporados a `dev` sem perda de histórico.
+     - A branch legada `tests` foi completamente removida do remoto e do local.
+     - O repositório opera exclusivamente sob o padrão de mercado com **`main`** (produção) e **`dev`** (desenvolvimento/staging).
+     - Todas as novas tarefas nascem como `feat/<nome>` a partir de `dev`, abrem Pull Request apontando para `dev` e sofrem squash merge.
+  4. **Suíte de Testes de Concorrência & Condições de Corrida (`tests/concurrency/race_conditions.test.ts`):**
+     - 4 cenários profundos: Rate Limiter atômico com 50 requisições simultâneas, Quorum de 25 votos simultâneos sem lost updates, Prevenção de saldo negativo e duplicidade em compra de cosméticos, e Revogação atômica concorrente de tokens JTI.
+     - Adicionado script `"test:concurrency"` ao `package.json` e integrado ao `npm test`.
+  5. **Flavors/Variants Mobile Segregados (`src/frontend/app.config.js`):**
+     - Suporte dinâmico a `APP_VARIANT=development` / `staging` vs `production`, segregando package, nome do app, scheme e endpoints.
+- **Integração e Padronização da Skill SemVer (Agent Skills Spec - `agentskills/agentskills`):**
+  1. **Auditoria da Especificação Aberta:** Inspecionado o repositório oficial [agentskills/agentskills](https://github.com/agentskills/agentskills.git) ([agentskills.io](https://agentskills.io)), comprovando que ele define o padrão aberto de estrutura e metadados de Agent Skills (`SKILL.md`, YAML frontmatter com `name`, `description`, `when_to_use`, `allowed-tools`, `version`, `compatibility`, progressive disclosure e diretórios `scripts/`, `references/`, `templates/`), além do validador `skills-ref`.
+  2. **Criação da Skill Oficial `semver`:** Criada a pasta `.agents/skills/semver/` contendo [`SKILL.md`](file:///home/criper/Documents/projetos/INI3A-EQ3/.agents/skills/semver/SKILL.md) 100% conforme com a especificação do Agent Skills e com as convenções do Presco (SemVer 2.0.0, Conventional Commits, sincronização multi-pacote, e pipeline de release no GitHub Actions).
+  3. **Scripts & Ferramentas:** Adicionados scripts utilitários executáveis: `scripts/bump.sh` (ponte CLI para o script `scripts/bump_version.ts` do Presco) e `scripts/validate_semver.py` (validador regex de especificações SemVer 2.0.0).
+  4. **Guias & Templates:** Criados `references/semver-spec.md`, `references/conventional-commits.md`, `references/presco-release-policy.md` e template de release em `templates/release-notes.md`.
+  5. **Saneamento e Sincronização:** Atualizado o frontmatter de `.agents/skills/semantic-versioning/SKILL.md` para estrita conformidade, purgados arquivos espúrios (`validate-api.sh` e `api-scaffold.yaml`), atualizado o inventário em `ARCHITECTURE.md` (44 skills, 15 scripts), e regenerados com sucesso `manifest.json` e `manifest.lock.json` via `generate_manifest.py`.
+- **Infraestrutura Completa de Testes Automatizados Mobile (Maestro) & Carga/Comportamento Backend (Grafana k6) (`v1.2.0`):**
+  1. **Grafana k6 Test Suite (`tests/k6/`):**
+     - Cobertura profunda de 100% dos módulos do backend (`01_health_and_system`, `02_auth_lifecycle`, `03_catalog_and_search`, `04_contributions_and_prices`, `05_custom_products`, `06_markets_and_geospatial`, `07_gamification_and_shop`, `08_admin_moderation`, `09_image_optimization`).
+     - Simulação de comportamentos realistas de usuários (User Journeys): `anonymous_browser` (navegação e busca de ofertas), `active_collaborator` (registro de preços e votação comunitária) e `power_shopper` (descoberta de mercados próximos e personalização de perfil).
+     - Testes de estresse e picos de tráfego (`stress_test.js` até 100 VUs, `spike_test.js` simulando picos de tráfego instantâneos).
+     - Orquestrador principal [`main.js`](file:///home/criper/Documents/projetos/INI3A-EQ3/tests/k6/main.js) com ciclo de vida `setup()` (autenticação centralizada pré-teste para contornar rate limiter), métricas customizadas de latência e gerador de relatórios HTML interativos (`report.html`).
+  2. **Maestro Mobile E2E Test Suite (`tests/maestro/`):**
+     - Instrumentação completa do frontend React Native Expo com seletores determinísticos `testID` em [`Footer.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/components/Footer.tsx), [`Header.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/components/Header.tsx), [`login.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/login.tsx), [`search.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/search.tsx), [`customRegisterProduct.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/customRegisterProduct.tsx), [`registerProduct.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/registerProduct.tsx), [`productDetails.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/productDetails.tsx), [`profile.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/profile.tsx), e [`settings.tsx`](file:///home/criper/Documents/projetos/INI3A-EQ3/src/frontend/app/settings.tsx).
+     - 10 fluxos de ponta a ponta: autenticação, catálogo/busca com chips e pull-to-refresh, detalhes e histórico com votação, registro de preço (+15 XP), cadastro de produto customizado (+25 XP), gamificação/loja de cosméticos, configurações/temas/limpeza de cache, mapa de mercados PostGIS, moderação administrativa de preços e jornada completa do usuário.
+     - Subfluxos modulares para login rápido (`admin` e `regular user`), logout e dismiss de tutorial.
+     - Runner script executável [`run_maestro.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/tests/maestro/run_maestro.sh) e integração com Maestro Studio/Viewer.
+  3. **Scripts de Pacote NPM & Versionamento:**
+     - Comandos adicionados ao `package.json`: `npm run test:k6`, `npm run test:k6:journeys`, `npm run test:k6:stress`, `npm run test:k6:spike`, `npm run test:maestro`.
+     - Versão do projeto incrementada para `v1.2.0` (`versionCode: 12`).
+- **Autenticação em Duas Etapas (2FA/MFA via Email com Resend) & Proteção de Preços (`branch tests`):**
+  1. **Schema & Migrations:** Adicionado campo `twoFactorVerified` (booleano, default false) na tabela `user` ([`schema.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/schema.ts)), migração Drizzle `0003_add_two_factor_verified.sql` e journal atualizado.
+  2. **Serviço de Email & Resend:** Criado [`email.service.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/services/email.service.ts) usando native `fetch` para disparar códigos OTP de 6 dígitos via API da Resend com chave oficial e template HTML institucional.
+  3. **Camada de Repositório & Cache:** Métodos `storeTwoFactorCode`, `getTwoFactorCode`, `deleteTwoFactorCode` e `setTwoFactorCooldown` implementados em [`auth.repository.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/repositories/auth.repository.ts) com TTL de 10 min e cooldown de 60 segundos. Retornos de [`user.repository.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/database/repositories/user.repository.ts) atualizados com `twoFactorVerified`.
+  4. **Controle de Acesso & Middleware:** Middleware `requireTwoFactor` em [`authMiddleware.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/shared/middlewares/authMiddleware.ts) bloqueia usuários sem verificação ao publicar produtos ([`product.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/product/product.routes.ts)), registrar ocorrências de preços ou votar em ocorrências ([`ocurrency.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/ocurrency/ocurrency.routes.ts)). Administradores mantêm bypass irrestrito.
+  5. **Endpoints de 2FA:** Adicionados `POST /auth/2fa/send` e `POST /auth/2fa/verify` em [`auth.routes.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/auth/auth.routes.ts) e controlados via [`auth.controller.ts`](file:///Users/criper/INI3A-EQ3/src/backend/src/modules/auth/auth.controller.ts).
+  6. **Interface Mobile & Experiência Guest:**
+     - Componente modal [`TwoFactorModal.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/components/TwoFactorModal.tsx) com campos de 6 dígitos, temporizador de reenvio, feedback háptico e tratamento dinâmico de erros.
+     - Usuários convidados (não autenticados) podem navegar livremente pelo catálogo e visualizar os produtos, mas os valores e comparativos de menores preços entre mercados são bloqueados com o card institucional direcionando para o login em [`productDetails.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/productDetails.tsx), além de badges `🔒 Ver preço` na Home ([`index.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/index.tsx)) e na Busca ([`search.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/search.tsx)).
+     - Telas de cadastro de produtos ([`customRegisterProduct.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/customRegisterProduct.tsx), [`registerProduct.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/registerProduct.tsx)) e perfil ([`profile.tsx`](file:///Users/criper/INI3A-EQ3/src/frontend/app/profile.tsx)) integradas com ativação de 2FA sob demanda.
+- **Configuração de Administradores no Banco de Dados:**
+  1. Executado comando direto no PostgreSQL para atualizar `leonardomaxduda@gmail.com` para `role_id = 5` (Admin), mantendo seus pontos inalterados.
+  2. Executado comando direto no PostgreSQL para configurar `aventureiromax1` como `role_id = 5` (Admin) com `points = 0`.
+- **Aba de Status OpenFoodFacts Upptime para Administradores (`v1.0.9`):**
+  1. Criado serviço [`upptimeService.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/services/upptimeService.ts) que consome os dados em tempo real gerados pelo monitor [Open Food Facts Upptime](https://github.com/openfoodfacts/openfoodfacts-upptime) (`summary.json`), com cache em memória (TTL de 60 segundos), tratamento de falha/timeout e categorização inteligente dos serviços.
+  2. Implementado componente [`OpenFoodFactsStatusTab.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/OpenFoodFactsStatusTab.tsx) contendo hero card de status da infraestrutura global, destaque com métricas em tempo real dos serviços essenciais utilizados no Presco (**Consulta de EAN / Barcode `API v2 / v3`** e **Servidor CDN de Fotos `open-food-facts-images`**, além de **Busca** e **Portal Principal**), filtros de listagem, busca instantânea e links para o repositório GitHub e status page oficial.
+  3. Na tela [`settings.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/app/settings.tsx), adicionada barra de navegação por abas (`Geral` e `Status OpenFoodFacts`) visível **estritamente para usuários administradores** (`isAdmin === true`), além de atalho rápido no Painel de Testes do Admin. Para usuários regulares, a visualização permanece inalterada.
+  4. Adicionada internacionalização completa (7 idiomas: pt, en, es, de, ru, zh, ja) em [`types.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/i18n/types.ts) e nos respectivos arquivos de locale.
+  5. Adicionado teste automatizado em [`tests/upptimeService.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/tests/upptimeService.test.ts) validando parsing, resiliência de cache e identificação de serviços de EAN e imagem.
+  6. Versão sincronizada para `v1.0.9` (`versionCode: 10`).
+- **Sincronização Dinâmica de Fotos do OpenFoodFacts no Scan (`v1.0.8`):**
+  1. No [`product.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.service.ts), atualizado o fluxo de `getProductByBarcode(cleanBarcode)`. Mesmo quando o produto já existe no banco de dados local, o backend consulta o OpenFoodFacts via `extractOpenFoodFactsImage`. Se houver uma foto nova ou se o produto estava sem foto (`icon: ""`), o banco PostgreSQL é atualizado automaticamente via `ProductRepository.updateProduct(localProduct.id, { icon: offImageUri })`, o cache Redis é invalidado (`invalidateCachePattern("products")`) e o DTO retornado ao scanner já traz a nova foto.
+  2. Implementada verificação complementar no `getProductById` para auto-recuperar fotos faltantes em produtos com EAN e no `createCustomProduct` para inicializar a foto com o OpenFoodFacts caso um EAN seja informado sem imagem.
+  3. No [`product.routes.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.routes.ts), removido o middleware de cache estático (`cacheResponse`) das rotas `/barcode/:ean` e `/barcode`, garantindo que todo scan físico ou busca de código de barras seja executado em tempo real.
+  4. Adicionado teste unitário em [`tests/productBarcodeSync.test.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/tests/productBarcodeSync.test.ts) validando a persistência e atualização da imagem no scan.
+  5. Versão sincronizada para `v1.0.8` (`versionCode: 9`).
+- **Consolidação de Memória & Limpeza de Markdowns da Raiz:**
+  1. Extraídas e sintetizadas as decisões técnicas, regras de negócio e fluxos descritos nos 17 markdowns temporários de tarefas para os arquivos canônicos da pasta `.agents/` ([`.agents/memory/tech-decisions.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/tech-decisions.md), [`.agents/memory/MEMORY.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/memory/MEMORY.md) e [`.agents/DESIGN.md`](file:///Users/aventureiromax/INI3A-EQ3/.agents/DESIGN.md)).
+  2. Arquivados os históricos detalhados em [`docs/archive/`](file:///Users/aventureiromax/INI3A-EQ3/docs/archive) e removidos os 17 arquivos redundantes da raiz do projeto, mantendo na raiz estritamente a documentação mestra ([`README.md`](file:///Users/aventureiromax/INI3A-EQ3/README.md) e [`DESIGN.md`](file:///Users/aventureiromax/INI3A-EQ3/DESIGN.md)).
+- **Purge de Produtos do Catálogo & Sincronização Desativada (`v1.0.7`):**
+  1. Criado método transacional `purgeAllProducts` em [`product.repository.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/repositories/product.repository.ts), [`product.service.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.service.ts) e [`product.controller.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/modules/product/product.controller.ts).
+  2. Exposto endpoint administrativo `POST /products/purge-all` protegido por `requireAdmin` para remoção em cascata segura de `cart_product`, `product_report`, `ocurrency` e `product` com invalidação imediata do cache de produtos no Redis.
+  3. Desativada a inserção automática de produtos de catálogo pré-cadastrados no [`seed.ts`](file:///Users/aventureiromax/INI3A-EQ3/src/backend/src/shared/database/seed.ts), assegurando que novos deploys não repopulem o catálogo.
+  4. Versão sincronizada para `v1.0.7` (`versionCode: 8`).
+- **Criação da Estrutura da Landing Page (`src/landing`):** Criada pasta dedicada para a landing page institucional do aplicativo Presco em [`src/landing`](file:///Users/aventureiromax/INI3A-EQ3/src/landing) contendo os arquivos base em branco ([`index.html`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/index.html), [`styles.css`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/styles.css), [`script.js`](file:///Users/aventureiromax/INI3A-EQ3/src/landing/script.js)) e subdiretório `assets/` para imagens e QR code.
+- **Remoção de Produtos Sem Preço na Tela Inicial:** Implementada filtragem estrita com `hasValidPrice` no carregamento e renderização do grid da tela inicial (`index.tsx`). Itens sem preço ou com status "Preço não informado" / "sob consulta" são completamente excluídos do grid de produtos da Home.
 - **Higienização do Servidor Remoto & Pipeline de Deploy Autônomo (`v1.0.5`):**
   1. Reestruturado [`scripts/deploy_remote.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/scripts/deploy_remote.sh) para sincronizar estritamente os arquivos essenciais de execução do backend (`src/backend/`, `deploy/deploy.sh`, `ecosystem.config.cjs`), impedindo o envio de `.agents/`, `docs/`, `sprints/`, scripts de desenvolvimento, código de frontend e múltiplos markdowns.
   2. Implementada rotina de higienização automatizada em [`deploy/deploy.sh`](file:///home/criper/Documents/projetos/INI3A-EQ3/deploy/deploy.sh) que purga resíduos não essenciais no servidor remoto (`.agents`, `tests`, `docs`, `gestao`, `sprints`, `scripts`, `src/frontend`, `.github`, `docker-compose.yml`, `turbo.json`, `setup.*`, `start*`), remove todos os markdowns espalhados e cria o único documento explicativo oficial do servidor (`README.md`) apontando para o repositório GitHub.
@@ -95,6 +571,12 @@ Routes:
 - `POST /customizations/equip/:itemId` — equip an owned banner, avatar frame or level badge (requireAuth)
 - `POST /customizations/unequip/:category` — restore a customization category to default (requireAuth)
 - `GET /images/optimize` — dynamic media transcoding to WebP/AVIF with Sharp and 7-day Redis binary cache
+- `GET /cart` — get or initialize active user shopping cart with products (requireAuth)
+- `POST /cart/items` — add or increment item quantity in cart (requireAuth)
+- `PUT /cart/items/:productId` — update item quantity in cart (requireAuth)
+- `DELETE /cart/items/:productId` — remove product from cart (requireAuth)
+- `DELETE /cart` — clear all items from cart (requireAuth)
+- `POST /cart/optimize` — multi-store and travel cost optimizer (HERE Routing v8 + TSP)
 - `GET /health` — inspect database and Redis health
 
 **Caching & Performance Architecture:** Multi-tier caching with HTTP ETag (304 Not Modified), Brotli/Gzip payload compression (`compression`), Redis cache-aside on product routes with in-memory fallback and pattern invalidation, and Sharp dynamic image pipeline.
@@ -139,12 +621,19 @@ Direct relative paths from project root.
 | `src/backend/src/shared/services/hereMarketDiscovery.service.ts` | `HereMarketDiscovery` — HERE Location Services (Discover & Browse v7) supermarket discovery with PostGIS sync |
 | `src/backend/src/modules/image/image.routes.ts` | Image Router (`GET /optimize?url=&w=&q=&fmt=`) |
 | `src/backend/src/modules/image/image.controller.ts` | `imageOptimizerController` — Sharp image transcoding (WebP/AVIF), resizing, and 7-day Redis binary cache |
+| `src/backend/src/modules/cart/cart.routes.ts` | Cart Router (`GET /`, `POST /items`, `PUT /items/:productId`, `DELETE /items/:productId`, `DELETE /`, `POST /optimize`) |
+| `src/backend/src/modules/cart/cart.controller.ts` | `cartController` singleton — getCart, addItem, updateQuantity, removeItem, clearCart, optimizeShoppingList |
+| `src/backend/src/modules/cart/cart.service.ts` | `cartService` singleton — cart management and multi-store travel cost optimization engine |
+| `src/backend/src/shared/database/repositories/cart.repository.ts` | `CartRepository` — atomic cart management, items aggregation, and multi-market price lookup |
+| `src/backend/src/shared/services/routing.service.ts` | `RoutingService` — HERE Routing API v8 route distance, Haversine fallback, and TSP permutation ordering |
 | `src/backend/src/shared/constants/productCategories.ts` | Predefined product categories (15 essential types with emoji, icon, description, and normalization helpers) |
 | `src/backend/src/shared/database/schema.ts` | All Drizzle table definitions: `role, scope, user, badge, customizationItem, userCustomization, product, market, ocurrency, cart, cured, roleScope, userBadge, cartProduct` |
 
 | `src/backend/src/shared/database/database.ts` | `db`, `pool`, `testDatabaseConnection`, `checkDatabaseHealth` |
 | `src/backend/src/shared/database/healthCheck.ts` | Standalone CLI DB & Redis health verification script |
 | `src/backend/src/shared/database/repositories/customization.repository.ts` | `CustomizationRepository` — getAllItems, getItemById, getUserInventory, isItemOwnedByUser, addCustomizationToUser, updateUserEquipped, getUserEquippedCustomizations |
+| `src/backend/src/shared/services/email.service.ts` | `EmailService` singleton — Resend API email transport for 2FA verification codes |
+| `src/frontend/components/TwoFactorModal.tsx` | Interactive 6-digit 2FA modal component with auto-focus, Resend cooldown, and haptic feedback |
 | `src/backend/src/shared/database/repositories/user.repository.ts` | `UserRepository` — createUser, getUserById, getUserByEmail, incrementPoints, getUserWithRole, getUserBadges, getAllBadges, awardBadge, getUserRank, updateUser, deleteUser |
 | `src/backend/src/shared/database/repositories/auth.repository.ts` | `AuthRepository` — Redis only. storeRefreshToken, revokeRefreshToken, rotateRefreshToken, blacklistAccessToken, isAccessTokenBlacklisted |
 | `src/backend/src/shared/database/repositories/ocurrency.repository.ts` | `OcurrencyRepository` — create, findById, findByProduct, findByUser, countByUser, update, delete, vote, getUserContributionGrid |
@@ -170,6 +659,7 @@ Direct relative paths from project root.
 | `scripts/dev_launcher.ts` | Unified cross-platform dev launcher: interactive network mode selector (LAN, Corporate Tunnel, Localhost, Remote CTI), process tree lifecycle manager |
 | `scripts/configure_env.ts` | Interactive & CLI frontend environment manager (`npm run env`, `env:remote`, `env:local`, `env:localhost`) |
 | `scripts/bump_version.ts` | CLI & programmatic SemVer manager: synchronized multi-package version bumping (`npm run version:bump[:minor|:major]`) |
+| `.agents/skills/semver/SKILL.md` | Skill oficial de SemVer 2.0.0 (AgentSkills spec): regras de versão, scripts de bump e release policy |
 | `scripts/patch_ios_swift6.js` | Swift 6.1 & Xcode 16.4 compatibility patcher: sanitizes SPM package manifests, trailing commas, weak let/var, Task polyfills, and C++ init bridges |
 | `.github/workflows/release.yml` | GitHub Actions workflow: autonomous test, typecheck, Expo prebuild, Gradle release APK compilation and GitHub Releases publication |
 | `scripts/deploy_remote.sh` | Remote deployment automation script for pushing and orchestrating release on CTI server |
@@ -201,8 +691,15 @@ Direct relative paths from project root.
 | `src/frontend/services/productService.ts` | `fetchProducts`, `fetchProductById`, `fetchProductByEan`, `createCustomProduct`, `updateProduct`, `deleteProduct`, `fetchCategories`, `fetchPriceHistory` |
 | `src/frontend/services/ocurrencyService.ts` | `submitPriceOccurrence`, `fetchProductOccurrences`, `voteOccurrence`, `updateOccurrence`, `deleteOccurrence` |
 | `src/frontend/services/marketService.ts` | `fetchMarkets`, `createMarket` |
+| `src/frontend/services/cartService.ts` | `cartService` — offline-first shopping cart manager, travel settings storage, listener events, and `/cart/optimize` API integration |
 | `src/frontend/app/_layout.tsx` | Root stack layout, gesture navigator wrapper and theme/i18n providers |
 | `src/frontend/app/index.tsx` | Home screen with dynamic products loading and item navigation |
+| `src/frontend/app/cart.tsx` | Full-featured shopping cart screen with store-grouped items, savings hero card, optimization controls, and GPS route preview |
+| `src/frontend/components/cart/SavingsHeroCard.tsx` | Hero card displaying net financial savings (single vs multi-store), grocery vs travel breakdown, and distance delta |
+| `src/frontend/components/cart/OptimizationStrategyControl.tsx` | Strategy selector pill component (Economia Máxima, Balanceado, Loja Única) with haptic feedback and travel settings shortcut |
+| `src/frontend/components/cart/StoreGroupCard.tsx` | Store group card showing items, subtotals, distance/travel cost, quantity steppers, and cross-store manual reallocation modal |
+| `src/frontend/components/cart/TravelSettingsModal.tsx` | Modal for customizing vehicle fuel efficiency (km/L), fuel price (R$/L), search radius, convenience threshold, and round-trip |
+| `src/frontend/components/cart/RoutePreviewModal.tsx` | Optimized itinerary modal with stop-by-stop sequencing, driving metrics, and 1-tap launcher for Google Maps / Waze / Apple Maps |
 | `src/frontend/app/login.tsx` | Login screen with Expo Go / Dev detection and 1-tap quick login for `admin@admin.org` and regular test user |
 | `src/frontend/app/registerUser.tsx` | Registration screen |
 | `src/frontend/app/scannerProduct.tsx` | Camera EAN barcode scanning |
@@ -234,10 +731,37 @@ Direct relative paths from project root.
 | `src/frontend/components/KeyboardAwareScrollView.tsx` | Smart scroll container with dynamic keyboard listeners, safe insets, and auto-scroll |
 | `src/frontend/components/FocusedInputWrapper.tsx` | Usability wrapper highlighting focused input container (Monet accent) and triggering scroll |
 
+### Testing, QA Automation & CI/CD Infrastructure
+
+| File | Key exports / purpose |
+|---|---|
+| `.github/workflows/pr-gatekeeper.yml` | Camada 1: Gatekeeper de PRs (< 3 min, regex de branch, validação de commits, typecheck, Semgrep SAST, testes) |
+| `.github/workflows/staging.yml` | Camada 2: Pipeline de pós-merge em dev (testes de concorrência, build APK devFlavor, upload de artefato) |
+| `.github/workflows/production.yml` | Camada 3: Pipeline de promoção para main (validação de contrato, deploy produção, build APK prodFlavor) |
+| `.github/workflows/nightly-audit.yml` | Camada 4: Auditoria noturna diária 02:00 UTC em dev (k6 real load, mutação/resiliência, abertura de Issue em falhas) |
+| `tests/concurrency/race_conditions.test.ts` | Suíte de testes de condições de corrida (rate limiting, quorum de votos, compra de cosméticos, revogação JTI) |
+| `src/frontend/app.config.js` | Configuração dinâmica do Expo com segregação de Flavors/Variants (devFlavor vs prodFlavor) |
+| `.cursorrules` | Regras estritas de IDE para governança de branches, sintaxe de commits e blindagem de testes |
+| `tests/k6/main.js` | Grafana k6 master test runner with centralized `setup()` pre-auth, metrics, and HTML reporter |
+| `tests/k6/config/environments.js` | Target environments (local `localhost:3333` vs remote `eq.projetoscti.com.br`) and test users |
+| `tests/k6/config/thresholds.js` | Strict SLA thresholds (p95 < 250ms, error rate < 1%, zero failures on critical endpoints) |
+| `tests/k6/scenarios/*.js` | 9 isolated scenario tests covering 100% of API endpoints (health, auth, catalog, occurrences, custom products, markets, shop, admin, image) |
+| `tests/k6/user_journeys/*.js` | End-to-end user behavior simulations: `anonymous_browser`, `active_collaborator`, `power_shopper` |
+| `tests/k6/stress_and_soak/*.js` | High-load stress test (up to 100 VUs) and instantaneous spike test |
+| `tests/maestro/config.yaml` | Maestro app configuration, appId (`com.presco.app`), env vars, tags |
+| `tests/maestro/subflows/*.yaml` | Reusable subflows for quick admin login, regular user login, logout, tutorial dismissal |
+| `tests/maestro/flows/*.yaml` | 10 comprehensive E2E mobile test flows covering all screens, interactions, forms, and admin moderation |
+| `tests/maestro/run_maestro.sh` | Portable Maestro CLI test runner script with device detection and exit codes |
+| `tests/cartOptimizer.test.ts` | Multi-Store Travel Cost Optimizer unit tests (AC1-AC5 acceptance criteria validation) |
+| `src/backend/tests/cart.test.ts` | Backend Cart API integration tests (Drizzle schema, repository, routing, and controller validation) |
+
 ---
 
 ## 3. Active Tasks & Roadmap
 
+- [x] Smart Multi-Store Shopping List & Travel Cost Optimizer (`v1.3.0`) — motor de trade-off de deslocamento com HERE Routing API v8, estratégias de economia (Max Savings, Balanced, Single Store), carrinho offline-first com AsyncStorage, agrupamento por lojas, reatribuição manual de itens, modais de configurações veiculares e itinerário GPS.
+- [x] Governança Estrita de Branches, Automação Remota via GitHub CLI, Blindagem de Testes e Multi-Ambiente (Ruleset de proteção de branches, 4 camadas de GitHub Actions, testes de concorrência, app.config.js com flavors, .cursorrules e endurecimento do AGENTS.md).
+- [x] Comprehensive Maestro E2E Mobile Automation & Grafana k6 Load/Performance Suite (10 mobile E2E flows, 9 backend k6 scenarios, 3 realistic user journeys, stress/spike tests, testID instrumentation across 9 screens/components, HTML reporting, and package scripts).
 - [x] Modular DDD backend with Drizzle ORM and JWT + Redis auth.
   - [x] Turborepo monorepo + Docker Compose infrastructure migration (Postgres/PostGIS + Redis in Docker, backend/frontend via `turbo run dev`, cross-platform, Expo Go LAN/tunnel support).
 - [x] Frontend HTTP abstraction (`apiRequest`) with auto-refresh on 401.

@@ -92,6 +92,78 @@ class AuthRepositoryClass {
     }
     return inMemoryStore.exists(`blacklist:${jti}`) === 1;
   }
+
+  async storeTwoFactorCode(
+    userId: number | string,
+    code: string,
+    expirySeconds = 600,
+  ): Promise<void> {
+    const key = `2fa:code:${userId}`;
+    if (redisClient.isOpen) {
+      try {
+        await redisClient.set(key, code, { EX: expirySeconds });
+        return;
+      } catch (err) {
+        console.warn("REDIS: Failed to store 2FA code in Redis, falling back to memory store:", err);
+      }
+    }
+    inMemoryStore.set(key, code, expirySeconds);
+  }
+
+  async getTwoFactorCode(userId: number | string): Promise<string | null> {
+    const key = `2fa:code:${userId}`;
+    if (redisClient.isOpen) {
+      try {
+        return await redisClient.get(key);
+      } catch (err) {
+        console.warn("REDIS: Failed to get 2FA code from Redis, falling back to memory store:", err);
+      }
+    }
+    return inMemoryStore.get(key);
+  }
+
+  async deleteTwoFactorCode(userId: number | string): Promise<void> {
+    const key = `2fa:code:${userId}`;
+    if (redisClient.isOpen) {
+      try {
+        await redisClient.del(key);
+        return;
+      } catch (err) {
+        console.warn("REDIS: Failed to delete 2FA code from Redis, falling back to memory store:", err);
+      }
+    }
+    inMemoryStore.del(key);
+  }
+
+  async setTwoFactorCooldown(
+    userId: number | string,
+    expirySeconds = 60,
+  ): Promise<void> {
+    const key = `2fa:cooldown:${userId}`;
+    if (redisClient.isOpen) {
+      try {
+        await redisClient.set(key, "1", { EX: expirySeconds });
+        return;
+      } catch (err) {
+        console.warn("REDIS: Failed to set 2FA cooldown in Redis, falling back to memory store:", err);
+      }
+    }
+    inMemoryStore.set(key, "1", expirySeconds);
+  }
+
+  async isTwoFactorCooldown(userId: number | string): Promise<boolean> {
+    const key = `2fa:cooldown:${userId}`;
+    if (redisClient.isOpen) {
+      try {
+        const result = await redisClient.exists(key);
+        return result === 1;
+      } catch (err) {
+        console.warn("REDIS: Failed to check 2FA cooldown in Redis, falling back to memory store:", err);
+      }
+    }
+    return inMemoryStore.exists(key) === 1;
+  }
 }
 
 export const AuthRepository = new AuthRepositoryClass();
+

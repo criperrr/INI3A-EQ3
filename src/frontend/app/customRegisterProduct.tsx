@@ -23,6 +23,7 @@ import CategorySelector from "../components/CategorySelector";
 import { formatLongDateWithWeekday } from "../utils/dateUtils";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import TwoFactorModal from "../components/TwoFactorModal";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -38,7 +39,9 @@ export default function CustomRegisterProduct() {
   const { themeStyles, accent, isDark, tokens } = useTheme();
   const { semantic } = tokens;
   const { t, language } = useI18n();
-  const { isAuthenticated, user, loginAsTestUser } = useAuth();
+  const { isAuthenticated, user, isTwoFactorVerified, loginAsTestUser } = useAuth();
+  const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
+  const [pending2FASubmit, setPending2FASubmit] = useState<(() => Promise<void>) | null>(null);
 
   const formattedRecordDate = formatLongDateWithWeekday(recordDate, language);
 
@@ -114,6 +117,13 @@ export default function CustomRegisterProduct() {
       ]);
     } catch (error: any) {
       setLoading(false);
+
+      if (error?.code === "TWO_FACTOR_REQUIRED" || String(error?.message).includes("duas etapas")) {
+        setPending2FASubmit(() => executeRegistration);
+        setIsTwoFactorModalVisible(true);
+        return;
+      }
+
       const isAuthError =
         error?.status === 401 ||
         error?.code === "UNAUTHORIZED" ||
@@ -137,6 +147,12 @@ export default function CustomRegisterProduct() {
 
     if (!isAuthenticated && !user) {
       promptLogin(executeRegistration);
+      return;
+    }
+
+    if (!isTwoFactorVerified) {
+      setPending2FASubmit(() => executeRegistration);
+      setIsTwoFactorModalVisible(true);
       return;
     }
 
@@ -182,6 +198,7 @@ export default function CustomRegisterProduct() {
           <FocusedInputWrapper borderRadius={12}>
             <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
               <TextInput
+                testID="custom-product-ean"
                 style={[styles.input, themeStyles.text]}
                 placeholder={t("scanner.barcode")}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -198,6 +215,7 @@ export default function CustomRegisterProduct() {
           <FocusedInputWrapper borderRadius={12}>
             <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
               <TextInput
+                testID="custom-product-name"
                 style={[styles.input, themeStyles.text]}
                 placeholder={t("products.productNamePlaceholder")}
                 placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -215,6 +233,7 @@ export default function CustomRegisterProduct() {
             <FocusedInputWrapper borderRadius={12}>
               <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
                 <TextInput
+                  testID="custom-product-brand"
                   style={[styles.input, themeStyles.text]}
                   placeholder={t("products.brandPlaceholder")}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -230,6 +249,7 @@ export default function CustomRegisterProduct() {
             <FocusedInputWrapper borderRadius={12}>
               <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
                 <TextInput
+                  testID="custom-product-unit"
                   style={[styles.input, themeStyles.text]}
                   placeholder={t("products.unitPlaceholder")}
                   placeholderTextColor={isDark ? "#9CA3AF" : "#666"}
@@ -300,6 +320,7 @@ export default function CustomRegisterProduct() {
             </View>
           </View>
           <Switch
+            testID="custom-product-promo-switch"
             value={isPromotion}
             onValueChange={setIsPromotion}
             trackColor={{ false: isDark ? "#4B5563" : "#D1D5DB", true: accent + "80" }}
@@ -308,6 +329,7 @@ export default function CustomRegisterProduct() {
         </View>
 
         <TouchableOpacity
+          testID="custom-product-submit"
           style={[styles.button, { backgroundColor: accent }]}
           activeOpacity={0.8}
           onPress={handleRegister}
@@ -322,6 +344,21 @@ export default function CustomRegisterProduct() {
           )}
         </TouchableOpacity>
       </KeyboardAwareScrollView>
+
+      <TwoFactorModal
+        visible={isTwoFactorModalVisible}
+        onClose={() => {
+          setIsTwoFactorModalVisible(false);
+          setPending2FASubmit(null);
+        }}
+        onSuccess={() => {
+          setIsTwoFactorModalVisible(false);
+          const action = pending2FASubmit;
+          setPending2FASubmit(null);
+          if (action) action();
+        }}
+        actionDescription="Para cadastrar novos produtos na comunidade, confirme o código enviado para seu e-mail."
+      />
     </View>
     </TouchableWithoutFeedback>
   );

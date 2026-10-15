@@ -6,6 +6,7 @@ import productRouter from "@/modules/product/product.routes";
 import ocurrencyRouter from "@/modules/ocurrency/ocurrency.routes";
 import marketRouter from "@/modules/market/market.routes";
 import customizationRouter from "@/modules/customization/customization.routes";
+import cartRouter from "@/modules/cart/cart.routes";
 
 import { checkDatabaseHealth } from "@/shared/database/database";
 import { redisClient } from "@/shared/redis/server";
@@ -71,6 +72,18 @@ app.get(["/health", "/ping", "/products/barcode/ping"], async (_, res) => {
   });
 });
 
+app.get(["/", "/index.html", "/index.php"], (_, res) => {
+  return res.status(200).json({
+    name: "Presco API",
+    description: "API de Monitoramento de Preços, Scanner EAN-13 e Otimizador de Rotas",
+    status: "online",
+    version: "1.3.7",
+    health: "/health",
+    docs: "/api/v1",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.use("/api/v1", (_, res) => {
   return res.status(200).json({ message: "API is running!" });
 });
@@ -81,6 +94,7 @@ app.use("/ocurrency", ocurrencyRouter);
 app.use("/markets", marketRouter);
 app.use("/customizations", customizationRouter);
 app.use("/images", imageRouter);
+app.use("/cart", cartRouter);
 
 app.use(errorHandler);
 

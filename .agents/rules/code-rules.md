@@ -109,12 +109,13 @@ Antes de modificar ou criar código, defina de forma ultra-concisa:
 - Após modificações em arquivos `.ts` / `.tsx`, execute silenciosamente `npx tsc --noEmit`.
 - Se houver erro de tipagem ou import ausente, resolva imediatamente antes de entregar a resposta final.
 
-### 4. Política de Commits Atômicos (Exclusivamente sob Demanda do Usuário)
+### 4. Política de Commits Atômicos & Isolamento por Chat (Exclusivamente sob Demanda do Usuário)
 - **NUNCA commitar espontaneamente:** A IA NÃO deve executar comandos de commit por iniciativa própria. Qualquer commit só deve ser realizado se o usuário solicitar expressamente (ex: "commite", "faça os commits", "pode commitar").
+- **Isolamento de Escopo por Chat (Commit & Push Cirúrgico):** Ao receber pedido de commit ou push, commitar e enviar EXCLUSIVAMENTE os arquivos tocados, modificados ou criados na sessão do chat atual. É estritamente proibido usar `git add .`, `git add -A`, `git add -u` ou `git commit -a`. Quaisquer alterações na working tree pertencentes a outros chats ou tarefas devem ser ignoradas e preservadas intactas.
 - **Desmembramento de Grandes Alterações:** Quando o usuário pedir para commitar após uma tarefa com múltiplas alterações/arquivos:
   1. Inspecione `git status`.
   2. Nunca faça um único commit gigante (`git add .`).
-  3. Desmembre e agrupe em commits atômicos por domínio:
+  3. Desmembre e agrupe em commits atômicos por domínio selecionando arquivo a arquivo:
      - `feat(db):` schema, migrations e sementes de dados.
      - `feat(api):` controllers, services, repositories e rotas.
      - `feat(ui):` telas, componentes visuais e design tokens.
@@ -131,3 +132,11 @@ Antes de modificar ou criar código, defina de forma ultra-concisa:
   - `src/frontend/package.json`
   - `src/frontend/app.json` (`version` e incremento de `versionCode`)
 - Aplique diretamente nos arquivos ou use o comando unificado `npm run version:bump` (`:minor` / `:major`).
+
+### 6. Axioma de Pull Requests, Validação de CI e Merge via GitHub CLI (`gh`)
+- **Regra Absoluta de Abertura de PR:** O fluxo de conclusão de uma tarefa exige abertura de Pull Request para `dev` via `gh pr create --base dev --title "..." --body "..."`.
+- **Validação Ativa de Testes (CI Gatekeeper):** O agente DEVE monitorar ativamente a execução dos testes (`gh pr checks <PR> --watch`). É expressamente proibido dar uma tarefa como encerrada sem verificar se os testes passaram (`SUCCESS`).
+- **Merge via `gh` do Usuário:** Se os testes passarem, o agente DEVE usar a CLI `gh` da máquina para realizar o merge em `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`). Se falharem, o agente deve diagnosticar, corrigir a implementação e revalidar.
+- **Pré-requisito do `gh`:** O agente deve verificar se o GitHub CLI está instalado e autenticado (`gh auth status`). Caso o `gh` não esteja configurado/autenticado, o agente DEVE interromper a automação e solicitar ao usuário que realize o login (`gh auth login`).
+- **Validação Mandatória com Maestro para Frontend:** Antes de commitar e dar push de qualquer branch com alterações no frontend mobile (`src/frontend/**`), o agente DEVE executar a suíte de testes de estabilidade do Maestro (`npm run test:maestro:full` ou `npm run test:maestro:docker` / MCP) para assegurar que toda a aplicação e jornadas de usuário permanecem estáveis.
+

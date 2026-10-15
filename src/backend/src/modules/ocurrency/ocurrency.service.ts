@@ -5,6 +5,30 @@ import { MarketRepository } from "@/shared/database/repositories/market.reposito
 import { NotFoundError, ForbiddenError, ValidationError, TooManyRequestsError } from "@/shared/errors/errors";
 import { invalidateCachePattern } from "@/shared/middlewares/cacheMiddleware";
 
+export function parseCurrencyValue(val: number | string | undefined | null): number {
+  if (val === undefined || val === null) return NaN;
+  if (typeof val === "number") return val;
+  const str = String(val).trim();
+  if (str === "") return NaN;
+  // If string contains both dots and commas (e.g. "1.500,00" or "1,500.00")
+  if (str.includes(".") && str.includes(",")) {
+    if (str.lastIndexOf(",") > str.lastIndexOf(".")) {
+      // Brazilian currency format: "1.500,00" -> remove dot, replace comma with dot -> "1500.00"
+      const clean = str.replace(/\./g, "").replace(",", ".");
+      return parseFloat(clean.replace(/[^0-9.-]/g, ""));
+    } else {
+      // US currency format: "1,500.00" -> remove comma -> "1500.00"
+      const clean = str.replace(/,/g, "");
+      return parseFloat(clean.replace(/[^0-9.-]/g, ""));
+    }
+  }
+  // If string contains only comma: "1500,00" -> "1500.00"
+  if (str.includes(",")) {
+    return parseFloat(str.replace(/,/g, ".").replace(/[^0-9.-]/g, ""));
+  }
+  return parseFloat(str.replace(/[^0-9.-]/g, ""));
+}
+
 class OcurrencyServiceClass {
   async create(data: {
     userId: number;
@@ -16,9 +40,9 @@ class OcurrencyServiceClass {
     createdAt?: string | Date | undefined;
     confirmOutlier?: boolean | undefined;
   }) {
-    const numValue = typeof data.value === "string" ? parseFloat(data.value.replace(/[^0-9.,]/g, "").replace(",", ".")) : data.value;
-    if (isNaN(numValue) || numValue <= 0) {
-      throw new ValidationError([{ field: "value", message: "O valor deve ser um número positivo." }]);
+    const numValue = parseCurrencyValue(data.value);
+    if (isNaN(numValue) || numValue < 0.10 || numValue > 15000.00) {
+      throw new ValidationError([{ field: "value", message: "O valor deve estar entre R$ 0,10 e R$ 15.000,00." }]);
     }
 
     const product = await ProductRepository.getProductById(data.productId);
@@ -57,6 +81,85 @@ class OcurrencyServiceClass {
 
     // --- Dynamic Adaptive Standard Deviation & Outlier Analysis ---
     const stats = await OcurrencyRepository.getAdaptivePriceStats(data.productId, numValue);
+
+    // --- Cold Start Handling (stats.count === 0) ---
+    // Products with no established verified history cannot directly publish trusted prices.
+    // They are held as provisional (isSuspended: true, isResolved: false, trustFlag: false)
+    // unless corroborated by a second independent user.
+    if (stats.count === 0) {
+      const corroboratingPending = await OcurrencyRepository.findPendingColdStartCorroboration(
+        data.productId,
+        data.userId,
+        numValue,
+      );
+
+      if (corroboratingPending) {
+        // Multi-user corroboration reached! Release both occurrences
+        await OcurrencyRepository.approveOccurrence(corroboratingPending.id);
+        await UserRepository.incrementPoints(corroboratingPending.userId, 15);
+
+        const [created] = await OcurrencyRepository.create({
+          userId: data.userId,
+          productId: data.productId,
+          marketId: data.marketId,
+          value: numValue,
+          icon: data.icon,
+          isPromotion: Boolean(data.isPromotion),
+          isSuspended: false,
+          isResolved: true,
+          trustFlag: true,
+          createdAt: data.createdAt,
+        });
+
+        const updatedUser = await UserRepository.incrementPoints(data.userId, 15);
+        await invalidateCachePattern("products");
+
+        return {
+          occurrence: created,
+          pointsEarned: 15,
+          currentPoints: updatedUser?.points ?? 0,
+          isSuspended: false,
+          pendingApproval: false,
+          requiresConfirmation: false,
+          corroborated: true,
+          message: "Preço confirmado através de corroboração independente entre colaboradores!",
+        };
+      }
+
+      // No corroborating quote: provisional creation (isSuspended: true, isResolved: false, trustFlag: false)
+      const [created] = await OcurrencyRepository.create({
+        userId: data.userId,
+        productId: data.productId,
+        marketId: data.marketId,
+        value: numValue,
+        icon: data.icon,
+        isPromotion: Boolean(data.isPromotion),
+        isSuspended: true,
+        isResolved: false,
+        trustFlag: false,
+        createdAt: data.createdAt,
+      });
+
+      const user = await UserRepository.getUserById(data.userId);
+      await invalidateCachePattern("products");
+
+      return {
+        occurrence: created,
+        pointsEarned: 0,
+        currentPoints: user?.points ?? 0,
+        isSuspended: true,
+        pendingApproval: true,
+        requiresConfirmation: false,
+        isColdStart: true,
+        stats: {
+          avgPrice: null,
+          currentPrice: numValue,
+          ratio: 1,
+          zScore: 0,
+        },
+        message: "Primeira cotação deste produto registrada como provisória. Ela aguarda validação da moderação ou corroboração para ser confirmada.",
+      };
+    }
 
     let isExtremeOutlier = false;
     let isModerateOutlier = false;
@@ -232,16 +335,39 @@ class OcurrencyServiceClass {
     }
 
     let parsedValue: number | undefined = undefined;
+    let needsReevaluationSuspension = false;
+
     if (data.value !== undefined) {
-      parsedValue = typeof data.value === "string" ? parseFloat(data.value.replace(/[^0-9.,]/g, "").replace(",", ".")) : data.value;
-      if (isNaN(parsedValue) || parsedValue <= 0) {
-        throw new ValidationError([{ field: "value", message: "Valor inválido." }]);
+      parsedValue = parseCurrencyValue(data.value);
+      if (isNaN(parsedValue) || parsedValue < 0.10 || parsedValue > 15000.00) {
+        throw new ValidationError([{ field: "value", message: "O valor deve estar entre R$ 0,10 e R$ 15.000,00." }]);
+      }
+
+      // Re-evaluate outlier protection if non-admin user alters price
+      if (!isAdmin && Number(occurrence.value) !== parsedValue) {
+        const stats = await OcurrencyRepository.getAdaptivePriceStats(occurrence.productId, parsedValue);
+        if (stats.count > 0 && stats.avgPrice && stats.avgPrice > 0) {
+          const mu = stats.avgPrice;
+          const sigma = stats.stddevPrice;
+          const delta = Math.abs(parsedValue - mu);
+          const outlierRatio = parsedValue >= mu ? parsedValue / mu : mu / parsedValue;
+          const zScore = sigma > 0 ? delta / sigma : 0;
+
+          if (
+            ((outlierRatio >= 2.2 || parsedValue <= 0.45 * mu) || (stats.count >= 3 && zScore >= 2.2)) &&
+            delta >= 1.5
+          ) {
+            // Price modification deviates significantly from baseline: suspend for moderation
+            needsReevaluationSuspension = true;
+          }
+        }
       }
     }
 
     const [updated] = await OcurrencyRepository.update(ocurrencyId, {
       value: parsedValue,
       marketId: data.marketId,
+      ...(needsReevaluationSuspension ? { isSuspended: true, isResolved: false, trustFlag: false } : {}),
     });
 
     await invalidateCachePattern("products");
@@ -297,6 +423,14 @@ class OcurrencyServiceClass {
       throw new NotFoundError("Ocorrência não encontrada.");
     }
 
+    // Idempotency: if already approved/resolved and not suspended, return directly without duplicate XP
+    if (occurrence.isResolved && !occurrence.isSuspended) {
+      return {
+        approved: true,
+        occurrence,
+      };
+    }
+
     const approved = await OcurrencyRepository.approveOccurrence(ocurrencyId);
     if (!approved) {
       throw new NotFoundError("Erro ao aprovar ocorrência.");
@@ -329,6 +463,10 @@ class OcurrencyServiceClass {
       rejected: true,
       occurrence: rejected,
     };
+  }
+
+  async createOcurrency(data: Parameters<OcurrencyServiceClass["create"]>[0]) {
+    return this.create(data);
   }
 }
 

@@ -10,15 +10,18 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
+import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
+import { useAuth } from "../content/authContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
 import { fetchProducts } from "../services/productService";
 import { fetchMarkets } from "../services/marketService";
 import { getUserLocation } from "../utils/userLocation";
 import { hasSeenTutorial } from "../utils/tutorialStorage";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 
 const { width } = Dimensions.get("window");
@@ -43,7 +46,20 @@ type GridItemType = {
   discountPercentage?: number | null;
   formattedDistance?: string | null;
   nearestMarketName?: string | null;
+  nearestMarketCoordinate?: { latitude: number; longitude: number } | null;
 };
+
+function hasValidPrice(price?: string | null): boolean {
+  if (!price) return false;
+  const clean = price.toLowerCase().trim();
+  return !(
+    clean === "" ||
+    clean.includes("não informado") ||
+    clean.includes("no occurrences") ||
+    clean.includes("sob consulta") ||
+    clean.includes("preço não")
+  );
+}
 
 // --- Mocks ---
 const MOCK_PRODUCTS: GridItemType[] = [
@@ -155,11 +171,16 @@ export default function HomeScreen() {
         latitude: loc?.latitude,
         longitude: loc?.longitude,
         radius: 15000,
-        limit: 6,
+        limit: 12,
       });
 
-      if (res.items && res.items.length > 0) {
-        const mapped: GridItemType[] = res.items.map((p) => ({
+      // Filtra estritamente apenas produtos com preço informado
+      const validItems = (res.items || []).filter((p) =>
+        hasValidPrice(p.bestPrice || p.lastPrice)
+      );
+
+      if (validItems.length > 0) {
+        const mapped: GridItemType[] = validItems.slice(0, 6).map((p) => ({
           id: p.id || Math.random(),
           name: p.name,
           category: p.category,
@@ -171,14 +192,14 @@ export default function HomeScreen() {
           discountPercentage: p.discountPercentage,
           formattedDistance: p.formattedDistance,
           nearestMarketName: p.nearestMarketName,
+          nearestMarketCoordinate: p.nearestMarketCoordinate,
         }));
         setRealProducts(mapped);
       } else {
-        setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+        setRealProducts([]);
       }
     } catch {
-      // Graceful fallback: load mock products only if network request fails
-      setRealProducts((prev) => (prev.length === 0 ? MOCK_PRODUCTS : prev));
+      setRealProducts([]);
     }
 
     try {
@@ -319,6 +340,7 @@ export default function HomeScreen() {
 }
 
 const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
+  const router = useRouter();
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
@@ -334,6 +356,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner1Action"),
         image:
           "https://images.unsplash.com/photo-1542838132-92c53300491e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/search",
       },
       {
         id: "2",
@@ -342,6 +365,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner2Action"),
         image:
           "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/registerProduct",
       },
       {
         id: "3",
@@ -350,6 +374,34 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         linkText: t("home.banner3Action"),
         image:
           "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/map",
+      },
+      {
+        id: "4",
+        title: t("home.banner4Title"),
+        subtitle: t("home.banner4Subtitle"),
+        linkText: t("home.banner4Action"),
+        image:
+          "https://images.unsplash.com/photo-1584473457406-6240486418e9?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/cart",
+      },
+      {
+        id: "5",
+        title: t("home.banner5Title"),
+        subtitle: t("home.banner5Subtitle"),
+        linkText: t("home.banner5Action"),
+        image:
+          "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/scannerProduct",
+      },
+      {
+        id: "6",
+        title: t("home.banner6Title"),
+        subtitle: t("home.banner6Subtitle"),
+        linkText: t("home.banner6Action"),
+        image:
+          "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=360&h=180&fit=crop&q=70&auto=format",
+        route: "/profile",
       },
     ],
     [t]
@@ -387,6 +439,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
   return (
     <View style={styles.bannerSection}>
       <FlatList
+        testID="home-banner-carousel"
         ref={flatListRef}
         data={banners}
         keyExtractor={(item) => item.id}
@@ -395,7 +448,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         showsHorizontalScrollIndicator={false}
         initialNumToRender={3}
         maxToRenderPerBatch={3}
-        windowSize={3}
+        windowSize={5}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         getItemLayout={(_, index) => ({
@@ -405,7 +458,14 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         })}
         renderItem={({ item }) => (
           <View style={{ width: CARD_WIDTH }}>
-            <View
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => {
+                if (item.route) {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  router.push(item.route as any);
+                }
+              }}
               style={[
                 styles.bannerCardFull,
                 {
@@ -450,21 +510,29 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
               >
                 {item.subtitle}
               </Text>
-              <Text
-                style={[
-                  styles.bannerLink,
-                  {
-                    color: accent,
-                    ...semantic.typography.caption,
-                    fontWeight: "600",
-                  },
-                ]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.linkText}
-              </Text>
-            </View>
+              <View style={styles.bannerActionRow}>
+                <Text
+                  style={[
+                    styles.bannerLink,
+                    {
+                      color: accent,
+                      ...semantic.typography.caption,
+                      fontWeight: "600",
+                    },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {item.linkText}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={13}
+                  color={accent}
+                  style={{ marginLeft: 2, marginTop: 1 }}
+                />
+              </View>
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -522,6 +590,7 @@ const ActionMenu = memo(function ActionMenu({
         return (
           <TouchableOpacity
             key={tab.id}
+            testID={`home-view-tab-${tab.id}`}
             style={[
               styles.tabButton,
               { borderRadius: semantic.radius.chip },
@@ -586,6 +655,16 @@ const ItemsGrid = memo(function ItemsGrid({
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
+
+  const itemsToRender = useMemo(() => {
+    if (!isProductView) return data;
+    return data.filter((item) => hasValidPrice(item.price));
+  }, [data, isProductView]);
+
+  if (itemsToRender.length === 0) {
+    return null;
+  }
 
   return (
     <View style={[styles.productsSection, { paddingHorizontal: semantic.spacing.itemGap }]}>
@@ -609,9 +688,10 @@ const ItemsGrid = memo(function ItemsGrid({
         )}
       </View>
       <View style={styles.productGrid}>
-        {data.map((item) => (
+        {itemsToRender.map((item) => (
           <TouchableOpacity
             key={item.id}
+            testID="home-product-card"
             style={[
               styles.productItem,
               {
@@ -657,16 +737,40 @@ const ItemsGrid = memo(function ItemsGrid({
               {item.name}
             </Text>
 
-            {isProductView && item.price && item.price !== "Preço não informado" && (
+            {isProductView && item.price ? (
               <View style={styles.priceRow}>
-                <Text style={[styles.productPrice, { color: accent }]}>
-                  {item.price}
-                </Text>
+                {isAuthenticated ? (
+                  <Text style={[styles.productPrice, { color: accent }]}>
+                    {item.price}
+                  </Text>
+                ) : (
+                  <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
+                    <Ionicons name="lock-closed" size={10} color={accent} />
+                    <Text style={[styles.lockedPriceText, { color: accent }]}>
+                      Ver preço
+                    </Text>
+                  </View>
+                )}
               </View>
-            )}
+            ) : null}
 
             {isProductView && item.formattedDistance && (
-              <View style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}>
+              <TouchableOpacity
+                style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}
+                activeOpacity={item.nearestMarketName ? 0.7 : 1}
+                onPress={(e) => {
+                  if (item.nearestMarketName) {
+                    e.stopPropagation();
+                    openMarketInGoogleMaps({
+                      marketName: item.nearestMarketName,
+                      coordinate: item.nearestMarketCoordinate,
+                      mode: "search",
+                    });
+                  }
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={item.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${item.nearestMarketName}` : undefined}
+              >
                 <Ionicons name="location" size={11} color={accent} />
                 <Text
                   style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
@@ -675,7 +779,10 @@ const ItemsGrid = memo(function ItemsGrid({
                 >
                   {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
                 </Text>
-              </View>
+                {Boolean(item.nearestMarketName) && (
+                  <Ionicons name="open-outline" size={10} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
+                )}
+              </TouchableOpacity>
             )}
           </TouchableOpacity>
         ))}
@@ -701,7 +808,12 @@ const styles = StyleSheet.create({
   },
   bannerTitle: {},
   bannerSubtitle: { marginTop: 2 },
-  bannerLink: { marginTop: 6 },
+  bannerActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+  bannerLink: {},
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",
@@ -809,6 +921,20 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 15,
     fontWeight: "800",
+  },
+  lockedPricePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 7,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  lockedPriceText: {
+    fontSize: 11,
+    fontWeight: "700",
   },
   distancePill: {
     flexDirection: "row",

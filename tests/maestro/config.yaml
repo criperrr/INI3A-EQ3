@@ -1,0 +1,12 @@
+appId: com.presco.app
+name: "Presco Maestro Test Suite Configuration"
+env:
+  DEFAULT_TIMEOUT: "10000"
+  ADMIN_EMAIL: "admin@admin.org"
+  ADMIN_PASSWORD: "admin"
+  USER_EMAIL: "usuario@presco.com"
+  USER_PASSWORD: "user123"
+tags:
+  - presco
+  - e2e
+  - regression

@@ -119,6 +119,15 @@ export interface TranslationSchema {
     banner3Title: string;
     banner3Subtitle: string;
     banner3Action: string;
+    banner4Title: string;
+    banner4Subtitle: string;
+    banner4Action: string;
+    banner5Title: string;
+    banner5Subtitle: string;
+    banner5Action: string;
+    banner6Title: string;
+    banner6Subtitle: string;
+    banner6Action: string;
     nearbyOffers: string;
     radiusFilter15km: string;
   };
@@ -164,6 +173,7 @@ export interface TranslationSchema {
     saveChanges: string;
     saving: string;
     adminActions: string;
+    viewInGoogleMaps: string;
     chartDays30: string;
     chartDays60: string;
     chartDays90: string;
@@ -195,6 +205,9 @@ export interface TranslationSchema {
     avgPriceLast5Desc: string;
     registeredAt: string;
     promotionTag: string;
+    addToCart: string;
+    inCart: string;
+    quantity: string;
   };
   settings: {
     title: string;
@@ -379,6 +392,39 @@ export interface TranslationSchema {
     moderationBanner: string;
     rejectAction: string;
     approveAction: string;
+    tabGeneral: string;
+    tabOffStatus: string;
+    offStatusTitle: string;
+    offStatusSubtitle: string;
+    offStatusBadge: string;
+    offOverallOperational: string;
+    offOverallIssues: string;
+    offServicesPresco: string;
+    offServicesAll: string;
+    offServiceEanTitle: string;
+    offServiceEanDesc: string;
+    offServiceImagesTitle: string;
+    offServiceImagesDesc: string;
+    offServiceSearchTitle: string;
+    offServiceSearchDesc: string;
+    offServiceMainTitle: string;
+    offServiceMainDesc: string;
+    offStatusOperational: string;
+    offStatusDown: string;
+    offLatency: string;
+    offUptime: string;
+    offLastCheck: string;
+    offRefreshBtn: string;
+    offRefreshing: string;
+    offFilterAll: string;
+    offFilterPresco: string;
+    offFilterIssues: string;
+    offSearchPlaceholder: string;
+    offViewOnGithub: string;
+    offOpenStatusPage: string;
+    offFromCache: string;
+    offDirectStatusCard: string;
+    offDirectStatusDesc: string;
   };
   profile: {
     title: string;
@@ -483,6 +529,7 @@ export interface TranslationSchema {
     hoursWithInfo: string;
     hoursUnknown: string;
     open24Hours: string;
+    searchOnGoogleMaps: string;
   };
   help: {
     title: string;
@@ -646,8 +693,62 @@ export interface TranslationSchema {
     screen6Subtitle: string;
     screen6Badge: string;
     screen6Tip: string;
+    screen7Title: string;
+    screen7Subtitle: string;
+    screen7Badge: string;
+    screen7Tip: string;
     replayTutorial: string;
     replayTutorialDesc: string;
+  };
+  cart: {
+    title: string;
+    emptyTitle: string;
+    emptySubtitle: string;
+    exploreProducts: string;
+    strategy: string;
+    maxSavings: string;
+    maxSavingsDesc: string;
+    balanced: string;
+    balancedDesc: string;
+    singleStore: string;
+    singleStoreDesc: string;
+    maxStops: string;
+    maxRadius: string;
+    travelSettings: string;
+    fuelEfficiency: string;
+    fuelPrice: string;
+    convenienceThreshold: string;
+    roundTrip: string;
+    savingsBannerSavings: string;
+    savingsBannerSingle: string;
+    grocerySubtotal: string;
+    travelCost: string;
+    stopTotal: string;
+    totalCombined: string;
+    netSavings: string;
+    singleStoreBest: string;
+    optimizedRoute: string;
+    reallocate: string;
+    reallocateModalTitle: string;
+    openInMaps: string;
+    missingItems: string;
+    itemsOtherStores: string;
+    itemsMixedUnassigned: string;
+    noPriceRegistered: string;
+    singleStoreIncompleteTitle: string;
+    singleStoreIncompleteDesc: string;
+    switchToMultiStore: string;
+    chooseProductToPrioritize: string;
+    chooseMarket: string;
+    allProductsOption: string;
+    clearCartConfirm: string;
+    clearCartTitle: string;
+    addedSuccess: string;
+    itemCount: string;
+    storesCount: string;
+    travelTime: string;
+    km: string;
+    liters: string;
   };
 }
 
@@ -677,5 +778,6 @@ export type TranslationKey =
   | `errors.${keyof TranslationSchema["errors"]}`
   | `productCategories.${keyof TranslationSchema["productCategories"]}`
   | `onboarding.${keyof TranslationSchema["onboarding"]}`
-  | `admin.${keyof TranslationSchema["admin"]}`;
+  | `admin.${keyof TranslationSchema["admin"]}`
+  | `cart.${keyof TranslationSchema["cart"]}`;
 

@@ -1,0 +1,879 @@
+{
+  "metrics": {
+    "http_req_failed": {
+      "type": "rate",
+      "contains": "default",
+      "values": {
+        "rate": 0.16981132075471697,
+        "passes": 9,
+        "fails": 44
+      },
+      "thresholds": {
+        "rate<0.01": {
+          "ok": false
+        }
+      }
+    },
+    "http_req_connecting": {
+      "values": {
+        "max": 14.272952,
+        "p(90)": 0,
+        "p(95)": 4.832160799999983,
+        "avg": 0.7633291509433963,
+        "min": 0,
+        "med": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "vus": {
+      "type": "gauge",
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      }
+    },
+    "iteration_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "max": 19951.077901,
+        "p(90)": 19951.077901,
+        "p(95)": 19951.077901,
+        "avg": 19951.077901,
+        "min": 19951.077901,
+        "med": 19951.077901
+      }
+    },
+    "checks": {
+      "contains": "default",
+      "values": {
+        "fails": 6,
+        "rate": 0.922077922077922,
+        "passes": 71
+      },
+      "type": "rate"
+    },
+    "data_sent": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 27361,
+        "rate": 1313.9661607779292
+      }
+    },
+    "http_req_duration{expected_response:true}": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(95)": 862.8044132500006,
+        "avg": 294.28663988636356,
+        "min": 14.303055,
+        "med": 190.57148949999998,
+        "max": 1669.541819,
+        "p(90)": 500.1247819000001
+      }
+    },
+    "http_req_blocked": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "p(90)": 0.015645,
+        "p(95)": 12.990668999999956,
+        "avg": 2.1192933773584905,
+        "min": 0.009499,
+        "med": 0.012362,
+        "max": 46.729226
+      }
+    },
+    "http_req_tls_handshaking": {
+      "values": {
+        "p(95)": 7.238909999999974,
+        "avg": 1.0943527358490566,
+        "min": 0,
+        "med": 0,
+        "max": 20.191137,
+        "p(90)": 0
+      },
+      "type": "trend",
+      "contains": "time"
+    },
+    "http_req_duration": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 314.66349603773585,
+        "min": 14.303055,
+        "med": 187.423573,
+        "max": 1669.541819,
+        "p(90)": 525.9586114000001,
+        "p(95)": 1146.2557097999997
+      },
+      "thresholds": {
+        "p(95)<400": {
+          "ok": false
+        },
+        "p(99)<800": {
+          "ok": false
+        }
+      }
+    },
+    "http_req_waiting": {
+      "contains": "time",
+      "values": {
+        "max": 1669.343392,
+        "p(90)": 525.8067416,
+        "p(95)": 1146.0939367999997,
+        "avg": 313.539489773585,
+        "min": 14.151353,
+        "med": 187.167663
+      },
+      "type": "trend"
+    },
+    "http_req_receiving": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 1.0807515849056606,
+        "min": 0.089122,
+        "med": 0.132005,
+        "max": 19.99348,
+        "p(90)": 0.20518820000000002,
+        "p(95)": 6.43709879999998
+      }
+    },
+    "data_received": {
+      "type": "counter",
+      "contains": "data",
+      "values": {
+        "count": 244659,
+        "rate": 11749.338362258959
+      }
+    },
+    "http_req_sending": {
+      "type": "trend",
+      "contains": "time",
+      "values": {
+        "avg": 0.04325467924528302,
+        "min": 0.021931,
+        "med": 0.037647,
+        "max": 0.13019,
+        "p(90)": 0.05340300000000001,
+        "p(95)": 0.09638519999999995
+      }
+    },
+    "vus_max": {
+      "contains": "default",
+      "values": {
+        "value": 1,
+        "min": 1,
+        "max": 1
+      },
+      "type": "gauge"
+    },
+    "group_duration": {
+      "contains": "time",
+      "values": {
+        "p(90)": 3027.545535,
+        "p(95)": 3773.805235,
+        "avg": 1771.6797230000002,
+        "min": 320.84633,
+        "med": 1176.122802,
+        "max": 4520.064935
+      },
+      "type": "trend"
+    },
+    "http_reqs": {
+      "type": "counter",
+      "contains": "default",
+      "values": {
+        "count": 53,
+        "rate": 2.545236158080123
+      }
+    },
+    "iterations": {
+      "values": {
+        "count": 1,
+        "rate": 0.04802332373736081
+      },
+      "type": "counter",
+      "contains": "default"
+    }
+  },
+  "setup_data": {
+    "admin": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiaWQiOjEsImVtYWlsIjoiYWRtaW5AYWRtaW4ub3JnIiwibmFtZSI6IkFkbWluIE1hc3RlciIsInJvbGVJZCI6NSwianRpIjoiN2EwN2VmNmYtOTU2Yy00N2Y4LTk4OGQtMmNkNTA2YjQ0ZGU3IiwiaWF0IjoxNzkwMDQzOTk2LCJleHAiOjE3OTAwNDQ4OTZ9.kPlN6LHyhDO4d4o1q9ZpwtM6TKARJH_x2HiOrh5QCow",
+      "refreshToken": "4a4cb82e8a8d447a356bf00c76f2932228bb4bf0d9977968b0aed922de6988d70182ee1955fe92d029623d837ea8d49c",
+      "user": {
+        "birthdate": null,
+        "dangerFlag": false,
+        "id": 1,
+        "name": "Admin Master",
+        "createdAt": "2026-09-10 12:33:50.927462+00",
+        "email": "admin@admin.org",
+        "location": null,
+        "points": 10054,
+        "roleId": 5,
+        "equippedAvatarFrameId": 10,
+        "equippedBannerId": null,
+        "equippedLevelFrameId": 25,
+        "equippedTitleId": 50,
+        "twoFactorVerified": false,
+        "updatedAt": "2026-09-10 12:33:50.927462+00"
+      }
+    },
+    "user": {
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyIiwiaWQiOjIsImVtYWlsIjoidXN1YXJpb0BwcmVzY28uY29tIiwibmFtZSI6IlVzdcOhcmlvIENvbXVtIiwicm9sZUlkIjoxLCJqdGkiOiJkZDg4YTZjYi0xN2I0LTRlOTItOGIyMi1hMGQ4YjcwYmQ1ZTAiLCJpYXQiOjE3OTAwNDM5OTYsImV4cCI6MTc5MDA0NDg5Nn0.j-cKgGgo4CZbI5JCfCsvWebqp9INbTz__691p2aac1M",
+      "refreshToken": "4265de5e02bd877a39ef2d149a1e8d8c381997862d10edd97e5efb06f5d3bf36793410325158a2554aa65d5d55b3f7e8",
+      "user": {
+        "equippedLevelFrameId": 20,
+        "location": null,
+        "name": "Usuário Comum",
+        "updatedAt": "2026-09-10 12:33:51.562232+00",
+        "email": "usuario@presco.com",
+        "equippedAvatarFrameId": 10,
+        "equippedBannerId": 1,
+        "id": 2,
+        "points": 305,
+        "createdAt": "2026-09-10 12:33:51.562232+00",
+        "twoFactorVerified": false,
+        "dangerFlag": false,
+        "equippedTitleId": 32,
+        "roleId": 1,
+        "birthdate": null
+      }
+    }
+  },
+  "root_group": {
+    "path": "",
+    "id": "d41d8cd98f00b204e9800998ecf8427e",
+    "groups": [
+      {
+        "name": "setup",
+        "path": "::setup",
+        "id": "5c0f8025f7e0b6654089e5b00e950f1a",
+        "groups": [],
+        "checks": [
+            {
+              "passes": 2,
+              "fails": 0,
+              "name": "login status is 200",
+              "path": "::setup::login status is 200",
+              "id": "bb27b460b057923f4a083e3603c038b9"
+            },
+            {
+              "passes": 2,
+              "fails": 0,
+              "name": "login returns tokens",
+              "path": "::setup::login returns tokens",
+              "id": "c5f8319a1b72e32a00345600991948ed"
+            }
+          ]
+      },
+      {
+        "name": "System & Health Endpoints",
+        "path": "::System & Health Endpoints",
+        "id": "602687fe943b3c34bd03dc2d93410fbc",
+        "groups": [],
+        "checks": [
+            {
+              "path": "::System & Health Endpoints::health status is 200",
+              "id": "318fdf1b56abab3b029282c33ed1c8c1",
+              "passes": 1,
+              "fails": 0,
+              "name": "health status is 200"
+            },
+            {
+              "name": "database is connected",
+              "path": "::System & Health Endpoints::database is connected",
+              "id": "c5dd3c343346664b27b3c388270cadf6",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "redis is active",
+              "path": "::System & Health Endpoints::redis is active",
+              "id": "2f561c2dbf56a068288ee35c71179381",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "has security headers (nosniff & DENY)",
+              "path": "::System & Health Endpoints::has security headers (nosniff & DENY)",
+              "id": "b932f503f4ecd44cc394fef628ba0d0c",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "ping status is 200",
+              "path": "::System & Health Endpoints::ping status is 200",
+              "id": "b3516648835757443ed59bd71eea9cba",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "api/v1 is running",
+              "path": "::System & Health Endpoints::api/v1 is running",
+              "id": "5dd81dc1e76d5c44b1ad8df751f1ed23",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "Authentication Lifecycle & Security",
+        "path": "::Authentication Lifecycle & Security",
+        "id": "fd0e0520ed884d3e4b018e1e91bff1c1",
+        "groups": [],
+        "checks": [
+            {
+              "name": "register responds 201",
+              "path": "::Authentication Lifecycle & Security::register responds 201",
+              "id": "795ff4f22f8268d14a60fad4b8032312",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "path": "::Authentication Lifecycle & Security::register returns access and refresh tokens",
+              "id": "7acf0668a92bfd24d5ff3f7b3ee42a9b",
+              "passes": 1,
+              "fails": 0,
+              "name": "register returns access and refresh tokens"
+            },
+            {
+              "name": "duplicate email rejected with 409 Conflict",
+              "path": "::Authentication Lifecycle & Security::duplicate email rejected with 409 Conflict",
+              "id": "dd278c928ab07d4504f764a4829fe117",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "path": "::Authentication Lifecycle & Security::invalid password rejected with 401 Unauthorized",
+              "id": "902b7c1e7ca69a4ccd99824c9855df73",
+              "passes": 1,
+              "fails": 0,
+              "name": "invalid password rejected with 401 Unauthorized"
+            },
+            {
+              "name": "valid login responds 200",
+              "path": "::Authentication Lifecycle & Security::valid login responds 200",
+              "id": "93f3dd7d64a581917b09c694d21935bf",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "login returns user role and identity",
+              "path": "::Authentication Lifecycle & Security::login returns user role and identity",
+              "id": "0164436c27db50a07462cc7e14a00c2b",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "refresh returns 200",
+              "path": "::Authentication Lifecycle & Security::refresh returns 200",
+              "id": "dba9a88c3e58c412e370e7e5bcfefb19",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "path": "::Authentication Lifecycle & Security::refresh provides new access token",
+              "id": "04f0753460f9a543cc8f445a5c34b862",
+              "passes": 1,
+              "fails": 0,
+              "name": "refresh provides new access token"
+            },
+            {
+              "fails": 0,
+              "name": "profile responds 200",
+              "path": "::Authentication Lifecycle & Security::profile responds 200",
+              "id": "4342d12daa83fe661ef7a71c013d9859",
+              "passes": 1
+            },
+            {
+              "fails": 0,
+              "name": "profile returns name and points balance",
+              "path": "::Authentication Lifecycle & Security::profile returns name and points balance",
+              "id": "fbeea2f358f98ba93859d312585de51b",
+              "passes": 1
+            },
+            {
+              "name": "2fa send responds with success or rate-limit status",
+              "path": "::Authentication Lifecycle & Security::2fa send responds with success or rate-limit status",
+              "id": "90df22f1dd7d426c7c04f2d09b56b852",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "id": "47564c43d66c83695e5e9d3d9e8fba8f",
+              "passes": 1,
+              "fails": 0,
+              "name": "password change responds 200",
+              "path": "::Authentication Lifecycle & Security::password change responds 200"
+            },
+            {
+              "name": "logout responds 200",
+              "path": "::Authentication Lifecycle & Security::logout responds 200",
+              "id": "62fd2cd17fadc04e777c02c8db773479",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "blacklisted token rejected with 401",
+              "path": "::Authentication Lifecycle & Security::blacklisted token rejected with 401",
+              "id": "39f6e88a8426fc91f6efe12bb8d5a82a",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "login status is 200",
+              "path": "::Authentication Lifecycle & Security::login status is 200",
+              "id": "99d77db1360148442fd9f2c80838c055",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "login returns tokens",
+              "path": "::Authentication Lifecycle & Security::login returns tokens",
+              "id": "7582354b6e3f9c86db2698d48db73534",
+              "passes": 1
+            },
+            {
+              "name": "account deletion responds 200",
+              "path": "::Authentication Lifecycle & Security::account deletion responds 200",
+              "id": "30452258429f4062d3a54ef5869e7e95",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "name": "Product Catalog, Search & Cache Validation",
+        "path": "::Product Catalog, Search & Cache Validation",
+        "id": "f5f82832b6e2516d06cc834d5334d654",
+        "groups": [],
+        "checks": [
+            {
+              "id": "adcac4f854d7156218cadd9765678c52",
+              "passes": 1,
+              "fails": 0,
+              "name": "catalog returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::catalog returns 200"
+            },
+            {
+              "name": "catalog response has items array",
+              "path": "::Product Catalog, Search & Cache Validation::catalog response has items array",
+              "id": "b4a1fb2d9451ca95a9d8d1c0e12e2b39",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "fails": 1,
+              "name": "search returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::search returns 200",
+              "id": "2494a0db0b4f4abced1426185ce49ef8",
+              "passes": 0
+            },
+            {
+              "name": "search returns data payload",
+              "path": "::Product Catalog, Search & Cache Validation::search returns data payload",
+              "id": "d86b674f47684134cd75017c208aa439",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "passes": 1,
+              "fails": 0,
+              "name": "category filter returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::category filter returns 200",
+              "id": "e17c538843b08ebf4902ebb9b8b7c5bb"
+            },
+            {
+              "name": "categories metadata returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::categories metadata returns 200",
+              "id": "a723f49e033a1a1a0e754908f1bf48ae",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "path": "::Product Catalog, Search & Cache Validation::categories is an array",
+              "id": "9270e192b84646152e946f548f4b1eaf",
+              "passes": 1,
+              "fails": 0,
+              "name": "categories is an array"
+            },
+            {
+              "name": "category details return 200",
+              "path": "::Product Catalog, Search & Cache Validation::category details return 200",
+              "id": "2cdf83769486819749ce09be59777fd1",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "path": "::Product Catalog, Search & Cache Validation::product details return 200",
+              "id": "1029fe887b7ea8e9c76ec100da5d514f",
+              "passes": 1,
+              "fails": 0,
+              "name": "product details return 200"
+            },
+            {
+              "name": "contains product name and price stats",
+              "path": "::Product Catalog, Search & Cache Validation::contains product name and price stats",
+              "id": "57438cc4f87cd7273ac1779923893fe4",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "id": "4b9fdbc977ce933f8bdf2dfb270bece0",
+              "passes": 1,
+              "fails": 0,
+              "name": "price history returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::price history returns 200"
+            },
+            {
+              "id": "c3f62caaf2a0521bca2eaf0ed134ca11",
+              "passes": 1,
+              "fails": 0,
+              "name": "history is an array",
+              "path": "::Product Catalog, Search & Cache Validation::history is an array"
+            },
+            {
+              "passes": 1,
+              "fails": 0,
+              "name": "barcode lookup returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::barcode lookup returns 200",
+              "id": "386d412f3ef73c6ae483478d17cd705d"
+            },
+            {
+              "name": "barcode matches product",
+              "path": "::Product Catalog, Search & Cache Validation::barcode matches product",
+              "id": "c85d0c54ac2cf515ade9904000c88113",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "geospatial product search returns 200",
+              "path": "::Product Catalog, Search & Cache Validation::geospatial product search returns 200",
+              "id": "66312cd47d60abe2df6ab2e2e36fb3a1",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "id": "d5781927c21e79227e0b15aba096f48b",
+        "groups": [],
+        "checks": [
+            {
+              "name": "occurrence creation responds 201 or 409 (cooldown)",
+              "path": "::Price Reporting, Auditing & Moderation::occurrence creation responds 201 or 409 (cooldown)",
+              "id": "3ce0a483702f4a679bf735998a973ba6",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "id": "f39cb48dee13f2e64e66be3bcfa287a1",
+              "passes": 1,
+              "fails": 0,
+              "name": "product occurrences return 200",
+              "path": "::Price Reporting, Auditing & Moderation::product occurrences return 200"
+            },
+            {
+              "id": "a18d47f467836bc873d5def35661fb04",
+              "passes": 1,
+              "fails": 0,
+              "name": "product occurrences is an array",
+              "path": "::Price Reporting, Auditing & Moderation::product occurrences is an array"
+            },
+            {
+              "path": "::Price Reporting, Auditing & Moderation::register status is 201",
+              "id": "ada6a4171ba8a156d0d43be7f2728a68",
+              "passes": 1,
+              "fails": 0,
+              "name": "register status is 201"
+            },
+            {
+              "passes": 1,
+              "fails": 0,
+              "name": "register returns access token",
+              "path": "::Price Reporting, Auditing & Moderation::register returns access token",
+              "id": "5c877227b4eac60c3251076430a9ac16"
+            },
+            {
+              "name": "community audit vote responds 200 or handles author guard",
+              "path": "::Price Reporting, Auditing & Moderation::community audit vote responds 200 or handles author guard",
+              "id": "f3cc7f48c2c6a5676549b9c2f5b427f4",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "product report responds 200 or 201",
+              "path": "::Price Reporting, Auditing & Moderation::product report responds 200 or 201",
+              "id": "22582cbfa91bf2cb003666b31795e335",
+              "passes": 1,
+              "fails": 0
+            }
+          ],
+        "name": "Price Reporting, Auditing & Moderation",
+        "path": "::Price Reporting, Auditing & Moderation"
+      },
+      {
+        "id": "c0dfa83583673704c1500b6d1ffb1e80",
+        "groups": [],
+        "checks": [
+            {
+              "name": "custom product created responds 201",
+              "path": "::Custom Products Creation & Catalog Management::custom product created responds 201",
+              "id": "feff5cb0bfebb16d9979c449890415d8",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "returns created product with ID",
+              "path": "::Custom Products Creation & Catalog Management::returns created product with ID",
+              "id": "c1299cf579a85785ac20312cea5bd48d",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "custom product immediately discoverable",
+              "path": "::Custom Products Creation & Catalog Management::custom product immediately discoverable",
+              "id": "dcf9a7bd7d0c297f8bcf7ed0a97a7a57",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "product update responds 200",
+              "path": "::Custom Products Creation & Catalog Management::product update responds 200",
+              "id": "930967c1085214331c17b837304049a9",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "product deletion responds 200",
+              "path": "::Custom Products Creation & Catalog Management::product deletion responds 200",
+              "id": "bbd6f265962e066dedb3b0dc92237817",
+              "passes": 1,
+              "fails": 0
+            }
+          ],
+        "name": "Custom Products Creation & Catalog Management",
+        "path": "::Custom Products Creation & Catalog Management"
+      },
+      {
+        "name": "Geospatial Queries & Markets Management",
+        "path": "::Geospatial Queries & Markets Management",
+        "id": "03b9237086cb5f547e8f808775897751",
+        "groups": [],
+        "checks": [
+            {
+              "name": "all markets responds 200",
+              "path": "::Geospatial Queries & Markets Management::all markets responds 200",
+              "id": "a87d75cf46c7514fe895983f712cb21f",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "markets list is non-empty array",
+              "path": "::Geospatial Queries & Markets Management::markets list is non-empty array",
+              "id": "a055d13f15b21a49eee92a360b166ac9",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "fails": 0,
+              "name": "proximity query responds 200",
+              "path": "::Geospatial Queries & Markets Management::proximity query responds 200",
+              "id": "9e540c1ef7acdabf633aa30f4aa1a147",
+              "passes": 1
+            },
+            {
+              "fails": 0,
+              "name": "returns markets array",
+              "path": "::Geospatial Queries & Markets Management::returns markets array",
+              "id": "8aa47f9c826358f0430842693e12d1f2",
+              "passes": 1
+            },
+            {
+              "id": "d12fd9f287c8008f2e9a440ee9e159fb",
+              "passes": 1,
+              "fails": 0,
+              "name": "single market responds 200",
+              "path": "::Geospatial Queries & Markets Management::single market responds 200"
+            },
+            {
+              "name": "contains market name and coordinates",
+              "path": "::Geospatial Queries & Markets Management::contains market name and coordinates",
+              "id": "bc7eaa3a58e99bc2665d5dbd33b55b75",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "market creation responds 201",
+              "path": "::Geospatial Queries & Markets Management::market creation responds 201",
+              "id": "7adbeb46f5850ab31520d3de04061bbb",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "returns created market with ID",
+              "path": "::Geospatial Queries & Markets Management::returns created market with ID",
+              "id": "7ab3b05d9a853dad76c8fb2318e33277",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "market update responds 200",
+              "path": "::Geospatial Queries & Markets Management::market update responds 200",
+              "id": "349876e555d423101631ce0e7d077a0f",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "id": "3839e87f439675b0c3c2680cf4087c34",
+              "passes": 1,
+              "fails": 0,
+              "name": "market deletion responds 200",
+              "path": "::Geospatial Queries & Markets Management::market deletion responds 200"
+            }
+          ]
+      },
+      {
+        "name": "Gamification & Customization Shop",
+        "path": "::Gamification & Customization Shop",
+        "id": "1258ac7572a6cf3d49eaa4475a8a85b5",
+        "groups": [],
+        "checks": [
+            {
+              "fails": 0,
+              "name": "shop catalog responds 200",
+              "path": "::Gamification & Customization Shop::shop catalog responds 200",
+              "id": "703200fe9205b73edb603b27b4df4d7c",
+              "passes": 1
+            },
+            {
+              "path": "::Gamification & Customization Shop::shop returns items catalog and user points",
+              "id": "18aa6c78ab4ff6be0da19964bf9b7ad3",
+              "passes": 1,
+              "fails": 0,
+              "name": "shop returns items catalog and user points"
+            },
+            {
+              "name": "buy item responds 200",
+              "path": "::Gamification & Customization Shop::buy item responds 200",
+              "id": "a4522fd15f317f093905096f063b3d8f",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "equip item responds 200",
+              "path": "::Gamification & Customization Shop::equip item responds 200",
+              "id": "92fac5afac23126bc41ff965eb60df36",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "equip avatar frame responds 200",
+              "path": "::Gamification & Customization Shop::equip avatar frame responds 200",
+              "id": "387a3b73c9936ccfc2745b42539360e1",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "unequip banner category responds 200",
+              "path": "::Gamification & Customization Shop::unequip banner category responds 200",
+              "id": "51975c31c7a10f698c237af05a076bf0",
+              "passes": 1,
+              "fails": 0
+            },
+            {
+              "name": "profile reflects badges and gamification state",
+              "path": "::Gamification & Customization Shop::profile reflects badges and gamification state",
+              "id": "8557a7aa0b56ce17f30ce9135fc0fb7d",
+              "passes": 1,
+              "fails": 0
+            }
+          ]
+      },
+      {
+        "checks": [
+          {
+            "passes": 1,
+            "fails": 0,
+            "name": "non-admin access rejected with 403 Forbidden",
+            "path": "::Admin Moderation Panel & RBAC Security::non-admin access rejected with 403 Forbidden",
+            "id": "2fb59f0b786f346dae0bef92ef3e0da7"
+          },
+          {
+            "fails": 0,
+            "name": "admin pending list responds 200",
+            "path": "::Admin Moderation Panel & RBAC Security::admin pending list responds 200",
+            "id": "b9718f7aa6ca68d3e4e0f1cddb7f5476",
+            "passes": 1
+          },
+          {
+            "path": "::Admin Moderation Panel & RBAC Security::pending list is an array",
+            "id": "b398dfd0dbeb3b2eef4c9cd06914c84b",
+            "passes": 1,
+            "fails": 0,
+            "name": "pending list is an array"
+          }
+        ],
+        "name": "Admin Moderation Panel & RBAC Security",
+        "path": "::Admin Moderation Panel & RBAC Security",
+        "id": "6f9735b31d4955012a8a0b4c6bde039c",
+        "groups": []
+      },
+      {
+        "id": "d3c1a71b57b8cd9a6d96adcd674af50b",
+        "groups": [],
+        "checks": [
+            {
+              "name": "image optimization responds 200 or 304",
+              "path": "::Image Optimization Pipeline::image optimization responds 200 or 304",
+              "id": "3a575de742bbddc73cf7298b9fa1164e",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "name": "content type is image or webp",
+              "path": "::Image Optimization Pipeline::content type is image or webp",
+              "id": "42b45d9147578b6e748f87d09b2690f0",
+              "passes": 0,
+              "fails": 1
+            },
+            {
+              "name": "cached image responds 200 or 304",
+              "path": "::Image Optimization Pipeline::cached image responds 200 or 304",
+              "id": "131528250c3299e064ba1988f226913f",
+              "passes": 0,
+              "fails": 1
+            }
+          ],
+        "name": "Image Optimization Pipeline",
+        "path": "::Image Optimization Pipeline"
+      }
+    ],
+    "checks": [],
+    "name": ""
+  },
+  "options": {
+    "summaryTrendStats": [
+      "avg",
+      "min",
+      "med",
+      "max",
+      "p(90)",
+      "p(95)"
+    ],
+    "summaryTimeUnit": "",
+    "noColor": false
+  },
+  "state": {
+    "isStdErrTTY": false,
+    "testRunDurationMs": 20823.2151,
+    "isStdOutTTY": false
+  }
+}

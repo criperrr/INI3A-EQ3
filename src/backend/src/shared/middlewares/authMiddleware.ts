@@ -1,7 +1,8 @@
 import type { NextFunction, Response } from "express";
 import { verifyAccessToken } from "@/shared/util/jwt";
 import { AuthRepository } from "@/shared/database/repositories/auth.repository";
-import { UnauthorizedError, ForbiddenError } from "@/shared/errors/errors";
+import { UserRepository } from "@/shared/database/repositories/user.repository";
+import { UnauthorizedError, ForbiddenError, TwoFactorRequiredError } from "@/shared/errors/errors";
 
 export async function requireAuth(
   req: Api.Request,
@@ -35,6 +36,20 @@ export async function requireAuth(
       throw new UnauthorizedError("Sessão revogada. Faça login novamente.");
     }
 
+    const userObj = await UserRepository.getUserById(decoded.id);
+
+    if (!userObj) {
+      throw new UnauthorizedError("Usuário não encontrado.");
+    }
+
+    if (userObj.dangerFlag === true) {
+      return next(
+        new ForbiddenError(
+          "Sua conta encontra-se suspensa por violação das diretrizes de segurança.",
+        ),
+      );
+    }
+
     req.user = {
       id: decoded.id,
       email: decoded.email,
@@ -42,11 +57,13 @@ export async function requireAuth(
       roleId: decoded.roleId,
       jti: decoded.jti,
       exp: decoded.exp!,
-    };
+      dangerFlag: Boolean(userObj.dangerFlag),
+      twoFactorVerified: Boolean(userObj.twoFactorVerified),
+    } as any;
 
     next();
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       next(error);
       return;
     }
@@ -131,5 +148,33 @@ export function requireMinAuthority(minAuthority: number) {
     });
   };
 }
+
+export async function requireTwoFactor(
+  req: Api.Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  return requireAuth(req, res, async (err) => {
+    if (err) return next(err);
+    if (!req.user) {
+      return next(new UnauthorizedError("Você precisa estar autenticado para realizar esta ação."));
+    }
+
+    // Role 5 (Administrador) has full authority and bypasses 2FA block
+    if (req.user.roleId >= 5) {
+      return next();
+    }
+
+    if (!(req.user as any).twoFactorVerified) {
+      return next(
+        new TwoFactorRequiredError(
+          "Verificação de duas etapas por e-mail necessária para realizar publicações e interações.",
+        ),
+      );
+    }
+    next();
+  });
+}
+
 
 

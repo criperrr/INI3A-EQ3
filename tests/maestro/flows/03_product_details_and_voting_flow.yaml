@@ -1,0 +1,40 @@
+appId: com.presco.app
+name: "03 - Product Details, Price Statistics & Community Auditing Flow"
+tags:
+  - details
+  - voting
+---
+- launchApp:
+    clearState: false
+
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    file: "../subflows/quick_login_user.yaml"
+
+# Go to Search and pick a product
+- tapOn:
+    id: "tab-search"
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Tap on the first product card in the list
+- tapOn:
+    point: "50%, 35%"
+
+# Verify on Product Details Screen
+- assertVisible:
+    id: "btn-register-price"
+
+# Scroll to examine price stats and market list
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Return to Search/Home
+- back

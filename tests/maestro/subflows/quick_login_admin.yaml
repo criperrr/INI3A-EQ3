@@ -1,0 +1,34 @@
+appId: com.presco.app
+---
+# Subflow: 1-Tap Quick Login as Administrator
+- runFlow:
+    when:
+      visible:
+        id: "quick-login-admin"
+    commands:
+      - tapOn:
+          id: "quick-login-admin"
+      - extendedWaitUntil:
+          notVisible:
+            id: "quick-login-admin"
+          timeout: 10000
+
+# Fallback: Standard login if dev box not present
+- runFlow:
+    when:
+      visible:
+        id: "login-submit-btn"
+    commands:
+      - tapOn:
+          id: "login-email-input"
+      - inputText: "admin@admin.org"
+      - tapOn:
+          id: "login-password-input"
+      - inputText: "admin"
+      - hideKeyboard
+      - tapOn:
+          id: "login-submit-btn"
+      - extendedWaitUntil:
+          notVisible:
+            id: "login-submit-btn"
+          timeout: 10000

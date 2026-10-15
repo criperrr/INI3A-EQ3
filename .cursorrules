@@ -1,0 +1,35 @@
+# Presco (.cursorrules) - Governança Estrita de Branches, Commits e Blindagem de Testes
+
+## 1. Axioma de Commits
+- Todo commit DEVE seguir estritamente o formato: `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+- Categorias válidas: `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
+- Não realize commits espontâneos sem solicitação explícita do usuário.
+- **Isolamento por Chat (Commit & Push):** Ao receber pedido de commit ou push, commitar e enviar EXCLUSIVAMENTE os arquivos tocados ou criados na sessão do chat atual. É estritamente proibido `git add .` ou `git commit -a`. Deixe alterações de outros chats/sessões intocadas na working tree.
+
+## 2. Axioma de Branches
+- Toda nova tarefa nasce OBRIGATORIAMENTE a partir de `dev`: `git checkout -b <categoria>/<nome-da-task> dev`.
+- Padrão de nomenclatura obrigatório: `^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$`.
+- Proibido ramificar de `main`, exceto hotfixes emergenciais de produção (`fix/hotfix-...`).
+
+## 3. Axioma de Merge Autônomo e Validação Obrigatória de PRs (Regra Absoluta)
+- NUNCA realize `git merge` local em `dev` ou `main`.
+- **Regra Absoluta do Ciclo de PR:** Toda tarefa deve abrir PR via `gh pr create --base dev`.
+- **Acompanhamento Obrigatório de Testes:** O agente DEVE monitorar ativamente se os testes da esteira de CI passaram (`gh pr checks <PR> --watch`). É expressamente proibido dar a tarefa como encerrada sem constatar aprovação dos testes.
+- **Merge via `gh` da Máquina:** Se os testes passarem, o agente DEVE usar o `gh` da máquina do usuário para realizar o merge em `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`). Se falharem, conserte a implementação até passar!
+- **Pré-requisito do GitHub CLI:** Se o `gh` não estiver configurado ou autenticado (`gh auth status`), o agente DEVE parar imediatamente e solicitar ao usuário que execute `gh auth login`.
+- **Teste Mandatório com Maestro para Frontend:** Antes de commitar e dar push de qualquer branch que modifique o frontend (`src/frontend/**`), o agente DEVE testar a estabilidade completa da aplicação usando o Maestro (`npm run test:maestro:full` ou `npm run test:maestro:docker` / MCP) para garantir que nada na interface foi quebrado.
+
+
+
+## 4. Blindagem de Testes (Anti-Tautologia)
+- Proibidos testes tautológicos ou vazios (`expect(true).toBe(true)` ou asserts genéricos sem verificação de estado).
+- Cobertura de código mínima de 80% nos arquivos modificados/adicionados.
+- ZONAS PROTEGIDAS: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
+- Proibido para IAs alterar asserções de teste ou relaxar thresholds de SLA de performance para burlar a esteira de CI. Se houver falha, conserte a implementação!
+
+## 5. Axioma de Títulos e Descrições de Pull Requests (PRs)
+- Estilo estritamente idêntico a mensagens/descrições de commit de desenvolvedores reais:
+  - Idioma: Exclusivamente em inglês (`en-US`).
+  - Formato: Letras minúsculas (`lowercase`), sem markdown, sem bullet points rebuscados, sem negrito, sem emojis.
+  - Tom: Meio jogado e informal, direto ao ponto, mas tecnicamente denso e bom.
+  - Proibido qualquer formatação corporativa ou prolixa de IA (ex: "### Resumo da Alteração").

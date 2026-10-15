@@ -1,8 +1,9 @@
 ---
 name: semantic-versioning
-description: >
-  Implement semantic versioning (SemVer) with automated release management. Use
-  conventional commits, semantic-release, and version bumping strategies.
+description: Implement semantic versioning (SemVer) with automated release management. Use conventional commits, semantic-release, and version bumping strategies.
+when_to_use: Use when configuring semantic versioning, release automation, conventional commit strategies, or automated changelog generation.
+allowed-tools: Read, Write, Edit, Bash
+version: 1.0.0
 ---
 
 # Semantic Versioning

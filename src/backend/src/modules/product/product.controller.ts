@@ -104,20 +104,26 @@ class ProductControllerClass {
 
       if (errors.length > 0) throw new ValidationError(errors);
 
-      const product = await productService.createCustomProduct({
-        name: name.trim(),
-        category,
-        categories: Array.isArray(categories) ? categories : undefined,
-        description,
-        icon,
-        ean,
-        ncm,
-        isPromotion: Boolean(isPromotion),
-        createdAt,
-      });
+      const userId = req.user?.id;
 
-      if (req.user?.id) {
-        await UserRepository.incrementPoints(req.user.id, 25).catch(() => {});
+      const product = await productService.createCustomProduct(
+        {
+          name: name.trim(),
+          category,
+          categories: Array.isArray(categories) ? categories : undefined,
+          description,
+          icon,
+          ean,
+          ncm,
+          isPromotion: Boolean(isPromotion),
+          createdAt,
+          createdByUserId: userId,
+        },
+        userId,
+      );
+
+      if (userId) {
+        await UserRepository.incrementPoints(userId, 25).catch(() => {});
       }
 
       return res.status(201).json(success(product));
@@ -245,6 +251,15 @@ class ProductControllerClass {
       );
 
       return res.status(201).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async purgeAllProducts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await productService.purgeAllProducts();
+      return res.status(200).json(success(result));
     } catch (e) {
       next(e);
     }

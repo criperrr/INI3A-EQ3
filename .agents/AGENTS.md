@@ -214,6 +214,11 @@ After any file modification or addition:
 ### 6.1. Git Commit Policy (Atomic Commits Strictly On Request)
 
 - **NO SPONTANEOUS COMMITS (CRITICAL):** The AI must NEVER execute `git commit` or stage files spontaneously. Commits are executed **ONLY IF AND WHEN THE USER EXPLICITLY REQUESTS IT** (e.g., "commita", "pode commitar", "faça os commits"). Otherwise, all modifications must remain in the working directory.
+- **ISOLAMENTO DE ESCOPO POR CHAT/SESSÃO (COMMIT & PUSH CIRÚRGICO):** Quando o usuário solicitar commit e/ou push em uma sessão de chat, a IA DEVE realizar o commit e push **ESTRITAMENTE dos arquivos modificados, criados ou tocados na sessão daquele chat específico**, ignorando e preservando intocadas as alterações de outros chats ou tarefas:
+  - **Proibição Absoluta de Adição Global:** NUNCA execute `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
+  - **Adição Cirúrgica de Arquivos:** Inspecione os arquivos manipulados no chat atual e execute `git add <arquivo1> <arquivo2> ...` apenas para os arquivos pertencentes ao escopo daquela solicitação.
+  - **Preservação da Working Tree:** Quaisquer alterações pendentes deixadas por outros chats concorrentes ou intervenções manuais não relacionadas ao chat solicitante devem permanecer intocadas na working tree (unstaged).
+  - **Push Isolado:** O push deve refletir e sincronizar apenas o conjunto de commits originados da tarefa do chat em questão.
 - **Decomposition of Large Tasks (Atomic Commits):** When explicitly asked to commit after complex multi-file or multi-layer changes:
   1. Inspect modified files (`git status`).
   2. DO NOT create a single monolithic commit (`git add . && git commit`).
@@ -267,4 +272,63 @@ After any file modification or addition:
 - **Comments:** Write minimal comments. Self-documenting code through clear naming.
 - **TypeScript:** Use `type` for DTOs; `interface` for extensible object shapes. Use `import type` for type-only imports. Use `async/await` throughout.
 - **Singletons:** Controllers and Services are exported as singleton instances (`export const authController = new AuthControllerClass()`).
-- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql\`ST_AsGeoJson(${table.location})\``.
+- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql`ST_AsGeoJson(${table.location})``.
+
+---
+
+## 8. Governança Rígida de Branches, Commits, CI/CD e Blindagem de Testes
+
+### 8.1. Axioma de Commits (Sintaxe Obrigatória e Isolamento por Chat)
+- **Formato Estrito:** `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
+- **Categorias Permitidas:** `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
+- **Regra de Sintaxe:** Mensagens fora desta sintaxe ou commits sem propósito atômico claro são rejeitados pelo pipeline de CI (`pr-gatekeeper.yml`).
+- **Isolamento de Escopo por Chat (Commit & Push):** Ao receber comando para commitar e/ou dar push, o agente deve selecionar cirurgicamente APENAS os arquivos que foram modificados ou criados na sessão do chat atual. Nunca utilizar `git add .` ou incluir alterações originadas de outros chats ou tarefas simultâneas na working tree.
+
+### 8.2. Axioma de Criação de Branches (Regra Prévia Obrigatória)
+- **Criação Prévia Mandatória:** O modelo DEVE OBRIGATORIAMENTE E SEMPRE criar uma branch temática a partir de `dev` (`git checkout -b <categoria>/<nome-da-task> dev`) ANTES de realizar qualquer modificação em qualquer arquivo do projeto.
+- **Proibição Absoluta de Trabalho Direto em `main` ou `dev`:** É EXPRESSAMENTE PROIBIDO realizar alterações diretamente na branch `main` ou na branch `dev`. A working tree deve ser ramificada imediatamente no início de qualquer tarefa.
+- **Branch Base Obrigatória:** Toda nova tarefa, feature ou correção deve nascer exclusivamente a partir da branch `dev`.
+- **Nomenclatura Obrigatória:** `<categoria>/<nome-da-task>` (ex: `feat/real-time-alerts`, `fix/login-session`, `test/concurrency-shop`).
+- **Proibição:** É expressamente proibido ramificar a partir de `main`, com a única exceção de hotfixes emergenciais de produção (`fix/hotfix-...`).
+
+### 8.3. Axioma de Merge Autônomo e Validação Obrigatória de PRs (Regra Absoluta)
+- **Proibição de Merge Local:** Agentes e modelos de IA **NUNCA** executam `git merge` localmente em `dev` ou `main`.
+- **Fluxo Exclusivo de Integração:**
+  1. Criar branch temática a partir de `dev` antes de tocar no código: `git checkout -b <categoria>/<nome-da-task> dev`.
+  2. Implementar e validar código e testes localmente (`npm test`, `npm run typecheck`).
+     - **Teste Obrigatório com Maestro para Frontend:** Caso a modificação infira ou toque no frontend mobile (`src/frontend/**`, componentes, telas, rotas Expo, tokens de design ou i18n), o agente **DEVE OBRIGATORIAMENTE testar a estabilidade da aplicação usando o Maestro** (`npm run test:maestro:full` ou `npm run test:maestro:quick` ou `npm run test:maestro:docker`) antes de prosseguir com o commit e push para o remoto.
+  3. Enviar branch para o repositório remoto: `git push origin <categoria>/<nome-da-task>`.
+  4. Abrir Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
+  5. **Verificação Obrigatória de Testes:** O agente DEVE acompanhar ativamente a esteira de CI (`gh pr checks <PR> --watch` ou consulta equivalente) para verificar se todos os testes passaram (`SUCCESS`). A tarefa NUNCA deve ser considerada finalizada sem essa verificação.
+  6. **Merge via GitHub CLI (`gh`):**
+     - Se os testes passarem: o agente DEVE obrigatoriamente utilizar a CLI `gh` da máquina do usuário para realizar o merge do PR na branch `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`).
+     - Se os testes falharem: o agente DEVE investigar a causa raiz da falha na esteira, corrigir o código, subir novo commit cirúrgico e aguardar a nova execução do CI até que seja aprovado.
+- **Pré-requisito Mandatório da CLI `gh` (Instalação e Login):**
+  - O agente deve verificar se o GitHub CLI está instalado (`which gh`). Se não estiver instalado, DEVE interromper e orientar o desenvolvedor a instalá-lo de acordo com o sistema operacional (`sudo apt install gh`, `brew install gh`, `pacman -S github-cli` ou via `winget install --id GitHub.cli`).
+  - O agente deve verificar se o GitHub CLI está autenticado (`gh auth status`). Se não estiver, DEVE interromper a automação e solicitar explicitamente que o usuário realize o login via terminal (`gh auth login`).
+- **Resolução Autônoma de Falhas de CI via Download de Logs e Artefatos:**
+  - Quando a esteira de CI do GitHub Actions falhar, o modelo DEVE inspecionar os passos com erro diretamente via terminal:
+    - Ver logs detalhados da falha: `gh run view <run-id> --log-failed`
+    - Baixar pacote de diagnóstico completo (screenshots de erro, relatório HTML, dump XML de UI e logcat): `gh run download <run-id> -n maestro-e2e-audit-reports`
+  - O modelo deve analisar os artefatos baixados para identificar a causa raiz com precisão cirúrgica sem onerar o desenvolvedor com execuções locais lentas.
+
+### 8.4. Proteção contra Testes Falsos (Anti-Tautologia) e Zonas Protegidas
+- **Proibição de Testes Tautológicos:** Proibido criar testes com asserções genéricas ou vazias (ex: `expect(true).toBe(true)`, `expect(res).toBeDefined()`), testes sem validação de mutação de estado real ou mocks excessivos que disfarcem falhas de integração.
+- **Barreira de Cobertura de Código:** Cobertura mínima de **80%** de linhas e branches nos arquivos criados ou modificados.
+- **Zonas Protegidas (Arquivos Intocáveis por IA para Burlar CI):**
+  - Diretórios estruturais de teste: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
+  - **Regra Inegociável:** Modelos e agentes de IA **NÃO têm permissão** para relaxar thresholds de performance (SLAs de latência/erros no k6), alterar asserções para falsos-positivos ou desativar steps de validação para forçar a passagem de pipelines de CI. Se um teste falhar, a causa raiz na implementação deve ser investigada e corrigida.
+
+### 8.5. Axioma de Títulos e Descrições de Pull Requests (PRs)
+- **Estilo Idêntico a Mensagens de Commit (Proibição de Slop de IA):** Expressamente proibido o uso de templates corporativos, prolixos e gerados por IA em títulos ou bodies de PR (sem `### Resumo`, sem listas com negrito `**`, sem emojis, sem tabelas e sem qualquer formatação de markdown).
+- **Regras Estritas de Escrita:**
+  - **Idioma:** Exclusivamente em inglês (`en-US`).
+  - **Caixa:** Totalmente em minúsculas (`lowercase`), tanto no título quanto no `--body`.
+  - **Sem Markdown:** Texto puro, corrido, sem headers, bullet points rebuscados ou negrito.
+  - **Tom:** Informal, direto e despojado ("meio jogado"), mas com vocabulário tecnicamente denso e preciso (estilo clássico de engenheiro sênior no terminal).
+- **Exemplo de Título:**
+  `feat(ci): add conditional expo bundle check to gatekeeper`
+- **Exemplo de Body (`--body`):**
+  `added conditional expo export step in pr-gatekeeper.yml that only triggers when src/frontend files are changed, bumped semver patch to 1.2.2 and cleaned up tests branch from workflows`
+
+

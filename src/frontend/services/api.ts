@@ -1,11 +1,22 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 
+export const REMOTE_PROD_URL = "https://eq.projetoscti.com.br/26-presco";
+export const REMOTE_DEV_URL = "https://eq.projetoscti.com.br/26-presco-dev";
+
 function resolveBaseUrl(): string {
+  const appVariant =
+    process.env.EXPO_PUBLIC_APP_VARIANT?.trim() ||
+    process.env.APP_VARIANT?.trim() ||
+    (Constants.expoConfig?.extra as any)?.appVariant ||
+    "production";
+  const isDev = appVariant === "development" || appVariant === "staging";
+  const defaultRemoteUrl = isDev ? REMOTE_DEV_URL : REMOTE_PROD_URL;
+
   const envUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
   const hostUri = Constants.expoConfig?.hostUri;
 
-  // Se uma URL remota explícita for configurada (ex: https://eq.projetoscti.com.br/26-presco ou túnel),
+  // Se uma URL remota explícita for configurada (ex: túnel ou endpoint remoto dedicado),
   // respeita-a sempre, garantindo acesso em qualquer rede (Wi-Fi, 4G, etc).
   if (envUrl && (envUrl.startsWith("https://") || process.env.EXPO_PUBLIC_FORCE_API_URL === "true")) {
     return envUrl.replace(/\/+$/, "");
@@ -27,7 +38,8 @@ function resolveBaseUrl(): string {
     return envUrl.replace(/\/+$/, "");
   }
 
-  return "http://localhost:3333";
+  // Retorna a URL padrão segregada por variante (Dev -> dev backend, Prod -> prod backend)
+  return defaultRemoteUrl;
 }
 
 const BASE_URL = resolveBaseUrl();
