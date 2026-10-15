@@ -1,6 +1,20 @@
 appId: com.presco.app
 ---
-# Subflow: Dismiss Onboarding Tutorial if Visible
+# Subflow: Dismiss Onboarding Tutorial & Dev Menu if Visible
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+
+- runFlow:
+    when:
+      visible:
+        id: "dismiss-tutorial-button"
+    commands:
+      - tapOn:
+          id: "dismiss-tutorial-button"
+
 - runFlow:
     when:
       visible: "Pular tutorial"
@@ -9,6 +23,26 @@ appId: com.presco.app
 
 - runFlow:
     when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+
+- runFlow:
+    when:
+      visible: "Pular"
+    commands:
+      - tapOn: "Pular"
+
+- runFlow:
+    when:
       visible: "Entendi"
     commands:
       - tapOn: "Entendi"
+
+- runFlow:
+    when:
+      visible: "(?i).*Runtime version.*|.*Toggle performance monitor.*"
+    commands:
+      - back
+      - waitForAnimationToEnd:
+          timeout: 500

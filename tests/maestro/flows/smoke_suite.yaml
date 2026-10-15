@@ -1,0 +1,77 @@
+appId: com.presco.app
+name: "Presco - Autonomous Fast Smoke Test"
+tags:
+  - smoke
+  - quick
+---
+# Step 1: Launch application cleanly
+- launchApp:
+    clearState: false
+
+# Dismiss any intro modal if present
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+
+- runFlow:
+    when:
+      visible: "Pular tutorial"
+    commands:
+      - tapOn: "Pular tutorial"
+
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+
+- runFlow:
+    when:
+      visible: "Entendi"
+    commands:
+      - tapOn: "Entendi"
+
+# Step 2: Verify Home screen & Core Navigation
+- assertVisible:
+    id: "tab-home"
+
+# Step 3: Navigate to Search / Catalog
+- tapOn:
+    id: "tab-search"
+- extendedWaitUntil:
+    visible:
+      id: "tab-search"
+    timeout: 5000
+
+# Step 4: Navigate to Map
+- tapOn:
+    id: "tab-map"
+- extendedWaitUntil:
+    visible:
+      id: "tab-map"
+    timeout: 5000
+
+# Step 5: Navigate to Profile
+- tapOn:
+    id: "tab-profile"
+
+# If unauthenticated, perform 1-Tap Quick Dev Login
+- runFlow:
+    when:
+      visible:
+        id: "profile-quick-login-user"
+    commands:
+      - tapOn:
+          id: "profile-quick-login-user"
+      - extendedWaitUntil:
+          notVisible:
+            id: "profile-quick-login-user"
+          timeout: 8000
+
+# Step 6: Return to Home
+- tapOn:
+    id: "tab-home"
+- assertVisible:
+    id: "tab-home"
