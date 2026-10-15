@@ -46,3 +46,19 @@ appId: com.presco.app
       - back
       - waitForAnimationToEnd:
           timeout: 500
+
+- runFlow:
+    when:
+      visible: "Fetch development servers"
+    commands:
+      - tapOn: "Fetch development servers"
+      - waitForAnimationToEnd:
+          timeout: 2000
+
+- runFlow:
+    when:
+      visible: "Connect"
+    commands:
+      - tapOn: "Connect"
+      - waitForAnimationToEnd:
+          timeout: 3000
