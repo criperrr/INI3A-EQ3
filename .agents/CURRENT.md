@@ -7,6 +7,9 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem do Pipeline CI de E2E no GitHub Actions (`maestro-e2e.yml`):**
+  - **Resolução do Dev Client & Modal de Onboarding:** Diagnosticado e resolvido o fluxo de carregamento headless no emulador Android: implementado pré-aquecimento do bundle JS via `curl` no Metro, inicialização em `--host lan`, preservação do estado via `stopApp: false`, priorização do dismiss do modal de tutorial (`dismiss-tutorial-button`, `Pular tutorial`, `Skip`) e espera determinística em `extendedWaitUntil: ".*(dismiss-tutorial-button|tab-home).*"` para transição segura à Home.
+  - **Filtro Estrito de Caminhos (*Path Filtering*):** Aplicado filtro cirúrgico em branches `test/**` e PRs (`src/frontend/**`, `tests/maestro/**`, `scripts/*maestro*`), impedindo compilação de APK e testes de emulador desnecessários em alterações de backend ou docs.
 - **Blindagem de Governança de Branches, Pré-requisito do `gh` e Diagnóstico Autônomo de CI:**
   - **Criação Prévia Mandatória de Branches:** O modelo deve obrigatoriamente criar uma branch temática a partir de `dev` antes de tocar em qualquer arquivo do projeto, sendo estritamente proibido alterar diretamente em `main` ou `dev`.
   - **Onboarding e Verificação do GitHub CLI (`gh`):** Instrução mandatória para o agente verificar a presença (`which gh`) e autenticação (`gh auth status`) da CLI do GitHub, orientando a instalação ou solicitando `gh auth login` se ausente.
