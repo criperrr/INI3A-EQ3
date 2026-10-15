@@ -138,9 +138,10 @@ jobs:
         working-directory: src/frontend/android
         env:
           APP_VARIANT: development
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 -x lint -x test --no-daemon
 
       - name: Executar Emulador Android e Suíte Maestro
         uses: reactivecircus/android-emulator-runner@v2
@@ -154,34 +155,7 @@ jobs:
           disk-size: 8192M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
-          script: |
-            export PATH="$HOME/.maestro/bin:$PATH"
-            echo "📱 Emulador Android conectado:"
-            adb devices
-            
-            echo "📦 Instalando APK Debug do Presco..."
-            adb install -r src/frontend/android/app/build/outputs/apk/debug/app-debug.apk
-            
-            echo "🔑 Concedendo permissões do sistema..."
-            adb shell pm grant com.presco.app android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true
-            adb shell pm grant com.presco.app android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true
-            
-            echo "🔀 Configurando redirecionamento de portas ADB..."
-            adb reverse tcp:8081 tcp:8081
-            adb reverse tcp:3333 tcp:3333
-            
-            echo "🚀 Iniciando Metro Bundler..."
-            cd src/frontend
-            npx expo start --localhost &
-            timeout 60 bash -c 'until curl -s http://localhost:8081/status; do sleep 2; done'
-            cd ../..
-            
-            echo "🧪 Executando suíte Maestro..."
-            if [ "${{ github.event.inputs.test_suite }}" == "quick" ]; then
-              npm run test:maestro:quick
-            else
-              npm run test:maestro:quality
-            fi
+          script: ./scripts/ci_run_maestro.sh "${{ github.event.inputs.test_suite || 'quality' }}"
 
       - name: Upload de Relatórios e Screenshots do Maestro
         if: always()
@@ -192,3 +166,4 @@ jobs:
             reports/maestro/
             ~/.maestro/tests/
           retention-days: 14
+          if-no-files-found: ignore
