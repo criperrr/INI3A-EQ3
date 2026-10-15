@@ -4055,3 +4055,34 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.gitignore`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** End-to-end automated UI quality assurance passing cleanly in 4m 14s with zero flakiness.
+
+## `2026-10-14 23:38` - `ci(maestro)`: Cloud E2E testing workflow with KVM and Android emulator
+
+- **Description:** Created GitHub Actions workflow `maestro-e2e.yml` running Maestro on headless Android emulator with hardware acceleration (KVM), automated database/redis provisioning, Expo Prebuild, APK build, and test report upload.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Enables continuous end-to-end frontend regression verification on GitHub Actions for PRs against dev and main.
+
+## `2026-10-14 23:57` - `docs(agents)`: Strengthen branch creation priority, gh setup and autonomous CI log download
+
+- **Description:** Updated system guidelines in AGENTS.md, MEMORY.md, and user-preferences.md to enforce mandatory prior branch creation from dev, gh CLI verification and installation guidance, and autonomous CI error artifact download via gh run download.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Solidifies AI governance protocols preventing unbranched work and empowering remote headless debugging.
+
+## `2026-10-15 01:54` - `fix(ci)`: Resilient Maestro Dev Launcher Connection & Bundle Pre-warming
+
+- **Description:** Fixed headless Android emulator Dev Client screen stall during GitHub Actions Maestro CI run. Implemented Metro bundle pre-warming (`curl ... index.bundle`), set Metro host binding to LAN (`--host lan`), configured `stopApp: false` in Maestro flows to preserve background intent state, added `openLink` deep-linking and fallback `inputText` in `dismiss_tutorial.yaml`, increased timeout thresholds, and applied strict path-filtering on `test/**` branch pushes.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/ci_run_maestro.sh`
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+- **Impact / Next Steps:** Awaiting GitHub Actions run `38683885066` completion. Upon successful green check, open PR to `dev`, verify checks, merge via `gh pr merge --squash`, and perform requested clean system shutdown.

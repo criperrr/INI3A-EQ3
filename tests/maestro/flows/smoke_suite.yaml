@@ -7,31 +7,29 @@ tags:
 # Step 1: Launch application cleanly
 - launchApp:
     clearState: false
+    stopApp: false
 
-# Dismiss any intro modal if present
-- runFlow:
-    when:
-      visible: "Continue"
-    commands:
-      - tapOn: "Continue"
+- waitForAnimationToEnd:
+    timeout: 2000
 
+# Dismiss any intro modal or dev launcher if present early
 - runFlow:
-    when:
-      visible: "Pular tutorial"
-    commands:
-      - tapOn: "Pular tutorial"
+    file: "../subflows/dismiss_tutorial.yaml"
 
-- runFlow:
-    when:
-      visible: "Skip"
-    commands:
-      - tapOn: "Skip"
+# Wait for either tutorial modal or home screen to load
+- extendedWaitUntil:
+    visible:
+      id: ".*(dismiss-tutorial-button|tab-home).*"
+    timeout: 35000
 
+# Dismiss tutorial modal once rendered
 - runFlow:
-    when:
-      visible: "Entendi"
-    commands:
-      - tapOn: "Entendi"
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 15000
 
 # Step 2: Verify Home screen & Core Navigation
 - assertVisible:

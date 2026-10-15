@@ -67,6 +67,7 @@ async function main() {
     execSync(`adb -s ${serial} shell pm grant com.presco.app android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true`);
     execSync(`adb -s ${serial} shell pm grant com.presco.app android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true`);
     execSync(`adb -s ${serial} reverse tcp:8081 tcp:8081 2>/dev/null || true`);
+    execSync(`adb -s ${serial} reverse tcp:3333 tcp:3333 2>/dev/null || true`);
   } catch {}
 
   // 3. Preparar diretórios de relatórios
