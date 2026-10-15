@@ -4142,3 +4142,14 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** 39/39 testes do backend passando, 0 erros no typecheck. Pronto para push e abertura de PR para `dev`.
+
+
+## `2026-10-15 16:53` - `chore(release)`: Deploy em produção v1.4.5 e publicação do APK no GitHub Releases
+
+- **Description:** Concluído o ciclo completo de implantação da v1.4.5 em produção: deploy e migração Drizzle (0005_structural_hardening_phase1.sql) no servidor CTI remoto, ajuste de scripts de troca de ambiente (configure_env.ts), validação de 100% dos testes no CI (incluindo 20m de Maestro E2E), merge do PR #33 na main e compilação/publicação automática do APK nativo (app-release.apk) no GitHub Releases via tag v1.4.5.
+- **Files Modified:**
+  - `scripts/configure_env.ts`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Aplicação 100% operacional em produção, banco migrado, API saudável e APK disponível para download direto na aba Releases do repositório.
