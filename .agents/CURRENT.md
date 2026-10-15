@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Pipeline de CI/CD para Testes E2E com Maestro no GitHub Actions (`maestro-e2e.yml`):**
+  - **Automação Completa na Nuvem:** Criado o workflow [`.github/workflows/maestro-e2e.yml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/.github/workflows/maestro-e2e.yml) para rodar a suíte completa de auditoria E2E do Maestro no GitHub Actions (`ubuntu-latest`) utilizando aceleração de hardware KVM (`/dev/kvm`), Node 22, Java 17, Gradle Cache, containers Docker (Postgres + Redis) e emulador Android (API 31, x86_64 via `reactivecircus/android-emulator-runner@v2`).
+  - **Filtro Cirúrgico de Caminhos (*Path Filtering*):** Acionado automaticamente em PRs para `dev` e `main` quando houver alterações em `src/frontend/**`, `tests/maestro/**` ou scripts de teste, preservando o tempo de PRs de backend/docs intactos.
+  - **Suporte a Execução Manual e Pré-PR:** Gatilhos via `workflow_dispatch` e em branches `test/**` para validação prévia na nuvem antes da abertura de PRs.
 - **Auditoria Profunda de Qualidade Frontend com Maestro (`v1.4.4`):**
   - **Suíte de Auditoria Completa:** Implementado o fluxo [`frontend_quality_audit.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/frontend_quality_audit.yaml) cobrindo 12 fases do app (Boot, Autenticação, Onboarding, Busca, Detalhes de Produto, Carrinho com Múltiplas Paradas, Rota no Mapa, Modais, Perfil Gamificado, Loja de Customizações, Temas Dinâmicos Claro/Escuro/AMOLED, Monet e Logout Limpo).
   - **Blindagem de Seletores e Acessibilidade:** Inseridos `testID`s determinísticos e `accessibilityRole="button"` em 13 componentes e telas (`cart.tsx`, `RoutePreviewModal.tsx`, `TravelSettingsModal.tsx`, `login.tsx`, `profile.tsx`, `registerUser.tsx`, `search.tsx`, `settings.tsx`, `productDetails.tsx`, `index.tsx`, `help.tsx`, `about.tsx`, `adminModeration.tsx`).
