@@ -1376,7 +1376,15 @@ function CustomizationShopModal({
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity
+              testID="shop-modal-close-btn"
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="shop-modal-close-btn"
+              style={styles.closeBtn}
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
               <Ionicons name="close" size={24} color={themeStyles.text.color} />
             </TouchableOpacity>
           </View>
@@ -1830,6 +1838,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
 
         <View style={styles.quickConnectButtons}>
           <TouchableOpacity
+            testID="profile-quick-login-user"
             style={[styles.quickUserBtn, { backgroundColor: accent }]}
             activeOpacity={0.8}
             onPress={() => onQuickConnect("user")}
@@ -1854,6 +1863,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
           </TouchableOpacity>
 
           <TouchableOpacity
+            testID="profile-quick-login-admin"
             style={[
               styles.quickAdminBtn,
               themeStyles.inputBg,
@@ -1887,6 +1897,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
       {/* Standard Actions */}
       <View style={styles.standardActions}>
         <TouchableOpacity
+          testID="profile-login-other-btn"
           style={[styles.loginBtn, themeStyles.inputBg, themeStyles.border]}
           activeOpacity={0.8}
           onPress={onGoToLogin}

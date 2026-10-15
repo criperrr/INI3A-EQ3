@@ -676,7 +676,7 @@ export default function ProductDetails() {
   const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
+    <View testID="product-details-screen" style={[styles.container, themeStyles.bg]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>

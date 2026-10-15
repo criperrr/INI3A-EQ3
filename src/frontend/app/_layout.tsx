@@ -1,6 +1,8 @@
 // app/_layout.tsx
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, StatusBar, Platform, AppState } from "react-native";
+import { StyleSheet, View, StatusBar, Platform, AppState, LogBox } from "react-native";
+
+LogBox.ignoreAllLogs(true);
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Stack, usePathname, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";

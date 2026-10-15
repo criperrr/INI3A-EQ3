@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
-  Share,
   Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -55,13 +54,16 @@ export default function CartScreen() {
 
   // Stable references for async callbacks
   const cartItemsRef = useRef(cartItems);
-  cartItemsRef.current = cartItems;
   const settingsRef = useRef(settings);
-  settingsRef.current = settings;
   const selectedSingleMarketIdRef = useRef(selectedSingleMarketId);
-  selectedSingleMarketIdRef.current = selectedSingleMarketId;
   const prioritizedProductIdRef = useRef(prioritizedProductId);
-  prioritizedProductIdRef.current = prioritizedProductId;
+
+  useEffect(() => {
+    cartItemsRef.current = cartItems;
+    settingsRef.current = settings;
+    selectedSingleMarketIdRef.current = selectedSingleMarketId;
+    prioritizedProductIdRef.current = prioritizedProductId;
+  });
 
   // Background optimizer trigger: does not block UI, resilient to 404/offline
   const triggerOptimization = useCallback(

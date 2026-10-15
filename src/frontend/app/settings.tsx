@@ -685,6 +685,7 @@ const SettingsScreen: React.FC = () => {
                 </Text>
               </View>
               <Switch
+                testID="theme-amoled-switch"
                 value={amoledEnabled}
                 trackColor={{ false: "#D4DCC8", true: accent }}
                 onValueChange={(val) => {
@@ -785,6 +786,7 @@ const SettingsScreen: React.FC = () => {
                   </Text>
                 </View>
                 <Switch
+                  testID="monet-system-sync-switch"
                   value={Platform.OS === "android" ? syncWithSystemAndroid : false}
                   trackColor={{ false: "#D4DCC8", true: accent }}
                   onValueChange={(val) => {
@@ -841,6 +843,7 @@ const SettingsScreen: React.FC = () => {
                       return (
                         <TouchableOpacity
                           key={preset.hex}
+                          testID={`monet-seed-${preset.name.toLowerCase()}`}
                           style={[
                             styles.colorOption,
                             {
@@ -1263,6 +1266,7 @@ const SettingsScreen: React.FC = () => {
 
             {/* Moderação de Preços Pendentes */}
             <TouchableOpacity
+              testID="btn-admin-moderation"
               style={[
                 styles.adminActionCard,
                 {
