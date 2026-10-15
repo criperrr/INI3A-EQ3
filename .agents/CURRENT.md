@@ -7,6 +7,26 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem Estrutural & Auditoria de Código da Fase 1 (`fix/structural-hardening-phase1`):**
+  - **V-01 (Limites de Preço, Cold Start & Variance Floor):**
+    - Implementada constraint no banco e validação no service para a faixa realista de preços [R$ 0,10, R$ 15.000,00], erradicando o "Tomate de 10 Bilhões".
+    - Isolamento estrito de Cold Start (`stats.count === 0`): cotações nascem como provisórias (`isSuspended: true, isResolved: false, trustFlag: false`) e com 0 XP, sendo isoladas do otimizador de carrinho e das buscas até dupla corroboração independente (faixa ±20%).
+    - Estabilização estatística de variância: `MAD_eff = Math.max(mad, 0.05 * median)` eliminando divisões por zero e Z-scores infinitos.
+    - Saneamento pericial: parser de moeda pt-BR (`parseCurrencyValue`), reavaliação de outliers no `PUT /ocurrency/:id` com auto-suspensão e idempotência no `service.approve` (fim do farm de XP).
+    - Gerada e registrada a migration física `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`.
+  - **V-03 (Custódia de Produtos & Authentication Shield):**
+    - Persistência de autoria: coluna `created_by_user_id` adicionada à tabela `product` com chave estrangeira `ON DELETE SET NULL` e índice B-Tree dedicado `idx_product_created_by`.
+    - Fail-closed no service: `productService.createCustomProduct` rejeita requisições sem `userId` com `UnauthorizedError`.
+    - Authentication Shield: validação de `dangerFlag === true` no `requireAuth` e `requireTwoFactor` retornando HTTP 403 Forbidden imediato. Otimização de I/O com anexação das flags em `req.user`, eliminando consulta duplicada ao PostgreSQL.
+  - **V-06 (Erradicação do Marco Zero & Validação Espacial de Mercados):**
+    - Erradicado totalmente o fallback silencioso para a Praça da Sé (`-23.55052, -46.633308`) em `market.service.ts` e `market.repository.ts`.
+    - Validação de entrada: `createMarket` e `updateMarket` exigem coordenadas numéricas válidas dentro do envelope territorial brasileiro (lat: [-34.0, +5.5], lng: [-74.0, -34.5]) e barram qualquer ponto a ≤ 50m do marco zero da Praça da Sé via fórmula geodésica de Haversine.
+  - **Auditoria Independente Anti-Slop (3 Auditores Adversariais):**
+    - V-01 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO E ENDURECIDO]**
+    - V-03 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+    - V-06 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+  - **Qualidade & Blindagem de Testes:** 39 testes unitários e de integração passando com 100% de sucesso (`npm run test:backend`), 0 erros no typecheck (`npm run typecheck`) e SemVer sincronizado para `v1.4.5` (`versionCode: 30`).
+  - **Dossiê Dialético V-08 Concluído:** Finalizado o ciclo de 4 rodadas adversariais para Google OAuth, 2FA Real (TOTP) e Trust Ramp, homologado com [APROVAÇÃO DEFINITIVA INTEGRAL] e documentado no compêndio.
 - **Blindagem do Pipeline CI de E2E no GitHub Actions (`maestro-e2e.yml`):**
   - **Resolução do Dev Client & Modal de Onboarding:** Diagnosticado e resolvido o fluxo de carregamento headless no emulador Android: implementado pré-aquecimento do bundle JS via `curl` no Metro, inicialização em `--host lan`, preservação do estado via `stopApp: false`, priorização do dismiss do modal de tutorial (`dismiss-tutorial-button`, `Pular tutorial`, `Skip`) e espera determinística em `extendedWaitUntil: ".*(dismiss-tutorial-button|tab-home).*"` para transição segura à Home.
   - **Filtro Estrito de Caminhos (*Path Filtering*):** Aplicado filtro cirúrgico em branches `test/**` e PRs (`src/frontend/**`, `tests/maestro/**`, `scripts/*maestro*`), impedindo compilação de APK e testes de emulador desnecessários em alterações de backend ou docs.

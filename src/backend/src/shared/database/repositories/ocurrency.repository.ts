@@ -34,7 +34,9 @@ export interface AdaptivePriceStats {
   count: number;
   distinctUsers: number;
   avgPrice: number | null;
+  medianPrice?: number | null;
   stddevPrice: number;
+  madPrice?: number;
   minPrice: number | null;
   maxPrice: number | null;
   hasQuorumForCandidate: boolean;
@@ -447,9 +449,11 @@ class OcurrencyRepositoryClass {
         COUNT(*)::int AS recent_count,
         COUNT(DISTINCT user_id)::int AS distinct_users,
         AVG(val)::numeric AS avg_price,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY val)::numeric AS median_price,
         COALESCE(STDDEV_SAMP(val), 0)::numeric AS stddev_price,
         MIN(val)::numeric AS min_price,
-        MAX(val)::numeric AS max_price
+        MAX(val)::numeric AS max_price,
+        ARRAY_AGG(val) AS vals
       FROM recent_prices;
     `);
 
@@ -458,9 +462,46 @@ class OcurrencyRepositoryClass {
     const count = Number(row?.recent_count || 0);
     const distinctUsers = Number(row?.distinct_users || 0);
     const avgPrice = row?.avg_price ? parseFloat(row.avg_price) : null;
-    const stddevPrice = row?.stddev_price ? parseFloat(row.stddev_price) : 0;
+    const rawMedianPrice = row?.median_price ? parseFloat(row.median_price) : null;
+    const rawStddevPrice = row?.stddev_price ? parseFloat(row.stddev_price) : 0;
     const minPrice = row?.min_price ? parseFloat(row.min_price) : null;
     const maxPrice = row?.max_price ? parseFloat(row.max_price) : null;
+
+    let numericVals: number[] = [];
+    if (Array.isArray(row?.vals)) {
+      numericVals = row.vals.map((v: any) => Number(v)).filter((v: number) => !isNaN(v));
+    } else if (typeof row?.vals === "string") {
+      numericVals = row.vals
+        .replace(/[{}]/g, "")
+        .split(",")
+        .map((v: string) => parseFloat(v.trim()))
+        .filter((v: number) => !isNaN(v));
+    }
+
+    let calculatedMedian = rawMedianPrice;
+    if (calculatedMedian === null && numericVals.length > 0) {
+      const sorted = [...numericVals].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      const midVal = sorted[mid] ?? 0;
+      const prevVal = sorted[mid - 1] ?? midVal;
+      calculatedMedian = sorted.length % 2 !== 0 ? midVal : (prevVal + midVal) / 2;
+    }
+
+    let madPrice = 0;
+    if (calculatedMedian !== null && numericVals.length > 0) {
+      const currentMedian = calculatedMedian;
+      const absDiffs = numericVals.map((v) => Math.abs(v - currentMedian)).sort((a, b) => a - b);
+      const mid = Math.floor(absDiffs.length / 2);
+      const midDiff = absDiffs[mid] ?? 0;
+      const prevDiff = absDiffs[mid - 1] ?? midDiff;
+      madPrice = absDiffs.length % 2 !== 0 ? midDiff : (prevDiff + midDiff) / 2;
+    }
+
+    // Variance Floor: guarantee effective deviation is never zero when count > 0 (MAD_eff = Math.max(mad, 0.05 * median))
+    const baseline = calculatedMedian ?? avgPrice ?? 0;
+    const varianceFloor = baseline > 0 ? 0.05 * baseline : 0;
+    const effectiveMad = count > 0 ? Math.max(madPrice, varianceFloor) : 0;
+    const effectiveStddev = count > 0 ? Math.max(rawStddevPrice, varianceFloor) : 0;
 
     let hasQuorumForCandidate = false;
     let quorumCount = 0;
@@ -487,12 +528,43 @@ class OcurrencyRepositoryClass {
       count,
       distinctUsers,
       avgPrice,
-      stddevPrice,
+      medianPrice: calculatedMedian,
+      stddevPrice: effectiveStddev,
+      madPrice: effectiveMad,
       minPrice,
       maxPrice,
       hasQuorumForCandidate,
       quorumCount,
     };
+  }
+
+  async findPendingColdStartCorroboration(productId: number, excludeUserId: number, candidatePrice: number) {
+    const minBand = (candidatePrice * 0.8).toFixed(2);
+    const maxBand = (candidatePrice * 1.2).toFixed(2);
+
+    const [pending] = await db
+      .select({
+        id: Ocurrency.id,
+        userId: Ocurrency.userId,
+        productId: Ocurrency.productId,
+        marketId: Ocurrency.marketId,
+        value: Ocurrency.value,
+        createdAt: Ocurrency.createdAt,
+      })
+      .from(Ocurrency)
+      .where(
+        and(
+          eq(Ocurrency.productId, productId),
+          eq(Ocurrency.isSuspended, true),
+          eq(Ocurrency.isResolved, false),
+          sql`${Ocurrency.userId} != ${excludeUserId}`,
+          sql`${Ocurrency.value}::numeric BETWEEN ${minBand}::numeric AND ${maxBand}::numeric`,
+        ),
+      )
+      .orderBy(desc(Ocurrency.createdAt))
+      .limit(1);
+
+    return pending || null;
   }
 
   async getPendingOccurrences() {
