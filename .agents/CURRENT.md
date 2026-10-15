@@ -7,6 +7,10 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem de Governança de Branches, Pré-requisito do `gh` e Diagnóstico Autônomo de CI:**
+  - **Criação Prévia Mandatória de Branches:** O modelo deve obrigatoriamente criar uma branch temática a partir de `dev` antes de tocar em qualquer arquivo do projeto, sendo estritamente proibido alterar diretamente em `main` ou `dev`.
+  - **Onboarding e Verificação do GitHub CLI (`gh`):** Instrução mandatória para o agente verificar a presença (`which gh`) e autenticação (`gh auth status`) da CLI do GitHub, orientando a instalação ou solicitando `gh auth login` se ausente.
+  - **Diagnóstico Autônomo de Falhas na Nuvem:** O modelo foi capacitado e instruído a inspecionar logs de erro (`gh run view <run-id> --log-failed`) e baixar os artefatos de teste (`gh run download <run-id> -n maestro-e2e-audit-reports`) diretamente via terminal para debugar sem onerar a máquina do desenvolvedor.
 - **Pipeline de CI/CD para Testes E2E com Maestro no GitHub Actions (`maestro-e2e.yml`):**
   - **Automação Completa na Nuvem:** Criado o workflow [`.github/workflows/maestro-e2e.yml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/.github/workflows/maestro-e2e.yml) para rodar a suíte completa de auditoria E2E do Maestro no GitHub Actions (`ubuntu-latest`) utilizando aceleração de hardware KVM (`/dev/kvm`), Node 22, Java 17, Gradle Cache, containers Docker (Postgres + Redis) e emulador Android (API 31, x86_64 via `reactivecircus/android-emulator-runner@v2`).
   - **Filtro Cirúrgico de Caminhos (*Path Filtering*):** Acionado automaticamente em PRs para `dev` e `main` quando houver alterações em `src/frontend/**`, `tests/maestro/**` ou scripts de teste, preservando o tempo de PRs de backend/docs intactos.

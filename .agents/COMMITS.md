@@ -4065,3 +4065,13 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `scripts/run_maestro_quick.ts`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Enables continuous end-to-end frontend regression verification on GitHub Actions for PRs against dev and main.
+
+## `2026-10-14 23:57` - `docs(agents)`: Strengthen branch creation priority, gh setup and autonomous CI log download
+
+- **Description:** Updated system guidelines in AGENTS.md, MEMORY.md, and user-preferences.md to enforce mandatory prior branch creation from dev, gh CLI verification and installation guidance, and autonomous CI error artifact download via gh run download.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Solidifies AI governance protocols preventing unbranched work and empowering remote headless debugging.

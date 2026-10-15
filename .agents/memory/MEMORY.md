@@ -21,7 +21,7 @@
 
 ## User Preferences
 - [user] Prioridade para execucao cirurgica e conservacao de contexto de tokens → user-preferences.md
-- [user] Política estrita de Git: isolamento cirúrgico por chat (commitar e dar push estritamente nos arquivos do chat solicitante, ignorando outros chats); NUNCA dar push/commit automaticamente; regra absoluta de criar PR para dev, validar testes no CI, mergear via gh CLI da máquina, exigir gh auth login caso desconfigurado e rodar testes de estabilidade com Maestro obrigatoriamente antes de push de frontend → user-preferences.md
+- [user] Política estrita de Git: criação OBRIGATÓRIA e prévia de branch a partir de dev antes de tocar no código (proibido alterar main ou dev diretamente); isolamento cirúrgico por chat; NUNCA dar push/commit automaticamente; regra de PR para dev, validar testes no CI, mergear via gh CLI da máquina, exigir gh instalado e autenticado (gh auth login), e realizar download e diagnóstico autônomo de logs/artefatos (gh run download / log-failed) se o CI falhar → user-preferences.md
 
 ## Feedback
 - [feedback] Impedir auto-votacao de precos e corrigir consultas geograficas no backend → feedback-history.md
