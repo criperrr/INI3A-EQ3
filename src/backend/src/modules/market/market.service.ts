@@ -1,6 +1,7 @@
 import { MarketRepository } from "@/shared/database/repositories/market.repository";
 import { HereMarketDiscovery } from "@/shared/services/hereMarketDiscovery.service";
-import { NotFoundError } from "@/shared/errors/errors";
+import { NotFoundError, ValidationError } from "@/shared/errors/errors";
+import { RoutingService } from "@/shared/services/routing.service";
 
 class MarketServiceClass {
   async getAllMarkets(params?: { latitude?: number | undefined; longitude?: number | undefined; radius?: number | undefined; includeAll?: boolean | undefined }) {
@@ -65,12 +66,45 @@ class MarketServiceClass {
     return found[0];
   }
 
-  async createMarket(data: { name: string; latitude?: number | undefined; longitude?: number | undefined }) {
-    const location = {
-      lat: data.latitude || -23.55052,
-      lng: data.longitude || -46.633308,
-    };
+  private validateMarketCoordinates(latitude: any, longitude: any): { lat: number; lng: number } {
+    if (
+      latitude === undefined ||
+      latitude === null ||
+      isNaN(Number(latitude)) ||
+      longitude === undefined ||
+      longitude === null ||
+      isNaN(Number(longitude))
+    ) {
+      throw new ValidationError([
+        { field: "location", message: "Coordenadas de latitude e longitude são obrigatórias e devem ser números válidos." },
+      ]);
+    }
 
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    if (lat < -34.0 || lat > 5.5 || lng < -74.0 || lng > -34.5) {
+      throw new ValidationError([
+        { field: "location", message: "Coordenadas fora dos limites do território brasileiro (latitude entre -34.0 e +5.5, longitude entre -74.0 e -34.5)." },
+      ]);
+    }
+
+    const distanceToMarcoZero = RoutingService.calculateHaversineDistance(
+      { lat, lng },
+      { lat: -23.55052, lng: -46.633308 }
+    );
+
+    if (distanceToMarcoZero <= 50) {
+      throw new ValidationError([
+        { field: "location", message: "Coordenadas inválidas ou localizadas no marco zero da Praça da Sé." },
+      ]);
+    }
+
+    return { lat, lng };
+  }
+
+  async createMarket(data: { name: string; latitude: number; longitude: number }) {
+    const location = this.validateMarketCoordinates(data.latitude, data.longitude);
 
     const [created] = await MarketRepository.createMarket({
       name: data.name.trim(),
@@ -85,11 +119,8 @@ class MarketServiceClass {
     if (data.name !== undefined) {
       updateData.name = data.name.trim();
     }
-    if (data.latitude !== undefined && data.longitude !== undefined) {
-      updateData.location = {
-        lat: data.latitude,
-        lng: data.longitude,
-      };
+    if (data.latitude !== undefined || data.longitude !== undefined) {
+      updateData.location = this.validateMarketCoordinates(data.latitude, data.longitude);
     }
 
     const updated = await MarketRepository.updateMarket(id, updateData);

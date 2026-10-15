@@ -1,5 +1,5 @@
 import { ProductRepository } from "@/shared/database/repositories/product.repository";
-import { ConflictError, NotFoundError, ValidationError } from "@/shared/errors/errors";
+import { ConflictError, NotFoundError, ValidationError, UnauthorizedError } from "@/shared/errors/errors";
 import { normalizeCategoryName } from "@/shared/constants/productCategories";
 import { invalidateCachePattern } from "@/shared/middlewares/cacheMiddleware";
 import type {
@@ -346,9 +346,17 @@ class ProductServiceClass {
     };
   }
 
-  async createCustomProduct(data: CreateProductDTO): Promise<ProductDTO> {
+  async createCustomProduct(
+    data: CreateProductDTO & { createdByUserId?: number | undefined },
+    createdByUserId?: number,
+  ): Promise<ProductDTO> {
     if (!data.name || typeof data.name !== "string" || data.name.trim().length === 0) {
       throw new ValidationError([{ field: "name", message: "O nome do produto é obrigatório." }]);
+    }
+
+    const userId = createdByUserId ?? data.createdByUserId;
+    if (!userId) {
+      throw new UnauthorizedError("É necessário estar autenticado para cadastrar um produto customizado.");
     }
 
     const trimmedEan = data.ean?.trim();
@@ -376,16 +384,20 @@ class ProductServiceClass {
       ? data.categories.join(", ")
       : (data.description || data.category || "");
 
-    const created = await ProductRepository.createProduct({
-      ean: trimmedEan || undefined,
-      ncm: data.ncm?.trim() || undefined,
-      name: data.name.trim(),
-      categories: data.categories,
-      description: categoryStr.trim(),
-      icon: initialIcon,
-      isPromotion: data.isPromotion,
-      createdAt: data.createdAt,
-    });
+    const created = await ProductRepository.createProduct(
+      {
+        ean: trimmedEan || undefined,
+        ncm: data.ncm?.trim() || undefined,
+        name: data.name.trim(),
+        categories: data.categories,
+        description: categoryStr.trim(),
+        icon: initialIcon,
+        isPromotion: data.isPromotion,
+        createdAt: data.createdAt,
+        createdByUserId: userId,
+      },
+      userId,
+    );
 
     if (!created) {
       throw new Error("Erro ao salvar produto no banco de dados.");
