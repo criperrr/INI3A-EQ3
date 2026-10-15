@@ -7,6 +7,11 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Release v1.4.5 em Produção & Publicação Oficial do APK Android:**
+  - **Deploy em Produção (CTI):** Executado `npm run deploy` via SSH (`ra2457039@projetoscti.com.br:4026`) no diretório `/var/www/equipes/26-presco`. Aplicada com sucesso a migration `0005_structural_hardening_phase1.sql` no PostgreSQL de produção (`54432`), executados seed e realocação de mercados (404 mercados verificados e ativos), e reiniciado o processo PM2 (`presco-backend`) na porta 3333 com healthcheck público `200 OK`.
+  - **Configuração do App Mobile para Produção:** Corrigido `scripts/configure_env.ts` (declaração de `FRONTEND_ENV_PATH`) e executado `npm run env:prod`, apontando `EXPO_PUBLIC_API_URL` para `https://eq.projetoscti.com.br/26-presco`.
+  - **Integração e Merge na `main` (PR #33):** Pipeline de CI validado com 100% de sucesso (PR Gatekeeper, Landing Page e Maestro E2E com 20m 24s no Android Emulator) e squash merge realizado na branch `main`.
+  - **Publicação Oficial do APK no GitHub Releases:** Enviada a tag oficial `v1.4.5`, acionando o workflow `Build and Release Android APK`. Compilado o binário nativo `app-release.apk` (134.24 MiB) via Gradle e publicado automaticamente no GitHub Releases: [Release Presco v1.4.5](https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.4.5).
 - **Blindagem Estrutural & Auditoria de Código da Fase 1 (`fix/structural-hardening-phase1`):**
   - **V-01 (Limites de Preço, Cold Start & Variance Floor):**
     - Implementada constraint no banco e validação no service para a faixa realista de preços [R$ 0,10, R$ 15.000,00], erradicando o "Tomate de 10 Bilhões".
