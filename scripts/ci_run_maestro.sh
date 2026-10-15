@@ -27,7 +27,7 @@ adb reverse tcp:3333 tcp:3333
 
 echo "🚀 Iniciando Metro Bundler em background..."
 cd src/frontend
-npx expo start --localhost > /tmp/metro.log 2>&1 &
+npx expo start --host lan > /tmp/metro.log 2>&1 &
 METRO_PID=$!
 cd ../..
 
@@ -42,9 +42,13 @@ echo "⏳ Aguardando Metro Bundler responder..."
 timeout 60 bash -c 'until curl -s http://localhost:8081/status; do sleep 2; done'
 echo "✅ Metro Bundler pronto."
 
+echo "🔥 Pré-aquecendo bundle JavaScript no Metro..."
+curl -s "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false" > /dev/null 2>&1 || true
+echo "✅ Bundle pré-aquecido."
+
 echo "🔗 Conectando app ao Metro Bundler via deep-link..."
 adb shell am start -a android.intent.action.VIEW -d "presco://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081" 2>/dev/null || true
-sleep 6
+sleep 8
 
 echo "🧪 Executando suíte Maestro ($SUITE)..."
 mkdir -p reports/maestro

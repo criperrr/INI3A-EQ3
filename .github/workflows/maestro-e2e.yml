@@ -6,11 +6,16 @@ on:
     paths:
       - "src/frontend/**"
       - "tests/maestro/**"
-      - "scripts/run_maestro*"
+      - "scripts/*maestro*"
       - ".github/workflows/maestro-e2e.yml"
   push:
     branches:
       - "test/**"
+    paths:
+      - "src/frontend/**"
+      - "tests/maestro/**"
+      - "scripts/*maestro*"
+      - ".github/workflows/maestro-e2e.yml"
   workflow_dispatch:
     inputs:
       test_suite:
