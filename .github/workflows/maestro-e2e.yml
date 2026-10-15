@@ -77,13 +77,22 @@ jobs:
       - name: Subir Infraestrutura de Backend (PostgreSQL + Redis)
         run: |
           docker compose up -d postgres redis
-          echo "Aguardando inicialização do PostgreSQL..."
+          echo "Aguardando estabilização dos serviços..."
+          sleep 4
           timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres -d presco_db; do sleep 1; done'
-          echo "Aguardando inicialização do Redis..."
           timeout 20 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
 
       - name: Configurar e Inicializar Backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
+          SERVER_PORT: 3333
+          SERVER_HOST: 0.0.0.0
+          JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          NODE_ENV: development
+          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
         run: |
+          mkdir -p src/backend
           cat << 'EOF' > src/backend/.env
           DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
           REDIS_URL=redis://127.0.0.1:6380
@@ -93,10 +102,16 @@ jobs:
           NODE_ENV=development
           HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
           EOF
+          cp src/backend/.env .env
 
-          echo "Executando migrações e seed do banco de dados..."
-          npm run --prefix src/backend db:migrate
-          npm run --prefix src/backend db:seed
+          echo "Executando migrações e seed com retry..."
+          for i in {1..6}; do
+            npm run --prefix src/backend db:migrate && break || (echo "Tentando migração novamente em 2s..." && sleep 2)
+          done
+
+          for i in {1..6}; do
+            npm run --prefix src/backend db:seed && break || (echo "Tentando seed novamente em 2s..." && sleep 2)
+          done
 
           echo "Iniciando servidor backend em segundo plano..."
           npm run --prefix src/backend start &
