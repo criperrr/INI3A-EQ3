@@ -16,6 +16,7 @@ const colors = {
 
 const ROOT_DIR = process.cwd();
 const FRONTEND_DIR = path.resolve(ROOT_DIR, "src/frontend");
+const FRONTEND_ENV_PATH = path.resolve(FRONTEND_DIR, ".env");
 const REMOTE_PROD_URL = "https://eq.projetoscti.com.br/26-presco";
 const REMOTE_DEV_URL = "https://eq.projetoscti.com.br/26-presco-dev";
 
