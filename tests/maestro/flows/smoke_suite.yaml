@@ -12,17 +12,24 @@ tags:
 - waitForAnimationToEnd:
     timeout: 2000
 
-# Dismiss any intro modal or dev launcher if present
+# Dismiss any intro modal or dev launcher if present early
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+# Wait for either tutorial modal or home screen to load
+- extendedWaitUntil:
+    visible:
+      id: ".*(dismiss-tutorial-button|tab-home).*"
+    timeout: 35000
+
+# Dismiss tutorial modal once rendered
 - runFlow:
     file: "../subflows/dismiss_tutorial.yaml"
 
 - extendedWaitUntil:
     visible:
       id: "tab-home"
-    timeout: 25000
-
-- runFlow:
-    file: "../subflows/dismiss_tutorial.yaml"
+    timeout: 15000
 
 # Step 2: Verify Home screen & Core Navigation
 - assertVisible:

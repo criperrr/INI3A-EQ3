@@ -4075,3 +4075,14 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/memory/user-preferences.md`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Solidifies AI governance protocols preventing unbranched work and empowering remote headless debugging.
+
+## `2026-10-15 01:54` - `fix(ci)`: Resilient Maestro Dev Launcher Connection & Bundle Pre-warming
+
+- **Description:** Fixed headless Android emulator Dev Client screen stall during GitHub Actions Maestro CI run. Implemented Metro bundle pre-warming (`curl ... index.bundle`), set Metro host binding to LAN (`--host lan`), configured `stopApp: false` in Maestro flows to preserve background intent state, added `openLink` deep-linking and fallback `inputText` in `dismiss_tutorial.yaml`, increased timeout thresholds, and applied strict path-filtering on `test/**` branch pushes.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/ci_run_maestro.sh`
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+- **Impact / Next Steps:** Awaiting GitHub Actions run `38683885066` completion. Upon successful green check, open PR to `dev`, verify checks, merge via `gh pr merge --squash`, and perform requested clean system shutdown.
