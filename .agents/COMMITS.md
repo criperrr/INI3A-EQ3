@@ -4086,3 +4086,59 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `tests/maestro/flows/smoke_suite.yaml`
   - `tests/maestro/subflows/dismiss_tutorial.yaml`
 - **Impact / Next Steps:** Awaiting GitHub Actions run `38683885066` completion. Upon successful green check, open PR to `dev`, verify checks, merge via `gh pr merge --squash`, and perform requested clean system shutdown.
+
+## `2026-10-15 14:25` - `feat(backend)`: Hardening Estrutural Fase 1 (V-01, V-03, V-06) e Auditoria Anti-Slop Aprovada
+
+- **Description:** Implementação completa e auditoria pericial independente das três primeiras blindagens estruturais do backend do Presco (INI3A-EQ3):
+  1. V-01 (Limites de Preço, Cold Start & Variance Floor): Constraint PostgreSQL [0.10, 15000.00] com migration 0005, isolamento de Cold Start (cotações provisórias suspensas e 0 XP até corroboração por 2º usuário em ±20%), estabilização de variância MAD_eff = max(mad, 0.05 * median) prevenindo divisão por zero, parser de moeda pt-BR, defesa contra outlier via PUT e idempotência no admin approve.
+  2. V-03 (Custódia de Produtos & Authentication Shield): Persistência de `created_by_user_id` na tabela `product` com FK e índice, fail-closed na criação de produto sem usuário, bloqueio em tempo real de contas com `dangerFlag === true` no `requireAuth` e `requireTwoFactor` (HTTP 403), e otimização de I/O eliminando query duplicada no PostgreSQL.
+  3. V-06 (Erradicação do Marco Zero & Validação Espacial): Fim do fallback silencioso da Praça da Sé, validação de coordenadas no envelope brasileiro [-34.0, 5.5] / [-74.0, -34.5], e zona de exclusão de 50 metros ao redor do marco zero para criação e edição de mercados.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 100% dos 3 auditores aprovaram as implementações sem ressalvas ou slop. Suíte de testes passando com 39/39 e 0 erros no typecheck. Pronto para commit atômico e push mediante autorização do usuário.
+
+
+## `2026-10-15 15:05` - `fix(backend)`: Blindagem estrutural de limites de preço, cold start, custódia e marco zero (Fase 1)
+
+- **Description:** Implementada e auditada a blindagem estrutural da Fase 1 do backend Presco:
+  1. **V-01 (Limites de Preço & Cold Start):** Constraint no PostgreSQL `[0.10, 15000.00]`, isolamento de cotações pioneiras em quarentena provisória sem contaminação do carrinho, corroboração multiusuário ($\pm 20\%$), variance floor `MAD_eff = max(mad, 0.05 * median)`, parser de moeda pt-BR e reavaliação de outliers no `PUT /ocurrency/:id`.
+  2. **V-03 (Custódia & Authentication Shield):** Adição de `created_by_user_id` com FK e índice na tabela `product`, fail-closed no `createCustomProduct` e checagem real-time de `dangerFlag === true` em `requireAuth` e `requireTwoFactor` retornando HTTP 403.
+  3. **V-06 (Erradicação do Marco Zero & Validação Espacial):** Erradicado totalmente o fallback da Praça da Sé em `market.service.ts`, validação estrita do envelope brasileiro `[-34.0, 5.5]` / `[-74.0, -34.5]` e exclusão de raio de 50m do marco zero.
+  4. **Migration 0005:** Gerada e registrada em `meta/_journal.json`.
+  5. **SemVer:** Versão sincronizada para `1.4.5` (Android `versionCode: 30`).
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** 39/39 testes do backend passando, 0 erros no typecheck. Pronto para push e abertura de PR para `dev`.
