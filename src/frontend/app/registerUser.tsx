@@ -94,6 +94,8 @@ export default function RegisterUser() {
             style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
             <TouchableOpacity
+              testID="register-back-btn"
+              accessible={true}
               style={[
                 styles.topBackButton,
                 themeStyles.inputBg,
@@ -172,6 +174,7 @@ export default function RegisterUser() {
             />
 
             <TouchableOpacity
+              testID="register-submit-btn"
               style={[
                 styles.saveButton,
                 { backgroundColor: accent, shadowColor: accent },

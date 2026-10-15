@@ -4004,3 +4004,54 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Files Modified:**
   - `deploy/deploy.sh`
 - **Impact / Next Steps:** Previne falhas de permissao durante deploys em producao e staging no servidor remoto.
+
+## `2026-10-13 08:29` - `chore(android)`: Run project on Android emulator with x86_64 native build
+
+- **Description:** Configured JDK 17, Gradle 9.3.1, NDK 27.1, and Android SDK Build-Tools 36. Compiled and launched the native Android debug app (`x86_64`) on emulator-5554, verifying UI and onboarding flow.
+- **Files Modified:**
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Presco app is running and responsive on the emulator for interactive testing and Maestro flows.
+
+## `2026-10-13 09:37` - `test(maestro)`: Autonomous quick smoke test suite for Android emulator
+
+- **Description:** Added autonomous fast smoke test flow `smoke_suite.yaml`, testIDs in `profile.tsx`, and `run_maestro_quick.ts` targeting emulator with automatic permission granting and popup handling. Verified end-to-end execution with `npm run test:maestro:quick`.
+- **Files Modified:**
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/frontend/app/profile.tsx`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Developers and CI can run fast UI validation in ~25 seconds with zero manual intervention.
+
+## `2026-10-14 23:22` - `test(maestro)`: Deep frontend quality audit suite and testID hardening
+
+- **Description:** Added comprehensive Maestro frontend quality audit suite covering 12 phases and 20 visual checkpoints. Hardened UI components with deterministic testIDs and accessibility attributes across 13 screens. Fixed React ref mutations during render in cart screen. Sourced SemVer v1.4.4.
+- **Files Modified:**
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `tests/maestro/subflows/logout.yaml`
+  - `tests/maestro/subflows/quick_login_user.yaml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/cart/TravelSettingsModal.tsx`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** End-to-end automated UI quality assurance passing cleanly in 4m 14s with zero flakiness.

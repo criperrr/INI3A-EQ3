@@ -4,6 +4,18 @@ appId: com.presco.app
 - runFlow:
     when:
       visible:
+        id: "profile-quick-login-user"
+    commands:
+      - tapOn:
+          id: "profile-quick-login-user"
+      - extendedWaitUntil:
+          notVisible:
+            id: "profile-quick-login-user"
+          timeout: 10000
+
+- runFlow:
+    when:
+      visible:
         id: "quick-login-user"
     commands:
       - tapOn:
@@ -12,6 +24,15 @@ appId: com.presco.app
           notVisible:
             id: "quick-login-user"
           timeout: 10000
+
+# Fallback by text on Profile
+- runFlow:
+    when:
+      visible: "(?i)Sign in as Regular User|Entrar como Usuário Regular"
+    commands:
+      - tapOn: "(?i)Sign in as Regular User|Entrar como Usuário Regular"
+      - waitForAnimationToEnd:
+          timeout: 2000
 
 # Fallback: Standard login
 - runFlow:

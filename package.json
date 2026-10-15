@@ -1,6 +1,6 @@
 {
   "name": "presco",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "private": true,
   "packageManager": "npm@10.9.2",
   "workspaces": [
@@ -32,6 +32,8 @@
     "test:k6:stress": "k6 run tests/k6/stress_and_soak/stress_test.js",
     "test:k6:spike": "k6 run tests/k6/stress_and_soak/spike_test.js",
     "test:maestro": "docker compose run --rm maestro",
+    "test:maestro:quick": "tsx scripts/run_maestro_quick.ts",
+    "test:maestro:quality": "tsx scripts/run_maestro_quality_audit.ts",
     "test:maestro:full": "docker compose run --rm maestro test tests/maestro/flows/11_full_app_stability_suite.yaml",
     "test:maestro:all": "docker compose run --rm maestro test tests/maestro/flows",
     "version:bump": "tsx scripts/bump_version.ts patch",

@@ -1,0 +1,484 @@
+appId: com.presco.app
+name: "Presco - Deep Frontend Quality Audit & Layout Stress Suite"
+tags:
+  - quality
+  - audit
+  - frontend
+  - layout
+---
+# ==============================================================================
+# PHASE 1: Boot & Onboarding Verification
+# ==============================================================================
+- launchApp:
+    clearState: false
+
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Dismiss onboarding / dev menu if present
+- runFlow:
+    file: "../subflows/dismiss_tutorial.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 20000
+
+- tapOn:
+    id: "tab-home"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- assertVisible:
+    id: "tab-home"
+
+- takeScreenshot: "01_app_boot_home"
+
+# ==============================================================================
+# PHASE 2: Authentication Security & Validation Error States
+# ==============================================================================
+- runFlow:
+    file: "../subflows/logout.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "login-submit-btn"
+    timeout: 8000
+
+# Test Invalid Credentials Submission & Error Feedback
+- tapOn:
+    id: "login-email-input"
+- inputText: "invalid_email_format@presco.com"
+
+- tapOn:
+    id: "login-password-input"
+- inputText: "wrong_password_123"
+- hideKeyboard
+
+- tapOn:
+    id: "login-submit-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "login-error-container"
+    timeout: 8000
+
+- assertVisible:
+    id: "login-error-container"
+
+- takeScreenshot: "02_auth_validation_error"
+
+# Test Navigation to Registration Screen
+- tapOn: "(?i)Sign Up|Cadastre-se"
+
+- extendedWaitUntil:
+    visible: "(?i)Create Account|Criar Conta"
+    timeout: 8000
+
+- takeScreenshot: "03_register_user_screen"
+
+- tapOn: "Voltar"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Perform Quick Dev Login
+- runFlow:
+    file: "../subflows/quick_login_user.yaml"
+
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 10000
+
+- takeScreenshot: "04_authenticated_home"
+
+# ==============================================================================
+# PHASE 3: Home Dashboard Deep Layout Attack & Gesture Stress
+# ==============================================================================
+- tapOn:
+    id: "tab-home"
+
+- assertVisible:
+    id: "header-left-btn"
+
+- assertVisible:
+    id: "header-cart-btn"
+
+- assertVisible:
+    id: "header-settings-btn"
+
+# Swipe Banner Carousel
+- swipe:
+    direction: LEFT
+    duration: 400
+    element:
+      id: "home-banner-carousel"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- takeScreenshot: "05_home_carousel_swiped"
+
+# Verify Action Menu Presence
+- runFlow:
+    when:
+      visible:
+        id: "home-view-tab-1"
+    commands:
+      - assertVisible:
+          id: "home-view-tab-1"
+      - assertVisible:
+          id: "home-view-tab-2"
+
+# ==============================================================================
+# PHASE 4: Subpage Navigation - Help Center (/help)
+# ==============================================================================
+- runFlow:
+    when:
+      visible:
+        id: "home-view-tab-3"
+    commands:
+      - tapOn:
+          id: "home-view-tab-3"
+      - extendedWaitUntil:
+          visible:
+            id: "help-back-btn"
+          timeout: 8000
+      - takeScreenshot: "07_help_center"
+      - tapOn:
+          id: "help-back-btn"
+      - extendedWaitUntil:
+          visible:
+            id: "tab-home"
+          timeout: 6000
+
+# ==============================================================================
+# PHASE 5: Subpage Navigation - About Us (/about)
+# ==============================================================================
+- runFlow:
+    when:
+      visible:
+        id: "home-view-tab-4"
+    commands:
+      - tapOn:
+          id: "home-view-tab-4"
+      - extendedWaitUntil:
+          visible:
+            id: "about-back-btn"
+          timeout: 8000
+      - scroll
+      - waitForAnimationToEnd:
+          timeout: 800
+      - takeScreenshot: "08_about_us"
+      - tapOn:
+          id: "about-back-btn"
+      - extendedWaitUntil:
+          visible:
+            id: "tab-home"
+          timeout: 6000
+
+# ==============================================================================
+# PHASE 3b: Vertical Feed Scrolling & Product Inspection
+# ==============================================================================
+- scroll
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- takeScreenshot: "06_home_feed_scrolled"
+
+# ==============================================================================
+# PHASE 6: Catalog & Debounced Search (/search)
+# ==============================================================================
+- tapOn:
+    id: "tab-search"
+
+- runFlow:
+    when:
+      notVisible:
+        id: "search-input"
+    commands:
+      - tapOn:
+          id: "tab-search"
+      - scrollUntilVisible:
+          element:
+            id: "search-input"
+          direction: UP
+          timeout: 5000
+
+- extendedWaitUntil:
+    visible:
+      id: "search-input"
+    timeout: 8000
+
+- tapOn:
+    id: "search-input"
+- inputText: "Leite"
+- hideKeyboard
+
+- waitForAnimationToEnd:
+    timeout: 2500
+
+- takeScreenshot: "09_search_debounced_results"
+
+# Test Category Filter Chip
+- runFlow:
+    when:
+      visible:
+        id: "search-category-chip"
+    commands:
+      - tapOn:
+          id: "search-category-chip"
+      - waitForAnimationToEnd:
+          timeout: 1200
+      - takeScreenshot: "10_search_category_filter"
+
+# ==============================================================================
+# PHASE 7: Product Details & Price Community Quorum (/productDetails)
+# ==============================================================================
+# Tap first product item using stable semantic selector
+- runFlow:
+    when:
+      visible:
+        id: "search-product-card"
+    commands:
+      - tapOn:
+          id: "search-product-card"
+      - extendedWaitUntil:
+          visible: "(?i)Price History|Histórico de Preços|product-details-screen"
+          timeout: 8000
+      - scroll
+      - waitForAnimationToEnd:
+          timeout: 800
+      - takeScreenshot: "11_product_details"
+      - runFlow:
+          when:
+            visible:
+              id: "btn-add-to-cart"
+          commands:
+            - tapOn:
+                id: "btn-add-to-cart"
+            - waitForAnimationToEnd:
+                timeout: 1000
+      - back
+
+# ==============================================================================
+# PHASE 8: Smart Shopping List & Multi-Store Optimizer (/cart)
+# ==============================================================================
+- tapOn:
+    id: "header-cart-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "header-left-btn"
+    timeout: 8000
+
+- waitForAnimationToEnd:
+    timeout: 1500
+
+- takeScreenshot: "12_cart_optimizer_overview"
+
+# Test Strategy Controls
+- runFlow:
+    when:
+      visible:
+        id: "strategy-tab-max-savings"
+    commands:
+      - tapOn:
+          id: "strategy-tab-max-savings"
+      - waitForAnimationToEnd:
+          timeout: 600
+      - tapOn:
+          id: "strategy-tab-balanced"
+      - waitForAnimationToEnd:
+          timeout: 600
+      - tapOn:
+          id: "strategy-tab-single-store"
+      - waitForAnimationToEnd:
+          timeout: 600
+
+# Test Travel Settings Modal
+- runFlow:
+    when:
+      visible:
+        id: "btn-travel-settings"
+    commands:
+      - tapOn:
+          id: "btn-travel-settings"
+      - extendedWaitUntil:
+          visible: "(?i)Vehicle & Travel Parameters|Parâmetros|travel-settings-close-btn"
+          timeout: 6000
+      - takeScreenshot: "13_cart_travel_modal"
+      - runFlow:
+          when:
+            visible:
+              id: "travel-settings-close-btn"
+          commands:
+            - tapOn:
+                id: "travel-settings-close-btn"
+      - runFlow:
+          when:
+            visible: "(?i)Save|Salvar"
+          commands:
+            - tapOn: "(?i)Save|Salvar"
+      - waitForAnimationToEnd:
+          timeout: 600
+
+# Test Route Preview Modal
+- runFlow:
+    when:
+      visible:
+        id: "btn-route-preview"
+    commands:
+      - tapOn:
+          id: "btn-route-preview"
+      - extendedWaitUntil:
+          visible:
+            id: "route-preview-close-btn"
+          timeout: 6000
+      - takeScreenshot: "14_cart_route_preview_modal"
+      - tapOn:
+          id: "route-preview-close-btn"
+      - waitForAnimationToEnd:
+          timeout: 600
+
+# Test Cart Clear
+- runFlow:
+    when:
+      visible:
+        id: "cart-clear-btn"
+    commands:
+      - tapOn:
+          id: "cart-clear-btn"
+      - runFlow:
+          when:
+            visible:
+              id: "android:id/button1"
+          commands:
+            - tapOn:
+                id: "android:id/button1"
+      - runFlow:
+          when:
+            visible: "(?i)Confirmar|Confirm"
+          commands:
+            - tapOn: "(?i)Confirmar|Confirm"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - takeScreenshot: "15_cart_empty_state"
+
+# ==============================================================================
+# PHASE 9: PostGIS Markets Map Screen (/map)
+# ==============================================================================
+- tapOn:
+    id: "tab-map"
+
+- waitForAnimationToEnd:
+    timeout: 2500
+
+- takeScreenshot: "16_postgis_markets_map"
+
+# ==============================================================================
+# PHASE 10: Dynamic Gamification Profile & Cosmetics Shop (/profile)
+# ==============================================================================
+- tapOn:
+    id: "tab-profile"
+
+- extendedWaitUntil:
+    visible:
+      id: "profile-shop-btn"
+    timeout: 8000
+
+- takeScreenshot: "17_gamified_profile"
+
+# Open Customization Shop Modal
+- tapOn:
+    id: "profile-shop-btn"
+
+- extendedWaitUntil:
+    visible:
+      id: "shop-modal-close-btn"
+    timeout: 8000
+
+- takeScreenshot: "18_customization_shop_modal"
+
+- tapOn:
+    id: "shop-modal-close-btn"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# ==============================================================================
+# PHASE 11: Settings, Dynamic Theming, AMOLED & Monet Stress (/settings)
+# ==============================================================================
+- openLink: "presco://settings"
+
+- extendedWaitUntil:
+    visible:
+      id: "theme-dark-switch"
+    timeout: 8000
+
+- takeScreenshot: "19_settings_light_theme"
+
+# Toggle Dark Mode
+- tapOn:
+    id: "theme-dark-switch"
+
+- waitForAnimationToEnd:
+    timeout: 1000
+
+- takeScreenshot: "20_settings_dark_theme"
+
+# Toggle AMOLED Pure Black
+- runFlow:
+    when:
+      visible:
+        id: "theme-amoled-switch"
+    commands:
+      - tapOn:
+          id: "theme-amoled-switch"
+      - waitForAnimationToEnd:
+          timeout: 1000
+      - takeScreenshot: "21_settings_amoled_pure_black"
+      - tapOn:
+          id: "theme-amoled-switch"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+# Toggle Monet System Sync to reveal presets if needed
+- runFlow:
+    when:
+      visible:
+        id: "monet-system-sync-switch"
+    commands:
+      - tapOn:
+          id: "monet-system-sync-switch"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+# Test Monet Seed Color
+- runFlow:
+    when:
+      visible:
+        id: "monet-seed-azul"
+    commands:
+      - tapOn:
+          id: "monet-seed-azul"
+      - waitForAnimationToEnd:
+          timeout: 800
+
+- takeScreenshot: "22_settings_monet_palette"
+
+- back
+- waitForAnimationToEnd:
+    timeout: 800
+
+# ==============================================================================
+# PHASE 12: Account Logout & Session Termination
+# ==============================================================================
+- runFlow:
+    file: "../subflows/logout.yaml"
+
+- assertVisible:
+    id: "login-submit-btn"
+
+- takeScreenshot: "23_clean_logout_success"

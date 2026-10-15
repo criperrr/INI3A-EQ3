@@ -1,21 +1,56 @@
 appId: com.presco.app
 ---
-# Subflow: Logout
-# Opens Profile or Settings and triggers clean logout
-- tapOn:
-    id: "tab-profile"
+# If an alert dialog is already visible, confirm it
+- runFlow:
+    when:
+      visible:
+        id: "android:id/button1"
+    commands:
+      - tapOn:
+          id: "android:id/button1"
 
-- scrollUntilVisible:
-    element:
-      id: "profile-logout-btn"
-    direction: DOWN
-    timeout: 10000
+# Opens Profile or Settings and triggers clean logout if authenticated, or navigates to login screen
+- runFlow:
+    when:
+      visible:
+        id: "tab-profile"
+    commands:
+      - tapOn:
+          id: "tab-profile"
 
-- tapOn:
-    id: "profile-logout-btn"
+# If unauthenticated and "Sign in with another account" is visible, tap it to go to login screen
+- runFlow:
+    when:
+      visible:
+        id: "profile-login-other-btn"
+    commands:
+      - tapOn:
+          id: "profile-login-other-btn"
 
-# Confirm logout modal alert
-- tapOn: "Sair"
+# If authenticated, scroll to logout button and tap it
+- runFlow:
+    when:
+      notVisible:
+        id: "login-submit-btn"
+    commands:
+      - runFlow:
+          when:
+            visible:
+              id: "tab-profile"
+          commands:
+            - scrollUntilVisible:
+                element:
+                  id: "profile-logout-btn"
+                direction: DOWN
+                timeout: 8000
+            - tapOn:
+                id: "profile-logout-btn"
+            - extendedWaitUntil:
+                visible:
+                  id: "android:id/button1"
+                timeout: 5000
+            - tapOn:
+                id: "android:id/button1"
 
 - extendedWaitUntil:
     visible:

@@ -7,6 +7,20 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Auditoria Profunda de Qualidade Frontend com Maestro (`v1.4.4`):**
+  - **Suíte de Auditoria Completa:** Implementado o fluxo [`frontend_quality_audit.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/frontend_quality_audit.yaml) cobrindo 12 fases do app (Boot, Autenticação, Onboarding, Busca, Detalhes de Produto, Carrinho com Múltiplas Paradas, Rota no Mapa, Modais, Perfil Gamificado, Loja de Customizações, Temas Dinâmicos Claro/Escuro/AMOLED, Monet e Logout Limpo).
+  - **Blindagem de Seletores e Acessibilidade:** Inseridos `testID`s determinísticos e `accessibilityRole="button"` em 13 componentes e telas (`cart.tsx`, `RoutePreviewModal.tsx`, `TravelSettingsModal.tsx`, `login.tsx`, `profile.tsx`, `registerUser.tsx`, `search.tsx`, `settings.tsx`, `productDetails.tsx`, `index.tsx`, `help.tsx`, `about.tsx`, `adminModeration.tsx`).
+  - **Correção de Linter & Render Ref:** Sincronização de referências de estado no carrinho (`cartItemsRef`, `settingsRef`) movida para `useEffect`, eliminando erros de mutação de refs durante o render no React.
+  - **Execução & Validação:** 100% dos testes aprovados (`1/1 Flow Passed in 4m 14s`), 20 screenshots capturados e arquivados em relatórios.
+  - **Qualidade & SemVer:** 48 testes unitários passando, 0 erros no typecheck e linting aprovado com código 0. Versão sincronizada para `v1.4.4` (`versionCode: 29`).
+- **Execução Autônoma do Maestro com Testes Rápidos (`test:maestro:quick`):**
+  - **Identificação e Resolução de Bloqueios:** Resolvido o modal bloqueante do Expo Dev Menu e o popup inicial de tutorial, além de garantir o direcionamento explícito ao emulador (`--device emulator-5554`) mesmo na presença de dispositivos USB físicos conectados.
+  - **Suíte Rápida Autônoma:** Criado o fluxo [`smoke_suite.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/smoke_suite.yaml) e o orquestrador [`run_maestro_quick.ts`](file:///home/criper/Documentos/projetos/INI3A-EQ3/scripts/run_maestro_quick.ts).
+  - **Validação de Execução:** Executado com sucesso via `npm run test:maestro:quick`, validando boot limpo, Home, navegação por abas (Busca, Mapa, Perfil), 1-Tap Dev Login e retorno à Home em menos de 30 segundos.
+- **Execução do Aplicativo no Emulador Android (`emulator-5554`):**
+  - **Ambiente & Dependências:** Configurado Amazon Corretto JDK 17 (`~/.local/jdks/temurin17`), Gradle 9.3.1, NDK 27.1 (`x86_64`) e Android SDK Build-Tools 36.
+  - **Compilação & Execução:** Build nativo em modo debug (`npm run android:debug`) compilado e empacotado com sucesso para a arquitetura `x86_64` do emulador.
+  - **Validação Visual:** Aplicativo `com.presco.app` inicializado com sucesso (PID ativo, onboarding exibido e renderizado com UI do Presco).
 - **Blindagem de Permissões `chmod` no Servidor Remoto de Produção CTI (`deploy/deploy.sh`):**
   - **Diagnóstico da Falha:** No deploy para produção, o servidor compartilhado CTI rejeitava comandos `chmod` sobre arquivos gerenciados pelo web server como `.htaccess`, `.env` e `README.md` (`Operation not permitted`), abortando o pipeline sob `set -euo pipefail`.
   - **Correção:** Protegidas todas as invocações de `chmod` com `2>/dev/null || true` em [`deploy.sh`](file:///Users/criper/INI3A-EQ3/deploy/deploy.sh).

@@ -83,7 +83,15 @@ export function TravelSettingsModal({ visible, onClose, settings, onSave }: Trav
                 {t("cart.travelSettings")}
               </Text>
             </View>
-            <TouchableOpacity activeOpacity={0.7} onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity
+              testID="travel-settings-close-btn"
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="travel-settings-close-btn"
+              activeOpacity={0.7}
+              onPress={onClose}
+              style={styles.closeBtn}
+            >
               <Ionicons name="close" size={22} color={semantic.colors.icon.primary} />
             </TouchableOpacity>
           </View>

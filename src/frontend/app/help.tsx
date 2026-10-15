@@ -310,6 +310,7 @@ export default function HelpScreen() {
         ]}
       >
         <TouchableOpacity
+          testID="help-back-btn"
           style={[styles.backButton, themeStyles.inputBg]}
           activeOpacity={0.7}
           onPress={() => {

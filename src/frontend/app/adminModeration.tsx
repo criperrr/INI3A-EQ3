@@ -122,6 +122,7 @@ export default function AdminModerationScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: semantic.colors.border.subtle }]}>
         <TouchableOpacity
+          testID="admin-moderation-back-btn"
           style={[styles.backButton, { backgroundColor: semantic.colors.surface.highlight }]}
           activeOpacity={0.7}
           onPress={() => {
