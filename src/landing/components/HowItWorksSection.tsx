@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -13,13 +13,25 @@ interface HowItWorksSectionProps {
 }
 
 export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
-    const isDesktop = width >= 860;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    const isDesktop = windowWidth >= 860;
+    const isMobile = windowWidth < 480;
 
     const steps = [
         {
             stepNumber: "01",
-            icon: "📍",
             title: "Descubra no Radar 15km",
             desc: "Abra o app e consulte supermercados, atacados e feiras na sua região. O Presco mapeia as menores cotações registradas pela comunidade.",
             tag: "GEOPROCESSAMENTO POSTGIS",
@@ -27,7 +39,6 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
         },
         {
             stepNumber: "02",
-            icon: "📸",
             title: "Aponte na Gôndola",
             desc: "Escaneie o código de barras EAN-13 direto pela câmera. O Presco valida o histórico e premia você com XP no ranking comunitário.",
             tag: "SCANNER ÓPTICO INSTANTÂNEO",
@@ -35,7 +46,6 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
         },
         {
             stepNumber: "03",
-            icon: "🚗",
             title: "Economize no Caixa & Gasolina",
             desc: "O motor matemático calcula a rota ideal e só sugere dividir a lista se o desconto total cobrir com folga o combustível gasto.",
             tag: "OTIMIZADOR MULTILOJAS",
@@ -75,8 +85,8 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                             styles.title,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 28,
-                                lineHeight: isDesktop ? 44 : 34,
+                                fontSize: isDesktop ? 36 : 26,
+                                lineHeight: isDesktop ? 44 : 32,
                             },
                         ]}
                     >
@@ -97,6 +107,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                             style={[
                                 styles.stepCard,
                                 isDesktop && styles.stepCardDesktop,
+                                isMobile && styles.stepCardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
@@ -112,18 +123,16 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                                 >
                                     <Text style={styles.stepNumText}>{s.stepNumber}</Text>
                                 </View>
-                                <Text style={styles.stepIcon}>{s.icon}</Text>
-                            </View>
-
-                            <View
-                                style={[
-                                    styles.tagPill,
-                                    { backgroundColor: theme.accent + "18" },
-                                ]}
-                            >
-                                <Text style={[styles.tagPillText, { color: theme.accent }]}>
-                                    {s.tag}
-                                </Text>
+                                <View
+                                    style={[
+                                        styles.tagPill,
+                                        { backgroundColor: theme.accent + "18" },
+                                    ]}
+                                >
+                                    <Text style={[styles.tagPillText, { color: theme.accent }]}>
+                                        {s.tag}
+                                    </Text>
+                                </View>
                             </View>
 
                             <Text
@@ -147,6 +156,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                             <View
                                 style={[
                                     styles.stepImageWrapper,
+                                    isMobile && styles.stepImageWrapperMobile,
                                     {
                                         borderColor: theme.surface.borderSubtle,
                                         backgroundColor: "#05070A",
@@ -170,19 +180,19 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 72,
+        paddingVertical: 56,
     },
     inner: {
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     headerArea: {
         alignItems: "center",
         maxWidth: 720,
         marginHorizontal: "auto",
-        marginBottom: 56,
+        marginBottom: 44,
     },
     badge: {
         paddingHorizontal: 12,
@@ -203,21 +213,21 @@ const styles = StyleSheet.create({
         letterSpacing: -0.8,
     },
     subtitle: {
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: 15,
+        lineHeight: 23,
         textAlign: "center",
     },
     stepsRow: {
         flexDirection: "column",
-        gap: 24,
+        gap: 20,
     },
     stepsRowDesktop: {
         flexDirection: "row",
         justifyContent: "space-between",
     },
     stepCard: {
-        padding: 32,
-        borderRadius: 28,
+        padding: 24,
+        borderRadius: 24,
         borderWidth: 1,
         width: "100%",
         position: "relative",
@@ -225,33 +235,31 @@ const styles = StyleSheet.create({
     stepCardDesktop: {
         width: "31.5%",
     },
+    stepCardMobile: {
+        padding: 18,
+    },
     cardHeader: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 16,
+        marginBottom: 14,
     },
     stepNumCircle: {
-        width: 38,
-        height: 38,
-        borderRadius: 19,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: "center",
         justifyContent: "center",
     },
     stepNumText: {
         color: "#000000",
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: "900",
     },
-    stepIcon: {
-        fontSize: 28,
-    },
     tagPill: {
-        alignSelf: "flex-start",
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 6,
-        marginBottom: 12,
     },
     tagPillText: {
         fontSize: 10,
@@ -259,25 +267,29 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     stepTitle: {
-        fontSize: 20,
+        fontSize: 19,
         fontWeight: "800",
-        marginBottom: 10,
+        marginBottom: 8,
         letterSpacing: -0.4,
     },
     stepDesc: {
-        fontSize: 14,
-        lineHeight: 22,
+        fontSize: 13,
+        lineHeight: 21,
     },
     stepImageWrapper: {
         width: "100%",
         height: 240,
         borderRadius: 18,
         overflow: "hidden",
-        marginTop: 20,
+        marginTop: 18,
         borderWidth: 1,
+    },
+    stepImageWrapperMobile: {
+        height: 200,
     },
     stepImage: {
         width: "100%",
         height: "100%",
     },
 });
+

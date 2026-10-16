@@ -255,7 +255,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                                 ]}
                             >
                                 <Text style={[styles.lgpdBadgeTitle, { color: theme.accent }]}>
-                                    🛡️ COMPROMISSO RIGOROSO COM A LEI 13.709/2018 (LGPD)
+                                    COMPROMISSO RIGOROSO COM A LEI 13.709/2018 (LGPD)
                                 </Text>
                                 <Text style={[styles.lgpdBadgeDesc, { color: theme.text.primary }]}>
                                     Seus dados pertencem a você. O Presco adota os princípios de Minimização,

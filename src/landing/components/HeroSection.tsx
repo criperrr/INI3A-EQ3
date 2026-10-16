@@ -56,7 +56,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         ]}
                     >
                         <Text style={[styles.badgeText, { color: theme.accent }]}>
-                            ✨ O APLICATIVO INTELIGENTE QUE SUBSTITUI A DÚVIDA NO MERCADO
+                            O APLICATIVO INTELIGENTE QUE SUBSTITUI A DÚVIDA NO MERCADO
                         </Text>
                     </View>
 
@@ -106,7 +106,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             onPress={onDownload}
                         >
                             <Text style={styles.btnPrimaryText}>Baixar APK Gratuito</Text>
-                            <Text style={styles.btnPrimarySub}>Android 8.0+ • v1.3.5 Oficial</Text>
+                            <Text style={styles.btnPrimarySub}>Android 8.0+ • v1.4.5 Oficial</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -121,7 +121,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             onPress={onScrollToHowItWorks || onExploreFeatures}
                         >
                             <Text style={[styles.btnSecondaryText, { color: theme.text.primary }]}>
-                                Como Funciona? ➔
+                                Como Funciona
                             </Text>
                             <Text
                                 style={[
@@ -148,7 +148,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             onPress={() => onOpenPolicies("privacy")}
                         >
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                🛡️ 100% Seguro & LGPD
+                                100% Seguro & LGPD
                             </Text>
                         </TouchableOpacity>
 
@@ -156,7 +156,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                         <View style={styles.trustItem}>
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                📍 Radar PostGIS 15km
+                                Radar PostGIS 15km
                             </Text>
                         </View>
 
@@ -164,7 +164,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
                         <View style={styles.trustItem}>
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                ⚡ Código Aberto & Livre
+                                Código Aberto & Livre
                             </Text>
                         </View>
                     </View>

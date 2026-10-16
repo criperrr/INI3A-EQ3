@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -12,33 +12,46 @@ interface ImpactStatsSectionProps {
 }
 
 export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
-    const isDesktop = width >= 860;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    const isDesktop = windowWidth >= 960;
+    const isTablet = windowWidth >= 640 && windowWidth < 960;
 
     const metrics = [
         {
             value: "R$ 38,70",
+            badge: "LÍQUIDO",
             label: "Economia Média Semanal",
             sub: "Calculada pelo otimizador já descontando o combustível",
-            icon: "💰",
         },
         {
             value: "15 km",
-            label: "Radar Espacial PostGIS",
+            badge: "POSTGIS",
+            label: "Radar Espacial Geodésico",
             sub: "Pesquisa em tempo real de supermercados e atacados",
-            icon: "📍",
         },
         {
             value: "100%",
-            label: "Livre & Aberto",
+            badge: "ABERTO",
+            label: "Livre & Independente",
             sub: "Sem assinaturas, compras embutidas ou anúncios espiões",
-            icon: "🌱",
         },
         {
             value: "2FA Ativo",
+            badge: "AUDITADO",
             label: "Quórum Anti-Fraude",
             sub: "Validação criptográfica via Resend e auditoria comunitária",
-            icon: "🛡️",
         },
     ];
 
@@ -54,12 +67,19 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
             ]}
         >
             <View style={styles.inner}>
-                <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
+                <View
+                    style={[
+                        styles.grid,
+                        isTablet && styles.gridTablet,
+                        isDesktop && styles.gridDesktop,
+                    ]}
+                >
                     {metrics.map((m, idx) => (
                         <View
                             key={idx}
                             style={[
                                 styles.card,
+                                isTablet && styles.cardTablet,
                                 isDesktop && styles.cardDesktop,
                                 {
                                     backgroundColor: theme.surface.card,
@@ -68,7 +88,6 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
                             ]}
                         >
                             <View style={styles.cardTop}>
-                                <Text style={styles.icon}>{m.icon}</Text>
                                 <Text
                                     style={[
                                         styles.value,
@@ -77,6 +96,16 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
                                 >
                                     {m.value}
                                 </Text>
+                                <View
+                                    style={[
+                                        styles.badgeBox,
+                                        { backgroundColor: theme.accent + "18" },
+                                    ]}
+                                >
+                                    <Text style={[styles.badgeText, { color: theme.accent }]}>
+                                        {m.badge}
+                                    </Text>
+                                </View>
                             </View>
                             <Text
                                 style={[
@@ -105,7 +134,7 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 48,
+        paddingVertical: 40,
         borderTopWidth: 1,
         borderBottomWidth: 1,
     },
@@ -113,21 +142,30 @@ const styles = StyleSheet.create({
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     grid: {
         flexDirection: "column",
         gap: 16,
     },
+    gridTablet: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
     gridDesktop: {
         flexDirection: "row",
+        flexWrap: "nowrap",
         justifyContent: "space-between",
     },
     card: {
-        padding: 24,
+        padding: 22,
         borderRadius: 20,
         borderWidth: 1,
         width: "100%",
+    },
+    cardTablet: {
+        width: "48%",
     },
     cardDesktop: {
         width: "23.5%",
@@ -136,10 +174,17 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 8,
+        marginBottom: 10,
     },
-    icon: {
-        fontSize: 24,
+    badgeBox: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    badgeText: {
+        fontSize: 10,
+        fontWeight: "800",
+        letterSpacing: 0.5,
     },
     value: {
         fontSize: 22,
@@ -149,11 +194,12 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 15,
         fontWeight: "800",
-        marginBottom: 4,
+        marginBottom: 6,
         letterSpacing: -0.2,
     },
     sub: {
         fontSize: 12,
-        lineHeight: 16,
+        lineHeight: 17,
     },
 });
+

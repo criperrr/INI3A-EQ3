@@ -62,7 +62,7 @@ export const ConsentBanner: React.FC<ConsentBannerProps> = ({
             <View style={styles.textColumn}>
                 <View style={styles.badgeRow}>
                     <Text style={[styles.badgeText, { color: theme.accent }]}>
-                        🛡️ PRIVACIDADE & ARMAZENAMENTO LOCAL (LGPD)
+                        PRIVACIDADE & ARMAZENAMENTO LOCAL (LGPD)
                     </Text>
                 </View>
                 <Text style={[styles.message, { color: theme.text.primary }]}>

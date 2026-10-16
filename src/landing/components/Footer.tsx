@@ -58,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({
                         <View style={styles.statusIndicator}>
                             <View style={[styles.statusDot, { backgroundColor: theme.accent }]} />
                             <Text style={[styles.statusText, { color: theme.text.secondary }]}>
-                                Sistemas Operacionais • Versão v1.3.3
+                                Sistemas Operacionais • Versão v1.4.5
                             </Text>
                         </View>
                     </View>

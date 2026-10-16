@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -12,33 +12,46 @@ interface FeaturesSectionProps {
 }
 
 export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
-    const isDesktop = width >= 860;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    const isDesktop = windowWidth >= 860;
+    const isMobile = windowWidth < 480;
 
     const features = [
         {
-            icon: "📸",
+            code: "EAN",
             tag: "SCANNER EAN-13",
             title: "Leitor de Gôndola com OpenFoodFacts",
             desc: "Aponte a câmera para o código de barras no supermercado. O Presco identifica instantaneamente o produto, fotos oficiais e dados nutricionais em milissegundos.",
             highlight: "+15 XP por preço • +25 XP novo produto",
         },
         {
-            icon: "🚗",
+            code: "ROTA",
             tag: "OTIMIZADOR MULTILOJAS",
             title: "Cálculo de Rota, Tempo e Combustível",
             desc: "Vale a pena ir a dois mercados? Nosso motor matemático analisa os preços e desconta o gasto da gasolina (km/L) e o tempo de trânsito para garantir economia líquida real.",
             highlight: "Economia Líquida: Preço Menor - Custo de Viagem",
         },
         {
-            icon: "📍",
+            code: "GPS",
             tag: "MOTOR ESPACIAL",
             title: "Radar Geográfico PostGIS (15 km)",
             desc: "Descubra atacadões, hipermercados e quitandas locais no raio de proximidade configurável. Rotas integradas com 1 toque no Waze, Google Maps e Apple Maps.",
-            highlight: "Precisão PostGIS com PostreSQL",
+            highlight: "Precisão PostGIS com PostgreSQL",
         },
         {
-            icon: "🏆",
+            code: "RANK",
             tag: "GAMIFICAÇÃO & HONRA",
             title: "Níveis, Medalhas e Loja de Cosméticos",
             desc: "Contribua com a economia da sua comunidade e ganhe pontos, títulos de autoridade na plataforma e personalize seu perfil com molduras e temas exclusivos.",
@@ -79,8 +92,8 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                             styles.sectionTitle,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 28,
-                                lineHeight: isDesktop ? 44 : 34,
+                                fontSize: isDesktop ? 36 : 26,
+                                lineHeight: isDesktop ? 44 : 32,
                             },
                         ]}
                     >
@@ -100,6 +113,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                             style={[
                                 styles.featureCard,
                                 isDesktop && styles.featureCardDesktop,
+                                isMobile && styles.featureCardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
@@ -113,7 +127,9 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                                         { backgroundColor: theme.accent + "18" },
                                     ]}
                                 >
-                                    <Text style={styles.iconText}>{feat.icon}</Text>
+                                    <Text style={[styles.iconText, { color: theme.accent }]}>
+                                        {feat.code}
+                                    </Text>
                                 </View>
                                 <View
                                     style={[
@@ -168,7 +184,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                                         { color: theme.accent },
                                     ]}
                                 >
-                                    ✨ {feat.highlight}
+                                    {feat.highlight}
                                 </Text>
                             </View>
                         </View>
@@ -182,7 +198,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 72,
+        paddingVertical: 56,
         borderTopWidth: 1,
         borderBottomWidth: 1,
     },
@@ -190,14 +206,13 @@ const styles = StyleSheet.create({
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     headerArea: {
         alignItems: "center",
-        textAlign: "center",
         maxWidth: 700,
         marginHorizontal: "auto",
-        marginBottom: 56,
+        marginBottom: 40,
     },
     sectionTag: {
         paddingHorizontal: 12,
@@ -214,25 +229,26 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontWeight: "900",
         textAlign: "center",
-        marginBottom: 16,
+        marginBottom: 14,
         letterSpacing: -0.8,
     },
     sectionSubtitle: {
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: 15,
+        lineHeight: 23,
         textAlign: "center",
     },
     grid: {
         flexDirection: "column",
-        gap: 24,
+        gap: 20,
     },
     gridDesktop: {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
+        rowGap: 24,
     },
     featureCard: {
-        padding: 28,
+        padding: 24,
         borderRadius: 24,
         borderWidth: 1,
         width: "100%",
@@ -240,24 +256,29 @@ const styles = StyleSheet.create({
     featureCardDesktop: {
         width: "48.5%",
     },
+    featureCardMobile: {
+        padding: 18,
+    },
     cardTopRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 16,
     },
     iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 14,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
         alignItems: "center",
         justifyContent: "center",
     },
     iconText: {
-        fontSize: 24,
+        fontSize: 12,
+        fontWeight: "900",
+        letterSpacing: 0.8,
     },
     tagBadge: {
-        paddingHorizontal: 10,
+        paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
     },
@@ -267,22 +288,23 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     cardTitle: {
-        fontSize: 20,
+        fontSize: 19,
         fontWeight: "800",
         letterSpacing: -0.4,
-        marginBottom: 12,
+        marginBottom: 10,
     },
     cardDesc: {
-        fontSize: 15,
-        lineHeight: 22,
-        marginBottom: 20,
+        fontSize: 14,
+        lineHeight: 21,
+        marginBottom: 16,
     },
     cardFooter: {
         borderTopWidth: 1,
-        paddingTop: 16,
+        paddingTop: 14,
     },
     highlightText: {
         fontSize: 12,
         fontWeight: "700",
     },
 });
+
