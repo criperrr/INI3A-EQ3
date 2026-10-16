@@ -2,6 +2,16 @@ import type { NextFunction, Request, Response } from "express";
 import { marketService } from "./market.service";
 import { success } from "@/shared/helpers/response.helper";
 import { ValidationError } from "@/shared/errors/errors";
+import { RoutingService } from "@/shared/services/routing.service";
+
+const SE_CATHEDRAL_COORDS = { lat: -23.55052, lng: -46.633308 };
+const MARCO_ZERO_RADIUS_METERS = 50;
+const BRAZIL_BOUNDS = {
+  minLat: -34.0,
+  maxLat: 5.5,
+  minLng: -74.0,
+  maxLng: -34.5,
+};
 
 class MarketControllerClass {
   async getAllMarkets(req: Request, res: Response, next: NextFunction) {
@@ -61,22 +71,58 @@ class MarketControllerClass {
         errors.push({ field: "name", message: "O nome do mercado é obrigatório." });
       }
 
-      const lat = latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : undefined;
-      const lng = longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : undefined;
+      const isLatProvided =
+        latitude !== undefined &&
+        latitude !== null &&
+        latitude !== "" &&
+        typeof latitude !== "boolean";
+      const isLngProvided =
+        longitude !== undefined &&
+        longitude !== null &&
+        longitude !== "" &&
+        typeof longitude !== "boolean";
 
-      if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) {
-        errors.push({ field: "latitude", message: "Latitude deve estar entre -90 e 90 graus." });
+      const lat = isLatProvided ? Number(latitude) : undefined;
+      const lng = isLngProvided ? Number(longitude) : undefined;
+
+      if (!isLatProvided || lat === undefined || isNaN(lat)) {
+        errors.push({ field: "latitude", message: "Latitude é obrigatória e deve ser um número válido." });
+      } else if (lat < BRAZIL_BOUNDS.minLat || lat > BRAZIL_BOUNDS.maxLat) {
+        errors.push({
+          field: "latitude",
+          message: `Latitude deve estar dentro do território brasileiro (entre ${BRAZIL_BOUNDS.minLat} e +${BRAZIL_BOUNDS.maxLat}).`,
+        });
       }
-      if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
-        errors.push({ field: "longitude", message: "Longitude deve estar entre -180 e 180 graus." });
+
+      if (!isLngProvided || lng === undefined || isNaN(lng)) {
+        errors.push({ field: "longitude", message: "Longitude é obrigatória e deve ser um número válido." });
+      } else if (lng < BRAZIL_BOUNDS.minLng || lng > BRAZIL_BOUNDS.maxLng) {
+        errors.push({
+          field: "longitude",
+          message: `Longitude deve estar dentro do território brasileiro (entre ${BRAZIL_BOUNDS.minLng} e ${BRAZIL_BOUNDS.maxLng}).`,
+        });
+      }
+
+      if (errors.length === 0 && lat !== undefined && lng !== undefined) {
+        const distanceToMarcoZero = RoutingService.calculateHaversineDistance(
+          { lat, lng },
+          SE_CATHEDRAL_COORDS
+        );
+
+        if (distanceToMarcoZero <= MARCO_ZERO_RADIUS_METERS) {
+          errors.push({
+            field: "location",
+            message: "Coordenadas inválidas ou localizadas no marco zero da Praça da Sé.",
+          });
+        }
       }
 
       if (errors.length > 0) throw new ValidationError(errors);
 
       const market = await marketService.createMarket({
         name: name.trim(),
-        latitude: lat,
-        longitude: lng,
+        latitude: lat!,
+        longitude: lng!,
       });
 
       return res.status(201).json(success(market));
@@ -100,14 +146,60 @@ class MarketControllerClass {
         errors.push({ field: "name", message: "O nome do mercado não pode ser vazio." });
       }
 
-      const lat = latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : undefined;
-      const lng = longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : undefined;
+      const isLatProvided =
+        latitude !== undefined &&
+        latitude !== null &&
+        latitude !== "" &&
+        typeof latitude !== "boolean";
+      const isLngProvided =
+        longitude !== undefined &&
+        longitude !== null &&
+        longitude !== "" &&
+        typeof longitude !== "boolean";
 
-      if (lat !== undefined && (isNaN(lat) || lat < -90 || lat > 90)) {
-        errors.push({ field: "latitude", message: "Latitude deve estar entre -90 e 90 graus." });
+      const lat = isLatProvided ? Number(latitude) : undefined;
+      const lng = isLngProvided ? Number(longitude) : undefined;
+
+      if ((isLatProvided && !isLngProvided) || (!isLatProvided && isLngProvided)) {
+        errors.push({
+          field: "location",
+          message: "Latitude e longitude devem ser fornecidas juntas para atualizar a localização.",
+        });
       }
-      if (lng !== undefined && (isNaN(lng) || lng < -180 || lng > 180)) {
-        errors.push({ field: "longitude", message: "Longitude deve estar entre -180 e 180 graus." });
+
+      if (isLatProvided) {
+        if (lat === undefined || isNaN(lat)) {
+          errors.push({ field: "latitude", message: "Latitude deve ser um número válido." });
+        } else if (lat < BRAZIL_BOUNDS.minLat || lat > BRAZIL_BOUNDS.maxLat) {
+          errors.push({
+            field: "latitude",
+            message: `Latitude deve estar dentro do território brasileiro (entre ${BRAZIL_BOUNDS.minLat} e +${BRAZIL_BOUNDS.maxLat}).`,
+          });
+        }
+      }
+
+      if (isLngProvided) {
+        if (lng === undefined || isNaN(lng)) {
+          errors.push({ field: "longitude", message: "Longitude deve ser um número válido." });
+        } else if (lng < BRAZIL_BOUNDS.minLng || lng > BRAZIL_BOUNDS.maxLng) {
+          errors.push({
+            field: "longitude",
+            message: `Longitude deve estar dentro do território brasileiro (entre ${BRAZIL_BOUNDS.minLng} e ${BRAZIL_BOUNDS.maxLng}).`,
+          });
+        }
+      }
+
+      if (isLatProvided && isLngProvided && lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng)) {
+        const distanceToZero = RoutingService.calculateHaversineDistance(
+          { lat, lng },
+          SE_CATHEDRAL_COORDS
+        );
+        if (distanceToZero <= MARCO_ZERO_RADIUS_METERS) {
+          errors.push({
+            field: "location",
+            message: "Coordenadas inválidas ou localizadas no marco zero da Praça da Sé.",
+          });
+        }
       }
 
       if (errors.length > 0) throw new ValidationError(errors);

@@ -2,8 +2,12 @@
   "expo": {
     "name": "LandingPage",
     "slug": "landing-page",
+    "platforms": [
+      "web"
+    ],
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single"
     }
   }
 }

@@ -36,6 +36,20 @@ export async function requireAuth(
       throw new UnauthorizedError("Sessão revogada. Faça login novamente.");
     }
 
+    const userObj = await UserRepository.getUserById(decoded.id);
+
+    if (!userObj) {
+      throw new UnauthorizedError("Usuário não encontrado.");
+    }
+
+    if (userObj.dangerFlag === true) {
+      return next(
+        new ForbiddenError(
+          "Sua conta encontra-se suspensa por violação das diretrizes de segurança.",
+        ),
+      );
+    }
+
     req.user = {
       id: decoded.id,
       email: decoded.email,
@@ -43,11 +57,13 @@ export async function requireAuth(
       roleId: decoded.roleId,
       jti: decoded.jti,
       exp: decoded.exp!,
-    };
+      dangerFlag: Boolean(userObj.dangerFlag),
+      twoFactorVerified: Boolean(userObj.twoFactorVerified),
+    } as any;
 
     next();
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       next(error);
       return;
     }
@@ -149,19 +165,14 @@ export async function requireTwoFactor(
       return next();
     }
 
-    try {
-      const userObj = await UserRepository.getUserById(req.user.id);
-      if (!userObj || !userObj.twoFactorVerified) {
-        return next(
-          new TwoFactorRequiredError(
-            "Verificação de duas etapas por e-mail necessária para realizar publicações e interações.",
-          ),
-        );
-      }
-      next();
-    } catch (e) {
-      next(e);
+    if (!(req.user as any).twoFactorVerified) {
+      return next(
+        new TwoFactorRequiredError(
+          "Verificação de duas etapas por e-mail necessária para realizar publicações e interações.",
+        ),
+      );
     }
+    next();
   });
 }
 

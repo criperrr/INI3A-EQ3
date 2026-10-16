@@ -24,8 +24,8 @@ import { ConsentBanner } from "./components/ConsentBanner";
 import { Footer } from "./components/Footer";
 
 const THEME_STORAGE_KEY = "@presco:landing_theme";
-const GITHUB_REPO_URL = "https://github.com/aventureiromax/INI3A-EQ3";
-const GITHUB_RELEASES_URL = "https://github.com/aventureiromax/INI3A-EQ3/releases/latest";
+const GITHUB_REPO_URL = "https://github.com/criperrr/INI3A-EQ3";
+const GITHUB_RELEASES_URL = "https://github.com/criperrr/INI3A-EQ3/releases/latest";
 
 export const LandingPage: React.FC = () => {
     const [themeType, setThemeType] = useState<ThemeType>("dark");

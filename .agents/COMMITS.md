@@ -3980,3 +3980,176 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/package.json`
   - `src/frontend/app.json`
 - **Impact / Next Steps:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem. Alterações prontas na working tree aguardando solicitação explícita do usuário para commit/push.
+
+## `2026-10-05 11:39` - `ci(landing)`: Pipeline multi-ambiente de deploy no GitHub Pages para main, dev e previews
+
+- **Description:** Implementação da arquitetura de deploy multi-ambiente da landing page no GitHub Pages. Configurado suporte a base URLs dinâmicas pelo Expo Metro Web via app.config.js, exportação estática SPA no modo single, workflow de CI/CD em .github/workflows/deploy-landing.yml com publicação isolada para main (raiz), dev (/dev/) e branches de preview/teste (/preview/<slug>/) preservando arquivos existentes com keep_files, badge de ambiente no cabeçalho e scripts de build na raiz e no pacote landing.
+- **Files Modified:**
+  - `.github/workflows/deploy-landing.yml`
+  - `src/landing/app.config.js`
+  - `src/landing/metro.config.js`
+  - `src/landing/app.json`
+  - `src/landing/package.json`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `package.json`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page 100% pronta para publicação contínua no GitHub Pages com separação estrita de ambientes para main, dev e feature branches.
+
+
+## `2026-10-05 12:33` - `fix(deploy)`: Blindagem de permissoes chmod no servidor remoto
+
+- **Description:** Adicionada protecao com `2>/dev/null || true` nas chamadas de `chmod` em `deploy/deploy.sh` (.htaccess, README.md e .env) para prevenir falha no script sob `set -e` em ambientes de hospedagem compartilhada como CTI.
+- **Files Modified:**
+  - `deploy/deploy.sh`
+- **Impact / Next Steps:** Previne falhas de permissao durante deploys em producao e staging no servidor remoto.
+
+## `2026-10-13 08:29` - `chore(android)`: Run project on Android emulator with x86_64 native build
+
+- **Description:** Configured JDK 17, Gradle 9.3.1, NDK 27.1, and Android SDK Build-Tools 36. Compiled and launched the native Android debug app (`x86_64`) on emulator-5554, verifying UI and onboarding flow.
+- **Files Modified:**
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Presco app is running and responsive on the emulator for interactive testing and Maestro flows.
+
+## `2026-10-13 09:37` - `test(maestro)`: Autonomous quick smoke test suite for Android emulator
+
+- **Description:** Added autonomous fast smoke test flow `smoke_suite.yaml`, testIDs in `profile.tsx`, and `run_maestro_quick.ts` targeting emulator with automatic permission granting and popup handling. Verified end-to-end execution with `npm run test:maestro:quick`.
+- **Files Modified:**
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/frontend/app/profile.tsx`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Developers and CI can run fast UI validation in ~25 seconds with zero manual intervention.
+
+## `2026-10-14 23:22` - `test(maestro)`: Deep frontend quality audit suite and testID hardening
+
+- **Description:** Added comprehensive Maestro frontend quality audit suite covering 12 phases and 20 visual checkpoints. Hardened UI components with deterministic testIDs and accessibility attributes across 13 screens. Fixed React ref mutations during render in cart screen. Sourced SemVer v1.4.4.
+- **Files Modified:**
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+  - `tests/maestro/subflows/logout.yaml`
+  - `tests/maestro/subflows/quick_login_user.yaml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/frontend/app/cart.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/login.tsx`
+  - `src/frontend/app/registerUser.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/about.tsx`
+  - `src/frontend/app/help.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/components/cart/RoutePreviewModal.tsx`
+  - `src/frontend/components/cart/TravelSettingsModal.tsx`
+  - `.gitignore`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** End-to-end automated UI quality assurance passing cleanly in 4m 14s with zero flakiness.
+
+## `2026-10-14 23:38` - `ci(maestro)`: Cloud E2E testing workflow with KVM and Android emulator
+
+- **Description:** Created GitHub Actions workflow `maestro-e2e.yml` running Maestro on headless Android emulator with hardware acceleration (KVM), automated database/redis provisioning, Expo Prebuild, APK build, and test report upload.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/run_maestro_quality_audit.ts`
+  - `scripts/run_maestro_quick.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Enables continuous end-to-end frontend regression verification on GitHub Actions for PRs against dev and main.
+
+## `2026-10-14 23:57` - `docs(agents)`: Strengthen branch creation priority, gh setup and autonomous CI log download
+
+- **Description:** Updated system guidelines in AGENTS.md, MEMORY.md, and user-preferences.md to enforce mandatory prior branch creation from dev, gh CLI verification and installation guidance, and autonomous CI error artifact download via gh run download.
+- **Files Modified:**
+  - `.agents/AGENTS.md`
+  - `.agents/memory/MEMORY.md`
+  - `.agents/memory/user-preferences.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Solidifies AI governance protocols preventing unbranched work and empowering remote headless debugging.
+
+## `2026-10-15 01:54` - `fix(ci)`: Resilient Maestro Dev Launcher Connection & Bundle Pre-warming
+
+- **Description:** Fixed headless Android emulator Dev Client screen stall during GitHub Actions Maestro CI run. Implemented Metro bundle pre-warming (`curl ... index.bundle`), set Metro host binding to LAN (`--host lan`), configured `stopApp: false` in Maestro flows to preserve background intent state, added `openLink` deep-linking and fallback `inputText` in `dismiss_tutorial.yaml`, increased timeout thresholds, and applied strict path-filtering on `test/**` branch pushes.
+- **Files Modified:**
+  - `.github/workflows/maestro-e2e.yml`
+  - `scripts/ci_run_maestro.sh`
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `tests/maestro/subflows/dismiss_tutorial.yaml`
+- **Impact / Next Steps:** Awaiting GitHub Actions run `38683885066` completion. Upon successful green check, open PR to `dev`, verify checks, merge via `gh pr merge --squash`, and perform requested clean system shutdown.
+
+## `2026-10-15 14:25` - `feat(backend)`: Hardening Estrutural Fase 1 (V-01, V-03, V-06) e Auditoria Anti-Slop Aprovada
+
+- **Description:** Implementação completa e auditoria pericial independente das três primeiras blindagens estruturais do backend do Presco (INI3A-EQ3):
+  1. V-01 (Limites de Preço, Cold Start & Variance Floor): Constraint PostgreSQL [0.10, 15000.00] com migration 0005, isolamento de Cold Start (cotações provisórias suspensas e 0 XP até corroboração por 2º usuário em ±20%), estabilização de variância MAD_eff = max(mad, 0.05 * median) prevenindo divisão por zero, parser de moeda pt-BR, defesa contra outlier via PUT e idempotência no admin approve.
+  2. V-03 (Custódia de Produtos & Authentication Shield): Persistência de `created_by_user_id` na tabela `product` com FK e índice, fail-closed na criação de produto sem usuário, bloqueio em tempo real de contas com `dangerFlag === true` no `requireAuth` e `requireTwoFactor` (HTTP 403), e otimização de I/O eliminando query duplicada no PostgreSQL.
+  3. V-06 (Erradicação do Marco Zero & Validação Espacial): Fim do fallback silencioso da Praça da Sé, validação de coordenadas no envelope brasileiro [-34.0, 5.5] / [-74.0, -34.5], e zona de exclusão de 50 metros ao redor do marco zero para criação e edição de mercados.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** 100% dos 3 auditores aprovaram as implementações sem ressalvas ou slop. Suíte de testes passando com 39/39 e 0 erros no typecheck. Pronto para commit atômico e push mediante autorização do usuário.
+
+
+## `2026-10-15 15:05` - `fix(backend)`: Blindagem estrutural de limites de preço, cold start, custódia e marco zero (Fase 1)
+
+- **Description:** Implementada e auditada a blindagem estrutural da Fase 1 do backend Presco:
+  1. **V-01 (Limites de Preço & Cold Start):** Constraint no PostgreSQL `[0.10, 15000.00]`, isolamento de cotações pioneiras em quarentena provisória sem contaminação do carrinho, corroboração multiusuário ($\pm 20\%$), variance floor `MAD_eff = max(mad, 0.05 * median)`, parser de moeda pt-BR e reavaliação de outliers no `PUT /ocurrency/:id`.
+  2. **V-03 (Custódia & Authentication Shield):** Adição de `created_by_user_id` com FK e índice na tabela `product`, fail-closed no `createCustomProduct` e checagem real-time de `dangerFlag === true` em `requireAuth` e `requireTwoFactor` retornando HTTP 403.
+  3. **V-06 (Erradicação do Marco Zero & Validação Espacial):** Erradicado totalmente o fallback da Praça da Sé em `market.service.ts`, validação estrita do envelope brasileiro `[-34.0, 5.5]` / `[-74.0, -34.5]` e exclusão de raio de 50m do marco zero.
+  4. **Migration 0005:** Gerada e registrada em `meta/_journal.json`.
+  5. **SemVer:** Versão sincronizada para `1.4.5` (Android `versionCode: 30`).
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`
+  - `src/backend/src/shared/database/drizzle/meta/_journal.json`
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/market/market.controller.ts`
+  - `src/backend/src/modules/market/market.service.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/tests/market.test.ts`
+  - `src/backend/tests/ocurrencyHardening.test.ts`
+  - `src/backend/tests/productCustodyAndAuth.test.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** 39/39 testes do backend passando, 0 erros no typecheck. Pronto para push e abertura de PR para `dev`.
+
+
+## `2026-10-15 16:53` - `chore(release)`: Deploy em produção v1.4.5 e publicação do APK no GitHub Releases
+
+- **Description:** Concluído o ciclo completo de implantação da v1.4.5 em produção: deploy e migração Drizzle (0005_structural_hardening_phase1.sql) no servidor CTI remoto, ajuste de scripts de troca de ambiente (configure_env.ts), validação de 100% dos testes no CI (incluindo 20m de Maestro E2E), merge do PR #33 na main e compilação/publicação automática do APK nativo (app-release.apk) no GitHub Releases via tag v1.4.5.
+- **Files Modified:**
+  - `scripts/configure_env.ts`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Aplicação 100% operacional em produção, banco migrado, API saudável e APK disponível para download direto na aba Releases do repositório.

@@ -661,7 +661,10 @@ class ProductRepositoryClass {
     return Number(res[0]?.count || 0);
   }
 
-  async createProduct(data: CreateProductDTO) {
+  async createProduct(
+    data: CreateProductDTO & { createdByUserId?: number | undefined },
+    createdByUserId?: number,
+  ) {
     this.categoryCache = null;
     const safeName = data.name.trim().slice(0, 195);
     const categoryStr = Array.isArray(data.categories) && data.categories.length > 0
@@ -669,12 +672,15 @@ class ProductRepositoryClass {
       : (data.description || data.category || "");
     const safeDescription = categoryStr.trim().slice(0, 250);
 
-    const payload: any = {
+    const userId = createdByUserId !== undefined ? createdByUserId : data.createdByUserId;
+
+    const payload: typeof product.$inferInsert = {
       ean: data.ean?.trim() || null,
       ncm: data.ncm?.trim() || null,
       name: safeName,
       description: safeDescription,
       icon: data.icon?.trim() || "",
+      createdByUserId: userId !== undefined ? userId : null,
     };
 
     if (data.createdAt) {

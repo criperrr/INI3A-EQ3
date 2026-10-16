@@ -1,14 +1,76 @@
 appId: com.presco.app
 ---
-# Subflow: Dismiss Onboarding Tutorial if Visible
+# Subflow: Dismiss Onboarding Tutorial & Dev Menu if Visible
+- runFlow:
+    when:
+      visible:
+        id: "dismiss-tutorial-button"
+    commands:
+      - tapOn:
+          id: "dismiss-tutorial-button"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
 - runFlow:
     when:
       visible: "Pular tutorial"
     commands:
       - tapOn: "Pular tutorial"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- runFlow:
+    when:
+      visible: "Skip"
+    commands:
+      - tapOn: "Skip"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- runFlow:
+    when:
+      visible: "Pular"
+    commands:
+      - tapOn: "Pular"
+      - waitForAnimationToEnd:
+          timeout: 1000
+
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+      - waitForAnimationToEnd:
+          timeout: 1000
 
 - runFlow:
     when:
       visible: "Entendi"
     commands:
       - tapOn: "Entendi"
+
+- runFlow:
+    when:
+      visible: "(?i).*Runtime version.*|.*Toggle performance monitor.*"
+    commands:
+      - back
+      - waitForAnimationToEnd:
+          timeout: 500
+
+# Handle Expo Development Client Launcher if visible
+- runFlow:
+    when:
+      visible: "Connect"
+    commands:
+      - openLink: "presco://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+      - waitForAnimationToEnd:
+          timeout: 4000
+      - runFlow:
+          when:
+            visible: "Connect"
+          commands:
+            - tapOn: "http://"
+            - inputText: "localhost:8081"
+            - tapOn: "Connect"
+            - waitForAnimationToEnd:
+                timeout: 5000

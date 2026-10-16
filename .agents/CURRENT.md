@@ -7,6 +7,73 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Release v1.4.5 em Produção & Publicação Oficial do APK Android:**
+  - **Deploy em Produção (CTI):** Executado `npm run deploy` via SSH (`ra2457039@projetoscti.com.br:4026`) no diretório `/var/www/equipes/26-presco`. Aplicada com sucesso a migration `0005_structural_hardening_phase1.sql` no PostgreSQL de produção (`54432`), executados seed e realocação de mercados (404 mercados verificados e ativos), e reiniciado o processo PM2 (`presco-backend`) na porta 3333 com healthcheck público `200 OK`.
+  - **Configuração do App Mobile para Produção:** Corrigido `scripts/configure_env.ts` (declaração de `FRONTEND_ENV_PATH`) e executado `npm run env:prod`, apontando `EXPO_PUBLIC_API_URL` para `https://eq.projetoscti.com.br/26-presco`.
+  - **Integração e Merge na `main` (PR #33):** Pipeline de CI validado com 100% de sucesso (PR Gatekeeper, Landing Page e Maestro E2E com 20m 24s no Android Emulator) e squash merge realizado na branch `main`.
+  - **Publicação Oficial do APK no GitHub Releases:** Enviada a tag oficial `v1.4.5`, acionando o workflow `Build and Release Android APK`. Compilado o binário nativo `app-release.apk` (134.24 MiB) via Gradle e publicado automaticamente no GitHub Releases: [Release Presco v1.4.5](https://github.com/criperrr/INI3A-EQ3/releases/tag/v1.4.5).
+- **Blindagem Estrutural & Auditoria de Código da Fase 1 (`fix/structural-hardening-phase1`):**
+  - **V-01 (Limites de Preço, Cold Start & Variance Floor):**
+    - Implementada constraint no banco e validação no service para a faixa realista de preços [R$ 0,10, R$ 15.000,00], erradicando o "Tomate de 10 Bilhões".
+    - Isolamento estrito de Cold Start (`stats.count === 0`): cotações nascem como provisórias (`isSuspended: true, isResolved: false, trustFlag: false`) e com 0 XP, sendo isoladas do otimizador de carrinho e das buscas até dupla corroboração independente (faixa ±20%).
+    - Estabilização estatística de variância: `MAD_eff = Math.max(mad, 0.05 * median)` eliminando divisões por zero e Z-scores infinitos.
+    - Saneamento pericial: parser de moeda pt-BR (`parseCurrencyValue`), reavaliação de outliers no `PUT /ocurrency/:id` com auto-suspensão e idempotência no `service.approve` (fim do farm de XP).
+    - Gerada e registrada a migration física `src/backend/src/shared/database/drizzle/0005_structural_hardening_phase1.sql`.
+  - **V-03 (Custódia de Produtos & Authentication Shield):**
+    - Persistência de autoria: coluna `created_by_user_id` adicionada à tabela `product` com chave estrangeira `ON DELETE SET NULL` e índice B-Tree dedicado `idx_product_created_by`.
+    - Fail-closed no service: `productService.createCustomProduct` rejeita requisições sem `userId` com `UnauthorizedError`.
+    - Authentication Shield: validação de `dangerFlag === true` no `requireAuth` e `requireTwoFactor` retornando HTTP 403 Forbidden imediato. Otimização de I/O com anexação das flags em `req.user`, eliminando consulta duplicada ao PostgreSQL.
+  - **V-06 (Erradicação do Marco Zero & Validação Espacial de Mercados):**
+    - Erradicado totalmente o fallback silencioso para a Praça da Sé (`-23.55052, -46.633308`) em `market.service.ts` e `market.repository.ts`.
+    - Validação de entrada: `createMarket` e `updateMarket` exigem coordenadas numéricas válidas dentro do envelope territorial brasileiro (lat: [-34.0, +5.5], lng: [-74.0, -34.5]) e barram qualquer ponto a ≤ 50m do marco zero da Praça da Sé via fórmula geodésica de Haversine.
+  - **Auditoria Independente Anti-Slop (3 Auditores Adversariais):**
+    - V-01 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO E ENDURECIDO]**
+    - V-03 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+    - V-06 Auditor: **[APROVADO - CÓDIGO LEGÍTIMO]**
+  - **Qualidade & Blindagem de Testes:** 39 testes unitários e de integração passando com 100% de sucesso (`npm run test:backend`), 0 erros no typecheck (`npm run typecheck`) e SemVer sincronizado para `v1.4.5` (`versionCode: 30`).
+  - **Dossiê Dialético V-08 Concluído:** Finalizado o ciclo de 4 rodadas adversariais para Google OAuth, 2FA Real (TOTP) e Trust Ramp, homologado com [APROVAÇÃO DEFINITIVA INTEGRAL] e documentado no compêndio.
+- **Blindagem do Pipeline CI de E2E no GitHub Actions (`maestro-e2e.yml`):**
+  - **Resolução do Dev Client & Modal de Onboarding:** Diagnosticado e resolvido o fluxo de carregamento headless no emulador Android: implementado pré-aquecimento do bundle JS via `curl` no Metro, inicialização em `--host lan`, preservação do estado via `stopApp: false`, priorização do dismiss do modal de tutorial (`dismiss-tutorial-button`, `Pular tutorial`, `Skip`) e espera determinística em `extendedWaitUntil: ".*(dismiss-tutorial-button|tab-home).*"` para transição segura à Home.
+  - **Filtro Estrito de Caminhos (*Path Filtering*):** Aplicado filtro cirúrgico em branches `test/**` e PRs (`src/frontend/**`, `tests/maestro/**`, `scripts/*maestro*`), impedindo compilação de APK e testes de emulador desnecessários em alterações de backend ou docs.
+- **Blindagem de Governança de Branches, Pré-requisito do `gh` e Diagnóstico Autônomo de CI:**
+  - **Criação Prévia Mandatória de Branches:** O modelo deve obrigatoriamente criar uma branch temática a partir de `dev` antes de tocar em qualquer arquivo do projeto, sendo estritamente proibido alterar diretamente em `main` ou `dev`.
+  - **Onboarding e Verificação do GitHub CLI (`gh`):** Instrução mandatória para o agente verificar a presença (`which gh`) e autenticação (`gh auth status`) da CLI do GitHub, orientando a instalação ou solicitando `gh auth login` se ausente.
+  - **Diagnóstico Autônomo de Falhas na Nuvem:** O modelo foi capacitado e instruído a inspecionar logs de erro (`gh run view <run-id> --log-failed`) e baixar os artefatos de teste (`gh run download <run-id> -n maestro-e2e-audit-reports`) diretamente via terminal para debugar sem onerar a máquina do desenvolvedor.
+- **Pipeline de CI/CD para Testes E2E com Maestro no GitHub Actions (`maestro-e2e.yml`):**
+  - **Automação Completa na Nuvem:** Criado o workflow [`.github/workflows/maestro-e2e.yml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/.github/workflows/maestro-e2e.yml) para rodar a suíte completa de auditoria E2E do Maestro no GitHub Actions (`ubuntu-latest`) utilizando aceleração de hardware KVM (`/dev/kvm`), Node 22, Java 17, Gradle Cache, containers Docker (Postgres + Redis) e emulador Android (API 31, x86_64 via `reactivecircus/android-emulator-runner@v2`).
+  - **Filtro Cirúrgico de Caminhos (*Path Filtering*):** Acionado automaticamente em PRs para `dev` e `main` quando houver alterações em `src/frontend/**`, `tests/maestro/**` ou scripts de teste, preservando o tempo de PRs de backend/docs intactos.
+  - **Suporte a Execução Manual e Pré-PR:** Gatilhos via `workflow_dispatch` e em branches `test/**` para validação prévia na nuvem antes da abertura de PRs.
+- **Auditoria Profunda de Qualidade Frontend com Maestro (`v1.4.4`):**
+  - **Suíte de Auditoria Completa:** Implementado o fluxo [`frontend_quality_audit.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/frontend_quality_audit.yaml) cobrindo 12 fases do app (Boot, Autenticação, Onboarding, Busca, Detalhes de Produto, Carrinho com Múltiplas Paradas, Rota no Mapa, Modais, Perfil Gamificado, Loja de Customizações, Temas Dinâmicos Claro/Escuro/AMOLED, Monet e Logout Limpo).
+  - **Blindagem de Seletores e Acessibilidade:** Inseridos `testID`s determinísticos e `accessibilityRole="button"` em 13 componentes e telas (`cart.tsx`, `RoutePreviewModal.tsx`, `TravelSettingsModal.tsx`, `login.tsx`, `profile.tsx`, `registerUser.tsx`, `search.tsx`, `settings.tsx`, `productDetails.tsx`, `index.tsx`, `help.tsx`, `about.tsx`, `adminModeration.tsx`).
+  - **Correção de Linter & Render Ref:** Sincronização de referências de estado no carrinho (`cartItemsRef`, `settingsRef`) movida para `useEffect`, eliminando erros de mutação de refs durante o render no React.
+  - **Execução & Validação:** 100% dos testes aprovados (`1/1 Flow Passed in 4m 14s`), 20 screenshots capturados e arquivados em relatórios.
+  - **Qualidade & SemVer:** 48 testes unitários passando, 0 erros no typecheck e linting aprovado com código 0. Versão sincronizada para `v1.4.4` (`versionCode: 29`).
+- **Execução Autônoma do Maestro com Testes Rápidos (`test:maestro:quick`):**
+  - **Identificação e Resolução de Bloqueios:** Resolvido o modal bloqueante do Expo Dev Menu e o popup inicial de tutorial, além de garantir o direcionamento explícito ao emulador (`--device emulator-5554`) mesmo na presença de dispositivos USB físicos conectados.
+  - **Suíte Rápida Autônoma:** Criado o fluxo [`smoke_suite.yaml`](file:///home/criper/Documentos/projetos/INI3A-EQ3/tests/maestro/flows/smoke_suite.yaml) e o orquestrador [`run_maestro_quick.ts`](file:///home/criper/Documentos/projetos/INI3A-EQ3/scripts/run_maestro_quick.ts).
+  - **Validação de Execução:** Executado com sucesso via `npm run test:maestro:quick`, validando boot limpo, Home, navegação por abas (Busca, Mapa, Perfil), 1-Tap Dev Login e retorno à Home em menos de 30 segundos.
+- **Execução do Aplicativo no Emulador Android (`emulator-5554`):**
+  - **Ambiente & Dependências:** Configurado Amazon Corretto JDK 17 (`~/.local/jdks/temurin17`), Gradle 9.3.1, NDK 27.1 (`x86_64`) e Android SDK Build-Tools 36.
+  - **Compilação & Execução:** Build nativo em modo debug (`npm run android:debug`) compilado e empacotado com sucesso para a arquitetura `x86_64` do emulador.
+  - **Validação Visual:** Aplicativo `com.presco.app` inicializado com sucesso (PID ativo, onboarding exibido e renderizado com UI do Presco).
+- **Blindagem de Permissões `chmod` no Servidor Remoto de Produção CTI (`deploy/deploy.sh`):**
+  - **Diagnóstico da Falha:** No deploy para produção, o servidor compartilhado CTI rejeitava comandos `chmod` sobre arquivos gerenciados pelo web server como `.htaccess`, `.env` e `README.md` (`Operation not permitted`), abortando o pipeline sob `set -euo pipefail`.
+  - **Correção:** Protegidas todas as invocações de `chmod` com `2>/dev/null || true` em [`deploy.sh`](file:///Users/criper/INI3A-EQ3/deploy/deploy.sh).
+  - **Qualidade & Validação:** 48 testes unitários passando (19 backend + 29 raiz), 0 erros de tipagem no `npm run typecheck`.
+- **Pipeline de Deploy Multi-Ambiente da Landing Page no GitHub Pages (`v1.4.3`):**
+  1. **Arquitetura de Hospedagem Multi-Branch:**
+     - `main` (Produção): Hospeda a landing page na raiz do GitHub Pages (`https://criperrr.github.io/INI3A-EQ3/`) com `baseUrl: /INI3A-EQ3`.
+     - `dev` (Desenvolvimento): Hospeda em subdiretório isolado (`https://criperrr.github.io/INI3A-EQ3/dev/`) com `baseUrl: /INI3A-EQ3/dev`.
+     - Feature & PR Branches (Testes & Previews): Cada modificação ou branch de testes (`feat/**`, `fix/**`, `test/**` ou PRs) gera uma prévia isolada em `https://criperrr.github.io/INI3A-EQ3/preview/<slug>/` com `keep_files: true` preservando os demais ambientes intactos.
+  2. **Configuração Técnica & Otimização do Metro Expo Web:**
+     - [`app.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/app.config.js): Injeção dinâmica de `experiments.baseUrl` a partir da variável `EXPO_BASE_URL`.
+     - [`metro.config.js`](file:///Users/criper/INI3A-EQ3/src/landing/metro.config.js): Exportação SPA (`output: "single"`) com suporte a bundling estático pelo Metro.
+     - [`Header.tsx`](file:///Users/criper/INI3A-EQ3/src/landing/components/Header.tsx): Badge dinâmico de identificação de ambiente (`DEV`, `TEST` ou limpo em produção) e sincronização SemVer `v1.4.3`.
+     - [`.github/workflows/deploy-landing.yml`](file:///Users/criper/INI3A-EQ3/.github/workflows/deploy-landing.yml): Workflow com concorrência segura (`deploy-gh-pages`), publicação na branch `gh-pages` com `.nojekyll`, habilitação automática da API do Pages e comentário com link no Pull Request.
+  3. **Qualidade & Validação:**
+     - 48 testes unitários passando (19 backend + 29 raiz).
+     - 0 erros de tipagem no `npm run typecheck`.
 - **Condicionamento do Botão "Mover de Mercado" à Existência do Produto no Banco (`v1.4.3`):**
   1. **Diagnóstico da Causa Raiz:**
      - Quando o otimizador dividia os produtos em múltiplos mercados (`storeGroups.length > 1`), o componente [`StoreGroupCard.tsx`](file:///Users/aventureiromax/INI3A-EQ3/src/frontend/components/cart/StoreGroupCard.tsx) renderizava o botão `[Mover de Mercado]` indiscriminadamente para todos os itens daquele supermercado, independentemente de o produto existir ou não nos outros mercados da rota.

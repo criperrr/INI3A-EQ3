@@ -316,8 +316,15 @@ const FooterLinks = ({
     <Text style={[styles.footerText, themeStyles.subText]}>
       {t("auth.noAccount")}{" "}
     </Text>
-    <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
-      <Text style={[styles.registerText, { color: accent }]}>{t("auth.signUp")}</Text>
+    <TouchableOpacity
+      testID="login-go-to-register-btn"
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel="login-go-to-register-btn"
+      onPress={onGoToRegister}
+      activeOpacity={0.7}
+    >
+      <Text testID="login-go-to-register-text" style={[styles.registerText, { color: accent }]}>{t("auth.signUp")}</Text>
     </TouchableOpacity>
   </View>
 );

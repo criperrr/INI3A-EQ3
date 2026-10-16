@@ -36,6 +36,13 @@
       "when": 1781160000000,
       "tag": "0004_add_cart_product_quantity",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781170000000,
+      "tag": "0005_structural_hardening_phase1",
+      "breakpoints": true
     }
   ]
 }

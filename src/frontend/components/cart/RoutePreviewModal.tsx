@@ -136,7 +136,15 @@ export function RoutePreviewModal({ visible, onClose, optimization }: RoutePrevi
               >
                 <Ionicons name="share-outline" size={20} color={semantic.colors.icon.primary} />
               </TouchableOpacity>
-              <TouchableOpacity activeOpacity={0.7} onPress={onClose} style={styles.iconBtn}>
+              <TouchableOpacity
+                testID="route-preview-close-btn"
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="route-preview-close-btn"
+                activeOpacity={0.7}
+                onPress={onClose}
+                style={styles.iconBtn}
+              >
                 <Ionicons name="close" size={22} color={semantic.colors.icon.primary} />
               </TouchableOpacity>
             </View>

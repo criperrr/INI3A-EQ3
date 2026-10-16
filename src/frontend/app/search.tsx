@@ -465,6 +465,7 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
           return (
             <TouchableOpacity
               key={cat}
+              testID="search-category-chip"
               style={[
                 styles.categoryChip,
                 {
@@ -535,6 +536,7 @@ const ProductCardItem = memo(function ProductCardItem({
 
   return (
     <TouchableOpacity
+      testID="search-product-card"
       style={[
         styles.productCard,
         {

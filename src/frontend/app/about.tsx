@@ -47,6 +47,7 @@ export default function AboutScreen() {
         ]}
       >
         <TouchableOpacity
+          testID="about-back-btn"
           style={[styles.backButton, themeStyles.inputBg]}
           activeOpacity={0.7}
           onPress={() => router.back()}

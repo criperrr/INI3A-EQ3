@@ -8,6 +8,8 @@
 
 src/frontend/.expo/
 src/frontend/dist/
+src/landing/.expo/
+src/landing/dist/
 dist/
 *.apk
 src/frontend/web-build/
@@ -41,6 +43,7 @@ deploy/.env.deploy
 deploy/*.key
 deploy/*.pem
 logs/
+reports/
 
 # Python cache
 __pycache__/

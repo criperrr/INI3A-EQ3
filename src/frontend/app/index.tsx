@@ -439,6 +439,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
   return (
     <View style={styles.bannerSection}>
       <FlatList
+        testID="home-banner-carousel"
         ref={flatListRef}
         data={banners}
         keyExtractor={(item) => item.id}
@@ -589,6 +590,7 @@ const ActionMenu = memo(function ActionMenu({
         return (
           <TouchableOpacity
             key={tab.id}
+            testID={`home-view-tab-${tab.id}`}
             style={[
               styles.tabButton,
               { borderRadius: semantic.radius.chip },
@@ -689,6 +691,7 @@ const ItemsGrid = memo(function ItemsGrid({
         {itemsToRender.map((item) => (
           <TouchableOpacity
             key={item.id}
+            testID="home-product-card"
             style={[
               styles.productItem,
               {
