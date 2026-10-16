@@ -4153,3 +4153,21 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Aplicação 100% operacional em produção, banco migrado, API saudável e APK disponível para download direto na aba Releases do repositório.
+
+## `2026-10-16 07:45` - `feat(landing)`: Refactor landing layout, mobile responsiveness and emoji eradication
+
+- **Description:** Realizada refatoração completa do layout da landing page em `src/landing`. Erradicados emojis decorativos em favor de tipografia técnica, limpa e badges semânticos. Ajustada a responsividade mobile com redimensionamento dinâmico e proporcional dos mockups de smartphone e molduras de capturas de tela via `Dimensions.addEventListener`, eliminando cortes e quebras em telas estreitas. Sincronizadas menções e badges para a versão `v1.4.5`.
+- **Files Modified:**
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/ImpactStatsSection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/DownloadSection.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/Footer.tsx`
+  - `src/landing/components/ConsentBanner.tsx`
+  - `src/landing/components/PolicyModal.tsx`
+- **Impact / Next Steps:** Landing page 100% responsiva, sem overflow em telas mobile, tipografia moderna e elegante sem emojis infantis, preservando rigorosamente o design original, o tema visual dinâmico e a paleta do Presco. 100% typecheck aprovado.
