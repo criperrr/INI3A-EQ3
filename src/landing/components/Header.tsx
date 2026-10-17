@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                         <View style={[styles.pulseDot, { backgroundColor: theme.accent }]} />
                         <Text style={[styles.versionText, { color: theme.accent }]}>
-                            v1.4.3
+                            v1.4.5
                         </Text>
                     </View>
                     {envBadge && (
@@ -165,7 +165,7 @@ export const Header: React.FC<HeaderProps> = ({
                         accessibilityLabel="Alternar tema visual"
                     >
                         <Text style={[styles.themeBtnText, { color: theme.text.primary }]}>
-                            {themeType === "dark" ? "🌙 Dark" : themeType === "amoled" ? "🖤 AMOLED" : "☀️ Light"}
+                            {themeType === "dark" ? "Dark" : themeType === "amoled" ? "AMOLED" : "Light"}
                         </Text>
                     </TouchableOpacity>
 

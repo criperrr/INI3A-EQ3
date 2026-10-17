@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -18,27 +18,46 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
     theme,
     onOpenPolicies,
 }) => {
-    const { width } = Dimensions.get("window");
-    const isDesktop = width >= 860;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    const isDesktop = windowWidth >= 860;
+    const isMobile = windowWidth < 480;
+
+    // Responsive mockup frame dimensions for the settings preview
+    const previewWidth = isMobile
+        ? Math.min(windowWidth - 72, 240)
+        : 260;
+    const previewHeight = Math.round(previewWidth * 1.84);
 
     const protectionPillars = [
         {
-            icon: "🛡️",
+            code: "QUÓRUM",
             title: "Quórum Comunitário Anti-Fraude",
             desc: "Cada preço reportado passa por votação e validação de outros consumidores locais. Ocorrências suspeitas ou destoantes são marcadas e suspensas preventivamente pelo algoritmo de confiança.",
         },
         {
-            icon: "🔐",
+            code: "2FA",
             title: "2FA com Resend OTP",
             desc: "Autenticação em duas etapas via código criptográfico de uso único no seu email, blindando as edições de catálogo e ações de moderação contra robôs e invasores.",
         },
         {
-            icon: "📍",
+            code: "GEO",
             title: "Geofencing & Rate Limiting Atômico",
             desc: "Validação espacial das coordenadas do supermercado via PostGIS aliada a cooldowns em memória no Redis, impedindo spam e manipulação coordenada de ofertas.",
         },
         {
-            icon: "⚖️",
+            code: "LGPD",
             title: "Conformidade Rígida com a LGPD",
             desc: "Total respeito à Lei 13.709/2018. Permissões de GPS e câmera sob demanda, sem rastreamento de anúncios de terceiros e com direito à exclusão definitiva da conta com 1 toque.",
         },
@@ -76,8 +95,8 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                             styles.title,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 28,
-                                lineHeight: isDesktop ? 44 : 34,
+                                fontSize: isDesktop ? 36 : 26,
+                                lineHeight: isDesktop ? 44 : 32,
                             },
                         ]}
                     >
@@ -99,13 +118,23 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                             style={[
                                 styles.pillarCard,
                                 isDesktop && styles.pillarCardDesktop,
+                                isMobile && styles.pillarCardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
                                 },
                             ]}
                         >
-                            <Text style={styles.pillarIcon}>{p.icon}</Text>
+                            <View
+                                style={[
+                                    styles.pillarBadge,
+                                    { backgroundColor: theme.accent + "18" },
+                                ]}
+                            >
+                                <Text style={[styles.pillarBadgeText, { color: theme.accent }]}>
+                                    {p.code}
+                                </Text>
+                            </View>
                             <Text
                                 style={[
                                     styles.pillarTitle,
@@ -131,6 +160,7 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                     style={[
                         styles.calloutCard,
                         isDesktop && styles.calloutCardDesktop,
+                        isMobile && styles.calloutCardMobile,
                         {
                             backgroundColor: theme.surface.card,
                             borderColor: theme.accent + "40",
@@ -145,7 +175,7 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                             ]}
                         >
                             <Text style={[styles.calloutBadgeText, { color: theme.accent }]}>
-                                🔒 PRIVACIDADE & SEGURANÇA VERIFICÁVEL
+                                PRIVACIDADE & SEGURANÇA VERIFICÁVEL
                             </Text>
                         </View>
 
@@ -160,13 +190,13 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
 
                         <View style={styles.complianceChecks}>
                             <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Autenticação em Duas Etapas (2FA) nativa com código descartável
+                                • Autenticação em Duas Etapas (2FA) nativa com código descartável
                             </Text>
                             <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
+                                • Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
                             </Text>
                             <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Zero rastreamento publicitário ou venda de relatórios de consumo
+                                • Zero rastreamento publicitário ou comercialização de relatórios
                             </Text>
                         </View>
 
@@ -206,12 +236,15 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                         </View>
                     </View>
 
-                    {/* Screenshot Frame of App Settings */}
+                    {/* Screenshot Frame of App Settings with Dynamic Scaled Sizing */}
                     <View style={styles.calloutRight}>
                         <View
                             style={[
                                 styles.settingsPreviewFrame,
                                 {
+                                    width: previewWidth,
+                                    height: previewHeight,
+                                    borderRadius: Math.round(previewWidth * 0.12),
                                     borderColor: theme.accent + "50",
                                     backgroundColor: "#05070A",
                                 },
@@ -233,19 +266,19 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 72,
+        paddingVertical: 56,
     },
     inner: {
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     headerArea: {
         alignItems: "center",
         maxWidth: 760,
         marginHorizontal: "auto",
-        marginBottom: 48,
+        marginBottom: 40,
     },
     badge: {
         paddingHorizontal: 12,
@@ -262,12 +295,12 @@ const styles = StyleSheet.create({
     title: {
         fontWeight: "900",
         textAlign: "center",
-        marginBottom: 16,
+        marginBottom: 14,
         letterSpacing: -0.8,
     },
     subtitle: {
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: 15,
+        lineHeight: 23,
         textAlign: "center",
     },
     pillarsGrid: {
@@ -279,47 +312,64 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
+        rowGap: 24,
     },
     pillarCard: {
         padding: 24,
-        borderRadius: 20,
+        borderRadius: 24,
         borderWidth: 1,
         width: "100%",
     },
     pillarCardDesktop: {
         width: "48.5%",
     },
-    pillarIcon: {
-        fontSize: 32,
-        marginBottom: 14,
+    pillarCardMobile: {
+        padding: 18,
+    },
+    pillarBadge: {
+        alignSelf: "flex-start",
+        paddingHorizontal: 9,
+        paddingVertical: 4,
+        borderRadius: 6,
+        marginBottom: 12,
+    },
+    pillarBadgeText: {
+        fontSize: 10,
+        fontWeight: "900",
+        letterSpacing: 0.8,
     },
     pillarTitle: {
         fontSize: 18,
         fontWeight: "800",
-        marginBottom: 8,
         letterSpacing: -0.3,
+        marginBottom: 8,
     },
     pillarDesc: {
         fontSize: 14,
-        lineHeight: 22,
+        lineHeight: 21,
     },
     calloutCard: {
-        padding: 32,
         borderRadius: 28,
         borderWidth: 1,
+        padding: 28,
         flexDirection: "column",
-        gap: 28,
+        gap: 24,
+        alignItems: "center",
     },
     calloutCardDesktop: {
         flexDirection: "row",
-        alignItems: "center",
         justifyContent: "space-between",
+        alignItems: "center",
+        padding: 40,
+    },
+    calloutCardMobile: {
+        padding: 20,
     },
     calloutLeft: {
         width: "100%",
     },
     calloutLeftDesktop: {
-        width: "60%",
+        width: "58%",
     },
     calloutBadge: {
         alignSelf: "flex-start",
@@ -362,18 +412,15 @@ const styles = StyleSheet.create({
         width: "100%",
         alignItems: "center",
         justifyContent: "center",
-        marginTop: 10,
     },
     settingsPreviewFrame: {
-        width: 260,
-        height: 480,
-        borderRadius: 32,
         borderWidth: 3,
         overflow: "hidden",
         shadowOffset: { width: 0, height: 16 },
         shadowOpacity: 0.3,
         shadowRadius: 30,
         elevation: 12,
+        alignSelf: "center",
     },
     settingsPreviewImage: {
         width: "100%",

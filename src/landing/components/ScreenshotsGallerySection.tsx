@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -13,8 +13,30 @@ interface ScreenshotsGallerySectionProps {
 }
 
 export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
-    const isDesktop = width >= 960;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    const isDesktop = windowWidth >= 960;
+    const isMobile = windowWidth < 480;
+
+    // Calculate responsive image container height
+    // Desktop: ~500px, Tablet: ~440px, Mobile: proportional to card width (aspect ratio ~16:9 or phone height)
+    const cardContentWidth = isDesktop
+        ? Math.min((1200 - 48 - 64) / 3, 340)
+        : Math.min(windowWidth - 48 - 32, 400);
+    const imageHeight = isDesktop
+        ? 500
+        : Math.min(Math.round(cardContentWidth * 1.55), 460);
 
     const screens = [
         {
@@ -89,8 +111,8 @@ export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps>
                             styles.title,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 28,
-                                lineHeight: isDesktop ? 44 : 34,
+                                fontSize: isDesktop ? 36 : 26,
+                                lineHeight: isDesktop ? 44 : 32,
                             },
                         ]}
                     >
@@ -111,6 +133,7 @@ export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps>
                             style={[
                                 styles.card,
                                 isDesktop && styles.cardDesktop,
+                                isMobile && styles.cardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
@@ -143,6 +166,7 @@ export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps>
                                 style={[
                                     styles.imageContainer,
                                     {
+                                        height: imageHeight,
                                         backgroundColor: "#05070A",
                                         borderColor: theme.surface.borderSubtle,
                                     },
@@ -165,7 +189,7 @@ export const ScreenshotsGallerySection: React.FC<ScreenshotsGallerySectionProps>
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 72,
+        paddingVertical: 56,
         borderTopWidth: 1,
         borderBottomWidth: 1,
     },
@@ -173,13 +197,13 @@ const styles = StyleSheet.create({
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
     },
     headerArea: {
         alignItems: "center",
         maxWidth: 700,
         marginHorizontal: "auto",
-        marginBottom: 48,
+        marginBottom: 40,
     },
     badge: {
         paddingHorizontal: 12,
@@ -200,24 +224,24 @@ const styles = StyleSheet.create({
         letterSpacing: -0.8,
     },
     subtitle: {
-        fontSize: 16,
-        lineHeight: 24,
+        fontSize: 15,
+        lineHeight: 23,
         textAlign: "center",
     },
     grid: {
         flexDirection: "column",
-        gap: 32,
+        gap: 24,
     },
     gridDesktop: {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
-        rowGap: 32,
+        rowGap: 28,
     },
     card: {
-        borderRadius: 28,
+        borderRadius: 24,
         borderWidth: 1,
-        padding: 20,
+        padding: 18,
         width: "100%",
         shadowOffset: { width: 0, height: 12 },
         shadowOpacity: 0.15,
@@ -227,8 +251,11 @@ const styles = StyleSheet.create({
     cardDesktop: {
         width: "31.5%",
     },
+    cardMobile: {
+        padding: 14,
+    },
     cardHeader: {
-        marginBottom: 16,
+        marginBottom: 14,
     },
     tagPill: {
         alignSelf: "flex-start",
@@ -243,7 +270,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     screenTitle: {
-        fontSize: 17,
+        fontSize: 16,
         fontWeight: "800",
         marginBottom: 4,
         letterSpacing: -0.3,
@@ -254,8 +281,7 @@ const styles = StyleSheet.create({
     },
     imageContainer: {
         width: "100%",
-        height: 520,
-        borderRadius: 22,
+        borderRadius: 18,
         overflow: "hidden",
         borderWidth: 1,
     },
@@ -264,3 +290,4 @@ const styles = StyleSheet.create({
         height: "100%",
     },
 });
+

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -17,8 +17,24 @@ type ScreenTab = "home" | "cart" | "search" | "product" | "profile" | "scanner" 
 
 export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
     const [activeTab, setActiveTab] = useState<ScreenTab>("home");
-    const { width } = Dimensions.get("window");
-    const isMobile = width < 480;
+    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
+
+    useEffect(() => {
+        const onChange = ({ window }: { window: { width: number } }) => {
+            setWindowWidth(window.width);
+        };
+        const sub = Dimensions.addEventListener("change", onChange);
+        return () => {
+            // @ts-ignore
+            if (sub?.remove) sub.remove();
+        };
+    }, []);
+
+    // Calculate dynamic responsive dimensions for the phone mockup
+    // Target standard phone aspect ratio ~ 19.5:9 (e.g. 340w x 640h on desktop)
+    const availableWidth = Math.min(windowWidth - 48, 360);
+    const phoneWidth = availableWidth < 340 ? Math.max(availableWidth, 260) : 340;
+    const phoneHeight = Math.round(phoneWidth * 1.88);
 
     const prints: Record<ScreenTab, any> = {
         home: require("../assets/prints/print-home.jpg"),
@@ -31,13 +47,13 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
     };
 
     const tabs: { key: ScreenTab; label: string }[] = [
-        { key: "home", label: "🏠 Início & Radar" },
-        { key: "cart", label: "🛒 Otimizador" },
-        { key: "search", label: "🏷️ Catálogo" },
-        { key: "product", label: "🔍 Menor Preço" },
-        { key: "profile", label: "🏆 Perfil & XP" },
-        { key: "scanner", label: "📸 Scanner" },
-        { key: "settings", label: "⚙️ 2FA & Ajustes" },
+        { key: "home", label: "Início & Radar" },
+        { key: "cart", label: "Otimizador" },
+        { key: "search", label: "Catálogo" },
+        { key: "product", label: "Menor Preço" },
+        { key: "profile", label: "Perfil & XP" },
+        { key: "scanner", label: "Scanner" },
+        { key: "settings", label: "2FA & Ajustes" },
     ];
 
     return (
@@ -65,6 +81,8 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
                                 ],
                             ]}
                             onPress={() => setActiveTab(tab.key)}
+                            accessibilityRole="button"
+                            accessibilityState={{ selected: isActive }}
                         >
                             <Text
                                 style={[
@@ -83,16 +101,18 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
                 })}
             </View>
 
-            {/* Smartphone Frame */}
+            {/* Smartphone Frame with Dynamic Responsive Sizing */}
             <View
                 style={[
                     styles.phoneShell,
                     {
+                        width: phoneWidth,
+                        height: phoneHeight,
                         backgroundColor: "#05070A",
                         borderColor: theme.accent + "55",
                         shadowColor: theme.accent,
+                        borderRadius: Math.round(phoneWidth * 0.14),
                     },
-                    isMobile && styles.phoneShellMobile,
                 ]}
             >
                 {/* Dynamic Island / Camera Notch */}
@@ -102,7 +122,12 @@ export const PhoneMockup: React.FC<PhoneMockupProps> = ({ theme }) => {
                 </View>
 
                 {/* Display Area */}
-                <View style={styles.phoneScreen}>
+                <View
+                    style={[
+                        styles.phoneScreen,
+                        { borderRadius: Math.round(phoneWidth * 0.11) },
+                    ]}
+                >
                     <Image
                         source={prints[activeTab]}
                         style={styles.printImage}
@@ -137,7 +162,7 @@ const styles = StyleSheet.create({
     },
     tabBtn: {
         paddingVertical: 7,
-        paddingHorizontal: 12,
+        paddingHorizontal: 11,
         borderRadius: 8,
     },
     tabBtnActive: {
@@ -152,9 +177,6 @@ const styles = StyleSheet.create({
         fontWeight: "700",
     },
     phoneShell: {
-        width: 340,
-        height: 640,
-        borderRadius: 48,
         borderWidth: 3,
         paddingHorizontal: 8,
         paddingTop: 10,
@@ -163,10 +185,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.35,
         shadowRadius: 40,
         elevation: 20,
-    },
-    phoneShellMobile: {
-        width: 300,
-        height: 560,
+        alignSelf: "center",
     },
     phoneNotchRow: {
         height: 18,
@@ -191,7 +210,6 @@ const styles = StyleSheet.create({
     },
     phoneScreen: {
         flex: 1,
-        borderRadius: 36,
         overflow: "hidden",
         marginTop: 6,
         backgroundColor: "#0D1117",
@@ -201,7 +219,7 @@ const styles = StyleSheet.create({
         height: "100%",
     },
     phoneHomeBar: {
-        width: 120,
+        width: 100,
         height: 4,
         backgroundColor: "rgba(255,255,255,0.25)",
         borderRadius: 2,
@@ -209,3 +227,4 @@ const styles = StyleSheet.create({
         marginTop: 6,
     },
 });
+

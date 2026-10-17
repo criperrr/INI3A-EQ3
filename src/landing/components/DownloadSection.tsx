@@ -69,7 +69,7 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                                 onPress={onDownload}
                             >
                                 <Text style={styles.downloadBtnText}>
-                                    ⬇️ Baixar APK (v1.3.3)
+                                    Baixar APK (v1.4.5)
                                 </Text>
                                 <Text style={styles.downloadBtnSub}>
                                     Android 8.0+ • ~58 MB
@@ -82,7 +82,7 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                                 onPress={onOpenRepo}
                             >
                                 <Text style={[styles.repoBtnText, { color: theme.text.primary }]}>
-                                    ⭐ Código no GitHub
+                                    Código no GitHub
                                 </Text>
                                 <Text style={[styles.repoBtnSub, { color: theme.text.secondary }]}>
                                     Repositório Open Source
@@ -93,15 +93,15 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                         {/* Integrity & Tech specs */}
                         <View style={styles.specsRow}>
                             <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                📦 Universal APK (arm64, v7a)
+                                Universal APK (arm64, v7a)
                             </Text>
                             <Text style={[styles.specDot, { color: theme.text.secondary }]}>•</Text>
                             <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                🔒 Assinado via CI/CD
+                                Assinado via CI/CD
                             </Text>
                             <Text style={[styles.specDot, { color: theme.text.secondary }]}>•</Text>
                             <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                🚀 Sem Custos
+                                Sem Custos
                             </Text>
                         </View>
                     </View>
