@@ -146,13 +146,17 @@ class HereMarketDiscoveryClass {
    * 600-6300-0066 = Supermarket / Hypermarket
    * 600-6300-0067 = Specialty Food / Grocery Store
    * 600-6300-0244 = Convenience Store
+   * 600-6300-0245 = Butcher / Meat Shop
+   * 600-6300-0246 = Fishmonger / Seafood
+   * 600-6300-0247 = Greengrocer / Produce
+   * 600-6000-0061 = Bakery & Baked Goods Store
    */
   private async fetchFromHereBrowse(
     lat: number,
     lng: number,
     apiKey: string
   ): Promise<DiscoveredMarket[]> {
-    const categories = "600-6300-0066,600-6300-0067,600-6300-0244,600-6800-0245,600-6700-0246,600-6900-0247,600-6000-0061";
+    const categories = "600-6300-0066,600-6300-0067,600-6300-0244,600-6300-0245,600-6300-0246,600-6300-0247,600-6000-0061";
     const url = `https://browse.search.hereapi.com/v1/browse?at=${lat},${lng}&categories=${categories}&limit=50&apiKey=${apiKey}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 4000);
@@ -208,7 +212,7 @@ class HereMarketDiscoveryClass {
 
       const hasMarketCategory = item.categories?.some((c: any) =>
         /supermercado|mercado|aliment|mercearia|conveni|grocery|padaria|bakery|a[cç]ougue|butcher|carnes|peixaria|hortifruti|frut/i.test(c.name || "") ||
-        ["600-6300-0066", "600-6300-0067", "600-6300-0244", "600-6800-0245", "600-6700-0246", "600-6900-0247", "600-6000-0061"].includes(c.id)
+        ["600-6300-0066", "600-6300-0067", "600-6300-0244", "600-6300-0245", "600-6300-0246", "600-6300-0247", "600-6000-0061"].includes(c.id)
       );
       const hasExcludedCategory = item.categories?.some((c: any) =>
         /estética|estetica|beleza|salão|salao|livraria|embalag|descart|papelaria|gráfica|grafica/i.test(c.name || "")
@@ -259,7 +263,7 @@ class HereMarketDiscoveryClass {
 
   /**
    * Synchronizes discovered HERE markets with PostgreSQL PostGIS database without duplicating.
-   * Uses spatial proximity deduplication (< 100m or same name < 500m) rather than global name matching,
+   * Uses spatial proximity deduplication (< 50m or same brand < 600m) rather than global name matching,
    * allowing real supermarket chains (e.g. Carrefour, Dia, Pão de Açúcar) to exist in multiple neighborhoods/cities.
    */
   private async syncWithDatabase(discovered: DiscoveredMarket[]): Promise<void> {
@@ -273,10 +277,22 @@ class HereMarketDiscoveryClass {
           continue;
         }
 
+        // Invariante V-06: Ignorar coordenadas cravadas no Marco Zero da Praça da Sé (<= 55m)
+        if (Math.abs(item.lat - (-23.55052)) < 0.0005 && Math.abs(item.lng - (-46.633308)) < 0.0005) {
+          continue;
+        }
+
         const wktPoint = `POINT(${item.lng} ${item.lat})`;
 
-        const brand = (item.name.trim().split(/[\s\-]/)[0] || "").toLowerCase();
-        const brandMatch = brand.length >= 4 ? `${brand}%` : item.name.toLowerCase();
+        const strippedName = item.name
+          .trim()
+          .replace(
+            /^(?:supermercados?|mercados?|minimercados?|hipermercados?|mercearias?|emp[oó]rios?|hortifrutis?|sacol[aã]o|atacad[aã]o|atacadistas?|comercial|rede)\s+/i,
+            ""
+          )
+          .trim();
+        const brand = ((strippedName || item.name.trim()).split(/[\s\-]/)[0] || "").toLowerCase();
+        const brandMatch = brand.length >= 4 ? `%${brand}%` : item.name.toLowerCase();
 
         const [existing] = await db
           .select({ id: market.id, name: market.name })
@@ -286,7 +302,7 @@ class HereMarketDiscoveryClass {
               ST_DWithin(
                 ${market.location},
                 ST_GeographyFromText(${wktPoint}),
-                150
+                50
               )
               OR (
                 LOWER(TRIM(${market.name})) ILIKE ${brandMatch}
@@ -331,7 +347,7 @@ class HereMarketDiscoveryClass {
 
     // Reject non-retail or unwanted organizations / facilities
     if (
-      /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|livraria|estética|estetica|salão|salao|embalagens|descartáveis|descartaveis|pet shop|veterinári|veterinari|papelaria|gráfica|grafica|lavanderia|banco|lotérica|loterica|bar e lanches|pastelaria|restaurante|chocolates|culturista|móveis|moveis|planejados|churros|tabacaria|barbearia|imobiliária|design)\b/i.test(
+      /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|petrobras|ipiranga|shell\s*select|br\s*mania|am\s*pm|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|livraria|estética|estetica|salão|salao|embalagen|embalagens|descart[aá]ve|descartáveis|descartaveis|pet shop|veterinári|veterinari|papelaria|gráfica|grafica|lavanderia|banco|banco\s*24|caixa\s*24|lot[eé]rica|loterica|bar e lanches|pastelaria|restaurante|chocolates|cacau\s*show|kopenhagen|brasil\s*cacau|vila\s*salt|fazenda\s*do\s*bolo|casa\s*de\s*bolos|clean\s*foods|marmitaria|marmita|adega|distribuidora\s*de\s*bebidas|condom[ií]nio|edif[ií]cio|culturista|móveis|moveis|planejados|churros|tabacaria|barbearia|imobiliária|design)\b/i.test(
         clean
       ) ||
       /\b(padaria\s+pet|wood\s+design|casa\s+company)\b/i.test(clean)

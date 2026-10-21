@@ -92,6 +92,13 @@ export default function ProductDetails() {
   const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
   const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  const resolvedImageUri = getOptimizedImageUrl(product?.imageUri || product?.icon || params.imageUri, 400);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [resolvedImageUri]);
 
   const [isInCart, setIsInCart] = useState(false);
   const [cartQuantity, setCartQuantity] = useState(1);
@@ -707,7 +714,7 @@ export default function ProductDetails() {
           </View>
 
           <View style={[styles.imageWrapper, themeStyles.inputBg]}>
-            {imageUri ? (
+            {imageUri && !imgError ? (
               <Image
                 source={{ uri: imageUri }}
                 style={styles.productImage}
@@ -715,6 +722,7 @@ export default function ProductDetails() {
                 cachePolicy="memory-disk"
                 recyclingKey={imageUri}
                 transition={150}
+                onError={() => setImgError(true)}
               />
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />

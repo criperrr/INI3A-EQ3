@@ -203,7 +203,7 @@ const normalizeHereMarketName = (name: string): string => {
 
     // Rejeitar estabelecimentos não comerciais / irrelevantes
     if (
-        /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|pet\s*shop|agropecu[aá]ria|veterin[aá]ria|m[oó]veis|planejados|churros|tabacaria|barbearia|imobili[aá]ria|design)\b/i.test(
+        /\b(estacionamento|parking|sindicato|associação|associacao|conselho|igreja|templo|paróquia|paroquia|escola|colégio|colegio|faculdade|universidade|posto|auto posto|gasolina|petrobras|ipiranga|shell\s*select|br\s*mania|am\s*pm|farmácia|farmacia|drogaria|academia|lava rápido|lava rapido|oficina|mecânica|mecanica|borracharia|hospital|clínica|clinica|odontologia|consultório|consultorio|pet\s*shop|agropecu[aá]ria|veterin[aá]ria|m[oó]veis|planejados|churros|cacau\s*show|kopenhagen|brasil\s*cacau|vila\s*salt|fazenda\s*do\s*bolo|casa\s*de\s*bolos|confeitaria|clean\s*foods|marmitaria|marmita|adega|tabacaria|distribuidora\s*de\s*bebidas|condom[ií]nio|edif[ií]cio|banco\s*24|caixa\s*24|lot[eé]rica|livraria|papelaria|embalagen|descart[aá]ve|est[eé]tica|sal[aã]o|barbearia|lavanderia|gr[aá]fica|restaurante|lanchonete|pastelaria|pizzaria|hamburgueria|churrascaria|imobili[aá]ria|design)\b/i.test(
             clean
         ) ||
         /\b(padaria\s+pet|wood\s+design|casa\s+company)\b/i.test(clean)
@@ -224,7 +224,7 @@ const classifyEstablishment = (name: string, categories: any[] = []): "supermark
 
     // 1. Hortifrutis, sacolões, quitandas, fruteiras, Oba
     const hasHortifrutiCat = categories.some((c: any) =>
-        c.id === "600-6900-0247" || /hortifruti|sacol[aã]o|quitanda|greengrocer|produce/i.test(c.name || "")
+        c.id === "600-6300-0247" || /hortifruti|sacol[aã]o|quitanda|greengrocer|produce/i.test(c.name || "")
     );
     if (
         hasHortifrutiCat ||
@@ -234,18 +234,21 @@ const classifyEstablishment = (name: string, categories: any[] = []): "supermark
         return "hortifruti";
     }
 
-    // 2. Padarias, panificadoras, confeitarias, confeitarias, bakeries
+    // 2. Padarias, panificadoras, bakeries
     const hasBakeryCat = categories.some((c: any) =>
-        c.id === "600-6300-0244" || /bakery|padaria|panificadora|confeitaria/i.test(c.name || "")
+        c.id === "600-6300-0244" || /bakery|padaria|panificadora/i.test(c.name || "")
     );
-    const isBakery = hasBakeryCat || /padaria|panificadora|bakery|confeitaria|p[aã]o\b|fornada|trigal|doceira|bolo/i.test(nameLower);
+    const isBakery = hasBakeryCat || /padaria|panificadora|bakery|p[aã]o\b|fornada|trigal/i.test(nameLower);
 
-    // 3. Mercados e mercearias locais, conveniências, empórios, açougues
+    // 3. Mercados e mercearias locais, conveniências, empórios, açougues, peixarias
     const hasLocalCat = categories.some((c: any) =>
-        c.id === "600-6000-0061" || c.id === "600-6300-0067" ||
-        /mercearia|conveni[eê]ncia|convenience|grocery|armaz[eé]m|emp[oó]rio|a[cç]ougue/i.test(c.name || "")
+        c.id === "600-6000-0061" ||
+        c.id === "600-6300-0067" ||
+        c.id === "600-6300-0245" ||
+        c.id === "600-6300-0246" ||
+        /mercearia|conveni[eê]ncia|convenience|grocery|armaz[eé]m|emp[oó]rio|a[cç]ougue|peixaria/i.test(c.name || "")
     );
-    const isLocalByKeywords = /mercearia|mercadinho|minimercado|mini mercado|mini box|armaz[eé]m|emp[oó]rio|conveni[eê]ncia|am\/?pm|select|br mania|posto|oxxo|venda|bodega|a[cç]ougue|carnes|peixaria|rotisseria/i.test(nameLower);
+    const isLocalByKeywords = /mercearia|mercadinho|minimercado|mini mercado|mini box|armaz[eé]m|emp[oó]rio|conveni[eê]ncia|oxxo|venda|bodega|a[cç]ougue|carnes|peixaria|rotisseria/i.test(nameLower);
 
     const isMajorSupermarket = /super|hiper|atacad[aã]o|atacarejo|atacadista|carrefour|p[aã]o de a[cç][uú]car|extra|assa[ií]|sonda|zaffari|mambo|st\.? marche|tenda|rold[aã]o|spani|makro|compre bem|covabra|enxuto|nagumo|shibata|savegnago/i.test(nameLower);
     const isNeighborhoodMercado = /^mercado\s+/i.test(nameLower) && !isMajorSupermarket;
@@ -258,12 +261,61 @@ const classifyEstablishment = (name: string, categories: any[] = []): "supermark
     return "supermarket";
 };
 
+const VALID_HERE_MARKET_CATEGORY_IDS = new Set([
+    "600-6300-0066",
+    "600-6300-0067",
+    "600-6000-0061",
+    "600-6300-0244",
+    "600-6300-0245",
+    "600-6300-0246",
+    "600-6300-0247",
+]);
+
+const INVALID_PRIMARY_CATEGORY_IDS = new Set([
+    "700-7200-0269",
+    "800-8500-0178",
+    "700-7400-0000",
+    "500-5000-0000",
+    "100-1000-0000",
+    "600-6900-0247",
+    "600-6800-0245",
+    "600-6700-0246",
+]);
+
 const parseHereResponse = (items: any[]): any[] => {
     return items.map(item => {
         const rawName = normalizeHereMarketName(item.title);
         if (!rawName) return null;
         const pos = item.position;
         if (!pos || typeof pos.lat !== "number" || typeof pos.lng !== "number") return null;
+
+        if (Array.isArray(item.categories) && item.categories.length > 0) {
+            const primaryCat = item.categories.find((c: any) => c.primary) || item.categories[0];
+            if (primaryCat) {
+                const primaryId = String(primaryCat.id || "");
+                const primaryName = String(primaryCat.name || "");
+                if (
+                    INVALID_PRIMARY_CATEGORY_IDS.has(primaryId) ||
+                    /^(100-|500-|700-|800-|900-|600-6700|600-6800|600-6900)/.test(primaryId) ||
+                    /restaurante|lanchonete|bar\b|hotel|estacionamento|parking|posto|farm[aá]cia|drogaria|hospital|cl[ií]nica|escola|col[eé]gio|banco|sal[aã]o|est[eé]tica|oficina|livraria|papelaria|vestu[aá]rio|roupa|condom[ií]nio/i.test(primaryName)
+                ) {
+                    return null;
+                }
+            }
+
+            const hasMarketCategory = item.categories.some((c: any) =>
+                VALID_HERE_MARKET_CATEGORY_IDS.has(String(c.id || "")) ||
+                /supermercado|hipermercado|mercado|aliment|mercearia|conveni|grocery|padaria|panificadora|bakery|a[cç]ougue|butcher|carnes|peixaria|hortifruti|sacol[aã]o|quitanda|greengrocer|produce|frut|emp[oó]rio|atacad/i.test(String(c.name || ""))
+            );
+            const hasExcludedCategory = item.categories.some((c: any) =>
+                INVALID_PRIMARY_CATEGORY_IDS.has(String(c.id || "")) ||
+                /restaurante|lanchonete|bar\b|hotel|estacionamento|parking|posto|gasolina|combust[ií]vel|farm[aá]cia|drogaria|hospital|cl[ií]nica|escola|col[eé]gio|banco|sal[aã]o|est[eé]tica|beleza|oficina|mec[aâ]nica|livraria|papelaria|embalag|descart|gr[aá]fica|vestu[aá]rio|roupa|cal[cç]ado|condom[ií]nio|edif[ií]cio/i.test(String(c.name || ""))
+            );
+
+            if (!hasMarketCategory || hasExcludedCategory) {
+                return null;
+            }
+        }
 
         // Rejeitar unidade extinta do Oba no Jardim América (mudou-se para Av. Getúlio Vargas)
         if (
@@ -332,7 +384,7 @@ const fetchHereBrowse = async (
     apiKey: string,
     limit: number = 100
 ): Promise<any[]> => {
-    const categories = "600-6300-0066,600-6300-0067,600-6000-0061,600-6900-0247,600-6300-0244,600-6800-0245,600-6700-0246";
+    const categories = "600-6300-0066,600-6300-0067,600-6000-0061,600-6300-0244,600-6300-0245,600-6300-0246,600-6300-0247";
     const url = `https://browse.search.hereapi.com/v1/browse?at=${latitude},${longitude}&categories=${categories}&limit=${limit}&apiKey=${apiKey}`;
     try {
         const controller = new AbortController();
@@ -504,6 +556,7 @@ export default function MapScreen() {
             const { status } = await Location.requestForegroundPermissionsAsync();
 
             if (status !== 'granted') {
+                setIsLocationResolved(true);
                 setAppState(prev => ({ ...prev, isProcessingLocation: false }));
                 return;
             }
@@ -537,10 +590,14 @@ export default function MapScreen() {
                     latitudeDelta: 0.03,
                     longitudeDelta: 0.03,
                 }, 600);
+            } else {
+                setIsLocationResolved(true);
             }
         } catch {
             // Keep current location on failure
+            setIsLocationResolved(true);
         } finally {
+            setIsLocationResolved(true);
             setAppState(prev => ({ ...prev, isProcessingLocation: false }));
         }
     }, []);
@@ -627,7 +684,7 @@ export default function MapScreen() {
         loadBackendMarkets();
 
         return () => { isMounted = false; };
-    }, [userLocation.latitude, userLocation.longitude]);
+    }, [isLocationResolved, userLocation.latitude, userLocation.longitude]);
 
     // Pre-fetch HERE elements progressively in background
     useEffect(() => {
@@ -656,7 +713,7 @@ export default function MapScreen() {
             });
 
         return () => { isMounted = false; };
-    }, [userLocation.latitude, userLocation.longitude]);
+    }, [isLocationResolved, userLocation.latitude, userLocation.longitude]);
 
     // Instant in-memory filtering (0ms) across shopType, maxDistance, and hoursOption
     const nearbyMarkets: MarketMarker[] = useMemo(() => {
@@ -728,8 +785,12 @@ export default function MapScreen() {
         const unique: MarketMarker[] = [];
         const seenMarketIds = new Set<string>();
 
-        for (const marker of combined) {
-            if (!marker.id || seenMarketIds.has(marker.id)) continue;
+        for (const rawMarker of combined) {
+            if (!rawMarker.id || seenMarketIds.has(rawMarker.id)) continue;
+            const marker: MarketMarker = {
+                ...rawMarker,
+                coordinate: { ...rawMarker.coordinate },
+            };
 
             const isDuplicate = unique.some(existing => {
                 const dist = calculateDistanceInKm(
@@ -738,32 +799,58 @@ export default function MapScreen() {
                     marker.coordinate.latitude,
                     marker.coordinate.longitude
                 );
-                // Qualquer ponto a menos de 80m é sempre considerado duplicata física
-                if (dist < 0.08) return true;
 
                 const name1 = existing.title.toLowerCase().trim().replace(/^(supermercado|mercado|hipermercado)\s+/i, "");
                 const name2 = marker.title.toLowerCase().trim().replace(/^(supermercado|mercado|hipermercado)\s+/i, "");
-
-                // Mesmo nome em até 600m (ex: entradas diferentes, coordenadas de estacionamento)
-                if (dist < 0.6 && name1 === name2) return true;
-
-                // Mesma marca (ex: Tauste Rio Branco vs Tauste Supermercados, Pão de Açúcar) em até 500m
-                const brand1 = name1.split(/[\s\-]/)[0];
-                const brand2 = name2.split(/[\s\-]/)[0];
-                if (brand1 && brand1.length >= 4 && brand1 === brand2 && dist < 0.5) return true;
 
                 // Oba Hortifruti: assegurar que a loja real na Av. Getúlio Vargas (lat ~ -22.3545, lon ~ -49.0493) prevaleça
                 if (/\boba\b/i.test(name1) && /\boba\b/i.test(name2)) {
                     const isM1Real = Math.abs(existing.coordinate.latitude - (-22.3545)) < 0.005 && Math.abs(existing.coordinate.longitude - (-49.0493)) < 0.005;
                     const isM2Real = Math.abs(marker.coordinate.latitude - (-22.3545)) < 0.005 && Math.abs(marker.coordinate.longitude - (-49.0493)) < 0.005;
-                    if (isM1Real && !isM2Real) return true; // Descarta M2, pois já temos a unidade oficial
-                    if (isM2Real && !isM1Real) {
-                        // Substitui existing pela unidade real oficial
-                        existing.coordinate = marker.coordinate;
-                        existing.title = "Oba Hortifruti";
+                    if (isM1Real && !isM2Real) {
+                        if (existing.id.startsWith("backend_")) {
+                            existing.openingHours = existing.openingHours || marker.openingHours;
+                            existing.address = existing.address || marker.address;
+                            existing.shopType = marker.shopType || existing.shopType;
+                        }
                         return true;
                     }
-                    if (dist < 2.5) return true;
+                    if (isM2Real && !isM1Real) {
+                        existing.coordinate = { ...marker.coordinate };
+                        existing.title = "Oba Hortifruti";
+                        existing.openingHours = marker.openingHours || existing.openingHours;
+                        existing.address = marker.address || existing.address;
+                        existing.shopType = marker.shopType || existing.shopType;
+                        return true;
+                    }
+                    if (dist < 2.5) {
+                        if (existing.id.startsWith("backend_")) {
+                            existing.openingHours = existing.openingHours || marker.openingHours;
+                            existing.address = existing.address || marker.address;
+                            existing.shopType = marker.shopType || existing.shopType;
+                        }
+                        return true;
+                    }
+                }
+
+                // Qualquer ponto a menos de 80m é sempre considerado duplicata física
+                const isClose = dist < 0.08;
+
+                // Mesmo nome em até 600m (ex: entradas diferentes, coordenadas de estacionamento)
+                const isSameName = dist < 0.6 && name1 === name2;
+
+                // Mesma marca (ex: Tauste Rio Branco vs Tauste Supermercados, Pão de Açúcar) em até 500m
+                const brand1 = name1.split(/[\s\-]/)[0];
+                const brand2 = name2.split(/[\s\-]/)[0];
+                const isSameBrand = Boolean(brand1 && brand1.length >= 4 && brand1 === brand2 && dist < 0.5);
+
+                if (isClose || isSameName || isSameBrand) {
+                    if (existing.id.startsWith("backend_")) {
+                        existing.openingHours = existing.openingHours || marker.openingHours;
+                        existing.address = existing.address || marker.address;
+                        existing.shopType = marker.shopType || existing.shopType;
+                    }
+                    return true;
                 }
 
                 return false;
@@ -1212,27 +1299,55 @@ const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, 
     );
 };
 
+const MARKET_COVER_IMAGES: Record<string, string> = {
+    supermarket: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=70&w=320&auto=format&fit=crop",
+    grocery: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?q=70&w=320&auto=format&fit=crop",
+    hortifruti: "https://images.unsplash.com/photo-1542838132-92c53300491e?q=70&w=320&auto=format&fit=crop",
+};
+
 const MarketDetailModal = ({ market, onClose, onNavigate, themeStyles, isDark, accentColor, t }: any) => {
+    const [imageError, setImageError] = useState(false);
+
+    useEffect(() => {
+        setImageError(false);
+    }, [market?.id]);
+
     if (!market) return null;
-    const categoryConfig = (CATEGORY_CONFIG as any)[market.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
+    const catConfig = (CATEGORY_CONFIG as any)[market.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
+    const rawCoverUrl = MARKET_COVER_IMAGES[market.shopType || "supermarket"] || MARKET_COVER_IMAGES.supermarket;
+    const coverUri = getOptimizedImageUrl(rawCoverUrl, 320, 70) || rawCoverUrl;
 
     return (
         <Modal visible={true} transparent={true} animationType="slide" onRequestClose={onClose}>
             <Pressable style={styles.modalOverlay} onPress={onClose}>
                 <Pressable style={[styles.marketDetailContent, themeStyles.card]}>
-                    <Image
-                        source={{ uri: getOptimizedImageUrl('https://images.unsplash.com/photo-1578916171728-46686eac8d58', 320, 70) || 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?q=70&w=320&auto=format&fit=crop' }}
-                        style={styles.marketImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        transition={200}
-                    />
+                    <View style={styles.marketImage}>
+                        {!imageError ? (
+                            <Image
+                                source={{ uri: coverUri }}
+                                style={{ width: "100%", height: "100%" }}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                transition={200}
+                                onError={() => setImageError(true)}
+                            />
+                        ) : (
+                            <View
+                                style={[
+                                    styles.marketImageFallback,
+                                    { backgroundColor: catConfig.color + "22" }
+                                ]}
+                            >
+                                <Ionicons name={catConfig.icon as any} size={48} color={catConfig.color} />
+                            </View>
+                        )}
+                    </View>
                     <View style={styles.modalHeader}>
                         <View style={{ flex: 1 }}>
-                            <View style={[styles.marketCategoryBadge, { backgroundColor: categoryConfig.color + "18", borderColor: categoryConfig.color }]}>
-                                <Ionicons name={categoryConfig.icon as any} size={12} color={categoryConfig.color} />
-                                <Text style={[styles.marketCategoryBadgeText, { color: categoryConfig.color }]}>
-                                    {t(categoryConfig.labelKey as any) || categoryConfig.defaultLabel}
+                            <View style={[styles.marketCategoryBadge, { backgroundColor: catConfig.color + "18", borderColor: catConfig.color }]}>
+                                <Ionicons name={catConfig.icon as any} size={12} color={catConfig.color} />
+                                <Text style={[styles.marketCategoryBadgeText, { color: catConfig.color }]}>
+                                    {t(catConfig.labelKey as any) || catConfig.defaultLabel}
                                 </Text>
                             </View>
                             <Text style={[styles.modalTitle, themeStyles.text]} numberOfLines={2}>
@@ -1527,6 +1642,12 @@ const styles = StyleSheet.create({
         height: 160,
         alignSelf: 'center',
         marginBottom: 20,
+    },
+    marketImageFallback: {
+        width: "100%",
+        height: "100%",
+        justifyContent: "center",
+        alignItems: "center",
     },
     marketInfoRow: {
         flexDirection: "row",

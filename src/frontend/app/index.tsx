@@ -185,9 +185,7 @@ export default function HomeScreen() {
           name: p.name,
           category: p.category,
           price: p.bestPrice || p.lastPrice,
-          image:
-            getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) ||
-            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
+          image: getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) || "",
           isPromotion: p.isPromotion,
           discountPercentage: p.discountPercentage,
           formattedDistance: p.formattedDistance,
@@ -262,7 +260,7 @@ export default function HomeScreen() {
         params: {
           id: String(item.id),
           name: item.name,
-          imageUri: item.image,
+          ...(item.image ? { imageUri: item.image } : {}),
           lastPrice: item.price,
         },
       });
@@ -639,6 +637,56 @@ const ActionMenu = memo(function ActionMenu({
   );
 });
 
+const GridItemImage = memo(function GridItemImage({
+  imageUri,
+  itemId,
+  borderRadius,
+  backgroundColor,
+  accent,
+}: {
+  imageUri?: string;
+  itemId: number | string;
+  borderRadius: number;
+  backgroundColor: string;
+  accent: string;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [imageUri]);
+
+  if (!imageUri || imgError) {
+    return (
+      <View
+        style={[
+          styles.productImage,
+          {
+            borderRadius,
+            backgroundColor,
+            alignItems: "center",
+            justifyContent: "center",
+          },
+        ]}
+      >
+        <Ionicons name="cube-outline" size={36} color={accent} />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: imageUri }}
+      style={[styles.productImage, { borderRadius }]}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      recyclingKey={imageUri || String(itemId)}
+      transition={150}
+      onError={() => setImgError(true)}
+    />
+  );
+});
+
 const ItemsGrid = memo(function ItemsGrid({
   title,
   subtitle,
@@ -705,16 +753,12 @@ const ItemsGrid = memo(function ItemsGrid({
             onPress={() => onItemPress(item)}
           >
             <View style={styles.imageWrapper}>
-              <Image
-                source={{ uri: item.image }}
-                style={[
-                  styles.productImage,
-                  { borderRadius: semantic.radius.badge },
-                ]}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={item.image || String(item.id)}
-                transition={150}
+              <GridItemImage
+                imageUri={item.image}
+                itemId={item.id}
+                borderRadius={semantic.radius.badge}
+                backgroundColor={semantic.colors.surface.input}
+                accent={accent}
               />
               {isProductView && item.isPromotion && (
                 <View style={styles.promoBadge}>

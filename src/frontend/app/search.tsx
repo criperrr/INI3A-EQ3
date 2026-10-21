@@ -523,6 +523,11 @@ const ProductCardItem = memo(function ProductCardItem({
   const { semantic } = tokens;
   const { isAuthenticated } = useAuth();
   const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 280, 70);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [imageSource]);
 
   const isUnquoted =
     !product.bestPrice ||
@@ -558,7 +563,7 @@ const ProductCardItem = memo(function ProductCardItem({
           },
         ]}
       >
-        {imageSource ? (
+        {Boolean(imageSource && !imgError) ? (
           <Image
             source={{ uri: imageSource }}
             style={styles.productImage}
@@ -566,6 +571,7 @@ const ProductCardItem = memo(function ProductCardItem({
             cachePolicy="memory-disk"
             recyclingKey={imageSource || String(product.id)}
             transition={150}
+            onError={() => setImgError(true)}
           />
         ) : (
           <View

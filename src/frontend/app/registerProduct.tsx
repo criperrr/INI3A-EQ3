@@ -23,14 +23,20 @@ import { fetchMarkets, MarketData } from "../services/marketService";
 import { submitPriceOccurrence, fetchProductOccurrences } from "../services/ocurrencyService";
 import { getUserLocation } from "../utils/userLocation";
 import { formatLongDateWithWeekday, parseDateSafeMs } from "../utils/dateUtils";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import TwoFactorModal from "../components/TwoFactorModal";
 
-const FALLBACK_PRODUCT = {
+const FALLBACK_PRODUCT: {
+  category: string;
+  name: string;
+  imageUri: string | null;
+  lastPrice: string;
+} = {
   category: "Produto",
   name: "Produto Selecionado",
-  imageUri: "https://images.openfoodfacts.org/images/placeholder.png",
+  imageUri: null,
   lastPrice: "Preço não informado",
 };
 
@@ -449,6 +455,15 @@ export default function RegisterProduct() {
     : null;
 
   const displayProduct = product || scannedProduct || FALLBACK_PRODUCT;
+  const optimizedDisplayImageUri = getOptimizedImageUrl(
+    displayProduct.imageUri || (product as any)?.icon,
+    400
+  );
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [optimizedDisplayImageUri]);
 
   const formattedTodayDate = formatLongDateWithWeekday(recordDate, language);
 
@@ -533,13 +548,14 @@ export default function RegisterProduct() {
                 },
               ]}
             >
-              {displayProduct.imageUri ? (
+              {optimizedDisplayImageUri && !imgError ? (
                 <Image
-                  source={{ uri: displayProduct.imageUri }}
+                  source={{ uri: optimizedDisplayImageUri }}
                   style={styles.heroImage}
                   contentFit="contain"
                   cachePolicy="memory-disk"
                   transition={200}
+                  onError={() => setImgError(true)}
                 />
               ) : (
                 <View style={[styles.heroImage, styles.placeholderIconBox]}>

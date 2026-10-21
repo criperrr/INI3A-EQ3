@@ -4171,3 +4171,35 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/landing/components/ConsentBanner.tsx`
   - `src/landing/components/PolicyModal.tsx`
 - **Impact / Next Steps:** Landing page 100% responsiva, sem overflow em telas mobile, tipografia moderna e elegante sem emojis infantis, preservando rigorosamente o design original, o tema visual dinâmico e a paleta do Presco. 100% typecheck aprovado.
+
+## `2026-10-21 14:36` - `docs(iacp)`: Create IACP (Internal Agent Communication Protocol) technical specification
+
+- **Description:** Criada a especificação técnica completa da arquitetura IACP (`IACP-v1.0`) em `docs/IACP_SPEC.md`, documentando a topologia do orquestrador $A_r$ e $n$ sub-agentes $A_j$, os modos operacionais (`error_hunt`, `feature_creator`, `analyse`), o pipeline de quatro fases (Dedução Isolada com relatórios $R_j$, Revisão Cruzada com consenso estatístico ponderado/aparado, Dispatch concorrente em DAG com locks exclusivos e Síntese Textual Final sem código bruto), o módulo de recursão autônoma (`low_count`, `medium_count`, `high_count`, `infinite` com parada estritamente vinculada a critérios determinísticos mensuráveis), diagramas Mermaid e exemplos de payloads JSON.
+- **Files Modified:**
+  - `docs/IACP_SPEC.md`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Documentação formal do protocolo IACP pronta para referência arquitetural e implementação de motores de orquestração multi-agente.
+
+## `2026-10-21 17:06` - `fix(map,media)`: Resolve map loading deadlock, filter non-market POIs, and harden image loading pipeline via IACP
+
+- **Description:** Executado o pipeline completo IACP-v1.0 para diagnosticar e corrigir os erros no mapa, aparição de mercados inexistentes e falhas no carregamento de fotos: (1) corrigidos os códigos de categoria HERE Places v7 (`600-6300-0245`, `600-6300-0246`, `600-6300-0247`), adicionada validação de categorias em `parseHereResponse`, expandida a blacklist de nomes em `hereMarketDiscovery.service.ts` e `map.native.tsx`, e corrigida a extração de `brand` em `syncWithDatabase`; (2) resolvido o deadlock de `isLocationResolved` em `map.native.tsx` e preservados `openingHours` e `address` da HERE API durante a deduplicação com o backend sem mutação in-place; (3) corrigida a conversão `.full.jpg` -> `.400.jpg` em `imageUtils.ts`, endurecido o proxy `image.controller.ts` com `User-Agent`, timeout e fallback OpenFoodFacts, removida a URL 404 de `FALLBACK_PRODUCT` e adicionados handlers `onError` em todos os componentes `<Image>` do frontend. SemVer atualizado para `v1.4.6`.
+- **Files Modified:**
+  - `src/backend/src/shared/services/hereMarketDiscovery.service.ts`
+  - `src/backend/src/modules/image/image.controller.ts`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/utils/imageUtils.ts`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** `npm run typecheck` e `npm test` aprovados com código 0. Mapa e carregamento de imagens estabilizados.
