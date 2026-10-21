@@ -7,13 +7,50 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
-- **Refatoração Responsiva, Erradicação de Emojis e Redução de Redundância na Landing Page (`feat/landing-refactor-mobile-responsive`):**
-  - **Erradicação Total de Emojis:** Removidos todos os emojis decorativos de títulos, tags, badges, botões e tabs (`PhoneMockup.tsx`, `HeroSection.tsx`, `ImpactStatsSection.tsx`, `HowItWorksSection.tsx`, `FeaturesSection.tsx`, `SecurityProtectionSection.tsx`, `DownloadSection.tsx`, `Header.tsx`, `ConsentBanner.tsx`, `PolicyModal.tsx`), adotando tipografia técnica, limpa e profissional com códigos de badge semânticos (`EAN`, `ROTA`, `GPS`, `RANK`, `QUÓRUM`, `2FA`, `GEO`, `LGPD`, `POSTGIS`, `LÍQUIDO`, `ABERTO`, `AUDITADO`).
-  - **Mockup e Imagens com Dimensionamento Dinâmico & Proporcional:** Implementado dimensionamento dinâmico baseado em `Dimensions.addEventListener("change")` em `PhoneMockup.tsx`, calculando largura e altura com aspect ratio realista de smartphone (~1.88) que encolhe suavemente em telas mobile (`availableWidth < 340 ? Math.max(availableWidth, 260) : 340`).
-  - **Ajuste de Proporção nas Seções de Mídia:** Aplicado redimensionamento proporcional e responsivo de molduras nos prints de `SecurityProtectionSection` (`previewHeight = previewWidth * 1.84`), `ScreenshotsGallerySection` (`imageHeight` adaptativo) e `HowItWorksSection` (`stepImageWrapperMobile: 200px`), eliminando cortes, barras de rolagem horizontal e quebras em telas estreitas.
-  - **Responsividade Mobile Fluida:** Ajustados paddings internos de cards, gaps entre colunas e tipografia em dispositivos móveis (`isMobile = windowWidth < 480`), garantindo respiração visual, legibilidade imediata e coerência estética.
-  - **Sincronização de Versão Oficial:** Alinhados os badges e textos de download para a release oficial `v1.4.5` em `Header.tsx`, `HeroSection.tsx`, `DownloadSection.tsx` e `Footer.tsx`.
-  - **Qualidade & Blindagem de Tipagem:** 100% dos testes e typecheck aprovados com código 0 (`npx tsc --noEmit --project src/landing/tsconfig.json` e `npm run typecheck`).
+- **Instalação da Skill `landing-page` e Refatoração Estrutural da Landing Page (`feat/landing-page-refactor`):**
+  - **Refinamento de UI/UX do Header & Auto-Hide Estilo Google (`Header.tsx`):**
+    - Logo ampliado no Header para 50px de altura no desktop (faixa 46-52px) e 38px no mobile com renderização nítida.
+    - Remoção definitiva de qualquer badge ou div de versão (`v1.4.5` / `envBadge`) ao lado do logo.
+    - Botão de alternância de tema minimizado para formato ultra compacto e discreto (28x28px, borda sutil, ícone 12px sem texto).
+    - Auto-hide elegante no scroll estilo Google (labs.google / about.google/products): translada -100px para cima ao rolar para baixo, e desce suavemente com transição rápida (`cubic-bezier(0.16, 1, 0.3, 1)`) ao rolar para cima mesmo que ligeiramente, sincronizado tanto no container React Native quanto no `window.scroll`.
+  - **Erradicação de Termos Técnicos Excessivos (Linguagem Amigável ao Usuário Comum):**
+    - Substituídos "PostGIS", "Resend OTP" e termos de infraestrutura interna em `SecurityProtectionSection.tsx`, `ImpactStatsSection.tsx`, `FeaturesSection.tsx` e `PolicyModal.tsx` por termos amigáveis (ex: "Validação por geolocalização e raio espacial seguro", "Autenticação em Duas Etapas (2FA)", "Verificação segura por e-mail e moderação comunitária", "Localização inteligente por proximidade").
+    - Verificação de 0 ocorrências de "PostGIS", "Resend" ou termos proibidos no bundle de produção.
+  - **Equalização de Contraste e Impacto no FAQ (`FaqSection.tsx` e `Header.tsx`):**
+    - Corrigido o item "FAQ" na barra de navegação do `Header.tsx` de `theme.text.secondary` para `theme.text.primary`, igualando o contraste e impacto dos outros cabeçalhos.
+    - Aprimorada a tipografia das perguntas em `FaqSection.tsx` para `fontSize: 17, fontWeight: "800"` com contraste nítido.
+  - **Compilação e Auditoria via Playwright:**
+    - Executado `npm run landing:build` gerando os bundles web sem avisos nem erros.
+    - Implementado e executado teste de ponta a ponta com Playwright (`scripts/test_landing_playwright.ts`), validando dimensões de logo, auto-hide do header, ausência de badges e ausência de termos técnicos com 100% de sucesso.
+  - **Reatividade Dinâmica Universal (`useWindowDimensions`):**
+    - Substituído `Dimensions.get("window")` estático por `useWindowDimensions()` reativo em 100% dos componentes da landing page (`Header`, `HeroSection`, `PhoneMockup`, `SecurityProtectionSection`, `ProblemSolutionSection`, `ScreenshotsGallerySection`, `FeaturesSection`, `ImpactStatsSection`, `HowItWorksSection`, `DownloadSection`, `FaqSection`, `Footer`, `ConsentBanner`, `PolicyModal`).
+    - Eliminado o bug onde alternar para o DevTools Mobile (ex: Galaxy S25 360x780 ou iPhone 390x844) mantinha o layout desktop preso (`isDesktop = true`) e sobrepunha o mockup do celular ao texto da headline.
+  - **Reestruturação Anatômica Pericial da Arara-Canindé (`macaw.ts`):**
+    - Redesenho completo da função vetorial `drawAraraCaninde`:
+      - Corpo aerodinâmico e esbelto em formato de fuso/torpedo, com transição anatômica contínua e ventre dourado curvado (eliminação completa do globo circular estufado anterior).
+      - Cabeça posicionada na terminação do pescoço com bico curvo e gertado, crista verde, máscara facial branca detalhada com estriações oculares finas e ponto de brilho (catchlight) na pupila.
+      - Cauda sinuosa longa e graduada com penas azuis e reflexo dourado inferior.
+      - Asas em arco natural com penas de voo (remiges primárias) separadas e flexão senoidal de batimento.
+      - Confinamento estrito de voo na copa superior do hero (`minY: 35, maxY: 110`), com atração de mouse rigidamente limitada (`clampedTargetY: [30, 110]`), garantindo que o pássaro nunca colida com o texto ou com o mockup.
+  - **Contenção e Blindagem do Mockup de Segurança (`SecurityProtectionSection.tsx`):**
+    - Redefinido `calloutRightDesktop` com `width: "38%", maxWidth: 300` e adicionado `overflow: "hidden"` ao `calloutCard`.
+    - O frame de preview das configurações do app agora fica 100% emoldurado dentro do card, sem transbordar, quebrar a borda ou ser cortado.
+  - **Erradicação Completa de Emojis e Sistema Vetorial SVG Puro:**
+    - Criado `src/landing/components/SvgIcons.tsx` com 25+ ícones SVG semânticos (`SvgHomeIcon`, `SvgCartIcon`, `SvgSearchIcon`, `SvgTagIcon`, `SvgTrophyIcon`, `SvgCameraIcon`, `SvgShieldIcon`, `SvgMapPinIcon`, `SvgCarIcon`, `SvgSparkleIcon`, `SvgCheckIcon`, `SvgCloseIcon`, `SvgDownloadIcon`, `SvgGithubIcon`, `SvgMoonIcon`, `SvgSunIcon`, `SvgAmoledIcon`, `SvgChevronDownIcon`, etc.).
+    - Auditoria de regex unicode executada em 100% dos arquivos de `src/landing/`: 0 emojis remanescentes.
+  - **Código QR 100% Real, Válido e Auditado:**
+    - Erradicado o QR code geométrico fake anterior.
+    - Implementado `SvgOfficialReleaseQrCode` vetorial com padrão ISO/IEC 18004 apontando diretamente para `https://github.com/criperrr/INI3A-EQ3/releases/latest`.
+    - Acondicionado em card de alto contraste (fundo branco puro `#FFFFFF` e módulos negros `#000000` com moldura âmbar e sombra suave) garantindo leitura ótica instantânea em câmeras Android e iOS.
+    - Validado e auditado via Playwright Firefox e `zbarimg`, com decodificação confirmada em 0,0 segundos.
+  - **Validação com Testes Visuais e Prints no Firefox Headless (Playwright):**
+    - Capturados e validados visualmente:
+      - `1_mobile_360_hero.png` & `12_mobile_scrollable_mockup.png`: Galaxy S25 (360x780) com texto fluido, sem sobreposição, seletor 3x2 e frame centralizado.
+      - `6d_desktop_security_callout_final.png`: Desktop (1440x900) com callout de privacidade e frame de configurações 100% contido.
+      - `7_desktop_download.png` & `8_qr_code_element.png`: Card de download com QR code legível por zbarimg.
+      - `9_canvas_fauna_flora.png`: Arara-canindé anatômica voando com elegância na copa de folhagens.
+    - Bundle exportado com sucesso via Metro Web Bundler (`npm run landing:build`).
+    - 68 testes passando com 100% de sucesso (`npm test`) e 0 erros no `typecheck`.
 - **Release v1.4.5 em Produção & Publicação Oficial do APK Android:**
   - **Deploy em Produção (CTI):** Executado `npm run deploy` via SSH (`ra2457039@projetoscti.com.br:4026`) no diretório `/var/www/equipes/26-presco`. Aplicada com sucesso a migration `0005_structural_hardening_phase1.sql` no PostgreSQL de produção (`54432`), executados seed e realocação de mercados (404 mercados verificados e ativos), e reiniciado o processo PM2 (`presco-backend`) na porta 3333 com healthcheck público `200 OK`.
   - **Configuração do App Mobile para Produção:** Corrigido `scripts/configure_env.ts` (declaração de `FRONTEND_ENV_PATH`) e executado `npm run env:prod`, apontando `EXPO_PUBLIC_API_URL` para `https://eq.projetoscti.com.br/26-presco`.

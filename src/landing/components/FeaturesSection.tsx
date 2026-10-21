@@ -1,61 +1,55 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgCarIcon,
+    SvgCameraIcon,
+    SvgShieldIcon,
+    SvgLeafIcon,
+    SvgSparkleIcon,
+} from "./SvgIcons";
 
 interface FeaturesSectionProps {
     theme: SemanticTheme;
 }
 
 export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
-    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
-
-    useEffect(() => {
-        const onChange = ({ window }: { window: { width: number } }) => {
-            setWindowWidth(window.width);
-        };
-        const sub = Dimensions.addEventListener("change", onChange);
-        return () => {
-            // @ts-ignore
-            if (sub?.remove) sub.remove();
-        };
-    }, []);
-
-    const isDesktop = windowWidth >= 860;
-    const isMobile = windowWidth < 480;
+    const { width } = useWindowDimensions();
+    const isDesktop = width >= 860;
 
     const features = [
         {
-            code: "EAN",
-            tag: "SCANNER EAN-13",
-            title: "Leitor de Gôndola com OpenFoodFacts",
-            desc: "Aponte a câmera para o código de barras no supermercado. O Presco identifica instantaneamente o produto, fotos oficiais e dados nutricionais em milissegundos.",
-            highlight: "+15 XP por preço • +25 XP novo produto",
+            Icon: SvgCarIcon,
+            tag: "ECONOMIA LÍQUIDA REAL",
+            title: "Desconto Real no Bolso (Descontando a Gasolina)",
+            desc: "O motor matemático avalia sua lista inteira e só sugere ir a dois supermercados se a diferença de preço cobrir com folga o combustível gasto (km/L) e o tempo de trânsito.",
+            highlight: "Economia Líquida = Preço Menor - Custo de Deslocamento",
         },
         {
-            code: "ROTA",
-            tag: "OTIMIZADOR MULTILOJAS",
-            title: "Cálculo de Rota, Tempo e Combustível",
-            desc: "Vale a pena ir a dois mercados? Nosso motor matemático analisa os preços e desconta o gasto da gasolina (km/L) e o tempo de trânsito para garantir economia líquida real.",
-            highlight: "Economia Líquida: Preço Menor - Custo de Viagem",
+            Icon: SvgCameraIcon,
+            tag: "SCANNER ÓPTICO INSTANTÂNEO",
+            title: "Preço Real na Gôndola em Menos de 1 Segundo",
+            desc: "Aponte a câmera para o código de barras EAN-13 no corredor do mercado. O Presco identifica o item, compara com lojas vizinhas e mostra o histórico de variação na hora.",
+            highlight: "+15 XP por preço confirmado • Base OpenFoodFacts",
         },
         {
-            code: "GPS",
-            tag: "MOTOR ESPACIAL",
-            title: "Radar Geográfico PostGIS (15 km)",
-            desc: "Descubra atacadões, hipermercados e quitandas locais no raio de proximidade configurável. Rotas integradas com 1 toque no Waze, Google Maps e Apple Maps.",
-            highlight: "Precisão PostGIS com PostgreSQL",
+            Icon: SvgShieldIcon,
+            tag: "QUÓRUM ANTI-FRAUDE",
+            title: "Comunidade Auditada sem Fake News de Preço",
+            desc: "Algoritmo estatístico de proteção com detecção inteligente de anomalias e validação comunitária em tempo real impedem que preços errados ou abusivos enganem você.",
+            highlight: "Quórum Ativo • Bloqueio de Outliers e Preços Falsos",
         },
         {
-            code: "RANK",
-            tag: "GAMIFICAÇÃO & HONRA",
-            title: "Níveis, Medalhas e Loja de Cosméticos",
-            desc: "Contribua com a economia da sua comunidade e ganhe pontos, títulos de autoridade na plataforma e personalize seu perfil com molduras e temas exclusivos.",
-            highlight: "100% Mérito Comunitário • Sem Pay-to-Win",
+            Icon: SvgLeafIcon,
+            tag: "PRIVACIDADE RADICAL",
+            title: "100% Gratuito, Sem Anúncios e sem Venda de Dados",
+            desc: "O Presco não vende seu histórico para redes varejistas nem exibe banners invasivos. Aplicativo de utilidade pública, transparente e de código aberto para sempre.",
+            highlight: "Zero Anúncios • Sem Cartão de Crédito • Totalmente Livre",
         },
     ];
 
@@ -84,7 +78,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                         ]}
                     >
                         <Text style={[styles.sectionTagText, { color: theme.accent }]}>
-                            ARQUITETURA & EXPERIÊNCIA
+                            BENEFÍCIOS REAIS • ECONOMIA NO SEU BOLSO
                         </Text>
                     </View>
                     <Text
@@ -92,8 +86,8 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                             styles.sectionTitle,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 26,
-                                lineHeight: isDesktop ? 44 : 32,
+                                fontSize: isDesktop ? 36 : 28,
+                                lineHeight: isDesktop ? 44 : 34,
                             },
                         ]}
                     >
@@ -101,7 +95,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                         <Text style={{ color: theme.accent }}>nunca mais pagar caro</Text>
                     </Text>
                     <Text style={[styles.sectionSubtitle, { color: theme.text.secondary }]}>
-                        Concebido com padrões modernos de computação móvel, geoprocessamento e inteligência colaborativa.
+                        Desenvolvido com localização inteligente por proximidade, leitor instantâneo de código de barras e cálculo real de economia no bolso.
                     </Text>
                 </View>
 
@@ -113,7 +107,6 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                             style={[
                                 styles.featureCard,
                                 isDesktop && styles.featureCardDesktop,
-                                isMobile && styles.featureCardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
@@ -127,9 +120,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                                         { backgroundColor: theme.accent + "18" },
                                     ]}
                                 >
-                                    <Text style={[styles.iconText, { color: theme.accent }]}>
-                                        {feat.code}
-                                    </Text>
+                                    <feat.Icon size={20} color={theme.accent} />
                                 </View>
                                 <View
                                     style={[
@@ -178,14 +169,17 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
                                     },
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.highlightText,
-                                        { color: theme.accent },
-                                    ]}
-                                >
-                                    {feat.highlight}
-                                </Text>
+                                <View style={styles.highlightRow}>
+                                    <SvgSparkleIcon size={13} color={theme.accent} />
+                                    <Text
+                                        style={[
+                                            styles.highlightText,
+                                            { color: theme.accent },
+                                        ]}
+                                    >
+                                        {feat.highlight}
+                                    </Text>
+                                </View>
                             </View>
                         </View>
                     ))}
@@ -198,7 +192,7 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ theme }) => {
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 56,
+        paddingVertical: 72,
         borderTopWidth: 1,
         borderBottomWidth: 1,
     },
@@ -206,13 +200,14 @@ const styles = StyleSheet.create({
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
     },
     headerArea: {
         alignItems: "center",
+        textAlign: "center",
         maxWidth: 700,
         marginHorizontal: "auto",
-        marginBottom: 40,
+        marginBottom: 56,
     },
     sectionTag: {
         paddingHorizontal: 12,
@@ -229,26 +224,25 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontWeight: "900",
         textAlign: "center",
-        marginBottom: 14,
+        marginBottom: 16,
         letterSpacing: -0.8,
     },
     sectionSubtitle: {
-        fontSize: 15,
-        lineHeight: 23,
+        fontSize: 16,
+        lineHeight: 24,
         textAlign: "center",
     },
     grid: {
         flexDirection: "column",
-        gap: 20,
+        gap: 24,
     },
     gridDesktop: {
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
-        rowGap: 24,
     },
     featureCard: {
-        padding: 24,
+        padding: 28,
         borderRadius: 24,
         borderWidth: 1,
         width: "100%",
@@ -256,29 +250,24 @@ const styles = StyleSheet.create({
     featureCardDesktop: {
         width: "48.5%",
     },
-    featureCardMobile: {
-        padding: 18,
-    },
     cardTopRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 16,
+        marginBottom: 20,
     },
     iconBox: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
+        width: 48,
+        height: 48,
+        borderRadius: 14,
         alignItems: "center",
         justifyContent: "center",
     },
     iconText: {
-        fontSize: 12,
-        fontWeight: "900",
-        letterSpacing: 0.8,
+        fontSize: 24,
     },
     tagBadge: {
-        paddingHorizontal: 8,
+        paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
     },
@@ -288,23 +277,27 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     cardTitle: {
-        fontSize: 19,
+        fontSize: 20,
         fontWeight: "800",
         letterSpacing: -0.4,
-        marginBottom: 10,
+        marginBottom: 12,
     },
     cardDesc: {
-        fontSize: 14,
-        lineHeight: 21,
-        marginBottom: 16,
+        fontSize: 15,
+        lineHeight: 22,
+        marginBottom: 20,
     },
     cardFooter: {
         borderTopWidth: 1,
-        paddingTop: 14,
+        paddingTop: 16,
+    },
+    highlightRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
     },
     highlightText: {
         fontSize: 12,
         fontWeight: "700",
     },
 });
-

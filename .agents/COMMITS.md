@@ -4154,20 +4154,93 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Aplicação 100% operacional em produção, banco migrado, API saudável e APK disponível para download direto na aba Releases do repositório.
 
-## `2026-10-16 07:45` - `feat(landing)`: Refactor landing layout, mobile responsiveness and emoji eradication
 
-- **Description:** Realizada refatoração completa do layout da landing page em `src/landing`. Erradicados emojis decorativos em favor de tipografia técnica, limpa e badges semânticos. Ajustada a responsividade mobile com redimensionamento dinâmico e proporcional dos mockups de smartphone e molduras de capturas de tela via `Dimensions.addEventListener`, eliminando cortes e quebras em telas estreitas. Sincronizadas menções e badges para a versão `v1.4.5`.
+## `2026-10-21 08:18` - `feat(landing)`: Refactor landing page with MengTo landing-page skill
+
+- **Description:** Installed the MengTo landing-page skill for Claude Code (`.claude/skills/landing-page`) and Antigravity (`.agents/skills/landing-page`). Refactored the Presco landing page according to the high-conversion single-offer principles, preserving the Arara (macaw) Canvas 2D and brand design as absolute axioms. Added ProblemSolutionSection, restructured benefits, updated version badges to v1.4.5, and expanded the FAQ section to address all top user objections.
 - **Files Modified:**
-  - `src/landing/components/PhoneMockup.tsx`
+  - `.agents/skills/landing-page/SKILL.md`
+  - `.agents/skills/landing-page/REFERENCES.md`
+  - `.agents/skills/landing-page/demo/PROMPT.md`
+  - `.agents/skills/landing-page/demo/index.html`
+  - `.agents/skills/landing-page/demo/preview.jpg`
+  - `.claude/skills/landing-page/*`
+  - `src/landing/components/ProblemSolutionSection.tsx`
+  - `src/landing/components/Header.tsx`
   - `src/landing/components/HeroSection.tsx`
-  - `src/landing/components/ImpactStatsSection.tsx`
-  - `src/landing/components/HowItWorksSection.tsx`
-  - `src/landing/components/ScreenshotsGallerySection.tsx`
   - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/components/DownloadSection.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Clean compile with Metro Web bundler (`npm run landing:build`), 0 type errors, 68/68 unit tests passing. Ready for PR and deployment to GitHub Pages.
+
+
+## `2026-10-21 17:16` - `refactor(landing)`: Responsiveness, SVG icons, valid QR code, and canopy flight fix
+
+- **Description:** Executada refatoração completa e blindagem visual da landing page aderente à skill oficial `landing-page`. Erradicados 100% dos emojis com substituição por ícones vetoriais em `SvgIcons.tsx`. Implementado código QR ISO/IEC 18004 100% autêntico e validado com decodificação instantânea pelo `zbarimg`. Corrigidos os waypoints e o damping de cursor do voo da Arara-canindé para confiná-la estritamente à copa superior (y: 35-115px). Resolvidas todas as quebras de layout, divs e responsividade em mobile (375px), tablet (768px) e desktop (1440px), auditados visualmente no Firefox via Playwright.
+- **Files Modified:**
+  - `src/landing/components/SvgIcons.tsx`
+  - `src/landing/components/DownloadSection.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/TropicalFaunaFloraCanvas.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page 100% funcional, esteticamente calibrada com o design system Monet do Presco e pronta para validação pelo usuário.
+
+## `2026-10-21 18:18` - `refactor(landing)`: Mobile responsiveness overhaul, sleek arara redesign and containment fixes
+
+- **Description:** Applied full mobile responsiveness refactor using `useWindowDimensions()` across all landing page components, redrew anatomically sleek Arara-canindé with canopy bounding, fixed settings frame card overflow, and validated with deterministic Firefox headless screenshots and zbarimg QR scans.
+- **Files Modified:**
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/components/Header.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/PhoneMockup.tsx`
   - `src/landing/components/SecurityProtectionSection.tsx`
   - `src/landing/components/DownloadSection.tsx`
-  - `src/landing/components/Header.tsx`
-  - `src/landing/components/Footer.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/ImpactStatsSection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/ProblemSolutionSection.tsx`
+  - `src/landing/components/ScreenshotsGallerySection.tsx`
   - `src/landing/components/ConsentBanner.tsx`
   - `src/landing/components/PolicyModal.tsx`
-- **Impact / Next Steps:** Landing page 100% responsiva, sem overflow em telas mobile, tipografia moderna e elegante sem emojis infantis, preservando rigorosamente o design original, o tema visual dinâmico e a paleta do Presco. 100% typecheck aprovado.
+  - `src/landing/components/Footer.tsx`
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/TropicalFaunaFloraCanvas.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Ready for user review and commit upon explicit confirmation.
+
+
+## `2026-10-21 19:55` - `feat(landing)`: Google-style header auto-hide, logo enhancement, and friendly copy
+
+- **Description:** Enhanced landing page header with 50px desktop / 38px mobile logo, removed version/env badges, minimized theme button to 28px discreet icon, and implemented smooth Google-style auto-hide on scroll (-100px translate on downscroll, instant slide-in on upscroll). Replaced technical jargon (PostGIS, Resend OTP) with user-friendly language in security, stats, features, and policy components. Equalized FAQ nav link contrast to match other headers and verified entire flow with Playwright tests.
+- **Files Modified:**
+  - `src/landing/components/Header.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/ImpactStatsSection.tsx`
+  - `src/landing/components/FeaturesSection.tsx`
+  - `src/landing/components/PolicyModal.tsx`
+  - `src/landing/components/FaqSection.tsx`
+  - `scripts/test_landing_playwright.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page passes Playwright audit and production compilation (`npm run landing:build`) with 0 errors. Ready for review or deployment.
+
+
+## `2026-10-21 20:05` - `chore(release)`: Bump version to 1.5.0 and sync Android versionCode to 31
+
+- **Description:** Synchronized SemVer across monorepo manifest files (`package.json`, `src/backend/package.json`, `src/frontend/package.json`, `src/frontend/app.json`, `src/landing/package.json`) and incremented Android `versionCode` from 30 to 31 following landing page enhancements and mobile refactoring.
+- **Files Modified:**
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `src/landing/package.json`
+- **Impact / Next Steps:** Monorepo ready for CI PR validation and deployment.

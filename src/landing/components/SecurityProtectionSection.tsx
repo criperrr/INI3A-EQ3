@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
     View,
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
     Image,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgShieldIcon,
+    SvgLockIcon,
+    SvgMapPinIcon,
+    SvgScaleIcon,
+    SvgCheckIcon,
+} from "./SvgIcons";
 
 interface SecurityProtectionSectionProps {
     theme: SemanticTheme;
@@ -18,46 +25,27 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
     theme,
     onOpenPolicies,
 }) => {
-    const [windowWidth, setWindowWidth] = useState(Dimensions.get("window").width);
-
-    useEffect(() => {
-        const onChange = ({ window }: { window: { width: number } }) => {
-            setWindowWidth(window.width);
-        };
-        const sub = Dimensions.addEventListener("change", onChange);
-        return () => {
-            // @ts-ignore
-            if (sub?.remove) sub.remove();
-        };
-    }, []);
-
-    const isDesktop = windowWidth >= 860;
-    const isMobile = windowWidth < 480;
-
-    // Responsive mockup frame dimensions for the settings preview
-    const previewWidth = isMobile
-        ? Math.min(windowWidth - 72, 240)
-        : 260;
-    const previewHeight = Math.round(previewWidth * 1.84);
+    const { width } = useWindowDimensions();
+    const isDesktop = width >= 860;
 
     const protectionPillars = [
         {
-            code: "QUÓRUM",
-            title: "Quórum Comunitário Anti-Fraude",
-            desc: "Cada preço reportado passa por votação e validação de outros consumidores locais. Ocorrências suspeitas ou destoantes são marcadas e suspensas preventivamente pelo algoritmo de confiança.",
+            Icon: SvgShieldIcon,
+            title: "Proteção Comunitária Anti-Fraude",
+            desc: "Cada preço informado é avaliado pela própria comunidade de consumidores locais. Informações suspeitas são suspensas preventivamente pelo sistema colaborativo de confiança.",
         },
         {
-            code: "2FA",
-            title: "2FA com Resend OTP",
-            desc: "Autenticação em duas etapas via código criptográfico de uso único no seu email, blindando as edições de catálogo e ações de moderação contra robôs e invasores.",
+            Icon: SvgLockIcon,
+            title: "Autenticação em Duas Etapas (2FA)",
+            desc: "Verificação de identidade com código seguro enviado ao seu e-mail, protegendo o catálogo e a comunidade contra robôs e ações não autorizadas.",
         },
         {
-            code: "GEO",
-            title: "Geofencing & Rate Limiting Atômico",
-            desc: "Validação espacial das coordenadas do supermercado via PostGIS aliada a cooldowns em memória no Redis, impedindo spam e manipulação coordenada de ofertas.",
+            Icon: SvgMapPinIcon,
+            title: "Geolocalização & Proteção Anti-Spam",
+            desc: "Validação por geolocalização e raio espacial seguro dos supermercados, garantindo dados reais e impedindo manipulação de ofertas.",
         },
         {
-            code: "LGPD",
+            Icon: SvgScaleIcon,
             title: "Conformidade Rígida com a LGPD",
             desc: "Total respeito à Lei 13.709/2018. Permissões de GPS e câmera sob demanda, sem rastreamento de anúncios de terceiros e com direito à exclusão definitiva da conta com 1 toque.",
         },
@@ -95,8 +83,8 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                             styles.title,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 36 : 26,
-                                lineHeight: isDesktop ? 44 : 32,
+                                fontSize: isDesktop ? 36 : 28,
+                                lineHeight: isDesktop ? 44 : 34,
                             },
                         ]}
                     >
@@ -118,22 +106,14 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                             style={[
                                 styles.pillarCard,
                                 isDesktop && styles.pillarCardDesktop,
-                                isMobile && styles.pillarCardMobile,
                                 {
                                     backgroundColor: theme.surface.card,
                                     borderColor: theme.surface.border,
                                 },
                             ]}
                         >
-                            <View
-                                style={[
-                                    styles.pillarBadge,
-                                    { backgroundColor: theme.accent + "18" },
-                                ]}
-                            >
-                                <Text style={[styles.pillarBadgeText, { color: theme.accent }]}>
-                                    {p.code}
-                                </Text>
+                            <View style={[styles.pillarIconWrap, { backgroundColor: theme.accent + "18" }]}>
+                                <p.Icon size={22} color={theme.accent} />
                             </View>
                             <Text
                                 style={[
@@ -160,7 +140,6 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                     style={[
                         styles.calloutCard,
                         isDesktop && styles.calloutCardDesktop,
-                        isMobile && styles.calloutCardMobile,
                         {
                             backgroundColor: theme.surface.card,
                             borderColor: theme.accent + "40",
@@ -174,6 +153,7 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                                 { backgroundColor: theme.accent + "18" },
                             ]}
                         >
+                            <SvgLockIcon size={12} color={theme.accent} />
                             <Text style={[styles.calloutBadgeText, { color: theme.accent }]}>
                                 PRIVACIDADE & SEGURANÇA VERIFICÁVEL
                             </Text>
@@ -189,15 +169,24 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                         </Text>
 
                         <View style={styles.complianceChecks}>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                • Autenticação em Duas Etapas (2FA) nativa com código descartável
-                            </Text>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                • Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
-                            </Text>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                • Zero rastreamento publicitário ou comercialização de relatórios
-                            </Text>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Autenticação em Duas Etapas (2FA) nativa com código descartável
+                                </Text>
+                            </View>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
+                                </Text>
+                            </View>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Zero rastreamento publicitário ou venda de relatórios de consumo
+                                </Text>
+                            </View>
                         </View>
 
                         <View style={styles.calloutActions}>
@@ -236,15 +225,12 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                         </View>
                     </View>
 
-                    {/* Screenshot Frame of App Settings with Dynamic Scaled Sizing */}
-                    <View style={styles.calloutRight}>
+                    {/* Screenshot Frame of App Settings */}
+                    <View style={[styles.calloutRight, isDesktop && styles.calloutRightDesktop]}>
                         <View
                             style={[
                                 styles.settingsPreviewFrame,
                                 {
-                                    width: previewWidth,
-                                    height: previewHeight,
-                                    borderRadius: Math.round(previewWidth * 0.12),
                                     borderColor: theme.accent + "50",
                                     backgroundColor: "#05070A",
                                 },
@@ -266,19 +252,19 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        paddingVertical: 56,
+        paddingVertical: 72,
     },
     inner: {
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 20,
+        paddingHorizontal: 24,
     },
     headerArea: {
         alignItems: "center",
         maxWidth: 760,
         marginHorizontal: "auto",
-        marginBottom: 40,
+        marginBottom: 48,
     },
     badge: {
         paddingHorizontal: 12,
@@ -295,12 +281,12 @@ const styles = StyleSheet.create({
     title: {
         fontWeight: "900",
         textAlign: "center",
-        marginBottom: 14,
+        marginBottom: 16,
         letterSpacing: -0.8,
     },
     subtitle: {
-        fontSize: 15,
-        lineHeight: 23,
+        fontSize: 16,
+        lineHeight: 24,
         textAlign: "center",
     },
     pillarsGrid: {
@@ -312,64 +298,53 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         justifyContent: "space-between",
-        rowGap: 24,
     },
     pillarCard: {
         padding: 24,
-        borderRadius: 24,
+        borderRadius: 20,
         borderWidth: 1,
         width: "100%",
     },
     pillarCardDesktop: {
         width: "48.5%",
     },
-    pillarCardMobile: {
-        padding: 18,
-    },
-    pillarBadge: {
-        alignSelf: "flex-start",
-        paddingHorizontal: 9,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginBottom: 12,
-    },
-    pillarBadgeText: {
-        fontSize: 10,
-        fontWeight: "900",
-        letterSpacing: 0.8,
+    pillarIconWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+        marginBottom: 14,
     },
     pillarTitle: {
         fontSize: 18,
         fontWeight: "800",
-        letterSpacing: -0.3,
         marginBottom: 8,
+        letterSpacing: -0.3,
     },
     pillarDesc: {
         fontSize: 14,
-        lineHeight: 21,
+        lineHeight: 22,
     },
     calloutCard: {
+        padding: 32,
         borderRadius: 28,
         borderWidth: 1,
-        padding: 28,
         flexDirection: "column",
-        gap: 24,
-        alignItems: "center",
+        gap: 28,
+        overflow: "hidden",
     },
     calloutCardDesktop: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
-        padding: 40,
-    },
-    calloutCardMobile: {
-        padding: 20,
+        justifyContent: "space-between",
     },
     calloutLeft: {
         width: "100%",
     },
     calloutLeftDesktop: {
         width: "58%",
+        maxWidth: 620,
     },
     calloutBadge: {
         alignSelf: "flex-start",
@@ -398,6 +373,11 @@ const styles = StyleSheet.create({
         gap: 8,
         marginBottom: 24,
     },
+    checkItemRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
     checkItem: {
         fontSize: 13,
         lineHeight: 20,
@@ -412,15 +392,23 @@ const styles = StyleSheet.create({
         width: "100%",
         alignItems: "center",
         justifyContent: "center",
+        marginTop: 10,
+    },
+    calloutRightDesktop: {
+        width: "38%",
+        maxWidth: 300,
+        marginTop: 0,
     },
     settingsPreviewFrame: {
+        width: 260,
+        height: 480,
+        borderRadius: 32,
         borderWidth: 3,
         overflow: "hidden",
         shadowOffset: { width: 0, height: 16 },
         shadowOpacity: 0.3,
         shadowRadius: 30,
         elevation: 12,
-        alignSelf: "center",
     },
     settingsPreviewImage: {
         width: "100%",

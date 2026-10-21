@@ -4,6 +4,8 @@ import {
     View,
     StyleSheet,
     Linking,
+    NativeSyntheticEvent,
+    NativeScrollEvent,
 } from "react-native";
 import {
     createSemanticColors,
@@ -13,6 +15,7 @@ import {
 import { Header } from "./components/Header";
 import { HeroSection } from "./components/HeroSection";
 import { ImpactStatsSection } from "./components/ImpactStatsSection";
+import { ProblemSolutionSection } from "./components/ProblemSolutionSection";
 import { HowItWorksSection } from "./components/HowItWorksSection";
 import { ScreenshotsGallerySection } from "./components/ScreenshotsGallerySection";
 import { FeaturesSection } from "./components/FeaturesSection";
@@ -31,8 +34,12 @@ export const LandingPage: React.FC = () => {
     const [themeType, setThemeType] = useState<ThemeType>("dark");
     const [policyModalVisible, setPolicyModalVisible] = useState(false);
     const [activePolicyTab, setActivePolicyTab] = useState<PolicyTab>("privacy");
+    const [headerVisible, setHeaderVisible] = useState(true);
 
     const scrollRef = useRef<ScrollView>(null);
+    const lastScrollY = useRef(0);
+    const isProgrammaticScroll = useRef(false);
+    const programmaticTimeout = useRef<any>(null);
 
     // Section coordinates for smooth scrolling
     const sectionPositions = useRef<{ [key: string]: number }>({});
@@ -80,7 +87,50 @@ export const LandingPage: React.FC = () => {
         Linking.openURL(GITHUB_REPO_URL);
     };
 
+    const processScrollY = (currentY: number) => {
+        if (isProgrammaticScroll.current) return;
+
+        const delta = currentY - lastScrollY.current;
+
+        // Near top: always keep header visible
+        if (currentY <= 20) {
+            setHeaderVisible(true);
+        } else if (delta > 5 && currentY > 40) {
+            // Scrolling down -> hide header with smooth slide-up
+            setHeaderVisible(false);
+        } else if (delta < -3) {
+            // Scrolling up even slightly -> reveal header immediately
+            setHeaderVisible(true);
+        }
+
+        lastScrollY.current = currentY;
+    };
+
+    const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+        processScrollY(event.nativeEvent.contentOffset.y);
+    };
+
+    // Google-style smooth auto-hide on window scroll (sync for desktop & mobile browsers)
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        const handleWindowScroll = () => {
+            const currentY = window.scrollY || document.documentElement.scrollTop || 0;
+            processScrollY(currentY);
+        };
+
+        window.addEventListener("scroll", handleWindowScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleWindowScroll);
+    }, []);
+
     const handleScrollToSection = (sectionId: string) => {
+        setHeaderVisible(true);
+        isProgrammaticScroll.current = true;
+        if (programmaticTimeout.current) clearTimeout(programmaticTimeout.current);
+        programmaticTimeout.current = setTimeout(() => {
+            isProgrammaticScroll.current = false;
+        }, 700);
+
         if (sectionId === "hero") {
             scrollRef.current?.scrollTo({ y: 0, animated: true });
             return;
@@ -88,7 +138,7 @@ export const LandingPage: React.FC = () => {
 
         const yPos = sectionPositions.current[sectionId];
         if (typeof yPos === "number") {
-            scrollRef.current?.scrollTo({ y: yPos - 60, animated: true });
+            scrollRef.current?.scrollTo({ y: Math.max(0, yPos - 80), animated: true });
         } else {
             if (typeof document !== "undefined") {
                 const elem = document.getElementById(sectionId);
@@ -108,10 +158,11 @@ export const LandingPage: React.FC = () => {
                 },
             ]}
         >
-            {/* ClickUp-style Sticky Navigation Header */}
+            {/* Google-style Auto-Hiding Sticky Navigation Header */}
             <Header
                 theme={theme}
                 themeType={themeType}
+                visible={headerVisible}
                 onToggleTheme={handleToggleTheme}
                 onOpenPolicies={handleOpenPolicies}
                 onScrollToSection={handleScrollToSection}
@@ -120,9 +171,15 @@ export const LandingPage: React.FC = () => {
 
             {/* Main Content Scroll View */}
             <ScrollView
+                nativeID="landing-scroll-view"
                 ref={scrollRef}
                 style={styles.scrollView}
-                contentContainerStyle={styles.contentContainer}
+                contentContainerStyle={[
+                    styles.contentContainer,
+                    { paddingTop: 72 },
+                ]}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
                 showsVerticalScrollIndicator={false}
             >
                 {/* 1. Hero Section com Showcase Interativo */}
@@ -149,7 +206,16 @@ export const LandingPage: React.FC = () => {
                     <ImpactStatsSection theme={theme} />
                 </View>
 
-                {/* 3. Como Funciona em 3 Passos (Too Good To Go Journey) */}
+                {/* 3. O Problema vs A Solução Presco (Landing Page High-Conversion Contrast) */}
+                <View
+                    onLayout={(e) => {
+                        sectionPositions.current["problem-solution"] = e.nativeEvent.layout.y;
+                    }}
+                >
+                    <ProblemSolutionSection theme={theme} />
+                </View>
+
+                {/* 4. Como Funciona em 3 Passos (Too Good To Go Journey) */}
                 <View
                     onLayout={(e) => {
                         sectionPositions.current["how-it-works"] = e.nativeEvent.layout.y;

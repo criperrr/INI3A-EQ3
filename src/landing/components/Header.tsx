@@ -5,13 +5,20 @@ import {
     TouchableOpacity,
     StyleSheet,
     Image,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme, ThemeType } from "../theme";
+import {
+    SvgMoonIcon,
+    SvgAmoledIcon,
+    SvgSunIcon,
+    SvgDownloadIcon,
+} from "./SvgIcons";
 
 interface HeaderProps {
     theme: SemanticTheme;
     themeType: ThemeType;
+    visible?: boolean;
     onToggleTheme: () => void;
     onOpenPolicies: (tab?: "terms" | "privacy" | "guidelines" | "cookies") => void;
     onScrollToSection: (sectionId: string) => void;
@@ -21,26 +28,15 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
     theme,
     themeType,
+    visible = true,
     onToggleTheme,
     onOpenPolicies,
     onScrollToSection,
     onDownload,
 }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 920;
-
-    const getEnvironmentBadge = () => {
-        if (typeof window !== "undefined" && window.location) {
-            const path = window.location.pathname;
-            if (path.includes("/dev")) return { label: "DEV", color: "#F59E0B" };
-            if (path.includes("/preview/")) {
-                const match = path.match(/\/preview\/([^/]+)/);
-                return { label: match ? match[1] : "TEST", color: "#3B82F6" };
-            }
-        }
-        return null;
-    };
-    const envBadge = getEnvironmentBadge();
+    const isMobile = width < 540;
 
     const logoSource = theme.isDark
         ? require("../assets/logo-darkmode.png")
@@ -48,16 +44,23 @@ export const Header: React.FC<HeaderProps> = ({
 
     return (
         <View
+            nativeID="landing-header"
             style={[
                 styles.container,
                 {
                     backgroundColor: theme.surface.header,
                     borderBottomColor: theme.surface.borderSubtle,
+                    transform: [{ translateY: visible ? 0 : -100 }],
+                    boxShadow: visible
+                        ? theme.isDark
+                            ? "0 4px 24px rgba(0, 0, 0, 0.45)"
+                            : "0 4px 20px rgba(0, 0, 0, 0.06)"
+                        : "none",
                 },
             ]}
         >
             <View style={styles.inner}>
-                {/* Brand Logo & Version Badge */}
+                {/* Brand Logo */}
                 <TouchableOpacity
                     style={styles.logoRow}
                     activeOpacity={0.8}
@@ -65,39 +68,9 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                     <Image
                         source={logoSource}
-                        style={styles.logoImage}
+                        style={[styles.logoImage, isMobile && styles.logoImageMobile]}
                         resizeMode="contain"
                     />
-                    <View
-                        style={[
-                            styles.versionBadge,
-                            {
-                                backgroundColor: theme.surface.badgeBg,
-                                borderColor: theme.accent + "40",
-                            },
-                        ]}
-                    >
-                        <View style={[styles.pulseDot, { backgroundColor: theme.accent }]} />
-                        <Text style={[styles.versionText, { color: theme.accent }]}>
-                            v1.4.5
-                        </Text>
-                    </View>
-                    {envBadge && (
-                        <View
-                            style={[
-                                styles.versionBadge,
-                                {
-                                    backgroundColor: envBadge.color + "20",
-                                    borderColor: envBadge.color + "60",
-                                    marginLeft: 6,
-                                },
-                            ]}
-                        >
-                            <Text style={[styles.versionText, { color: envBadge.color, fontWeight: "700" }]}>
-                                {envBadge.label}
-                            </Text>
-                        </View>
-                    )}
                 </TouchableOpacity>
 
                 {/* ClickUp-style Desktop Navigation Links */}
@@ -143,7 +116,7 @@ export const Header: React.FC<HeaderProps> = ({
                             style={styles.navItem}
                             onPress={() => onScrollToSection("faq")}
                         >
-                            <Text style={[styles.navText, { color: theme.text.secondary }]}>
+                            <Text style={[styles.navText, { color: theme.text.primary }]}>
                                 FAQ
                             </Text>
                         </TouchableOpacity>
@@ -151,32 +124,43 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
 
                 {/* Right Actions: Theme Toggle + Yellow CTA */}
-                <View style={styles.rightActions}>
+                <View style={[styles.rightActions, isMobile && styles.rightActionsMobile]}>
                     <TouchableOpacity
                         style={[
                             styles.themeBtn,
                             {
-                                backgroundColor: theme.surface.card,
-                                borderColor: theme.surface.border,
+                                backgroundColor: theme.isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+                                borderColor: theme.surface.borderSubtle,
                             },
                         ]}
-                        activeOpacity={0.8}
+                        activeOpacity={0.7}
                         onPress={onToggleTheme}
                         accessibilityLabel="Alternar tema visual"
                     >
-                        <Text style={[styles.themeBtnText, { color: theme.text.primary }]}>
-                            {themeType === "dark" ? "Dark" : themeType === "amoled" ? "AMOLED" : "Light"}
-                        </Text>
+                        {themeType === "dark" ? (
+                            <SvgMoonIcon size={12} color={theme.text.secondary} />
+                        ) : themeType === "amoled" ? (
+                            <SvgAmoledIcon size={12} color={theme.text.secondary} />
+                        ) : (
+                            <SvgSunIcon size={12} color={theme.text.secondary} />
+                        )}
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.ctaBtn, { backgroundColor: theme.accent }]}
+                        style={[
+                            styles.ctaBtn,
+                            isMobile && styles.ctaBtnMobile,
+                            { backgroundColor: theme.accent, shadowColor: theme.accent },
+                        ]}
                         activeOpacity={0.85}
                         onPress={onDownload}
                     >
-                        <Text style={styles.ctaBtnText}>
-                            {isDesktop ? "Baixar APK (Android)" : "Baixar APK"}
-                        </Text>
+                        <View style={styles.ctaBtnRow}>
+                            <SvgDownloadIcon size={14} color={theme.text.inverse} />
+                            <Text style={[styles.ctaBtnText, { color: theme.text.inverse }]}>
+                                {isDesktop ? "Baixar APK (Android)" : isMobile ? "Baixar" : "Baixar APK"}
+                            </Text>
+                        </View>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -186,11 +170,19 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
     container: {
+        position: "fixed" as any,
+        top: 0,
+        left: 0,
+        right: 0,
         width: "100%",
         borderBottomWidth: 1,
-        zIndex: 50,
+        zIndex: 100,
         // @ts-ignore: React Native Web backdrop filter
         backdropFilter: "blur(16px)",
+        // @ts-ignore: CSS transition for ultra smooth Google style
+        transition: "transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, background-color 0.2s ease",
+        // @ts-ignore: GPU hardware acceleration
+        willChange: "transform",
     },
     inner: {
         maxWidth: 1200,
@@ -205,30 +197,16 @@ const styles = StyleSheet.create({
     logoRow: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
     },
     logoImage: {
-        width: 130,
-        height: 38,
+        width: 54,
+        height: 54,
+        aspectRatio: 1,
     },
-    versionBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 12,
-        borderWidth: 1,
-    },
-    pulseDot: {
-        width: 6,
-        height: 6,
-        borderRadius: 3,
-    },
-    versionText: {
-        fontSize: 11,
-        fontWeight: "800",
-        letterSpacing: 0.5,
+    logoImageMobile: {
+        width: 44,
+        height: 44,
+        aspectRatio: 1,
     },
     navLinks: {
         flexDirection: "row",
@@ -249,28 +227,37 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 12,
     },
-    themeBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderRadius: 10,
-        borderWidth: 1,
+    rightActionsMobile: {
+        gap: 8,
     },
-    themeBtnText: {
-        fontSize: 12,
-        fontWeight: "800",
+    themeBtn: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        borderWidth: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        opacity: 0.75,
     },
     ctaBtn: {
         paddingHorizontal: 18,
         paddingVertical: 10,
         borderRadius: 10,
-        shadowColor: "#FFB703",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.35,
         shadowRadius: 10,
         elevation: 4,
     },
+    ctaBtnMobile: {
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+    },
+    ctaBtnRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
     ctaBtnText: {
-        color: "#000000",
         fontSize: 13,
         fontWeight: "900",
         letterSpacing: 0.2,

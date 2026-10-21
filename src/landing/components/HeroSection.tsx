@@ -4,11 +4,18 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
 import { PhoneMockup } from "./PhoneMockup";
 import { TropicalFaunaFloraCanvas } from "./TropicalFaunaFloraCanvas";
+import {
+    SvgSparkleIcon,
+    SvgShieldIcon,
+    SvgMapPinIcon,
+    SvgGithubIcon,
+    SvgChevronRightIcon,
+} from "./SvgIcons";
 
 interface HeroSectionProps {
     theme: SemanticTheme;
@@ -25,7 +32,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
     onExploreFeatures,
     onScrollToHowItWorks,
 }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 960;
 
     return (
@@ -45,7 +52,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <View style={[styles.inner, isDesktop && styles.innerDesktop]}>
                 {/* Left Column: Text & Actions */}
                 <View style={[styles.textContent, isDesktop && styles.textContentDesktop]}>
-                    {/* ClickUp-style Header Pill Badge */}
+                    {/* Header Pill Badge */}
                     <View
                         style={[
                             styles.badgeRow,
@@ -55,8 +62,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             },
                         ]}
                     >
+                        <SvgSparkleIcon size={13} color={theme.accent} />
                         <Text style={[styles.badgeText, { color: theme.accent }]}>
-                            O APLICATIVO INTELIGENTE QUE SUBSTITUI A DÚVIDA NO MERCADO
+                            {width < 400 ? "INTELIGÊNCIA COLABORATIVA" : "INTELIGÊNCIA COLABORATIVA CONTRA A INFLAÇÃO"}
                         </Text>
                     </View>
 
@@ -66,14 +74,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             styles.headline,
                             {
                                 color: theme.text.primary,
-                                fontSize: isDesktop ? 52 : 36,
-                                lineHeight: isDesktop ? 60 : 44,
+                                fontSize: isDesktop ? (width >= 1200 ? 46 : 38) : (width < 380 ? 26 : 30),
+                                lineHeight: isDesktop ? (width >= 1200 ? 54 : 46) : (width < 380 ? 34 : 38),
                             },
                         ]}
                     >
-                        Economize nas compras da semana com a{" "}
+                        Economize até 35% no supermercado com a{" "}
                         <Text style={{ color: theme.accent }}>
-                            força da sua comunidade.
+                            força da sua comunidade
                         </Text>
                     </Text>
 
@@ -83,13 +91,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             styles.subtitle,
                             {
                                 color: theme.text.secondary,
-                                fontSize: isDesktop ? 18 : 16,
-                                lineHeight: isDesktop ? 28 : 24,
+                                fontSize: isDesktop ? 17 : 15,
+                                lineHeight: isDesktop ? 26 : 22,
                             },
                         ]}
                     >
-                        Chega de ser surpreendido no caixa. O Presco combina leitor óptico de gôndola,
-                        cotações em tempo real e um motor de rota veicular que desconta o combustível para
+                        Chega de surpresas indigestas no caixa. O Presco combina leitor óptico instantâneo na gôndola,
+                        cotações em tempo real e um motor de rota veicular que desconta o combustível gasto para
                         garantir economia líquida no seu bolso.
                     </Text>
 
@@ -100,13 +108,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                                 styles.btnPrimary,
                                 {
                                     backgroundColor: theme.accent,
+                                    shadowColor: theme.accent,
                                 },
                             ]}
                             activeOpacity={0.85}
                             onPress={onDownload}
                         >
-                            <Text style={styles.btnPrimaryText}>Baixar APK Gratuito</Text>
-                            <Text style={styles.btnPrimarySub}>Android 8.0+ • v1.4.5 Oficial</Text>
+                            <Text style={[styles.btnPrimaryText, { color: theme.text.inverse }]}>Baixar APK Gratuito</Text>
+                            <Text style={[styles.btnPrimarySub, { color: theme.isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.7)" }]}>Android 8.0+ • v1.4.5 Oficial • 100% Livre</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -120,9 +129,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             activeOpacity={0.8}
                             onPress={onScrollToHowItWorks || onExploreFeatures}
                         >
-                            <Text style={[styles.btnSecondaryText, { color: theme.text.primary }]}>
-                                Como Funciona
-                            </Text>
+                            <View style={styles.secondaryBtnRow}>
+                                <Text style={[styles.btnSecondaryText, { color: theme.text.primary }]}>
+                                    Como Funciona
+                                </Text>
+                                <SvgChevronRightIcon size={14} color={theme.text.primary} />
+                            </View>
                             <Text
                                 style={[
                                     styles.btnSecondarySub,
@@ -134,7 +146,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                         </TouchableOpacity>
                     </View>
 
-                    {/* Social Proof & Trust Strip */}
+                    {/* Social Proof & Trust Strip with 100% SVG Icons */}
                     <View
                         style={[
                             styles.trustRow,
@@ -147,24 +159,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                             style={styles.trustItem}
                             onPress={() => onOpenPolicies("privacy")}
                         >
+                            <SvgShieldIcon size={14} color={theme.accent} />
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                100% Seguro & LGPD
+                                Sem Anúncios & LGPD
                             </Text>
                         </TouchableOpacity>
 
                         <Text style={[styles.trustDot, { color: theme.text.secondary }]}>•</Text>
 
                         <View style={styles.trustItem}>
+                            <SvgMapPinIcon size={14} color={theme.accent} />
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                Radar PostGIS 15km
+                                400+ Mercados Mapeados
                             </Text>
                         </View>
 
                         <Text style={[styles.trustDot, { color: theme.text.secondary }]}>•</Text>
 
                         <View style={styles.trustItem}>
+                            <SvgGithubIcon size={14} color={theme.accent} />
                             <Text style={[styles.trustItemText, { color: theme.text.secondary }]}>
-                                Código Aberto & Livre
+                                Código Aberto no GitHub
                             </Text>
                         </View>
                     </View>
@@ -203,31 +218,38 @@ const styles = StyleSheet.create({
         maxWidth: 1200,
         marginHorizontal: "auto",
         width: "100%",
-        paddingHorizontal: 24,
+        paddingHorizontal: 20,
         flexDirection: "column",
         alignItems: "center",
-        gap: 48,
+        gap: 36,
+        position: "relative",
     },
     innerDesktop: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        gap: 56,
+        gap: 40,
     },
     textContent: {
         width: "100%",
         alignItems: "flex-start",
+        position: "relative",
     },
     textContentDesktop: {
-        flex: 1,
-        maxWidth: 620,
+        flex: 1.25,
+        maxWidth: 640,
     },
     badgeRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
         borderWidth: 1,
         marginBottom: 20,
+        position: "relative",
+        zIndex: 30,
     },
     badgeText: {
         fontSize: 11,
@@ -236,24 +258,31 @@ const styles = StyleSheet.create({
     },
     headline: {
         fontWeight: "900",
-        letterSpacing: -1.2,
-        marginBottom: 20,
+        letterSpacing: -1.0,
+        marginBottom: 18,
+        position: "relative",
+        zIndex: 30,
     },
     subtitle: {
         fontWeight: "400",
         letterSpacing: -0.2,
-        marginBottom: 32,
+        marginBottom: 28,
+        maxWidth: 560,
+        position: "relative",
+        zIndex: 30,
     },
     actionRow: {
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 16,
-        marginBottom: 32,
+        marginBottom: 28,
         width: "100%",
+        position: "relative",
+        zIndex: 10,
     },
     btnPrimary: {
         paddingVertical: 14,
-        paddingHorizontal: 28,
+        paddingHorizontal: 24,
         borderRadius: 14,
         shadowColor: "#FFB703",
         shadowOffset: { width: 0, height: 6 },
@@ -277,10 +306,17 @@ const styles = StyleSheet.create({
     },
     btnSecondary: {
         paddingVertical: 14,
-        paddingHorizontal: 22,
+        paddingHorizontal: 20,
         borderRadius: 14,
         borderWidth: 1,
-        minWidth: 180,
+        minWidth: 160,
+        justifyContent: "center",
+    },
+    secondaryBtnRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 4,
     },
     btnSecondaryText: {
         fontSize: 14,
@@ -289,7 +325,6 @@ const styles = StyleSheet.create({
     },
     btnSecondarySub: {
         fontSize: 11,
-        fontWeight: "500",
         textAlign: "center",
         marginTop: 2,
     },
@@ -297,12 +332,18 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         flexWrap: "wrap",
-        gap: 10,
-        paddingTop: 20,
+        gap: 12,
+        paddingTop: 18,
         borderTopWidth: 1,
         width: "100%",
+        position: "relative",
+        zIndex: 30,
     },
-    trustItem: {},
+    trustItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
     trustItemText: {
         fontSize: 12,
         fontWeight: "700",
@@ -314,9 +355,11 @@ const styles = StyleSheet.create({
         width: "100%",
         alignItems: "center",
         justifyContent: "center",
+        position: "relative",
+        zIndex: 10,
     },
     mockupColumnDesktop: {
-        flex: 1,
-        maxWidth: 460,
+        flex: 0.85,
+        maxWidth: 390,
     },
 });
