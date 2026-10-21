@@ -99,9 +99,9 @@ export function createSemanticColors(themeType: ThemeType = "dark") {
         ? primitiveColors.darkPalette
         : primitiveColors.lightPalette;
 
-    // Amarelo oficial do Presco (#FFB703)
-    const accent = primitiveColors.brand.yellow500;
-    const accentHover = primitiveColors.brand.yellow600;
+    // Amarelo oficial do Presco (#FFB703) para Dark/AMOLED e Âmbar Encorpado (#B45309) para Light (WCAG AA/AAA)
+    const accent = isLight ? primitiveColors.brand.yellow800 : primitiveColors.brand.yellow500;
+    const accentHover = isLight ? primitiveColors.brand.yellow900 : primitiveColors.brand.yellow600;
 
     return {
         themeType,
@@ -119,14 +119,14 @@ export function createSemanticColors(themeType: ThemeType = "dark") {
             border: palette.border,
             borderSubtle: palette.borderSubtle,
             overlay: primitiveColors.overlay.black75,
-            highlight: accent + "18",
-            badgeBg: accent + "22",
+            highlight: isLight ? "rgba(180, 83, 9, 0.12)" : accent + "18",
+            badgeBg: isLight ? "rgba(180, 83, 9, 0.14)" : accent + "22",
         },
         text: {
             primary: palette.text,
             secondary: palette.subText,
             tertiary: isLight ? primitiveColors.neutral.gray500 : primitiveColors.neutral.gray400,
-            inverse: "#000000",
+            inverse: isLight ? "#FFFFFF" : "#000000",
             accent: accent,
         },
         border: {

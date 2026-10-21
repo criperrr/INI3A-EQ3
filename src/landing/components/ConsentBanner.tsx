@@ -4,9 +4,10 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import { SvgShieldIcon } from "./SvgIcons";
 
 interface ConsentBannerProps {
     theme: SemanticTheme;
@@ -20,7 +21,7 @@ export const ConsentBanner: React.FC<ConsentBannerProps> = ({
     onOpenPolicies,
 }) => {
     const [accepted, setAccepted] = useState(true); // default true to avoid flash
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     useEffect(() => {
@@ -61,6 +62,7 @@ export const ConsentBanner: React.FC<ConsentBannerProps> = ({
         >
             <View style={styles.textColumn}>
                 <View style={styles.badgeRow}>
+                    <SvgShieldIcon size={12} color={theme.accent} />
                     <Text style={[styles.badgeText, { color: theme.accent }]}>
                         PRIVACIDADE & ARMAZENAMENTO LOCAL (LGPD)
                     </Text>
@@ -85,7 +87,7 @@ export const ConsentBanner: React.FC<ConsentBannerProps> = ({
                     style={[styles.acceptBtn, { backgroundColor: theme.accent }]}
                     onPress={handleAccept}
                 >
-                    <Text style={styles.acceptBtnText}>Aceitar & Continuar</Text>
+                    <Text style={[styles.acceptBtnText, { color: theme.text.inverse }]}>Aceitar & Continuar</Text>
                 </TouchableOpacity>
             </View>
         </View>

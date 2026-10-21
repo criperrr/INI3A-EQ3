@@ -5,9 +5,10 @@ import {
     TouchableOpacity,
     ScrollView,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import { SvgCloseIcon, SvgShieldIcon } from "./SvgIcons";
 
 export type PolicyTab = "terms" | "privacy" | "guidelines" | "cookies";
 
@@ -25,7 +26,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
     onClose,
 }) => {
     const [activeTab, setActiveTab] = useState<PolicyTab>(initialTab);
-    const { width, height } = Dimensions.get("window");
+    const { width, height } = useWindowDimensions();
     const isDesktop = width >= 768;
 
     useEffect(() => {
@@ -86,9 +87,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                         onPress={onClose}
                         accessibilityLabel="Fechar janela"
                     >
-                        <Text style={[styles.closeBtnText, { color: theme.text.primary }]}>
-                            ✕
-                        </Text>
+                        <SvgCloseIcon size={16} color={theme.text.primary} />
                     </TouchableOpacity>
                 </View>
 
@@ -236,7 +235,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                             </Text>
                             <Text style={[styles.paragraph, { color: theme.text.secondary }]}>
                                 Para registrar preços ou votar em ocorrências, o usuário compromete-se a fornecer um endereço de e-mail válido
-                                e a verificar sua identidade via 2FA (código OTP). O usuário é o único responsável pela guarda de suas credenciais
+                                e a verificar sua identidade via autenticação em duas etapas (código seguro por e-mail). O usuário é o único responsável pela guarda de suas credenciais
                                 e por todas as ações praticadas em sua conta.
                             </Text>
                         </View>
@@ -254,9 +253,12 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                                     },
                                 ]}
                             >
-                                <Text style={[styles.lgpdBadgeTitle, { color: theme.accent }]}>
-                                    COMPROMISSO RIGOROSO COM A LEI 13.709/2018 (LGPD)
-                                </Text>
+                                <View style={styles.badgeTitleRow}>
+                                    <SvgShieldIcon size={14} color={theme.accent} />
+                                    <Text style={[styles.lgpdBadgeTitle, { color: theme.accent }]}>
+                                        COMPROMISSO RIGOROSO COM A LEI 13.709/2018 (LGPD)
+                                    </Text>
+                                </View>
                                 <Text style={[styles.lgpdBadgeDesc, { color: theme.text.primary }]}>
                                     Seus dados pertencem a você. O Presco adota os princípios de Minimização,
                                     Finalidade Legítima e Segurança Cibernética por Padrão (Privacy by Default).
@@ -267,7 +269,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                                 1. Quais Dados Coletamos e Por Quê
                             </Text>
                             <Text style={[styles.paragraph, { color: theme.text.secondary }]}>
-                                • <Text style={styles.strong}>Identificação e Acesso:</Text> Nome público, endereço de e-mail e hash criptográfico de senha (armazenado com algoritmo bcrypt fator de custo 10). O e-mail é utilizado estritamente para autenticação e envio do código de segurança 2FA via Resend.
+                                • <Text style={styles.strong}>Identificação e Acesso:</Text> Nome público, endereço de e-mail e senha protegida por criptografia de alto nível. O e-mail é utilizado estritamente para autenticação e envio do código de segurança em duas etapas (2FA).
                                 {"\n"}• <Text style={styles.strong}>Geolocalização (GPS):</Text> Utilizada sob demanda para buscar supermercados no raio de até 15km e calcular o otimizador de rota veicular. <Text style={styles.strong}>Não armazenamos histórico de deslocamentos nem rastreamos o usuário em segundo plano.</Text>
                                 {"\n"}• <Text style={styles.strong}>Câmera:</Text> Acessada exclusivamente no leitor de código de barras EAN-13 para leitura instantânea de gôndola. Nenhuma imagem da sua câmera é transmitida ou gravada em nossos servidores.
                             </Text>
@@ -286,7 +288,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                                 A qualquer momento, através da aba Configurações no aplicativo móvel, você pode:
                                 {"\n"}• Visualizar e exportar todos os dados vinculados à sua conta.
                                 {"\n"}• Retificar informações cadastrais ou alterar sua senha.
-                                {"\n"}• <Text style={styles.strong}>Excluir definitivamente sua conta:</Text> a exclusão purga instantaneamente todos os seus dados pessoais do banco de dados e encerra todas as sessões ativas no Redis.
+                                {"\n"}• <Text style={styles.strong}>Excluir definitivamente sua conta:</Text> a exclusão remove instantaneamente todos os seus dados pessoais de forma permanente e encerra todas as sessões ativas com segurança.
                             </Text>
                         </View>
                     )}
@@ -333,7 +335,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                             <Text style={[styles.paragraph, { color: theme.text.secondary }]}>
                                 Utilizamos o armazenamento local seguro do seu dispositivo (AsyncStorage no celular e localStorage no navegador)
                                 única e exclusivamente para as seguintes finalidades operacionais essenciais:
-                                {"\n"}• <Text style={styles.strong}>Sessão Autenticada:</Text> Chaves criptografadas de Access Token JWT (validade de 15 minutos) e Refresh Token (validade de 7 dias com rotação atômica no Redis).
+                                {"\n"}• <Text style={styles.strong}>Sessão Autenticada:</Text> Tokens de acesso criptografados e chaves temporárias de login para manter sua conta conectada com segurança sem expor seus dados.
                                 {"\n"}• <Text style={styles.strong}>Preferências Visuais:</Text> Armazenamento do tema selecionado (Dark, AMOLED ou Light).
                                 {"\n"}• <Text style={styles.strong}>Consentimento:</Text> Registro de que você tomou ciência das políticas desta plataforma.
                             </Text>

@@ -4,9 +4,17 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgDownloadIcon,
+    SvgGithubIcon,
+    SvgBoxIcon,
+    SvgLockIcon,
+    SvgShieldIcon,
+    SvgOfficialReleaseQrCode,
+} from "./SvgIcons";
 
 interface DownloadSectionProps {
     theme: SemanticTheme;
@@ -19,7 +27,7 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
     onDownload,
     onOpenRepo,
 }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     return (
@@ -35,7 +43,16 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
             ]}
         >
             <View style={styles.inner}>
-                <View style={[styles.card, isDesktop && styles.cardDesktop, { backgroundColor: theme.surface.card, borderColor: theme.accent + "50" }]}>
+                <View
+                    style={[
+                        styles.card,
+                        isDesktop && styles.cardDesktop,
+                        {
+                            backgroundColor: theme.surface.card,
+                            borderColor: theme.accent + "50",
+                        },
+                    ]}
+                >
                     {/* Left Column: Download Info & CTA */}
                     <View style={styles.infoColumn}>
                         <View
@@ -48,7 +65,7 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                             ]}
                         >
                             <Text style={[styles.badgeText, { color: theme.accent }]}>
-                                DISTRIBUIÇÃO OFICIAL • STANDALONE APK
+                                {width < 440 ? "DISTRIBUIÇÃO OFICIAL" : "DISTRIBUIÇÃO OFICIAL • STANDALONE APK"}
                             </Text>
                         </View>
 
@@ -64,26 +81,32 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                         {/* Buttons */}
                         <View style={styles.actionRow}>
                             <TouchableOpacity
-                                style={[styles.downloadBtn, { backgroundColor: theme.accent }]}
+                                style={[styles.downloadBtn, { backgroundColor: theme.accent, shadowColor: theme.accent }]}
                                 activeOpacity={0.85}
                                 onPress={onDownload}
                             >
-                                <Text style={styles.downloadBtnText}>
-                                    Baixar APK (v1.4.5)
-                                </Text>
-                                <Text style={styles.downloadBtnSub}>
-                                    Android 8.0+ • ~58 MB
+                                <View style={styles.btnContentRow}>
+                                    <SvgDownloadIcon size={18} color={theme.text.inverse} />
+                                    <Text style={[styles.downloadBtnText, { color: theme.text.inverse }]}>
+                                        Baixar APK Gratuito (v1.4.5)
+                                    </Text>
+                                </View>
+                                <Text style={[styles.downloadBtnSub, { color: theme.isLight ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.7)" }]}>
+                                    Android 8.0+ • Release Oficial Standalone
                                 </Text>
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.repoBtn, { borderColor: theme.surface.border }]}
+                                style={[styles.repoBtn, { borderColor: theme.surface.border, backgroundColor: theme.surface.card }]}
                                 activeOpacity={0.8}
                                 onPress={onOpenRepo}
                             >
-                                <Text style={[styles.repoBtnText, { color: theme.text.primary }]}>
-                                    Código no GitHub
-                                </Text>
+                                <View style={styles.btnContentRow}>
+                                    <SvgGithubIcon size={18} color={theme.text.primary} />
+                                    <Text style={[styles.repoBtnText, { color: theme.text.primary }]}>
+                                        Código no GitHub
+                                    </Text>
+                                </View>
                                 <Text style={[styles.repoBtnSub, { color: theme.text.secondary }]}>
                                     Repositório Open Source
                                 </Text>
@@ -92,21 +115,30 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
 
                         {/* Integrity & Tech specs */}
                         <View style={styles.specsRow}>
-                            <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                Universal APK (arm64, v7a)
-                            </Text>
+                            <View style={styles.specItemWrap}>
+                                <SvgBoxIcon size={13} color={theme.text.secondary} />
+                                <Text style={[styles.specItem, { color: theme.text.secondary }]}>
+                                    Universal APK (arm64, v7a)
+                                </Text>
+                            </View>
                             <Text style={[styles.specDot, { color: theme.text.secondary }]}>•</Text>
-                            <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                Assinado via CI/CD
-                            </Text>
+                            <View style={styles.specItemWrap}>
+                                <SvgLockIcon size={13} color={theme.text.secondary} />
+                                <Text style={[styles.specItem, { color: theme.text.secondary }]}>
+                                    Assinado via CI/CD
+                                </Text>
+                            </View>
                             <Text style={[styles.specDot, { color: theme.text.secondary }]}>•</Text>
-                            <Text style={[styles.specItem, { color: theme.text.secondary }]}>
-                                Sem Custos
-                            </Text>
+                            <View style={styles.specItemWrap}>
+                                <SvgShieldIcon size={13} color={theme.text.secondary} />
+                                <Text style={[styles.specItem, { color: theme.text.secondary }]}>
+                                    Zero Anúncios & Sem Cartão
+                                </Text>
+                            </View>
                         </View>
                     </View>
 
-                    {/* Right Column: QR Code Visual for Mobile Camera Scan */}
+                    {/* Right Column: Real Valid SVG QR Code */}
                     <View
                         style={[
                             styles.qrColumn,
@@ -125,33 +157,30 @@ export const DownloadSection: React.FC<DownloadSectionProps> = ({
                             </Text>
                         </View>
 
-                        {/* Styled QR Code Matrix Simulation */}
-                        <View style={styles.qrMatrixWrapper}>
-                            <View style={styles.qrMatrix}>
-                                <View style={[styles.qrCorner, styles.qrTL, { borderColor: theme.accent }]}>
-                                    <View style={[styles.qrCornerInner, { backgroundColor: theme.accent }]} />
-                                </View>
-                                <View style={[styles.qrCorner, styles.qrTR, { borderColor: theme.accent }]}>
-                                    <View style={[styles.qrCornerInner, { backgroundColor: theme.accent }]} />
-                                </View>
-                                <View style={[styles.qrCorner, styles.qrBL, { borderColor: theme.accent }]}>
-                                    <View style={[styles.qrCornerInner, { backgroundColor: theme.accent }]} />
-                                </View>
-                                <View style={styles.qrGridPattern}>
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                    <View style={[styles.qrDot, { backgroundColor: theme.accent }]} />
-                                </View>
-                            </View>
+                        {/* 100% Real, Valid, Scannable SVG QR Code (High-contrast ISO/IEC 18004) */}
+                        <View
+                            style={[
+                                styles.qrMatrixWrapper,
+                                {
+                                    backgroundColor: "#FFFFFF",
+                                    borderColor: theme.accent,
+                                    borderWidth: 2,
+                                    shadowColor: theme.accent,
+                                    shadowOffset: { width: 0, height: 4 },
+                                    shadowOpacity: 0.25,
+                                    shadowRadius: 12,
+                                },
+                            ]}
+                        >
+                            <SvgOfficialReleaseQrCode
+                                size={170}
+                                color="#000000"
+                                bgColor="#FFFFFF"
+                            />
                         </View>
 
                         <Text style={[styles.qrFooterText, { color: theme.text.secondary }]}>
-                            Aponta para github.com/.../releases
+                            Aponta para github.com/criperrr/.../releases
                         </Text>
                     </View>
                 </View>
@@ -176,7 +205,7 @@ const styles = StyleSheet.create({
     card: {
         borderRadius: 28,
         borderWidth: 1,
-        padding: 36,
+        padding: 32,
         flexDirection: "column",
         gap: 36,
         alignItems: "center",
@@ -193,7 +222,7 @@ const styles = StyleSheet.create({
     badge: {
         alignSelf: "flex-start",
         paddingHorizontal: 12,
-        paddingVertical: 5,
+        paddingVertical: 4,
         borderRadius: 20,
         borderWidth: 1,
         marginBottom: 16,
@@ -206,8 +235,8 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: "900",
-        letterSpacing: -0.8,
-        marginBottom: 14,
+        marginBottom: 12,
+        letterSpacing: -0.6,
     },
     desc: {
         fontSize: 16,
@@ -221,40 +250,42 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     downloadBtn: {
-        paddingVertical: 14,
         paddingHorizontal: 24,
-        borderRadius: 14,
-        minWidth: 180,
+        paddingVertical: 14,
+        borderRadius: 16,
+        minWidth: 220,
+    },
+    btnContentRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
     },
     downloadBtnText: {
-        color: "#030712",
-        fontSize: 15,
+        color: "#000000",
+        fontSize: 16,
         fontWeight: "800",
-        textAlign: "center",
+        letterSpacing: -0.2,
     },
     downloadBtnSub: {
-        color: "rgba(3, 7, 18, 0.7)",
+        color: "#333333",
         fontSize: 11,
         fontWeight: "600",
-        textAlign: "center",
-        marginTop: 2,
+        marginTop: 3,
     },
     repoBtn: {
-        paddingVertical: 14,
         paddingHorizontal: 20,
-        borderRadius: 14,
+        paddingVertical: 14,
+        borderRadius: 16,
         borderWidth: 1,
-        minWidth: 180,
+        minWidth: 190,
     },
     repoBtnText: {
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: "700",
-        textAlign: "center",
     },
     repoBtnSub: {
         fontSize: 11,
-        textAlign: "center",
-        marginTop: 2,
+        marginTop: 3,
     },
     specsRow: {
         flexDirection: "row",
@@ -262,19 +293,24 @@ const styles = StyleSheet.create({
         flexWrap: "wrap",
         gap: 8,
     },
+    specItemWrap: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 5,
+    },
     specItem: {
         fontSize: 12,
-        fontWeight: "600",
+        fontWeight: "500",
     },
     specDot: {
         fontSize: 12,
     },
     qrColumn: {
-        padding: 24,
         borderRadius: 24,
         borderWidth: 1,
+        padding: 24,
         alignItems: "center",
-        width: 260,
+        width: 250,
     },
     qrHeader: {
         alignItems: "center",
@@ -283,63 +319,23 @@ const styles = StyleSheet.create({
     qrTitle: {
         fontSize: 15,
         fontWeight: "800",
+        marginBottom: 4,
     },
     qrSub: {
         fontSize: 11,
-        marginTop: 2,
+        textAlign: "center",
     },
     qrMatrixWrapper: {
-        width: 160,
-        height: 160,
-        backgroundColor: "#000000",
-        borderRadius: 16,
         padding: 12,
+        borderRadius: 16,
         alignItems: "center",
         justifyContent: "center",
-        marginBottom: 14,
-    },
-    qrMatrix: {
-        width: 136,
-        height: 136,
-        position: "relative",
-    },
-    qrCorner: {
-        position: "absolute",
-        width: 38,
-        height: 38,
-        borderWidth: 4,
-        borderRadius: 8,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    qrCornerInner: {
-        width: 16,
-        height: 16,
-        borderRadius: 4,
-    },
-    qrTL: { top: 0, left: 0 },
-    qrTR: { top: 0, right: 0 },
-    qrBL: { bottom: 0, left: 0 },
-    qrGridPattern: {
-        position: "absolute",
-        bottom: 8,
-        right: 8,
-        width: 44,
-        height: 44,
-        flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 6,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    qrDot: {
-        width: 12,
-        height: 12,
-        borderRadius: 3,
+        marginBottom: 12,
     },
     qrFooterText: {
         fontSize: 10,
-        textAlign: "center",
         fontWeight: "600",
+        textAlign: "center",
+        letterSpacing: 0.2,
     },
 });

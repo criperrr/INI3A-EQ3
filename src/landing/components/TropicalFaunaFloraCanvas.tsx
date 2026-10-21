@@ -47,7 +47,7 @@ export const TropicalFaunaFloraCanvas: React.FC<TropicalFaunaFloraCanvasProps> =
             canvas.style.width = "100%";
             canvas.style.height = "100%";
             canvas.style.pointerEvents = "none";
-            canvas.style.zIndex = "1";
+            canvas.style.zIndex = "20";
             canvasRef.current = canvas;
             container.appendChild(canvas);
         }
@@ -264,6 +264,6 @@ const styles = StyleSheet.create({
         ...StyleSheet.absoluteFill,
         overflow: "hidden",
         pointerEvents: "none",
-        zIndex: 2,
+        zIndex: 20,
     },
 });

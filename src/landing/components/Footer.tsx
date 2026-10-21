@@ -5,7 +5,7 @@ import {
     TouchableOpacity,
     StyleSheet,
     Image,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
 import { PolicyTab } from "./PolicyModal";
@@ -23,7 +23,7 @@ export const Footer: React.FC<FooterProps> = ({
     onScrollToSection,
     onOpenRepo,
 }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     const logoSource = theme.isDark
@@ -58,7 +58,7 @@ export const Footer: React.FC<FooterProps> = ({
                         <View style={styles.statusIndicator}>
                             <View style={[styles.statusDot, { backgroundColor: theme.accent }]} />
                             <Text style={[styles.statusText, { color: theme.text.secondary }]}>
-                                Sistemas Operacionais • Versão v1.4.5
+                                Sistemas Operacionais • Versão v1.4.5 Oficial
                             </Text>
                         </View>
                     </View>
