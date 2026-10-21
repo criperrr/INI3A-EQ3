@@ -4171,3 +4171,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/landing/components/ConsentBanner.tsx`
   - `src/landing/components/PolicyModal.tsx`
 - **Impact / Next Steps:** Landing page 100% responsiva, sem overflow em telas mobile, tipografia moderna e elegante sem emojis infantis, preservando rigorosamente o design original, o tema visual dinâmico e a paleta do Presco. 100% typecheck aprovado.
+
+
+## `2026-10-21 09:10` - `docs(agents)`: Especificação formal do protocolo IACP
+
+- **Description:** Criada a especificação arquitetural completa do IACP (Internal Agent Communication Protocol) para distribuição de tarefas multi-agente, consenso dialético com rotação cruzada de análises/ações, e governança de ciclos recursivos autônomos. Inclui atores ($A_r$, $A_j$), operações (`error_hunt`, `feature_creator`, `analyse`), diagramas de sequência Mermaid e versão formalmente revisada do prompt do desenvolvedor.
+- **Files Modified:**
+  - `.agents/protocols/IACP.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Documento estruturado disponível para consultas e orquestração de subagentes em tarefas complexas e refatorações em escala.

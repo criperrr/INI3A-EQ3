@@ -7,6 +7,13 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Especificação Arquitetural do Protocolo IACP (Internal Agent Communication Protocol) (`docs/iacp-protocol-specification`):**
+  - **Criação do Protocolo Formal:** Criado o documento [`.agents/protocols/IACP.md`](file:///C:/Users/ra2457009/Desktop/proj/INI3A-EQ3/.agents/protocols/IACP.md) definindo a arquitetura distribuída de colaboração, consenso e rotação cíclica entre agentes autônomos de IA.
+  - **Atores & Formalismo Matemático:** Formalizados $ (Agente Raiz), $ (Subagentes especialistas), $ (Resultados/diagnósticos), $ (Quórum de rotação cruzada),  \subseteq A$ (Cluster de convergência semântica) e $\mathcal{A}_{\text{sembleia}} = \{A_r\} \cup A$ (Assembleia deliberativa).
+  - **Operações Fundamentais:** Especificadas as operações `error_hunt`, `feature_creator` e `analyse`, detalhando suas relações de equivalência e herança estrutural ($\text{error\_hunt} \equiv \text{feature\_creator} + \text{análise adversarial}$, $\text{analyse} \equiv \text{estágio primário de } \text{error\_hunt}$).
+  - **6 Fases de Execução:** Detalhado o pipeline com diagramas de sequência Mermaid cobrindo Spawn, Rotação de Resultados, Clusterização/Despacho, Rotação de Ações, Execução & Revisão Paritária, e Síntese Executiva de alto nível para o desenvolvedor.
+  - **Mecanismo de Ciclos Recursivos (*Cycles System*):** Especificadas as modalidades `low_count`, `medium_count`, `high_count` e `infinite` (com critério autônomo de parada por consenso da assembleia), explorando a variabilidade estocástica dos modelos para mitigar alucinações e viabilizar alterações massivas em código com máxima segurança.
+  - **Prompt Revisado:** Incluída transcrição formal, gramatical e semanticamente otimizada da solicitação conceitual para reutilização e evolução incremental.
 - **Refatoração Responsiva, Erradicação de Emojis e Redução de Redundância na Landing Page (`feat/landing-refactor-mobile-responsive`):**
   - **Erradicação Total de Emojis:** Removidos todos os emojis decorativos de títulos, tags, badges, botões e tabs (`PhoneMockup.tsx`, `HeroSection.tsx`, `ImpactStatsSection.tsx`, `HowItWorksSection.tsx`, `FeaturesSection.tsx`, `SecurityProtectionSection.tsx`, `DownloadSection.tsx`, `Header.tsx`, `ConsentBanner.tsx`, `PolicyModal.tsx`), adotando tipografia técnica, limpa e profissional com códigos de badge semânticos (`EAN`, `ROTA`, `GPS`, `RANK`, `QUÓRUM`, `2FA`, `GEO`, `LGPD`, `POSTGIS`, `LÍQUIDO`, `ABERTO`, `AUDITADO`).
   - **Mockup e Imagens com Dimensionamento Dinâmico & Proporcional:** Implementado dimensionamento dinâmico baseado em `Dimensions.addEventListener("change")` em `PhoneMockup.tsx`, calculando largura e altura com aspect ratio realista de smartphone (~1.88) que encolhe suavemente em telas mobile (`availableWidth < 340 ? Math.max(availableWidth, 260) : 340`).
@@ -607,6 +614,12 @@ Routes:
 ## 2. Navigation Index
 
 Direct relative paths from project root.
+
+### Multi-Agent Protocols
+
+| File | Key exports / purpose |
+|---|---|
+| `.agents/protocols/IACP.md` | Especificação arquitetural do IACP (Internal Agent Communication Protocol), atores ($, $), rotação dialética e ciclos recursivos |
 
 ### Backend
 
