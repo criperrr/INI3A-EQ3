@@ -312,7 +312,8 @@ class AuthServiceClass {
         badgesCount: badgesWithStatus.filter((b) => b.isUnlocked).length,
       },
       badges: badgesWithStatus,
-      twoFactorVerified: Boolean(user.twoFactorVerified || isSuperAdmin),
+      // [TEMPORÁRIO - DEMONSTRAÇÃO DEV]: 2FA sempre ativo no profile para demonstração
+      twoFactorVerified: true,
       contributionsGrid: contributionGrid,
       recentContributions,
       createdAt: user.createdAt,
