@@ -4244,3 +4244,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `src/landing/package.json`
 - **Impact / Next Steps:** Monorepo ready for CI PR validation and deployment.
+
+
+## `2026-10-21 21:15` - `feat(auth)`: Temporarily disable 2FA requirement for dev demo APK
+
+- **Description:** Temporarily bypassed the two-factor authentication requirement in `authMiddleware.ts` (`requireTwoFactor`) and frontend `authContext.tsx` (`isTwoFactorVerified = true`) and `auth.service.ts` to allow smooth product demonstration, manual item registration, and price submission on dev APK builds without email OTP blocking. Configured `staging.yml` workflow to automatically build and publish the devFlavor APK artifact on push.
+- **Files Modified:**
+  - `src/backend/src/shared/middlewares/authMiddleware.ts`
+  - `src/backend/src/modules/auth/auth.service.ts`
+  - `src/frontend/content/authContext.tsx`
+  - `.github/workflows/staging.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Developers and testers can freely post products and submit prices in demonstration APKs.

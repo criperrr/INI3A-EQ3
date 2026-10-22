@@ -7,6 +7,15 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Desativação Temporária de 2FA para APK de Demonstração em `dev` (`feat/disable-2fa-dev`):**
+  - **Bypass no Backend (`authMiddleware.ts` & `auth.service.ts`):**
+    - `requireTwoFactor` permite passagem direta de usuários autenticados sem bloqueio de código por e-mail para viabilizar cadastro de produtos e cotações na demonstração.
+    - `authService.getProfile` retorna `twoFactorVerified: true` por padrão.
+  - **Bypass no Frontend (`authContext.tsx`):**
+    - `isTwoFactorVerified` definido como `true` no contexto global, permitindo acesso imediato a `customRegisterProduct`, `registerProduct` e interações de cotação/votos sem disparar o modal bloqueante.
+  - **Automação do APK de Staging no CI (`staging.yml`):**
+    - Configurado o workflow `staging.yml` para compilar automaticamente o APK debug devFlavor (`Presco-Staging-devFlavor.apk`) em pushes na branch `dev` com upload de artefato para download direto.
+  - **SemVer:** Atualizado para `v1.5.1` (`versionCode: 32`).
 - **Instalação da Skill `landing-page` e Refatoração Estrutural da Landing Page (`feat/landing-page-refactor`):**
   - **Refinamento de UI/UX do Header & Auto-Hide Estilo Google (`Header.tsx`):**
     - Logo ampliado no Header para 50px de altura no desktop (faixa 46-52px) e 38px no mobile com renderização nítida.
