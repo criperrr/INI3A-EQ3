@@ -41,28 +41,30 @@ jobs:
         run: |
           docker compose up -d postgres redis
           echo "Aguardando serviços ficarem saudáveis..."
-          sleep 5
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres -d presco_db; do sleep 1; done'
+          timeout 20 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
+          echo "✅ Postgres e Redis online e saudáveis!"
 
       - name: Executar Migrações e Seed no Banco de Teste
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
-          REDIS_URL: redis://localhost:6379
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
           JWT_SECRET: nightly-audit-secret-key-32-chars-long
-        run: |
-          npm run db:migrate || true
-          npm run db:seed || true
-
-      - name: Iniciar Backend em Segundo Plano para Carga
         run: |
           mkdir -p src/backend
           cat << 'EOF' > src/backend/.env
-          DATABASE_URL=postgres://postgres:postgres@localhost:5432/presco
-          REDIS_URL=redis://localhost:6379
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL=redis://127.0.0.1:6380
           SERVER_PORT=3333
           JWT_SECRET=nightly-audit-secret-key-32-chars-long
           NODE_ENV=test
           EOF
           cp src/backend/.env .env
+          npm run --prefix src/backend db:migrate
+          npm run --prefix src/backend db:seed
+
+      - name: Iniciar Backend em Segundo Plano para Carga
+        run: |
           npm run --prefix src/backend start > backend-nightly.log 2>&1 &
           echo "Aguardando backend inicializar..."
           READY=0
@@ -91,6 +93,11 @@ jobs:
           npm run test:k6:journeys || true
 
       - name: Executar Testes de Concorrência e Mutação
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
+          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+          NODE_ENV: test
         run: |
           echo "Executando testes de concorrência e resiliência..."
           npm run test:concurrency
