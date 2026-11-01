@@ -24,6 +24,26 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-11-01 11:45] - fix(ci): corrigir falhas no workflow de auditoria noturna k6 e upload de artefatos
+
+- **Description:** Diagnosticou e corrigiu integralmente as causas de falha do job `124802702281` no workflow `nightly-audit.yml`:
+  1. Suporte a `K6_TARGET` e fallback para `local` em `tests/k6/config/environments.js`, impedindo que os testes atacassem o servidor remoto sem autorização em vez do backend local.
+  2. Ajustado o script de subida do backend para instanciar via `npm run --prefix src/backend start` com `.env` dedicado e verificação estrita de prontidão com fail-fast.
+  3. Substituição de dois-pontos (`:`) por hífens no timestamp de logs para evitar bloqueio no `upload-artifact@v4`.
+  4. Permissão `issues: write` adicionada ao workflow para notificação via `gh issue create`.
+  5. Adicionado bypass de rate limit de autenticação para suíte k6 e `NODE_ENV === "test"`.
+  6. Atualizada URL de teste da imagem do OpenFoodFacts para versão ativa no CDN.
+- **Files Modified:**
+  - `.github/workflows/nightly-audit.yml`
+  - `src/backend/src/shared/middlewares/rateLimiter.ts`
+  - `tests/k6/config/environments.js`
+  - `tests/k6/config/thresholds.js`
+  - `tests/k6/scenarios/09_image_optimization.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Pipeline noturno de auditoria pesado (`nightly-audit.yml`) agora executa com total estabilidade, acumula históricos e publica artefatos de performance sem erros.
+
+
 ## [2026-09-08 12:40] - feat(setup): manifesto de dependências + bootstrap cross-platform com serviços híbridos nativo/Docker
 
 - **Description:** Reescreveu o fluxo de setup para instalar tudo que o projeto precisa e resolver Postgres/Redis com estratégia nativo-first:

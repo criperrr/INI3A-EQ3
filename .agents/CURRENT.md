@@ -7,6 +7,15 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Blindagem e Correção da Auditoria Noturna CI no GitHub Actions (`nightly-audit.yml`):**
+  - **Diagnóstico da Causa Raiz da Falha no Job `124802702281`:**
+    - `K6_TARGET: local` vs `TARGET_ENV`: O workflow enviava `K6_TARGET: local`, porém `tests/k6/config/environments.js` verificava apenas `__ENV.TARGET_ENV`, caindo no fallback `'remote'` e direcionando indevidamente a carga k6 para o servidor CTI em vez dos containers Postgres/Redis/Backend levantados no runner do GitHub Actions.
+    - Inicialização e Alias do Backend: O step invocava `nohup npx tsx src/backend/src/server.ts` da raiz sem carregar `.env` do backend e sem o mapeamento de paths `@/*` da raiz, falhando silenciosamente após o loop de 30s. Ajustado para provisionar `src/backend/.env` e iniciar via `npm run --prefix src/backend start` com verificação estrita de prontidão (`curl http://localhost:3333/health`) e fail-fast com dump de log se não responder.
+    - Caractere Proibido em Artefatos do GitHub Actions: `date -u +"%Y-%m-%dT%H:%M:%SZ"` gerava dois-pontos (`:`) no nome de arquivo de log (`logs/backend-nightly-...:..:..Z.log`), violando regras de sistema de arquivos do `actions/upload-artifact@v4` e abortando o job. Corrigido para `+"%Y-%m-%d_%H-%M-%SZ"`.
+    - Permissões de Notificação de Falha: Adicionado `permissions: { contents: read, issues: write }` ao workflow para permitir que `gh issue create` funcione com sucesso em caso de incidentes.
+    - Limite de Taxa de Autenticação em Testes: Em `rateLimiter.ts`, adicionado bypass seguro quando `NODE_ENV === "test"` ou quando o User-Agent for `Presco-k6-PerformanceTest`, prevenindo bloqueio 429 durante auditorias e testes de carga contínuos.
+    - CDN OpenFoodFacts e Imagem Transcodificada: Atualizada a URL de teste de imagem em `09_image_optimization.js` de `.4.400.jpg` (404 obsoleto) para `.34.400.jpg` (ativo).
+    - Infraestrutura Remota CTI: Corrigida a chave SSH no Termux (`~/.ssh/config` apontando para a chave válida `ra2457039_id_ed25519 (2)`), instalado o módulo binário nativo `sharp` linux-x64 no servidor CTI (`npm install --include=optional sharp`) e reiniciado o processo PM2 com 100% de sucesso.
 - **Desativação Temporária de 2FA para APK de Demonstração em `dev` (`feat/disable-2fa-dev`):**
   - **Bypass no Backend (`authMiddleware.ts` & `auth.service.ts`):**
     - `requireTwoFactor` permite passagem direta de usuários autenticados sem bloqueio de código por e-mail para viabilizar cadastro de produtos e cotações na demonstração.

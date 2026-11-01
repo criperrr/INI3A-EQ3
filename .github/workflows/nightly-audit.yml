@@ -9,6 +9,10 @@ concurrency:
   group: nightly-audit
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   heavy_audit:
     name: Heavy Audit (Mutation, Load & User Journeys)
@@ -49,26 +53,38 @@ jobs:
           npm run db:seed || true
 
       - name: Iniciar Backend em Segundo Plano para Carga
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: nightly-audit-secret-key-32-chars-long
-          SERVER_PORT: 3333
-          NODE_ENV: test
         run: |
-          nohup npx tsx src/backend/src/server.ts > backend-nightly.log 2>&1 &
+          mkdir -p src/backend
+          cat << 'EOF' > src/backend/.env
+          DATABASE_URL=postgres://postgres:postgres@localhost:5432/presco
+          REDIS_URL=redis://localhost:6379
+          SERVER_PORT=3333
+          JWT_SECRET=nightly-audit-secret-key-32-chars-long
+          NODE_ENV=test
+          EOF
+          cp src/backend/.env .env
+          npm run --prefix src/backend start > backend-nightly.log 2>&1 &
           echo "Aguardando backend inicializar..."
+          READY=0
           for i in {1..30}; do
             if curl -s http://localhost:3333/health | grep -q "ok"; then
               echo "✅ Backend online e respondendo em http://localhost:3333"
+              READY=1
               break
             fi
             sleep 1
           done
+          if [ "$READY" -ne 1 ]; then
+            echo "❌ Backend falhou ao inicializar dentro de 30s. Logs do backend:"
+            cat backend-nightly.log
+            exit 1
+          fi
 
       - name: Executar Simulação de Carga e Comportamento Real (Grafana k6)
         env:
+          TARGET_ENV: local
           K6_TARGET: local
+          BASE_URL: http://localhost:3333
         run: |
           echo "Executando suíte k6 com SLAs rígidos e simulação de jornada..."
           npm run test:k6
@@ -84,7 +100,7 @@ jobs:
         if: always()
         run: |
           mkdir -p tests/k6/history logs
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%SZ")
           if [ -f tests/k6/summary.json ]; then
             node -e '
               const fs = require("fs");
@@ -123,6 +139,7 @@ jobs:
             tests/k6/history/
             backend-nightly.log
             logs/
+          if-no-files-found: ignore
           retention-days: 90
 
       - name: Notificar Falha Noturna Criando Issue no GitHub
