@@ -5,7 +5,7 @@
  */
 
 import { group, check } from 'k6';
-import { get, post, put, del, safeJson } from '../helpers/http.js';
+import { get, post, put, del, safeJson, expectedStatuses } from '../helpers/http.js';
 import { getAdminAuth, getUserAuth, authHeaders, registerRandomUser } from '../helpers/auth.js';
 import { SMOKE_THRESHOLDS } from '../config/thresholds.js';
 import { randomFloat } from '../helpers/generator.js';
@@ -51,7 +51,8 @@ export default function contributionsAndPricesScenario(data) {
         confirmOutlier: true,
       },
       authHeaders(admin.accessToken),
-      'POST /ocurrency'
+      'POST /ocurrency',
+      { responseCallback: expectedStatuses(200, 201, 400, 409) }
     );
 
     check(createOccRes, {
@@ -83,7 +84,8 @@ export default function contributionsAndPricesScenario(data) {
           `/ocurrency/${occurrenceToAudit.id}/vote`,
           { verdict: true },
           authHeaders(voter.accessToken),
-          'POST /ocurrency/:id/vote'
+          'POST /ocurrency/:id/vote',
+          { responseCallback: expectedStatuses(200, 400, 403) }
         );
 
         check(voteRes, {

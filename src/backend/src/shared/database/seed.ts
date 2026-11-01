@@ -1467,14 +1467,107 @@ export async function seedDatabase() {
   let availableMarkets = await db.select().from(market).limit(10);
   if (availableMarkets.length === 0) {
     console.log("🌐 [Seed] Discovering real markets via HERE API for initial data...");
-    const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
-    await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
-    await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
+    try {
+      const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
+      await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
+      await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
+    } catch (err: any) {
+      console.warn("⚠️ [Seed] HereMarketDiscovery error:", err?.message || err);
+    }
     availableMarkets = await db.select().from(market).limit(10);
   }
 
-  // Purged catalog: Do not auto-seed predefined products to keep database clean as requested by user.
-  console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
+  // Fallback baseline markets if discovery produced 0 markets (e.g. offline, CI without HERE_API_KEY, or test runner)
+  if (availableMarkets.length === 0) {
+    console.log("🌱 [Seed] Seeding baseline fallback markets for offline/CI environments...");
+    const fallbackMarkets = [
+      { name: "Supermercado Confiança Max", location: { lat: -22.3432, lng: -49.0587 } as any },
+      { name: "Tauste Supermercados Bauru", location: { lat: -22.3325, lng: -49.0682 } as any },
+      { name: "Pão de Açúcar Paulista", location: { lat: -23.5651, lng: -46.6517 } as any },
+    ];
+    for (const fm of fallbackMarkets) {
+      await db.insert(market).values(fm).onConflictDoNothing();
+    }
+    availableMarkets = await db.select().from(market).limit(10);
+  }
+
+  // Synchronize catalog products when running tests/CI or when explicitly requested
+  const shouldSeedCatalog =
+    process.env.SEED_CATALOG === "true" ||
+    process.env.NODE_ENV === "test" ||
+    process.env.CI === "true";
+
+  if (shouldSeedCatalog) {
+    let insertedProductCount = 0;
+    let insertedOccurrencesCount = 0;
+
+    for (const item of catalogProducts) {
+      let targetProduct = await db.query.product.findFirst({
+        where: (table, { eq }) => eq(table.ean, item.ean),
+      });
+
+      if (!targetProduct) {
+        const [newProduct] = await db
+          .insert(product)
+          .values({
+            ean: item.ean,
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
+          })
+          .returning();
+        targetProduct = newProduct;
+        insertedProductCount++;
+      } else {
+        await db
+          .update(product)
+          .set({
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
+          })
+          .where(eq(product.id, targetProduct.id));
+      }
+
+      if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
+        for (let i = 0; i < item.prices.length; i++) {
+          const p = item.prices[i];
+          const assignedMarket = availableMarkets[i % availableMarkets.length];
+          if (!assignedMarket) continue;
+
+          const existingOcc = await db.query.ocurrency.findFirst({
+            where: (table, { and, eq }) =>
+              and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
+          });
+
+          if (!existingOcc) {
+            await db.insert(ocurrency).values({
+              userId: adminUserId,
+              marketId: assignedMarket.id,
+              productId: targetProduct.id,
+              value: p.value,
+              trustFlag: p.trustFlag ?? true,
+              isPromotion: Boolean(p.isPromotion),
+              upvoteCount: p.upvotes ?? 0,
+              downvoteCount: p.downvotes ?? 0,
+              ...(p.createdAt ? { createdAt: new Date(p.createdAt).toISOString() } : {}),
+            });
+            insertedOccurrencesCount++;
+          }
+        }
+      }
+    }
+
+    console.log(
+      `✅ [Seed] Test catalog seeded: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} price occurrences seeded).`
+    );
+  } else {
+    // Purged catalog: Do not auto-seed predefined products in dev/prod to keep database clean as requested by user.
+    console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
+  }
+
   console.log("✨ [Seed] Database initial seed completed successfully.");
 }
 

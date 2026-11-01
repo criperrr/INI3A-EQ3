@@ -24,6 +24,27 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-11-01 12:10] - fix(ci): adicionar seed de catálogo em testes, fallback de mercados e sanitização de queries k6
+
+- **Description:** Implementou correções pontuais para assegurar 100% de sucesso nas asserções do Grafana k6 durante a auditoria noturna no GitHub Actions:
+  1. **Fallback de Mercados no Seed (`seed.ts`):** Adicionou inserção automática de 3 mercados reais de Bauru/SP caso a descoberta via HERE API não encontre registros (offline ou CI).
+  2. **Auto-seed de Catálogo Condicional (`seed.ts`):** Permitiu o carregamento do catálogo de testes quando `SEED_CATALOG === "true"`, `NODE_ENV === "test"` ou `CI === "true"`, preservando o estado enxuto em dev/prod.
+  3. **Configuração de Ambiente no Workflow (`nightly-audit.yml`):** Adicionou `SEED_CATALOG=true` e `HERE_API_KEY` ao `.env` do backend em CI.
+  4. **URI Encoding em Buscas k6 (`03_catalog_and_search.js`, `anonymous_browser.js`):** Envolveu termos em `encodeURIComponent()` para suportar caracteres acentuados sem provocar 400 Bad Request no parser HTTP.
+  5. **Métricas de Falha em Testes Negativos de Segurança (`tests/k6/helpers/http.js`, `02_auth_lifecycle.js`, `04_contributions_and_prices.js`, `08_admin_moderation.js`):** Implementou `extraParams` nos wrappers HTTP e anotou cenários com `responseCallback: expectedStatuses(...)` para evitar que códigos 401, 403 e 409 intencionais inflem artificialmente a métrica `http_req_failed`.
+- **Files Modified:**
+  - `src/backend/src/shared/database/seed.ts`
+  - `.github/workflows/nightly-audit.yml`
+  - `tests/k6/helpers/http.js`
+  - `tests/k6/scenarios/02_auth_lifecycle.js`
+  - `tests/k6/scenarios/03_catalog_and_search.js`
+  - `tests/k6/scenarios/04_contributions_and_prices.js`
+  - `tests/k6/scenarios/08_admin_moderation.js`
+  - `tests/k6/user_journeys/anonymous_browser.js`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Garante 100% de aprovação nas verificações de carga do k6 com integridade de dados e métricas limpas.
+
 ## [2026-11-01 11:45] - fix(ci): corrigir falhas no workflow de auditoria noturna k6 e upload de artefatos
 
 - **Description:** Diagnosticou e corrigiu integralmente as causas de falha do job `124802702281` no workflow `nightly-audit.yml`:

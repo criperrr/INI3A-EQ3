@@ -16,6 +16,14 @@ Executive summary and direct file index for token-efficient agent navigation. Re
     - Limite de Taxa de Autenticação em Testes: Em `rateLimiter.ts`, adicionado bypass seguro quando `NODE_ENV === "test"` ou quando o User-Agent for `Presco-k6-PerformanceTest`, prevenindo bloqueio 429 durante auditorias e testes de carga contínuos.
     - CDN OpenFoodFacts e Imagem Transcodificada: Atualizada a URL de teste de imagem em `09_image_optimization.js` de `.4.400.jpg` (404 obsoleto) para `.34.400.jpg` (ativo).
     - Infraestrutura Remota CTI: Corrigida a chave SSH no Termux (`~/.ssh/config` apontando para a chave válida `ra2457039_id_ed25519 (2)`), instalado o módulo binário nativo `sharp` linux-x64 no servidor CTI (`npm install --include=optional sharp`) e reiniciado o processo PM2 com 100% de sucesso.
+    - População Baseline de Mercados e Produtos no Seed (`seed.ts`):
+      - Adicionado fallback automático de 3 mercados reais de Bauru/SP caso a descoberta via HERE API não retorne dados (por chave ausente ou offline em CI).
+      - Condicionado o auto-seed de produtos de catálogo ao ambiente de testes/CI (`SEED_CATALOG === "true" || NODE_ENV === "test" || CI === "true"`), mantendo a base limpa em dev/prod conforme decisão arquitetural, mas garantindo dados para validações de catálogo, busca e ocorrências de preço.
+    - URI Encoding em Buscas k6 (`03_catalog_and_search.js` e `anonymous_browser.js`):
+      - Envolvidos termos de busca em `encodeURIComponent()` prevenindo 400 Bad Request por caracteres acentuados (ã, é, Ó) no parser HTTP do Node.js.
+    - Tratamento de Cenários Negativos de Segurança no k6 (`http_req_failed`):
+      - Em `tests/k6/helpers/http.js`, implementado suporte a `extraParams` em `get`, `post`, `put`, `patch`, `del` e reexportado `expectedStatuses`.
+      - Marcados testes de segurança negativos propositais (409 duplicata, 401 senha incorreta, 401 token revogado, 403 usuário comum em painel admin) com `responseCallback: expectedStatuses(...)` para que não inflem a métrica `http_req_failed`.
 - **Desativação Temporária de 2FA para APK de Demonstração em `dev` (`feat/disable-2fa-dev`):**
   - **Bypass no Backend (`authMiddleware.ts` & `auth.service.ts`):**
     - `requireTwoFactor` permite passagem direta de usuários autenticados sem bloqueio de código por e-mail para viabilizar cadastro de produtos e cotações na demonstração.

@@ -54,6 +54,8 @@ jobs:
           SERVER_HOST: 0.0.0.0
           JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
           NODE_ENV: test
+          SEED_CATALOG: "true"
+          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
         run: |
           mkdir -p src/backend
           cat << 'EOF' > src/backend/.env
@@ -63,6 +65,8 @@ jobs:
           SERVER_HOST=0.0.0.0
           JWT_SECRET=3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
           NODE_ENV=test
+          SEED_CATALOG=true
+          HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
           EOF
           cp src/backend/.env .env
 

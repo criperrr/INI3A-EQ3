@@ -33,7 +33,7 @@ export default function anonymousBrowserJourney() {
 
     // Step 2: Search for a specific staple grocery item
     const query = randomItem(GROCERY_SEARCH_QUERIES);
-    const searchRes = get(`/products?search=${query}&limit=10`, undefined, 'Guest: Search Product');
+    const searchRes = get(`/products?search=${encodeURIComponent(query)}&limit=10`, undefined, 'Guest: Search Product');
     
     check(searchRes, {
       'guest search succeeded': (r) => r.status === 200,

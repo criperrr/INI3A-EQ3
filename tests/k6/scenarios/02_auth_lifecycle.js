@@ -5,7 +5,7 @@
  */
 
 import { group, check, sleep } from 'k6';
-import { get, post, safeJson } from '../helpers/http.js';
+import { get, post, safeJson, expectedStatuses } from '../helpers/http.js';
 import { authHeaders, login, registerRandomUser } from '../helpers/auth.js';
 import { generateUserPayload } from '../helpers/generator.js';
 import { SMOKE_THRESHOLDS } from '../config/thresholds.js';
@@ -39,7 +39,9 @@ export default function authLifecycleScenario() {
     let refreshToken = regData.refreshToken;
 
     // 2. Conflict: Duplicate registration attempt with same email
-    const duplicateRes = post('/auth/register', userPayload, undefined, 'POST /auth/register [duplicate]');
+    const duplicateRes = post('/auth/register', userPayload, undefined, 'POST /auth/register [duplicate]', {
+      responseCallback: expectedStatuses(409),
+    });
     check(duplicateRes, {
       'duplicate email rejected with 409 Conflict': (r) => r.status === 409,
     });
@@ -48,7 +50,9 @@ export default function authLifecycleScenario() {
     const invalidLoginRes = post('/auth/login', {
       email: userPayload.email,
       password: 'WrongPassword999!',
-    }, undefined, 'POST /auth/login [invalid]');
+    }, undefined, 'POST /auth/login [invalid]', {
+      responseCallback: expectedStatuses(401),
+    });
     check(invalidLoginRes, {
       'invalid password rejected with 401 Unauthorized': (r) => r.status === 401,
     });
@@ -93,7 +97,9 @@ export default function authLifecycleScenario() {
     });
 
     // 7. Request 2FA code generation: POST /auth/2fa/send
-    const send2FARes = post('/auth/2fa/send', {}, authHeaders(accessToken), 'POST /auth/2fa/send');
+    const send2FARes = post('/auth/2fa/send', {}, authHeaders(accessToken), 'POST /auth/2fa/send', {
+      responseCallback: expectedStatuses(200, 429),
+    });
     check(send2FARes, {
       '2fa send responds with success or rate-limit status': (r) => r.status === 200 || r.status === 429,
     });
@@ -122,7 +128,9 @@ export default function authLifecycleScenario() {
     });
 
     // 10. Security: Access with blacklisted token must be rejected with 401
-    const blacklistedAccessRes = get('/auth/me', authHeaders(accessToken), 'GET /auth/me [blacklisted]');
+    const blacklistedAccessRes = get('/auth/me', authHeaders(accessToken), 'GET /auth/me [blacklisted]', {
+      responseCallback: expectedStatuses(401),
+    });
     check(blacklistedAccessRes, {
       'blacklisted token rejected with 401': (r) => r.status === 401,
     });
