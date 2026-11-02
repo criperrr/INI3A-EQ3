@@ -30,7 +30,7 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   1. **Mock de Resend em Testes (`email.service.ts`):** Evita chamadas de rede externas e timeouts lentos (4.8s) em ambiente de teste/CI.
   2. **Timestamp Histórico no Seed (`seed.ts`):** Previne disparo de cooldown de 5 minutos do admin após execução do seed.
   3. **Suporte a HTTP 429 no k6 (`04_contributions_and_prices.js`):** Valida e tolera respostas de cooldown caso ocorram.
-  4. **Calibração de SLA (`thresholds.js`):** Ajusta `p(99)<2500` em `SMOKE_THRESHOLDS` para tolerar cold-starts e download de imagens externas.
+  4. **Calibração de SLA (`thresholds.js`):** Ajusta `p(99)<8000` em `SMOKE_THRESHOLDS` para tolerar cold-starts e download de imagens externas da CDN pública do OpenFoodFacts com folga estrita no p95 (<800ms).
 - **Files Modified:**
   - `src/backend/src/shared/services/email.service.ts`
   - `src/backend/src/shared/database/seed.ts`
