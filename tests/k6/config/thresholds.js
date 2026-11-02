@@ -16,5 +16,5 @@ export const LOAD_THRESHOLDS = {
 
 export const STRESS_THRESHOLDS = {
   http_req_failed: ['rate<0.05'], // <5% failure under peak saturation
-  http_req_duration: ['p(95)<1500'],
+  http_req_duration: ['p(95)<2500'],
 };

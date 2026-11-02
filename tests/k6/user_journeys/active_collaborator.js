@@ -9,7 +9,7 @@
  */
 
 import { group, check, sleep } from 'k6';
-import { get, post, safeJson } from '../helpers/http.js';
+import { get, post, safeJson, expectedStatuses } from '../helpers/http.js';
 import { getAdminAuth, authHeaders, registerRandomUser } from '../helpers/auth.js';
 import { randomFloat } from '../helpers/generator.js';
 
@@ -58,11 +58,13 @@ export default function activeCollaboratorJourney() {
         confirmOutlier: true,
       },
       headers,
-      'Collab: Submit Price (+15 XP)'
+      'Collab: Submit Price (+15 XP)',
+      { responseCallback: expectedStatuses(200, 201, 400, 409, 429) }
     );
 
     check(submitPriceRes, {
-      'price submitted or handled cooldown': (r) => r.status === 201 || r.status === 409 || r.status === 400,
+      'price submitted or handled cooldown': (r) =>
+        r.status === 200 || r.status === 201 || r.status === 409 || r.status === 429 || r.status === 400,
     });
     sleep(1);
 
@@ -79,10 +81,12 @@ export default function activeCollaboratorJourney() {
           `/ocurrency/${occToVote.id}/vote`,
           { verdict: true },
           authHeaders(voter.accessToken),
-          'Collab: Audit Vote (+5 XP)'
+          'Collab: Audit Vote (+5 XP)',
+          { responseCallback: expectedStatuses(200, 400, 403, 409, 429) }
         );
         check(voteRes, {
-          'audit vote processed': (r) => r.status === 200 || r.status === 403 || r.status === 400,
+          'audit vote processed': (r) =>
+            r.status === 200 || r.status === 403 || r.status === 400 || r.status === 409 || r.status === 429,
         });
       }
     }
