@@ -47,25 +47,34 @@ function analyzeFailure() {
     }
   }
 
-  // 2. Inspect k6 summary for HTTP 5xx responses (server errors)
-  const k6SummaryPath = path.resolve('tests/k6/summary.json');
-  if (fs.existsSync(k6SummaryPath)) {
-    try {
-      const k6Summary = JSON.parse(fs.readFileSync(k6SummaryPath, 'utf8'));
-      const rawChecks = [];
-      function collectChecks(group) {
-        if (group.checks) rawChecks.push(...group.checks);
-        if (group.groups) group.groups.forEach(collectChecks);
-      }
-      collectChecks(k6Summary.root_group || {});
-
-      for (const check of rawChecks) {
-        if (check.name && (check.name.includes('500') || check.name.includes('502') || check.name.includes('503')) && check.passes > 0) {
-          findings.push(`### [k6 HTTP 5xx Server Error]\nO k6 detectou resposta de erro de servidor no check: '${check.name}'`);
+  // 2. Inspect k6 summaries (smoke & stress) for HTTP 5xx responses (server errors)
+  const summaryPaths = ['tests/k6/summary.json', 'tests/k6/stress_summary.json'];
+  for (const sPath of summaryPaths) {
+    const k6SummaryPath = path.resolve(sPath);
+    if (fs.existsSync(k6SummaryPath)) {
+      try {
+        const k6Summary = JSON.parse(fs.readFileSync(k6SummaryPath, 'utf8'));
+        const rawChecks = [];
+        function collectChecks(group) {
+          if (group.checks) rawChecks.push(...group.checks);
+          if (group.groups) group.groups.forEach(collectChecks);
         }
+        collectChecks(k6Summary.root_group || {});
+
+        for (const check of rawChecks) {
+          if (
+            check.name &&
+            (check.name.includes('500') || check.name.includes('502') || check.name.includes('503')) &&
+            check.passes > 0
+          ) {
+            findings.push(
+              `### [k6 HTTP 5xx Server Error (${sPath})]\nO k6 detectou resposta de erro de servidor no check: '${check.name}'`
+            );
+          }
+        }
+      } catch {
+        // Ignored
       }
-    } catch {
-      // Ignored
     }
   }
 

@@ -1,4 +1,4 @@
-name: Nightly Heavy Audit (Mutation & K6 Real Load)
+name: Nightly Heavy Audit (Real Load & Stress Testing)
 
 on:
   schedule:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   heavy_audit:
-    name: Heavy Audit (Mutation, Load & User Journeys)
+    name: Heavy Audit (Real Concurrency, Journeys & Stress Testing)
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -91,9 +91,12 @@ jobs:
           K6_TARGET: local
           BASE_URL: http://localhost:3333
         run: |
-          echo "Executando suíte k6 com SLAs rígidos e simulação de jornada..."
+          echo "1. Smoke test de cobertura funcional da API..."
           npm run test:k6
-          npm run test:k6:journeys || true
+          echo "2. Simulação de jornadas multi-usuário simultâneas..."
+          npm run test:k6:journeys
+          echo "3. Teste de estresse com rampa de concorrência até 100 VUs..."
+          npm run test:k6:stress
 
       - name: Executar Testes de Concorrência e Mutação
         env:
@@ -147,6 +150,7 @@ jobs:
           path: |
             tests/k6/report.html
             tests/k6/summary.json
+            tests/k6/stress_summary.json
             tests/k6/history/
             backend-nightly.log
             logs/

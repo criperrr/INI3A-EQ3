@@ -7,6 +7,22 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Auditoria Noturna de Alta Carga, Estresse Concorrente e Jornadas de Usuário (`feat/nightly-real-stress-audit`):**
+  - **Transformação de Auditoria Noturna em Teste Real de Carga e Estresse:**
+    - Erradicado o mascaramento com `|| true` no step de execução de testes k6 em `.github/workflows/nightly-audit.yml`.
+    - Encadeadas as três etapas canônicas: (1) Smoke test de cobertura da API (`npm run test:k6`), (2) Jornadas multi-usuário concorrentes (`npm run test:k6:journeys`), e (3) Teste de estresse com rampa de concorrência até 100 VUs (`npm run test:k6:stress`).
+    - Ativadas todas as jornadas de usuário no comando `test:k6:journeys`: `anonymous_browser.js` (3 VUs), `active_collaborator.js` (2 VUs), e `power_shopper.js` (2 VUs).
+  - **Correção da Jornada do Colaborador Ativo (`active_collaborator.js`):**
+    - Adicionado suporte a HTTP 429 (`TooManyRequestsError` por cooldown de cotação) na asserção de envio de preço e registrado `expectedStatuses(200, 201, 400, 409, 429)`.
+    - Adicionado suporte a `expectedStatuses(200, 400, 403, 409, 429)` para a auditoria de votos comunitários.
+  - **Blindagem do Teste de Estresse e Spike (`stress_test.js` & `spike_test.js`):**
+    - Envolvidos termos de busca em `encodeURIComponent()` para prevenir 400 Bad Request por acentuação gráfica sob carga.
+    - Registrado `expectedStatuses(200, 429)` para catalog, busca e categorias, permitindo que o rate limiter do backend bloqueie abusos com 429 sem poluir falsamente a taxa `http_req_failed`.
+    - Calibrado `p(95)<2500` em `STRESS_THRESHOLDS` para tolerar picos de 100 VUs simultâneos em runners CI sem falso alarme de timeout.
+    - Exportado relatório detalhado `tests/k6/stress_summary.json` e incorporado ao artefato e ao analisador forense `scripts/audit_failure_analyzer.js`.
+  - **Branch Temática Preservada:**
+    - Branch `feat/nightly-real-stress-audit` mantida ativa para modificações adicionais do desenvolvedor.
+  - **SemVer:** Atualizado para `v1.5.2` (`versionCode: 33`).
 - **Blindagem e Correção da Auditoria Noturna CI no GitHub Actions (`nightly-audit.yml`):**
   - **Diagnóstico da Causa Raiz da Falha no Job `124802702281`:**
     - `K6_TARGET: local` vs `TARGET_ENV`: O workflow enviava `K6_TARGET: local`, porém `tests/k6/config/environments.js` verificava apenas `__ENV.TARGET_ENV`, caindo no fallback `'remote'` e direcionando indevidamente a carga k6 para o servidor CTI em vez dos containers Postgres/Redis/Backend levantados no runner do GitHub Actions.
