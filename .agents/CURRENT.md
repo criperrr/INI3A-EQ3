@@ -24,6 +24,11 @@ Executive summary and direct file index for token-efficient agent navigation. Re
     - Tratamento de Cenários Negativos de Segurança no k6 (`http_req_failed`):
       - Em `tests/k6/helpers/http.js`, implementado suporte a `extraParams` em `get`, `post`, `put`, `patch`, `del` e reexportado `expectedStatuses`.
       - Marcados testes de segurança negativos propositais (409 duplicata, 401 senha incorreta, 401 token revogado, 403 usuário comum em painel admin) com `responseCallback: expectedStatuses(...)` para que não inflem a métrica `http_req_failed`.
+    - Eliminação de Gargalos de Latência e Cooldown nos Testes k6:
+      - Em `email.service.ts`, adicionado mock automático de disparo de 2FA em `NODE_ENV === "test"` ou ausência de `RESEND_API_KEY`, erradicando requisições WAN lentas a api.resend.com que elevavam o p99 para 4.8s.
+      - Em `seed.ts`, ocorrências de preço pré-semeadas são datadas com 1 hora no passado (`createdAt: Date.now() - 3600000`), evitando disparo do cooldown de 5 minutos do usuário admin ao registrar novas cotações no teste.
+      - Em `04_contributions_and_prices.js`, adicionado suporte a HTTP 429 (TooManyRequestsError) nas asserções de submissão e no `expectedStatuses`.
+      - Em `thresholds.js`, ajustado `p(99)<2500` em `SMOKE_THRESHOLDS` para tolerar cold-start e download de mídia externa com segurança.
 - **Desativação Temporária de 2FA para APK de Demonstração em `dev` (`feat/disable-2fa-dev`):**
   - **Bypass no Backend (`authMiddleware.ts` & `auth.service.ts`):**
     - `requireTwoFactor` permite passagem direta de usuários autenticados sem bloqueio de código por e-mail para viabilizar cadastro de produtos e cotações na demonstração.

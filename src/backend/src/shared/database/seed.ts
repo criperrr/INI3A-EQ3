@@ -1552,7 +1552,9 @@ export async function seedDatabase() {
               isPromotion: Boolean(p.isPromotion),
               upvoteCount: p.upvotes ?? 0,
               downvoteCount: p.downvotes ?? 0,
-              ...(p.createdAt ? { createdAt: new Date(p.createdAt).toISOString() } : {}),
+              createdAt: p.createdAt
+                ? new Date(p.createdAt).toISOString()
+                : new Date(Date.now() - 3600000).toISOString(),
             });
             insertedOccurrencesCount++;
           }

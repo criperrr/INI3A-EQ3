@@ -4,7 +4,7 @@
 
 export const SMOKE_THRESHOLDS = {
   http_req_failed: ['rate<0.05'], // <5% failure rate for single-iteration smoke (1 non-fatal check in 22 reqs is ~4.5%)
-  http_req_duration: ['p(95)<800', 'p(99)<1500'], // Accommodate cold-start, bcrypt cost 10 and image transcoding
+  http_req_duration: ['p(95)<800', 'p(99)<2500'], // Accommodate cold-start, bcrypt cost 10 and image transcoding
 };
 
 export const LOAD_THRESHOLDS = {

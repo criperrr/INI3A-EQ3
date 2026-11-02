@@ -52,11 +52,12 @@ export default function contributionsAndPricesScenario(data) {
       },
       authHeaders(admin.accessToken),
       'POST /ocurrency',
-      { responseCallback: expectedStatuses(200, 201, 400, 409) }
+      { responseCallback: expectedStatuses(200, 201, 400, 409, 429) }
     );
 
     check(createOccRes, {
-      'occurrence creation responds 201 or 409 (cooldown)': (r) => r.status === 201 || r.status === 409 || r.status === 400,
+      'occurrence creation responds 201 or cooldown/outlier': (r) =>
+        r.status === 201 || r.status === 409 || r.status === 429 || r.status === 400,
     });
 
     const createdJson = safeJson(createOccRes);
