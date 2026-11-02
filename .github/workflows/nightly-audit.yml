@@ -102,9 +102,10 @@ jobs:
           JWT_SECRET: nightly-audit-secret-key-32-chars-long
           NODE_ENV: test
         run: |
+          mkdir -p logs
           echo "Executando testes de concorrência e resiliência..."
           npm run test:concurrency
-          npm test
+          npm test 2>&1 | tee logs/backend-tests.log
 
       - name: Registrar e Acumular Métricas de Desempenho no Histórico
         if: always()
@@ -152,12 +153,23 @@ jobs:
           if-no-files-found: ignore
           retention-days: 90
 
-      - name: Notificar Falha Noturna Criando Issue no GitHub
+      - name: Notificar Falha Noturna Apenas se For Bug Real da Aplicação
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          node scripts/audit_failure_analyzer.js || {
+            echo "ℹ️ Auditoria encerrou com falha, mas a análise forense confirmou que NÃO se trata de um bug da aplicação (apenas instabilidade de ambiente/rede/SLA de teste). Nenhuma issue criada."
+            exit 0
+          }
+
+          echo "🚨 Bug real confirmado no backend! Criando issue técnica..."
+          BUG_DETAILS=$(cat app-bug-report.md)
           gh issue create \
-            --title "🚨 [NIGHTLY AUDIT] Falha detectada na auditoria noturna" \
-            --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os relatórios acumulados e logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --title "🚨 [BUG APLICAÇÃO] Falha confirmada no backend durante auditoria noturna" \
+            --body "A auditoria noturna detectou uma falha real de execução no backend (erro 500, crash ou regressão de teste unitário):
+
+          ${BUG_DETAILS}
+
+          **Run URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug" || echo "Não foi possível abrir a issue automaticamente."

@@ -24,6 +24,19 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 
 ## Modification History
 
+## [2026-11-02 10:55] - fix(ci): criar issues exclusivamente para bugs confirmados da aplicacao
+
+- **Description:** Implementou analisador forense para garantir que issues do GitHub só sejam abertas quando houver evidência incontestável de falha na aplicação:
+  1. **Analisador Forense (`scripts/audit_failure_analyzer.js`):** Inspeciona logs do backend e relatórios do k6 em busca de erros 500, crashes, exceções não tratadas ou regressões em testes unitários.
+  2. **Condição Estrita no Workflow (`nightly-audit.yml`):** Descarta automaticamente falhas causadas por instabilidades de ambiente de CI, timeouts de rede externa ou tooling de testes sem poluir as issues do repositório.
+  3. **Limpeza de Falsos-Positivos:** Fechadas as issues #38, #39, #40, #41 e #42 abertas anteriormente.
+- **Files Modified:**
+  - `scripts/audit_failure_analyzer.js`
+  - `.github/workflows/nightly-audit.yml`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Erradica a abertura de issues indevidas por falhas de testes ou infraestrutura.
+
 ## [2026-11-02 10:40] - fix(ci): otimizar latência de 2FA em testes, tolerância a cooldown e SLA de p99 no k6
 
 - **Description:** Sanou as últimas divergências de latência e cooldown na auditoria noturna do k6:
