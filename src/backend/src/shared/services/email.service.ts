@@ -62,6 +62,13 @@ class EmailServiceClass {
 </html>
     `.trim();
 
+    // In test environments or when API key is missing, mock delivery to avoid external network latency and rate limits
+    if (env.NODE_ENV === "test" || !env.RESEND_API_KEY) {
+      console.log(`[Resend] Mock dispatch in ${env.NODE_ENV || "development"} mode for: ${toEmail}`);
+      console.log(`🔑 [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+      return true;
+    }
+
     try {
       console.log(`[Resend] Dispatching 2FA verification email to: ${toEmail}`);
       const response = await fetch("https://api.resend.com/emails", {

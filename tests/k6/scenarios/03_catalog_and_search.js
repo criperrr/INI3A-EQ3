@@ -33,7 +33,7 @@ export default function catalogAndSearchScenario() {
     // 2. Trigram / Full-text Search
     const searchTerms = ['Arroz', 'Feijão', 'Café', 'Leite', 'Óleo'];
     const randomTerm = searchTerms[Math.floor(Math.random() * searchTerms.length)];
-    const searchRes = get(`/products?search=${randomTerm}&limit=10`, undefined, 'GET /products?search');
+    const searchRes = get(`/products?search=${encodeURIComponent(randomTerm)}&limit=10`, undefined, 'GET /products?search');
     check(searchRes, {
       'search returns 200': (r) => r.status === 200,
       'search returns data payload': (r) => {

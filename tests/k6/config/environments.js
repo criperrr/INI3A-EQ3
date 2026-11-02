@@ -16,18 +16,23 @@ export const ENVIRONMENTS = {
   },
 };
 
-// Target environment: determined by TARGET_ENV or falls back to remote if specified, else local
-const target = __ENV.TARGET_ENV || (__ENV.BASE_URL ? 'custom' : 'remote');
+// Target environment: determined by TARGET_ENV or K6_TARGET or falls back to local (or custom if BASE_URL given)
+const rawTarget = (__ENV.TARGET_ENV || __ENV.K6_TARGET || '').toLowerCase();
+const target = rawTarget === 'remote'
+  ? 'remote'
+  : rawTarget === 'local'
+  ? 'local'
+  : (__ENV.BASE_URL ? 'custom' : 'local');
 
-export const CURRENT_ENV = target === 'local' 
-  ? ENVIRONMENTS.local 
-  : target === 'remote' 
+export const CURRENT_ENV = target === 'remote' 
   ? ENVIRONMENTS.remote 
-  : {
-      baseUrl: __ENV.BASE_URL || ENVIRONMENTS.remote.baseUrl,
+  : target === 'custom' 
+  ? {
+      baseUrl: __ENV.BASE_URL || ENVIRONMENTS.local.baseUrl,
       name: 'Custom Target Server',
       timeout: '15s',
-    };
+    }
+  : ENVIRONMENTS.local;
 
 export const BASE_URL = CURRENT_ENV.baseUrl;
 
