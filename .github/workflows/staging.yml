@@ -21,10 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 10
+    outputs:
+      frontend_changed: ${{ steps.detect_frontend.outputs.frontend_changed }}
 
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -46,10 +50,19 @@ jobs:
           echo "Executando testes de concorrência e race conditions..."
           npm run test:concurrency
 
+      - name: Detectar Alterações no Frontend
+        id: detect_frontend
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          npx tsx scripts/check_frontend_changes.ts "$EVENT_BEFORE" "HEAD"
+
   build_staging_apk:
     name: Build Mobile App (devFlavor / Staging)
     needs: [concurrency_and_audit]
-    if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (inputs.build_apk == true || inputs.build_apk == 'true'))
+    if: |
+      (github.event_name == 'workflow_dispatch' && (inputs.build_apk == true || inputs.build_apk == 'true')) ||
+      (github.event_name == 'push' && needs.concurrency_and_audit.outputs.frontend_changed == 'true')
     runs-on: ubuntu-latest
     environment: staging
     timeout-minutes: 40
