@@ -64,7 +64,15 @@ function analyzeFailure() {
         for (const check of rawChecks) {
           if (
             check.name &&
-            (check.name.includes('500') || check.name.includes('502') || check.name.includes('503')) &&
+            check.name.toLowerCase().includes('no server 500 error') &&
+            check.fails > 0
+          ) {
+            findings.push(
+              `### [k6 HTTP 5xx Server Error (${sPath})]\nO k6 detectou ${check.fails} resposta(s) com erro 500 no check: '${check.name}'`
+            );
+          } else if (
+            check.name &&
+            check.name.toLowerCase().includes('server error 500 detected') &&
             check.passes > 0
           ) {
             findings.push(
@@ -90,6 +98,17 @@ function analyzeFailure() {
         .join('\n');
       findings.push(
         `### [Regressão em Testes Unitários/Integração do Backend]\nFalha em testes de lógica de negócio:\n\`\`\`\n${failSnippet}\n\`\`\``
+      );
+    }
+  }
+
+  // 4. Inspect database integrity check log
+  const integrityLogPath = path.resolve('logs/integrity.log');
+  if (fs.existsSync(integrityLogPath)) {
+    const intLog = fs.readFileSync(integrityLogPath, 'utf8');
+    if (/violação\(ões\) crítica\(s\)/i.test(intLog) || /FALHOU! Encontrados/i.test(intLog)) {
+      findings.push(
+        `### [Violação de Integridade do Banco de Dados Pós-Carga]\n\`\`\`\n${intLog.trim()}\n\`\`\``
       );
     }
   }
