@@ -60,7 +60,7 @@ jobs:
           echo "Aguardando backend inicializar..."
           for i in {1..30}; do
             if curl -s http://localhost:3333/health | grep -q "ok"; then
-              echo "✅ Backend online e respondendo em http://localhost:3333"
+              echo "[OK] Backend online e respondendo em http://localhost:3333"
               break
             fi
             sleep 1
@@ -104,7 +104,7 @@ jobs:
                 };
                 history.push(entry);
                 fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
-                console.log("✅ Benchmark registrado no histórico:", entry);
+                console.log("[OK] Benchmark registrado no histórico:", entry);
               } catch (e) {
                 console.warn("Aviso ao processar histórico k6:", e.message);
               }
@@ -131,6 +131,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh issue create \
-            --title "🚨 [NIGHTLY AUDIT] Falha detectada na auditoria noturna" \
+            --title "[NIGHTLY AUDIT] Falha detectada na auditoria noturna" \
             --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os relatórios acumulados e logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug" || echo "Não foi possível abrir a issue automaticamente."
