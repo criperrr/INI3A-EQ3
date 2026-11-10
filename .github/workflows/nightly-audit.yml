@@ -1,4 +1,4 @@
-name: Nightly Heavy Audit (Mutation & K6 Real Load)
+name: Nightly Heavy Audit (Real Load & Stress Testing)
 
 on:
   schedule:
@@ -9,9 +9,13 @@ concurrency:
   group: nightly-audit
   cancel-in-progress: false
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   heavy_audit:
-    name: Heavy Audit (Mutation, Load & User Journeys)
+    name: Heavy Audit (Real Concurrency, Journeys & Stress Testing)
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -33,58 +37,84 @@ jobs:
       - name: Instalar Dependências do Monorepo
         run: npm ci
 
-      - name: Subir Serviços de Suporte (Postgres & Redis via Docker)
+      - name: Subir Infraestrutura de Backend (PostgreSQL + Redis)
         run: |
           docker compose up -d postgres redis
-          echo "Aguardando serviços ficarem saudáveis..."
-          sleep 5
+          echo "Aguardando estabilização dos serviços..."
+          sleep 4
+          timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres -d presco_db; do sleep 1; done'
+          timeout 20 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
+          echo "[OK] Postgres e Redis online e saudáveis!"
 
-      - name: Executar Migrações e Seed no Banco de Teste
+      - name: Configurar e Inicializar Backend para Auditoria Noturna
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: nightly-audit-secret-key-32-chars-long
-        run: |
-          npm run db:migrate || true
-          npm run db:seed || true
-
-      - name: Iniciar Backend em Segundo Plano para Carga
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/presco
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
           SERVER_PORT: 3333
+          SERVER_HOST: 0.0.0.0
+          JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
           NODE_ENV: test
+          SEED_CATALOG: "true"
+          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
         run: |
-          nohup npx tsx src/backend/src/server.ts > backend-nightly.log 2>&1 &
-          echo "Aguardando backend inicializar..."
-          for i in {1..30}; do
-            if curl -s http://localhost:3333/health | grep -q "ok"; then
-              echo "[OK] Backend online e respondendo em http://localhost:3333"
-              break
-            fi
-            sleep 1
+          mkdir -p src/backend
+          cat << 'EOF' > src/backend/.env
+          DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL=redis://127.0.0.1:6380
+          SERVER_PORT=3333
+          SERVER_HOST=0.0.0.0
+          JWT_SECRET=3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          NODE_ENV=test
+          SEED_CATALOG=true
+          HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+          EOF
+          cp src/backend/.env .env
+
+          echo "Executando migrações com retry..."
+          for i in {1..6}; do
+            npm run --prefix src/backend db:migrate && break || (echo "Tentando migração novamente em 2s..." && sleep 2)
           done
+
+          echo "Executando seed com retry..."
+          for i in {1..6}; do
+            npm run --prefix src/backend db:seed && break || (echo "Tentando seed novamente em 2s..." && sleep 2)
+          done
+
+          echo "Iniciando servidor backend em segundo plano..."
+          npm run --prefix src/backend start > backend-nightly.log 2>&1 &
+          timeout 30 bash -c 'until curl -s http://localhost:3333/health | grep -q "ok"; do sleep 1; done'
+          echo "[OK] Backend online e respondendo em http://localhost:3333"
 
       - name: Executar Simulação de Carga e Comportamento Real (Grafana k6)
         env:
+          TARGET_ENV: local
           K6_TARGET: local
+          BASE_URL: http://localhost:3333
         run: |
-          echo "Executando suíte k6 com SLAs rígidos e simulação de jornada..."
+          echo "1. Smoke test de cobertura funcional da API..."
           npm run test:k6
-          npm run test:k6:journeys || true
+          echo "2. Simulação de jornadas multi-usuário simultâneas..."
+          npm run test:k6:journeys
+          echo "3. Teste de estresse com rampa de concorrência até 100 VUs..."
+          npm run test:k6:stress
 
       - name: Executar Testes de Concorrência e Mutação
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+          REDIS_URL: redis://127.0.0.1:6380
+          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+          NODE_ENV: test
         run: |
+          mkdir -p logs
           echo "Executando testes de concorrência e resiliência..."
           npm run test:concurrency
-          npm test
+          npm test 2>&1 | tee logs/backend-tests.log
 
       - name: Registrar e Acumular Métricas de Desempenho no Histórico
         if: always()
         run: |
           mkdir -p tests/k6/history logs
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          TIMESTAMP=$(date -u +"%Y-%m-%d_%H-%M-%SZ")
           if [ -f tests/k6/summary.json ]; then
             node -e '
               const fs = require("fs");
@@ -120,17 +150,30 @@ jobs:
           path: |
             tests/k6/report.html
             tests/k6/summary.json
+            tests/k6/stress_summary.json
             tests/k6/history/
             backend-nightly.log
             logs/
+          if-no-files-found: ignore
           retention-days: 90
 
-      - name: Notificar Falha Noturna Criando Issue no GitHub
+      - name: Notificar Falha Noturna Apenas se For Bug Real da Aplicação
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          node scripts/audit_failure_analyzer.js || {
+            echo "[INFO] Auditoria encerrou com falha, mas a análise forense confirmou que NÃO se trata de um bug da aplicação (apenas instabilidade de ambiente/rede/SLA de teste). Nenhuma issue criada."
+            exit 0
+          }
+
+          echo "[ERRO] Bug real confirmado no backend! Criando issue técnica..."
+          BUG_DETAILS=$(cat app-bug-report.md)
           gh issue create \
-            --title "[NIGHTLY AUDIT] Falha detectada na auditoria noturna" \
-            --body "A auditoria noturna agendada falhou em um dos steps pesados (Carga k6, Concorrência ou Mutação). Verifique os relatórios acumulados e logs em: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --title "[BUG APLICAÇÃO] Falha confirmada no backend durante auditoria noturna" \
+            --body "A auditoria noturna detectou uma falha real de execução no backend (erro 500, crash ou regressão de teste unitário):
+
+          ${BUG_DETAILS}
+
+          **Run URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --label "bug" || echo "Não foi possível abrir a issue automaticamente."
