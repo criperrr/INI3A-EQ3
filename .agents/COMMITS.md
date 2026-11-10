@@ -4330,3 +4330,21 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Developers and testers can freely post products and submit prices in demonstration APKs.
+
+
+## `2026-11-02 11:25` - `feat(ci)`: Upgrade nightly audit to real stress test and concurrent multi-VU journeys
+
+- **Description:** Transformed the nightly CI audit from a single-VU smoke test into a genuine high-concurrency stress test suite and multi-VU user journey simulation without `|| true` masking. Calibrated stress thresholds, handled HTTP 429 rate limits, added power shopper journey, generated `stress_summary.json`, and bumped SemVer to v1.5.2.
+- **Files Modified:**
+  - `.github/workflows/nightly-audit.yml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `scripts/audit_failure_analyzer.js`
+  - `tests/k6/config/thresholds.js`
+  - `tests/k6/stress_and_soak/stress_test.js`
+  - `tests/k6/stress_and_soak/spike_test.js`
+  - `tests/k6/user_journeys/active_collaborator.js`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Nightly audit now tests real application stability under heavy load up to 100 concurrent VUs. Branch kept alive on remote as requested.
