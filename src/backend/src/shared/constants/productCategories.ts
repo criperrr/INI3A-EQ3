@@ -11,7 +11,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "alimentos_basicos",
     name: "Alimentos",
-    emoji: "🌾",
+    emoji: "",
     icon: "basket-outline",
     description: "Arroz, feijão, massas, óleos, açúcar, farinhas, grãos e condimentos essenciais.",
     aliases: [
@@ -41,7 +41,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "hortifruti",
     name: "Hortifrúti",
-    emoji: "🥦",
+    emoji: "",
     icon: "leaf-outline",
     description: "Frutas frescas, legumes, verduras, ervas e produtos da horta.",
     aliases: [
@@ -61,7 +61,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "carnes_aves_peixes",
     name: "Carnes",
-    emoji: "🥩",
+    emoji: "",
     icon: "restaurant-outline",
     description: "Cortes bovinos, suínos, aves, pescados, frutos do mar e embutidos frescos.",
     aliases: [
@@ -86,7 +86,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "laticinios_ovos",
     name: "Laticínios",
-    emoji: "🥛",
+    emoji: "",
     icon: "water-outline",
     description: "Leites, queijos, iogurtes, manteigas, requeijão, cremes e ovos.",
     aliases: [
@@ -107,7 +107,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "padaria_confeitaria",
     name: "Padaria",
-    emoji: "🥖",
+    emoji: "",
     icon: "pizza-outline",
     description: "Pães artesanais, bolos, tortas, torradas, biscoitos e massas frescas.",
     aliases: [
@@ -127,7 +127,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "bebidas",
     name: "Bebidas",
-    emoji: "🧃",
+    emoji: "",
     icon: "cafe-outline",
     description: "Sucos, refrigerantes, águas minerais, cafés, chás, isotônicos e energéticos.",
     aliases: [
@@ -151,7 +151,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "congelados",
     name: "Congelados",
-    emoji: "🧊",
+    emoji: "",
     icon: "snow-outline",
     description: "Pratos prontos congelados, pizzas, sorvetes, polpas e vegetais congelados.",
     aliases: [
@@ -168,7 +168,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "doces_snacks",
     name: "Doces & Snacks",
-    emoji: "🍪",
+    emoji: "",
     icon: "happy-outline",
     description: "Chocolates, salgadinhos, petiscos, balas, guloseimas e sobremesas.",
     aliases: [
@@ -189,7 +189,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "limpeza",
     name: "Limpeza",
-    emoji: "🧹",
+    emoji: "",
     icon: "sparkles-outline",
     description: "Sabão em pó, detergentes, amaciantes, desinfetantes, esponjas e alvejantes.",
     aliases: [
@@ -213,7 +213,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "higiene_beleza",
     name: "Higiene",
-    emoji: "🧴",
+    emoji: "",
     icon: "heart-outline",
     description: "Sabonetes, xampus, condicionadores, cremes dentais, desodorantes e cuidados pessoais.",
     aliases: [
@@ -235,7 +235,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "bebes_infantil",
     name: "Bebês",
-    emoji: "👶",
+    emoji: "",
     icon: "body-outline",
     description: "Fraldas descartáveis, lenços umedecidos, fórmulas infantis e higiene do bebê.",
     aliases: [
@@ -255,7 +255,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "pet_shop",
     name: "Pets",
-    emoji: "🐾",
+    emoji: "",
     icon: "paw-outline",
     description: "Rações secas e úmidas, petiscos, areia sanitária e produtos para pets.",
     aliases: ["Pet Shop", "pets", "pet", "animais", "ração", "racao", "rações", "racoes", "gato", "cachorro"],
@@ -263,7 +263,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "farmacia_saude",
     name: "Farmácia",
-    emoji: "💊",
+    emoji: "",
     icon: "medkit-outline",
     description: "Vitaminas, suplementos alimentares, curativos, álcool e primeiros socorros.",
     aliases: [
@@ -284,7 +284,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "utilidades_bazar",
     name: "Utilidades",
-    emoji: "🏠",
+    emoji: "",
     icon: "home-outline",
     description: "Artigos de cozinha, potes, descartáveis, sacos de lixo e utilidades domésticas.",
     aliases: [
@@ -303,7 +303,7 @@ export const PREDEFINED_PRODUCT_CATEGORIES: PredefinedCategory[] = [
   {
     id: "outros",
     name: "Outros",
-    emoji: "📦",
+    emoji: "",
     icon: "grid-outline",
     description: "Itens variados, sazonais e produtos gerais do cotidiano.",
     aliases: ["Outros / Geral", "Outros e Geral", "outros", "geral", "diversos", "others"],

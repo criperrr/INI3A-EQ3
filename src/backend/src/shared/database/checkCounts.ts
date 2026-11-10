@@ -10,9 +10,9 @@ async function verify() {
   const markets = await db.select().from(market);
 
   console.log("=== DB SEED VERIFICATION ===");
-  console.log(`📦 Total Products: ${pCount[0]?.count ?? 0}`);
-  console.log(`🏪 Total Markets: ${mCount[0]?.count ?? 0}`);
-  console.log(`💰 Total Price Occurrences: ${oCount[0]?.count ?? 0}`);
+  console.log(`Total Products: ${pCount[0]?.count ?? 0}`);
+  console.log(`Total Markets: ${mCount[0]?.count ?? 0}`);
+  console.log(`Total Price Occurrences: ${oCount[0]?.count ?? 0}`);
   
   console.log("\nRegistered Markets:");
   markets.forEach((m) => console.log(` - [ID ${m.id}] ${m.name}`));
@@ -35,9 +35,9 @@ async function verify() {
       .innerJoin(market, eq(ocurrency.marketId, market.id))
       .where(eq(ocurrency.productId, p.id));
 
-    console.log(`\n📦 ${p.name} [EAN: ${p.ean}] - Categoria: ${p.description}`);
+    console.log(`\n${p.name} [EAN: ${p.ean}] - Categoria: ${p.description}`);
     occs.forEach((o) =>
-      console.log(`   🏬 ${o.marketName.padEnd(25)} -> R$ ${Number(o.value).toFixed(2)} (👍 ${o.upvotes})`)
+      console.log(`   ${o.marketName.padEnd(25)} -> R$ ${Number(o.value).toFixed(2)} (votos: ${o.upvotes})`)
     );
   }
 

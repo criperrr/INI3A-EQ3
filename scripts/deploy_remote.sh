@@ -18,11 +18,11 @@ SYNC=1
 BRANCH="$(git -C "$ROOT" branch --show-current || echo main)"
 
 echo "================================================================================"
-echo "🚀 [Deploy] $SSH_USER@$SSH_HOST:$SSH_PORT → $REMOTE_TARGET_DIR (branch $BRANCH)"
+echo "[INFO] [Deploy] $SSH_USER@$SSH_HOST:$SSH_PORT -> $REMOTE_TARGET_DIR (branch $BRANCH)"
 echo "================================================================================"
 
 if [ "$SYNC" = "1" ]; then
-  echo "📤 Sincronizando estritamente os arquivos essenciais do backend..."
+  echo "[INFO] Sincronizando estritamente os arquivos essenciais do backend..."
 
   # Garante a criação prévia dos diretórios essenciais no destino remoto
   remote_exec "mkdir -p '$REMOTE_TARGET_DIR/src' '$REMOTE_TARGET_DIR/deploy' '$REMOTE_TARGET_DIR/logs'"
@@ -63,13 +63,13 @@ echo "🔐 Entregando segredos ao servidor (arquivo temporário 600, apagado ap�
   done
 } | remote_exec "umask 077; mkdir -p '$REMOTE_TARGET_DIR/deploy'; cat > '$REMOTE_TARGET_DIR/deploy/.env.deploy'"
 
-echo "⚡ Executando deploy remoto..."
+echo "[INFO] Executando deploy remoto..."
 remote_exec "bash '$REMOTE_TARGET_DIR/deploy/deploy.sh'"
 
 if [ -n "${PUBLIC_URL:-}" ]; then
   echo ""
-  echo "🔍 Healthcheck a partir da sua máquina: $PUBLIC_URL/health"
-  curl -s -k --max-time 15 "$PUBLIC_URL/health" || echo "⚠️  Sem resposta pública."
+  echo "[INFO] Healthcheck a partir da sua maquina: $PUBLIC_URL/health"
+  curl -s -k --max-time 15 "$PUBLIC_URL/health" || echo "[AVISO] Sem resposta publica."
   echo ""
 fi
-echo "🎉 Deploy finalizado."
+echo "[OK] Deploy finalizado."

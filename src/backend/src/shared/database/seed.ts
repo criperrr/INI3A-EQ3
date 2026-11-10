@@ -5,7 +5,7 @@ import { db, pool } from "./database";
 import { role, user, badge, userBadge, market, customizationItem, userCustomization, product, ocurrency } from "./schema";
 
 export async function seedDatabase() {
-  console.log("🌱 [Seed] Checking and seeding database initial data...");
+  console.log("[Seed] Checking and seeding database initial data...");
 
   // 0. Ensure Customization Tables & User Columns exist
   await db.execute(sql`
@@ -77,105 +77,105 @@ export async function seedDatabase() {
     {
       id: 1,
       name: "Pioneiro",
-      icon: "🌱",
+      icon: "leaf-outline",
       description: "Primeiro passo na comunidade Presco.",
       minPoints: 0,
     },
     {
       id: 2,
       name: "Primeiro Olhar",
-      icon: "👁️",
+      icon: "eye-outline",
       description: "Primeiro produto ou preço consultado no app.",
       minPoints: 25,
     },
     {
       id: 3,
       name: "Caçador de Preços",
-      icon: "⭐",
+      icon: "star-outline",
       description: "Iniciou o monitoramento ativo de ofertas locais.",
       minPoints: 50,
     },
     {
       id: 4,
       name: "Sentinela do Bairro",
-      icon: "🏪",
+      icon: "storefront-outline",
       description: "Colaborador frequente mapeando comércios da vizinhança.",
       minPoints: 100,
     },
     {
       id: 5,
       name: "Economista Ativo",
-      icon: "💰",
+      icon: "cash-outline",
       description: "Ajudando a comunidade a economizar em compras diárias.",
       minPoints: 175,
     },
     {
       id: 6,
       name: "Auditor Comunitário",
-      icon: "🔍",
+      icon: "search-outline",
       description: "Verificando e confirmando a exatidão dos registros de preço.",
       minPoints: 250,
     },
     {
       id: 7,
       name: "Detetive de Ofertas",
-      icon: "🕵️",
+      icon: "finger-print-outline",
       description: "Especialista em identificar grandes descontos e pechinchas.",
       minPoints: 350,
     },
     {
       id: 8,
       name: "Guardião da Economia",
-      icon: "🛡️",
+      icon: "shield-checkmark-outline",
       description: "Defensor do bolso coletivo e da transparência de mercado.",
       minPoints: 500,
     },
     {
       id: 9,
       name: "Mestre das Ofertas",
-      icon: "🏆",
+      icon: "trophy-outline",
       description: "Contribuidor de alto impacto com ampla cobertura de preços.",
       minPoints: 750,
     },
     {
       id: 10,
       name: "Radar de Preços",
-      icon: "📡",
+      icon: "radio-outline",
       description: "Monitoramento constante e atualizações ágeis no catálogo.",
       minPoints: 1000,
     },
     {
       id: 11,
       name: "Lendário",
-      icon: "👑",
+      icon: "ribbon-outline",
       description: "Reconhecimento lendário por dedicação contínua à comunidade.",
       minPoints: 1500,
     },
     {
       id: 12,
       name: "Patrono do Consumo",
-      icon: "💎",
+      icon: "diamond-outline",
       description: "Patrono essencial que transforma a experiência de consumo.",
       minPoints: 2000,
     },
     {
       id: 13,
       name: "Oráculo dos Mercados",
-      icon: "🔮",
+      icon: "sparkles-outline",
       description: "Conhecimento profundo das tendências de preço e supermercados.",
       minPoints: 3000,
     },
     {
       id: 14,
       name: "Soberano Supremo",
-      icon: "⚡",
+      icon: "flash-outline",
       description: "Autoridade e prestígio máximo em colaboração de preços.",
       minPoints: 5000,
     },
     {
       id: 15,
       name: "Mito Presco",
-      icon: "🌌",
+      icon: "planet-outline",
       description: "Lenda viva eterna com contribuições históricas na plataforma.",
       minPoints: 10000,
     },
@@ -705,7 +705,7 @@ export async function seedDatabase() {
       name ILIKE '%Pronto Socorro da Casa%' OR
       name ILIKE '%Casa Company%';
   `);
-  console.log("🗺️ [Seed] Markets checked: invalid address street names and non-markets purged.");
+  console.log("[Seed] Markets checked: invalid address street names and non-markets purged.");
 
   // 5. Seed Admin Test User: admin@admin.org / admin
   const adminEmail = "admin@admin.org";
@@ -743,7 +743,7 @@ export async function seedDatabase() {
         await db.insert(userCustomization).values({ userId: newAdmin.id, itemId }).onConflictDoNothing();
       }
     }
-    console.log("✅ [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
+    console.log("[OK] [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
   } else {
     adminUserId = existingAdmin.id;
     await db
@@ -789,7 +789,7 @@ export async function seedDatabase() {
     for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
       await db.insert(userCustomization).values({ userId: targetAdmin.id, itemId }).onConflictDoNothing();
     }
-    console.log("✅ [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
+    console.log("[OK] [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
   }
 
   // 6. Seed Regular Test User: usuario@presco.com / user123
@@ -827,7 +827,7 @@ export async function seedDatabase() {
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 30 }).onConflictDoNothing();
     }
-    console.log("✅ [Seed] Created regular test user: usuario@presco.com / user123");
+    console.log("[OK] [Seed] Created regular test user: usuario@presco.com / user123");
   } else {
     for (const b of defaultBadges) {
       if (existingUser.points >= b.minPoints) {
@@ -1466,7 +1466,7 @@ export async function seedDatabase() {
 
   let availableMarkets = await db.select().from(market).limit(10);
   if (availableMarkets.length === 0) {
-    console.log("🌐 [Seed] Discovering real markets via HERE API for initial data...");
+    console.log("[Seed] Discovering real markets via HERE API for initial data...");
     const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
     await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
     await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
@@ -1474,8 +1474,8 @@ export async function seedDatabase() {
   }
 
   // Purged catalog: Do not auto-seed predefined products to keep database clean as requested by user.
-  console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
-  console.log("✨ [Seed] Database initial seed completed successfully.");
+  console.log("[Seed] Skipping predefined products catalog auto-insertion (purged).");
+  console.log("[OK] [Seed] Database initial seed completed successfully.");
 }
 
 // Standalone execution support
@@ -1486,7 +1486,7 @@ if (process.argv[1]?.endsWith("seed.ts")) {
       process.exit(0);
     })
     .catch(async (err) => {
-      console.error("❌ [Seed] Error:", err);
+      console.error("[FAIL] [Seed] Error:", err);
       await pool.end();
       process.exit(1);
     });
