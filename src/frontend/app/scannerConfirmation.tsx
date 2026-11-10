@@ -16,7 +16,7 @@ import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductOccurrences } from "../services/ocurrencyService";
 import {
-  getCategoryEmoji,
+  getCategoryIcon,
   getLocalizedCategoryName,
 } from "../constants/productCategories";
 import { parseDateSafeMs } from "../utils/dateUtils";
@@ -263,7 +263,6 @@ export default function ScannerConfirmation() {
                 ]}
                 numberOfLines={1}
               >
-                {getCategoryEmoji(product.category)}{" "}
                 {getLocalizedCategoryName(product.category, t).toUpperCase()}
               </Text>
             )}

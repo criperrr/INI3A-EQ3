@@ -584,7 +584,7 @@ export const pt: TranslationSchema = {
     faq12Question: "Como equipar fundos de perfil, molduras de avatar e insígnias?",
     faq12Answer: "Acesse a aba 'Perfil', toque em 'Personalizar' para abrir a Loja. Na aba 'Meu Inventário' ou nos itens disponíveis, selecione o item desejado e toque em 'Equipar'. As alterações são sincronizadas e salvas instantaneamente.",
     faq13Question: "Como auditar e verificar preços informados por outros usuários?",
-    faq13Answer: "Na tela de Detalhes do Produto, visualize a lista de preços por mercado e use os botões de curadoria (Verdadeiro 👍 / Duvidoso 👎). Cada auditoria válida concede +5 XP e ajuda a manter a base de dados blindada contra erros.",
+    faq13Answer: "Na tela de Detalhes do Produto, visualize a lista de preços por mercado e use os botões de curadoria (Verdadeiro + / Duvidoso -). Cada auditoria válida concede +5 XP e ajuda a manter a base de dados blindada contra erros.",
     faq14Question: "O que acontece se alguém cadastrar um preço errado ou abusivo?",
     faq14Answer: "Nosso algoritmo de curadoria comunitária analisa os votos dos usuários. Ocorrências com alto índice de votos negativos são suspensas automaticamente para revisão, e usuários com histórico recorrente de inconsistências podem ter a conta restrita.",
     faq15Question: "O que significam os selos de 'Melhor Preço' e 'Promoção'?",

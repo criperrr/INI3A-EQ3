@@ -459,7 +459,7 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
           if (!cat) return null;
           const isSelected = selectedCategory === cat;
           const isAll = cat === allCategoryLabel || cat === "Todos" || cat === "All";
-          const emoji = isAll ? "🔍" : getCategoryEmoji(cat);
+          const iconName = isAll ? "search" : getCategoryIcon(cat);
           const displayName = isAll ? allCategoryLabel : getLocalizedCategoryName(cat, t);
 
           return (
@@ -484,7 +484,12 @@ const CategoryFilterChips = memo(function CategoryFilterChips({
                 onSelectCategory(cat);
               }}
             >
-              <Text style={styles.categoryChipEmoji}>{emoji}</Text>
+              <Ionicons
+                name={iconName as any}
+                size={13}
+                color={isSelected ? "#FFFFFF" : semantic.colors.text.secondary}
+                style={{ marginRight: 5 }}
+              />
               <Text
                 style={[
                   styles.categoryChipText,
@@ -586,11 +591,12 @@ const ProductCardItem = memo(function ProductCardItem({
           <View
             style={[
               styles.promoBadge,
-              { backgroundColor: semantic.colors.feedback.error, borderRadius: semantic.radius.badge },
+              { backgroundColor: semantic.colors.feedback.error, borderRadius: semantic.radius.badge, flexDirection: "row", alignItems: "center" },
             ]}
           >
+            <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 2 }} />
             <Text style={styles.promoBadgeText}>
-              🔥 {product.discountPercentage ? `-${product.discountPercentage}%` : t("products.promoBadge")}
+              {product.discountPercentage ? `-${product.discountPercentage}%` : t("products.promoBadge")}
             </Text>
           </View>
         ) : Boolean(product.category && product.category !== "Sem Categoria") ? (
@@ -600,10 +606,12 @@ const ProductCardItem = memo(function ProductCardItem({
               {
                 backgroundColor: accent,
                 borderRadius: semantic.radius.badge,
+                flexDirection: "row",
+                alignItems: "center",
               },
             ]}
           >
-            <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(product.category)}</Text>
+            <Ionicons name={getCategoryIcon(product.category) as any} size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
             <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
               {getLocalizedCategoryName(product.category, t).toUpperCase()}
             </Text>

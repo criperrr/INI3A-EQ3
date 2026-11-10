@@ -67,6 +67,33 @@ const getGridColor = (intensity: number, isDark: boolean) => {
   }
 };
 
+const BADGE_FALLBACK_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  "\u{1F331}": "leaf-outline",
+  "\u{1F441}\u{FE0F}": "eye-outline",
+  "\u{1F441}": "eye-outline",
+  "\u{2B50}": "star-outline",
+  "\u{1F3EA}": "storefront-outline",
+  "\u{1F4B0}": "cash-outline",
+  "\u{1F50D}": "search-outline",
+  "\u{1F575}\u{FE0F}": "finger-print-outline",
+  "\u{1F575}": "finger-print-outline",
+  "\u{1F6E1}\u{FE0F}": "shield-checkmark-outline",
+  "\u{1F6E1}": "shield-checkmark-outline",
+  "\u{1F3C6}": "trophy-outline",
+  "\u{1F4E1}": "radio-outline",
+  "\u{1F451}": "ribbon-outline",
+  "\u{1F48E}": "diamond-outline",
+  "\u{1F52E}": "sparkles-outline",
+  "\u{26A1}": "flash-outline",
+  "\u{1F30C}": "planet-outline",
+};
+
+function resolveBadgeIcon(iconName?: string | null): keyof typeof Ionicons.glyphMap {
+  if (!iconName) return "ribbon-outline";
+  if (BADGE_FALLBACK_ICONS[iconName]) return BADGE_FALLBACK_ICONS[iconName];
+  return (iconName as any) || "ribbon-outline";
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { themeStyles, isDark, accent } = useTheme();
@@ -927,7 +954,11 @@ const BadgesSection = memo(function BadgesSection({
                     : { backgroundColor: isDark ? "#23272F" : "#E2E8F0", borderColor: "transparent" },
                 ]}
               >
-                <Text style={styles.badgeEmoji}>{b.icon || "🏅"}</Text>
+                <Ionicons
+                  name={resolveBadgeIcon(b.icon)}
+                  size={22}
+                  color={isUnlocked ? accent : (isDark ? "#A0AEC0" : "#718096")}
+                />
                 {!isUnlocked && (
                   <View style={styles.badgeLockOverlay}>
                     <Ionicons name="lock-closed" size={10} color="#FFFFFF" />
@@ -1013,7 +1044,11 @@ const BadgesSection = memo(function BadgesSection({
                     : { backgroundColor: isDark ? "#23272F" : "#E2E8F0", borderColor: themeStyles.border.borderColor },
                 ]}
               >
-                <Text style={styles.badgeModalEmoji}>{selectedBadge.icon || "🏅"}</Text>
+                <Ionicons
+                  name={resolveBadgeIcon(selectedBadge.icon)}
+                  size={44}
+                  color={selectedBadge.isUnlocked ? accent : (isDark ? "#A0AEC0" : "#718096")}
+                />
               </View>
 
               <Text style={[styles.badgeModalTitle, themeStyles.text]} numberOfLines={2}>

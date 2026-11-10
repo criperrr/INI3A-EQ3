@@ -221,9 +221,10 @@ export default function AdminModerationScreen() {
                         </Text>
                       </View>
                       {item.hasTrendQuorum && (
-                        <View style={[styles.trendBadge, { backgroundColor: "#EA580C20" }]}>
+                        <View style={[styles.trendBadge, { backgroundColor: "#EA580C20", flexDirection: "row", alignItems: "center" }]}>
+                          <Ionicons name="flame" size={12} color="#EA580C" style={{ marginRight: 3 }} />
                           <Text style={[styles.trendBadgeText, { color: "#EA580C" }]}>
-                            🔥 Tendência ({item.quorumUsersCount} users)
+                            Tendência ({item.quorumUsersCount} users)
                           </Text>
                         </View>
                       )}
