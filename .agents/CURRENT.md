@@ -18,7 +18,7 @@ Executive summary and direct file index for token-efficient agent navigation. Re
   - **Jornadas Multi-Persona Paralelas (`combined_journeys.js`):**
     - Execução concorrente simultânea de 3 perfis de usuários (Navegadores Anônimos, Colaboradores Ativos e Power Shoppers) por 25 segundos.
   - **Teste de Caos e Resiliência com Queda do Redis (`nightly-audit.yml`):**
-    - Pausa deliberada do container do Redis (`docker compose pause redis`), validação de sobrevivência da API via fallback transparente em memória (`InMemoryStore`), seguida de restauração e reconexão automática.
+    - Parada deliberada do container do Redis (`docker compose stop redis`), validação de sobrevivência da API via fallback transparente em memória (`InMemoryStore`), timeouts de 10s no `curl` e limite de 5 minutos no step, seguida de restauração com `docker compose start redis` e reconexão automática.
   - **Auditoria Pós-Carga de Integridade Relacional e Anti-Fraude (`verify_database_integrity.ts`):**
     - 8 verificações profundas no banco de dados pós-estresse: valores positivos em cotações, ausência de órfãos, saldo de XP >= 0, ausência de votos duplicados, regra anti-auto-voto, nomes de produto e limites territoriais geoespaciais.
 - **Condicionalização Cirúrgica de Build do APK de Staging e Restrição Estrita de Escopo do SemVer (`chore/staging-frontend-filter-semver`):**

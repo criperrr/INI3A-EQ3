@@ -4543,3 +4543,11 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `package.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Backend quality and stability are now rigorously tested against real-world edge cases, combinatorial load, chaos outages, and database corruption risks.
+
+
+## `2026-11-10 20:50` - `fix(ci)`: prevent socket freeze during chaos test using docker stop
+
+- **Description:** Replaced `docker compose pause redis` with `docker compose stop redis` (and `start redis`) in `nightly-audit.yml`. Pausing the container freezes the cgroup without closing TCP sockets, causing `node-redis` commands and incoming HTTP health checks to hang indefinitely. Added `--max-time 10` to `curl` commands and step-level `timeout-minutes: 5`.
+- **Files Modified:**
+  - `.github/workflows/nightly-audit.yml`
+- **Impact / Next Steps:** Prevents 1-hour job timeout during nightly stability and chaos testing. Ready to trigger and verify the workflow run.
