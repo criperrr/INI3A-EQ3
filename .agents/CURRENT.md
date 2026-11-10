@@ -7,6 +7,20 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Auditoria Agressiva de Estabilidade, Carga Multi-Vetorial, Caos e Integridade Relacional (`test/aggressive-stress-chaos-audit`):**
+  - **Estresse Agressivo Multi-Vetorial no k6 (`stress_test.js`):**
+    - Rampa escalável até 100 VUs simultâneos cobrindo 4 vetores de ataque:
+      1. *Solver Combinatório de Carrinho (`POST /cart/optimize`):* Carrinhos dinâmicos com 3 a 10 itens distribuídos em múltiplos mercados e coordenadas geodésicas de Bauru/SP, testando as 3 estratégias (`max_savings`, `balanced`, `single_store`).
+      2. *Motor de Outliers e Detecção de Fraude (`POST /ocurrency`):* Submissões concorrentes com 25% de valores extremos (R$ 0,75 ou R$ 599,90) para testar isolamento de Z-Score e piso de variância.
+      3. *Quórum Atômico de Votos:* Votações concorrentes (`POST /ocurrency/:id/vote`) desafiando atomicidade de XP e prevenção de Lost Updates.
+      4. *Busca Trigram GIN e Radar PostGIS GiST:* Consultas concorrentes com acentuação gráfica e múltiplos raios de busca.
+    - Asserção rígida de zero erros 500 (`r.status < 500`).
+  - **Jornadas Multi-Persona Paralelas (`combined_journeys.js`):**
+    - Execução concorrente simultânea de 3 perfis de usuários (Navegadores Anônimos, Colaboradores Ativos e Power Shoppers) por 25 segundos.
+  - **Teste de Caos e Resiliência com Queda do Redis (`nightly-audit.yml`):**
+    - Parada deliberada do container do Redis (`docker compose stop redis`), validação de sobrevivência da API via fallback transparente em memória (`InMemoryStore`), timeouts de 10s no `curl` e limite de 5 minutos no step, seguida de restauração com `docker compose start redis` e reconexão automática.
+  - **Auditoria Pós-Carga de Integridade Relacional e Anti-Fraude (`verify_database_integrity.ts`):**
+    - 8 verificações profundas no banco de dados pós-estresse: valores positivos em cotações, ausência de órfãos, saldo de XP >= 0, ausência de votos duplicados, regra anti-auto-voto, nomes de produto e limites territoriais geoespaciais.
 - **Condicionalização Cirúrgica de Build do APK de Staging e Restrição Estrita de Escopo do SemVer (`chore/staging-frontend-filter-semver`):**
   - **Cancelamento Imediato de Compilação Redundante:** Cancelada a execução `42901643965` no GitHub Actions que compilava desnecessariamente o APK nativo de staging após merge de PR de CI/testes k6 (#44).
   - **Filtro de Detecção Inteligente de Front-end no Pipeline de Staging (`.github/workflows/staging.yml` e `scripts/check_frontend_changes.ts`):**

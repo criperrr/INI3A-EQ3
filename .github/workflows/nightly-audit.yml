@@ -110,6 +110,31 @@ jobs:
           npm run test:concurrency
           npm test 2>&1 | tee logs/backend-tests.log
 
+      - name: Teste de Caos e Resiliência (Fallback In-Memory com Queda do Redis)
+        timeout-minutes: 5
+        run: |
+          echo "[INFO] Iniciando teste de caos: parando container do Redis para simular falha de infraestrutura..."
+          docker compose stop redis
+          sleep 2
+          
+          echo "[INFO] Testando se o backend continua respondendo via fallback em memória (InMemoryStore)..."
+          curl -f --max-time 10 http://localhost:3333/health || (echo "[ERRO] Backend caiu após interrupção do Redis!" && exit 1)
+          curl -f --max-time 10 "http://localhost:3333/products?limit=5" || (echo "[ERRO] Listagem de produtos falhou durante fallback do Redis!" && exit 1)
+          
+          echo "[INFO] Restaurando Redis..."
+          docker compose start redis
+          sleep 3
+          curl -f --max-time 10 http://localhost:3333/health || (echo "[ERRO] Backend não restabeleceu conexão com Redis!" && exit 1)
+          echo "[OK] Teste de Caos concluído: backend sobreviveu à queda do Redis via InMemoryStore!"
+
+      - name: Auditoria Pós-Carga de Integridade Relacional e Anti-Fraude do Banco
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
+        run: |
+          mkdir -p logs
+          echo "[INFO] Executando validação profunda de integridade pós-carga e estresse..."
+          npm run test:db:integrity 2>&1 | tee logs/integrity.log
+
       - name: Registrar e Acumular Métricas de Desempenho no Histórico
         if: always()
         run: |

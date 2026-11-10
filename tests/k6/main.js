@@ -29,8 +29,8 @@ import { CURRENT_ENV } from './config/environments.js';
 import { getAdminAuth, getUserAuth } from './helpers/auth.js';
 
 export const options = {
-  vus: 1,
-  iterations: 1,
+  vus: 3,
+  iterations: 3,
   thresholds: SMOKE_THRESHOLDS,
 };
 
@@ -41,7 +41,7 @@ export function setup() {
 }
 
 export default function masterTestSuite(data) {
-  console.log(`🚀 Executing Presco k6 Test Suite against: ${CURRENT_ENV.name} (${CURRENT_ENV.baseUrl})`);
+  console.log(`[INFO] Executing Presco k6 Test Suite against: ${CURRENT_ENV.name} (${CURRENT_ENV.baseUrl})`);
 
   // Scenario 1: Health & System Diagnostics
   healthAndSystemScenario();
@@ -139,6 +139,6 @@ export function handleSummary(data) {
   return {
     'tests/k6/report.html': htmlContent,
     'tests/k6/summary.json': JSON.stringify(data, null, 2),
-    stdout: `\n✅ Presco k6 Test Suite Concluída!\n- Requisições: ${totalReqs}\n- Latência Média: ${avgDuration}ms\n- p(95): ${p95Duration}ms\n- Falhas: ${(failedRate * 100).toFixed(2)}%\n- Relatório HTML salvo em: tests/k6/report.html\n\n`,
+    stdout: `\n[OK] Presco k6 Test Suite Concluída!\n- Requisições: ${totalReqs}\n- Latência Média: ${avgDuration}ms\n- p(95): ${p95Duration}ms\n- Falhas: ${(failedRate * 100).toFixed(2)}%\n- Relatório HTML salvo em: tests/k6/report.html\n\n`,
   };
 }
