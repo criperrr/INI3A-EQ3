@@ -66,3 +66,12 @@ As telas residem em `src/frontend/app/`:
 - Suporte completo a 7 idiomas: `pt-BR`, `en-US`, `es-ES`, `de-DE`, `ru-RU`, `zh-CN`, `ja-JP`.
 - Sempre utilizar `const { t } = useI18n();` ou `useTranslation()` para textos visíveis ao usuário.
 - Nenhuma string voltada ao usuário deve ficar hardcoded no JSX. Adicionar novas chaves em todos os arquivos de locale em `src/frontend/constants/locales/`.
+
+---
+
+## 6. Axioma de Erradicação de Emojis e Ícones Vetoriais
+
+- **Proibição Absoluta de Emojis na UI:** Nenhuma tela ou componente deve renderizar emojis diretamente como elementos visuais, categorias, badges ou botões.
+- **Ícones Vetoriais SVG:** Utilize exclusivamente `@expo/vector-icons` (`Ionicons`) ou `lucide-react-native`.
+- **Exceção Única:** Mensagens externas exportadas para fora do app (como o compartilhamento de lista de compras para WhatsApp ou cópia para área de transferência em `src/frontend/utils/mapQueryBuilder.ts`).
+

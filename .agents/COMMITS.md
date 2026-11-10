@@ -4260,3 +4260,182 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Developers and testers can freely post products and submit prices in demonstration APKs.
+
+
+## 2026-10-22 15:15 - `fix(landing)`: Corrigir cor da asa de trás da arara para azul anatômico
+
+- **Description:** Corrigida a renderização da asa distante (asa de trás) da arara-canindé em `macaw.ts`. A asa estava utilizando a paleta `WING_UNDER` (amarela e oliva), criando a falsa impressão de que a arara tinha uma asa amarela e outra azul. Implementada a paleta `WING_FAR` em tons de azul turquesa e cobalto com profundidade atmosférica, garantindo fidelidade anatômica à espécie (*Ara ararauna*).
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Ambas as asas agora renderizam em azul homogêneo com relevo 3D natural em todos os estados de voo (batimento e planeio).
+
+## `2026-10-22 15:22` - `feat(landing)`: Animação suave no FAQ, arara companheira no scroll, alinhamento pericial e refinamento do header/footer
+
+- **Description:**
+  - **FAQ Interativo com Expansão Suave:** Implementada transição fluida (`cubic-bezier(0.16, 1, 0.3, 1)`) com expansão animada de `maxHeight`, `opacity`, padding e rotação de 180° do chevron no acordeão de perguntas do FAQ (`FaqSection.tsx`).
+  - **Arara-Canindé Companheira de Scroll (`macaw.ts` & `MacawCompanionCanvas.tsx`):** A arara deixou de ter patrulhamento aleatório no Hero e passou a sobrevoar toda a extensão da landing page através de um canvas fixo no viewport (`MacawCompanionCanvas.tsx`). Sua cinemática responde dinamicamente ao scroll:
+    - Planeio majestoso com asas abertas ao longo da leitura (`gliding: true`);
+    - Mergulhos e inclinações aerodinâmicas (`bankAngle`) em descidas rápidas;
+    - Batimento ativo de asas para subir de altitude ao rolar a página para cima;
+    - Flutuação térmica orgânica em repouso ao pausar a leitura.
+  - **Correção do Texto Deslocado na Seção de Segurança (`SecurityProtectionSection.tsx`):** Equalizado o layout do callout card ("Central Oficial de Políticas & Governança"), eliminando o vazio vertical superior de 140px e readequando a moldura do celular para 380px com foco nítido nas opções de "Privacidade & Segurança".
+  - **Header Auto-Hide com Limiar da Primeira Página (`LandingPage.tsx`):** O cabeçalho agora permanece 100% visível durante toda a primeira página (Hero), só ocultando ao rolar para baixo após ultrapassar o limiar de 600px e reaparecendo instantaneamente ao rolar para cima.
+  - **Refinamento do Footer (`Footer.tsx`):** Logo ampliado para 60x60px de destaque e remoção definitiva da linha e badge "Sistemas Operacionais • Versão v1.4.5 Oficial".
+  - **Validação com Testes Determinísticos Playwright (`test_landing_playwright.ts` & `test_macaw_companion_flight.ts`):** 100% dos testes e capturas de tela aprovados em desktop (1280x800) e mobile (390x844).
+  - **SemVer:** Atualizado para `v1.5.2` (`versionCode: 33`).
+- **Files Modified:**
+  - `src/landing/components/FaqSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/Footer.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/PolicyModal.tsx`
+  - `src/landing/components/MacawCompanionCanvas.tsx`
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/LandingPage.tsx`
+  - `scripts/test_landing_playwright.ts`
+  - `scripts/test_macaw_companion_flight.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Landing page visualmente lapidada, dinâmica e com experiência de leitura interativa com a Arara-Canindé. Pronto para avaliação do usuário.
+
+## `2026-10-22 15:40` - `fix(landing)`: Correção do batimento anatômico das asas e trajetória pré-gravada de leitura guiada por scroll
+
+- **Description:**
+  - **Correção Pericial do Batimento das Asas (`macaw.ts`):** Identificado que a asa próxima e a asa distante estavam configuradas com ângulos opostos fixos (106° para baixo e 252° para cima), fazendo com que uma asa ficasse permanentemente apontada para o chão e a outra para o teto com oscilações artificiais. Refatorado `drawWing` para que ambas as asas batam sincronizadas de forma anatômica: na subida (`f = 1`), ambas elevam-se acima do dorso (245° e 260°); na descida (`f = -1`), ambas descem empurrando o ar (115° e 130°); e em planeio, estendem-se em sustentação com sutil flexão aerodinâmica.
+  - **Trajetória Pré-Gravada Estritamente em Função do Scroll (`macaw.ts`):** A arara agora inicia parada/pousada no canto superior direito do Hero (`p = 0.00`). Ao iniciar a rolagem, ela percorre uma trajetória pré-gravada (`DESKTOP_EYE_PATH` e `MOBILE_EYE_PATH`) calculada especificamente para guiar o olhar do leitor sem sobrepor o conteúdo:
+    1. Hero: CTA e badges de confiança;
+    2. Faixa de Impacto: varre os 4 contadores de economia;
+    3. Problema vs Solução: curva em direção ao cartão de solução;
+    4. Como Funciona: percorre os Passos 01, 02 e 03;
+    5. Galeria de Telas & Recursos: desce suavemente pela margem lateral;
+    6. Governança & LGPD: sobrevoa a central oficial;
+    7. FAQ & Rodapé: assenta suavemente ao lado das perguntas frequentes e download final.
+  - **Dinâmica de Rolagem e Repouso:** Quando a página está sendo rolada, a arara bate as asas ativamente para se deslocar. Quando o usuário cessa o scroll, ela para no exato ponto da trajetória onde o leitor parou, mantendo sustentação suave e asas abertas.
+  - **Camadas & Desobstrução Visual (`LandingPage.tsx` & seções):** Canvas ajustado para `zIndex: 1` e `ScrollView` para `zIndex: 5`, com fundos dos cartões opacos, garantindo que o pássaro nunca obstrua os textos.
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/MacawCompanionCanvas.tsx`
+  - `src/landing/LandingPage.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/HowItWorksSection.tsx`
+  - `src/landing/components/ProblemSolutionSection.tsx`
+  - `src/landing/components/SecurityProtectionSection.tsx`
+  - `src/landing/components/FaqSection.tsx`
+- **Impact / Next Steps:** Movimento 100% orgânico e biomecanicamente correto, acompanhando a leitura com fidelidade visual comprovada por testes Playwright.
+
+## `2026-10-22 16:57` - `fix(landing)`: Corrigir sobreposicao de folhas nos textos e divs no mobile e desktop
+
+- **Description:** Corrigido problema de sobreposição visual na Hero Section onde as folhas de costela-de-adão (TropicalFaunaFloraCanvas) cobriam o título, badge e divs de texto no mobile. Ajustado o z-index do canvas de 20 para 1 e elevado o container de conteúdo para z-index 10. Implementada calibração responsiva de folhagem com ancoragem limpa nos cantos superiores do teto sem invasão da área de texto, além de ajuste inicial do ponto de repouso da Arara-Canindé no mobile.
+- **Files Modified:**
+  - `src/landing/components/TropicalFaunaFloraCanvas.tsx`
+  - `src/landing/components/HeroSection.tsx`
+  - `src/landing/components/MacawCompanionCanvas.tsx`
+  - `src/landing/graphics/macaw.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Tipografia e blocos da landing page 100% legíveis e desobstruídos em qualquer resolução; build e testes Playwright aprovados.
+
+## `2026-10-22 17:02` - `fix(landing)`: Macaw companion serenity stabilization and graceful cross-screen gliding
+
+- **Description:** Eliminated frantic rocking/shaking and cross-screen teleportation of the Arara-Canindé companion. Fixed root cause where idle breathing was added to the physics spring target, causing violent velocity oscillations and triggering spurious dive/climb tilt toggling at high frequencies. Decoupled idle bobbing to canvas render stage, capped horizontal velocity to 9.0 px/frame (6.5 mobile), expanded scroll transition intervals between sections from 0.02 to 0.06-0.08, calibrated majestic wing flap cadences (3.6 rad/s hovering, 4.2 cruise, 5.0 climb, aerodynamic delta tuck during dive), and verified continuous smooth cross-screen gliding with Playwright deterministic tests.
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `scripts/test_macaw_companion_flight.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Arara companion glides serenely without jitter or teleports across gutters while maintaining the requested ~83° rasante plunge during active scrolling. Awaiting user visual inspection.
+
+## `2026-10-22 17:08` - `feat(landing)`: Interactive user-controlled macaw side mirroring and 5-click petting easter egg
+
+- **Description:** Added interactive drag-and-drop side control and 5-click petting pirouette easter egg to the Macaw companion. Users can drag the macaw with mouse or touch to either side of the screen; upon release, she attaches to the closest gutter and inverts the animation path flow (isMirrored) across all sections. Rapidly clicking 5 times triggers an affectionate natural 360-degree aerial roll with vector heart particles. Verified 100% with Playwright deterministic tests.
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `src/landing/components/MacawCompanionCanvas.tsx`
+  - `scripts/test_macaw_interactive.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Landing page macaw companion has tactile user interaction, reversible choreographies, and playful easter egg feedback. Ready for user evaluation.
+
+## `2026-10-22 17:17` - `fix(landing)`: Parachute airbrake on dive stops and dynamic scroll velocity boost
+
+- **Description:** Implemented aerodynamic parachute flare brake (airBrake) triggering whenever the macaw exits a downward dive, fanning wings 42% wider, deploying splayed tail feathers into an airbrake rudder, and applying exponential air drag deceleration (vy *= 0.12). Restored lively, energetic wing beat frequencies (5.8 rad/s hovering, 7.2 cruise, 9.2 climb). Added dynamic scroll velocity scaling (speedBoost up to 4.0x, base 18.0 px/frame) to prevent lag and serpentine ping-ponging ("sambando") during rapid multi-section scrolling. Verified with deterministic Playwright tests.
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `scripts/test_macaw_airbrake_fastscroll.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Macawcompanion exhibits dramatic parachute flare deceleration on dive arrest and swift, decisive tracking under high-speed scrolling with zero browser stutter. Ready for user feedback.
+
+## `2026-10-22 17:22` - `refactor(landing)`: Majestic smooth acrobatic loop maneuver for macaw petting interaction
+
+- **Description:** Replaced static in-place spin with a cinematic smooth acrobatic loop maneuver (getAcrobaticPose). Triggered on 5 clicks, the macaw dips into a mini-dive to gather kinetic momentum (+24px), surges forward into open space (up to 135px), pulls up into a high soaring arc (-72px) executing a C2-continuous 360-degree smootherstep barrel roll during the climb, and glides back to settle precisely at its original starting position. Verified 100% with Playwright deterministic multi-phase tests.
+- **Files Modified:**
+  - `src/landing/graphics/macaw.ts`
+  - `scripts/test_macaw_interactive.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Macaw petting interaction has fluid natural flight kinematics, organic momentum transfer, and returns seamlessly to resting position. Ready for user evaluation.
+
+## `2026-10-22 20:14` - `feat(build)`: Compile standalone showcase release APK with complete 2FA eradication
+
+- **Description:** Hardened frontend and backend against two-factor authentication requirements for presentation demo. Neutralized TwoFactorModal with automatic success trigger, unblocked product and price registration routes across screens, added usesCleartextTraffic in app.json and AndroidManifest.xml, synchronized remote CTI backend requireTwoFactor bypass, and compiled standalone native release APK via Gradle.
+- **Files Modified:**
+  - `src/frontend/components/TwoFactorModal.tsx`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app.json`
+  - `src/frontend/android/app/src/main/AndroidManifest.xml`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Standalone APK generated at `src/frontend/android/app/build/outputs/apk/release/app-release.apk` (56 MB), ready for presentation install without Expo Go.
+
+## `2026-11-10 18:51` - `chore(ci)`: Staging APK conditional build, strict SemVer scope, and UI SVG icon replacement
+
+- **Description:** Cancelada a compilação redundante do APK no GitHub Actions após merge de PR não relacionado ao front-end (#44). Implementado script inteligente `scripts/check_frontend_changes.ts` e condicionalizado o job `build_staging_apk` em `.github/workflows/staging.yml` para compilar exclusivamente quando houver alterações reais de front-end. Blindada a regra e utilitário `scripts/bump_version.ts` para restringir alterações de SemVer estritamente a modificações em `src/frontend/` ou `src/backend/`. Realizada a erradicação de emojis em workflows, logs de backend e interface gráfica mobile, substituindo-os por ícones vetoriais SVG de bibliotecas (@expo/vector-icons Ionicons e lucide-react-native), preservando emojis estritamente nas mensagens de compartilhamento externo da lista de compras.
+- **Files Modified:**
+  - `.github/workflows/staging.yml`
+  - `.github/workflows/deploy-landing.yml`
+  - `.github/workflows/maestro-e2e.yml`
+  - `.github/workflows/nightly-audit.yml`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `scripts/check_frontend_changes.ts`
+  - `scripts/bump_version.ts`
+  - `.agents/skills/semver/scripts/bump.sh`
+  - `tests/semver.test.ts`
+  - `.agents/AGENTS.md`
+  - `.agents/skills/semver/SKILL.md`
+  - `.agents/skills/semver/references/presco-release-policy.md`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/healthCheck.ts`
+  - `src/backend/src/shared/database/checkCounts.ts`
+  - `src/backend/src/shared/database/reallocateMarkets.ts`
+  - `src/backend/src/shared/redis/server.ts`
+  - `src/backend/src/shared/services/email.service.ts`
+  - `src/backend/src/shared/util/crashLogger.ts`
+  - `src/backend/src/shared/constants/productCategories.ts`
+  - `src/frontend/constants/productCategories.ts`
+  - `src/frontend/components/CategorySelector.tsx`
+  - `src/frontend/components/OnboardingTutorialModal.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/app/profile.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `src/frontend/i18n/index.ts`
+  - `src/frontend/i18n/locales/*.ts`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Execução de CI economiza até 30 minutos de runner por commit que não toque no front-end. O SemVer agora é estritamente protegido contra bumps desnecessários. A interface do aplicativo agora utiliza exclusivamente ícones SVG profissionais e consistentes com o sistema Monet.
+
+
+## `2026-11-10 18:56` - `docs(agents)`: Codify fundamental No Emojis policy across rules and agent guidelines
+
+- **Description:** Added the "No Emojis Policy" as a foundational, system-wide P0 axiom across universal rules, system guidelines, root instructions, clean code, and frontend architecture skills. Emojis are strictly banned in code, backend logs, database seeds, workflows, and graphical interfaces (where SVG vector icons are mandatory), with the single exception of outgoing external sharing messages.
+- **Files Modified:**
+  - `AGENTS.md`
+  - `.agents/rules/universal-rules.md`
+  - `.agents/AGENTS.md`
+  - `.agents/skills/clean-code/SKILL.md`
+  - `.agents/skills/presco-frontend/SKILL.md`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** All AI agents and developers are now strictly bounded by the No Emojis axiom.
