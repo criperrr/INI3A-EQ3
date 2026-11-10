@@ -146,7 +146,7 @@ export async function connectRedis(maxRetries = 2, delayMs = 1000): Promise<bool
       const msg = e instanceof Error ? e.message : String(e);
       if (attempt === maxRetries) {
         console.warn(`REDIS: Could not connect to '${targetUrl}' (${msg || "connection refused - server offline"}).`);
-        console.warn(`REDIS: ⚠️ In-memory fallback mode activated. Sessions and tokens will be cached safely in-memory.`);
+        console.warn(`REDIS: [WARN] In-memory fallback mode activated. Sessions and tokens will be cached safely in-memory.`);
         return false;
       }
       await new Promise((res) => setTimeout(res, delayMs));

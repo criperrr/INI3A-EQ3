@@ -26,7 +26,7 @@ export function logFatalError(context: string, error: unknown): void {
 
     const logEntry = [
       "================================================================================",
-      `🔥 CATASTROPHIC ERROR DETECTED [${timestamp}]`,
+      `[FATAL] CATASTROPHIC ERROR DETECTED [${timestamp}]`,
       `Context: ${context}`,
       `PID: ${process.pid} | Uptime: ${process.uptime().toFixed(1)}s | Node: ${process.version} (${process.platform})`,
       `Memory: RSS ${(mem.rss / 1024 / 1024).toFixed(1)}MB | Heap ${(mem.heapUsed / 1024 / 1024).toFixed(1)}MB / ${(mem.heapTotal / 1024 / 1024).toFixed(1)}MB`,

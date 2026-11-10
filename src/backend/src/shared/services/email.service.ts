@@ -93,7 +93,7 @@ class EmailServiceClass {
           responseData?.message || responseData,
         );
         // Em ambientes de teste/desenvolvimento ou domínios não verificados, registramos o código no log para viabilizar testes imediatos
-        console.log(`🔑 [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+        console.log(`[AUTH] [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
         return false;
       }
 
@@ -101,7 +101,7 @@ class EmailServiceClass {
       return true;
     } catch (error) {
       console.error("[Resend] Network error when sending 2FA email:", error);
-      console.log(`🔑 [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+      console.log(`[AUTH] [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
       return false;
     }
   }

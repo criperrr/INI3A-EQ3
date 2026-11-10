@@ -25,7 +25,13 @@ When incrementing the version:
    - `expo.version`: `"<newVersion>"`
    - `expo.android.versionCode`: `previousCode + 1` (integer)
 
-## 2. Automated Script
+## 2. Scope Policy: Frontend or Backend Changes ONLY
+
+SemVer versions MUST ONLY be bumped when changes impact application source code:
+- Allowed scopes: `src/frontend/` (mobile app) or `src/backend/` (API/services).
+- Forbidden scopes: CI/CD (`.github/`), scripts (`scripts/`), stress tests (`tests/k6/`), docs (`docs/`, `*.md`), landing page, or tooling.
+
+## 3. Automated Script
 
 Use the project's atomic bumping utility:
 ```bash

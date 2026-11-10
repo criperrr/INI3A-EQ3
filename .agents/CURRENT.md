@@ -7,6 +7,131 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Condicionalização Cirúrgica de Build do APK de Staging e Restrição Estrita de Escopo do SemVer (`chore/staging-frontend-filter-semver`):**
+  - **Cancelamento Imediato de Compilação Redundante:** Cancelada a execução `42901643965` no GitHub Actions que compilava desnecessariamente o APK nativo de staging após merge de PR de CI/testes k6 (#44).
+  - **Filtro de Detecção Inteligente de Front-end no Pipeline de Staging (`.github/workflows/staging.yml` e `scripts/check_frontend_changes.ts`):**
+    - Desenvolvido script TypeScript automatizado `scripts/check_frontend_changes.ts` que analisa o diff do commit em relação à base e diferencia alterações reais de front-end (telas, componentes, hooks, assets, dependências) de meros bumps de versão (`version` e `versionCode` em `app.json` e `package.json`).
+    - Configurado o workflow `staging.yml` para emitir o output `frontend_changed` e condicionalizar o job `build_staging_apk` exclusivamente para execuções onde houve código real de front-end alterado ou disparo manual via `workflow_dispatch`.
+  - **Restrição Estrita de Alteração de SemVer aos Escopos Front-end e Back-end:**
+    - Atualizados `.agents/AGENTS.md`, `.agents/skills/semver/SKILL.md` e referências: estabelecida proibição absoluta de bump de versão para alterações restritas a CI/CD, testes de estresse k6, scripts de infra, landing page ou documentação.
+    - Atualizado `scripts/bump_version.ts` com a função `checkAppChanges()` que bloqueia bumps caso não haja alterações em `src/frontend/` ou `src/backend/`, permitindo bypass manual apenas via flag `--force`.
+  - **Erradicação Abrangente de Emojis e Substituição por Ícones Vetoriais SVG de Bibliotecas:**
+    - Erradicados emojis de todos os workflows do GitHub Actions (`.github/workflows/*.yml`), substituindo por marcadores padrão limpos `[OK]`, `[INFO]`, `[ERRO]`.
+    - Backend: Erradicados emojis em logs, scripts de seed e migrações de mercado (`seed.ts`, `healthCheck.ts`, `checkCounts.ts`, `reallocateMarkets.ts`, `redis/server.ts`, `crashLogger.ts`). Badges agora utilizam identificadores canônicos de ícones vetoriais.
+    - Interface Gráfica Mobile: Emojis substituídos por ícones vetoriais SVG de bibliotecas (`@expo/vector-icons` / `Ionicons` e `lucide-react-native`):
+      - Badges de perfil e modal de conquistas (`profile.tsx`): ícones vetoriais dinâmicos de alta fidelidade via `Ionicons`.
+      - Seletores e chips de categorias (`CategorySelector.tsx`, `search.tsx`, `productDetails.tsx`, `productCard.tsx`, `scannerConfirmation.tsx`): ícones temáticos dedicados por categoria (cesta, folha, talheres, etc.).
+      - Badges de promoção e tendência (`index.tsx`, `adminModeration.tsx`, `search.tsx`): ícone vetorial `flame` SVG.
+      - Tutorial interativo (`OnboardingTutorialModal.tsx`): ícones vetoriais em chips, pins, carimbos e notas.
+      - Seleção de idiomas (`settings.tsx`, `i18n/index.ts`): flags emoji substituídas por badges textuais elegantes de código de idioma (`PT`, `EN`, `ES`, etc.) e ícones SVG.
+    - Preservação Estrita Solicitada: Mantidos emojis exclusivamente em mensagens de saída/compartilhamento externo da lista de compras (`mapQueryBuilder.ts` -> WhatsApp/clipboard).
+    - **Axioma Fundamental de Erradicação de Emojis Formalizado:** Codificado como axioma universal mandatório em `.agents/rules/universal-rules.md`, `.agents/AGENTS.md` (Seção 8.6), `AGENTS.md` (raiz), `.agents/skills/clean-code/SKILL.md` e `.agents/skills/presco-frontend/SKILL.md`, proibindo terminantemente emojis em UI, código e workflows (com SVG vetorial obrigatório na interface).
+  - **Validação Completa:** 71 testes automatizados (unitários, integração, concorrência e SemVer) aprovados com 100% de sucesso e 0 erros de `typecheck`.
+- **Compilação do APK de Release Standalone para Mostruário sem 2FA (`feat/demo-apk-no-2fa`):**
+  - **Eliminação Completa da Autenticação em Duas Etapas (2FA) em Todas as Camadas:**
+    - `TwoFactorModal.tsx`: Fail-safe absoluto que chama `onSuccess?.()` e fecha instantaneamente se acionado por qualquer fluxo.
+    - `customRegisterProduct.tsx`, `registerProduct.tsx` e `productDetails.tsx`: Bloqueios residuais por código 2FA removidos, submetendo os produtos, preços e votos de forma incondicional.
+    - Backend Local e Remoto CTI (`projetoscti.com.br`): Middleware `requireTwoFactor` sincronizado e PM2 reiniciado (`presco-backend` e `presco-backend-dev`) com bypass garantido (`return next()`).
+    - `app.json` e `AndroidManifest.xml`: Adicionado `usesCleartextTraffic: true` para suportar conexões HTTP em rede local sem restrições de segurança do Android.
+  - **Compilação Nativa Release Concluída com Sucesso (`npm run android:apk`):**
+    - APK gerado: `src/frontend/android/app/build/outputs/apk/release/app-release.apk` (56 MB).
+    - Binário 100% autônomo com bytecode Hermes embutido, pronto para instalação e apresentação sem dependência de Metro ou Expo Go.
+- **Refatoração da Manobra Acrobática Suave de Carinho (Mini-Rasante, Momentum e Giro 360°) (`feat/landing-faq-macaw-scroll`):**
+  - **Cinemática Fluida e Orgânica da Manobra de Carinho (`getAcrobaticPose`):**
+    - Substituído o giro estático no próprio eixo por uma manobra acrobática completa e cinematográfica inspirada em dinâmicas reais de voo aviário:
+      1. *Fase 1 (Mini-Rasante):* Ao atingir 5 cliques consecutivos, a arara mergulha suavemente para baixo e para frente ($\Delta y = +24\text{px}$, bico inclinado a 23°), acumulando velocidade cinética (*momentum*).
+      2. *Fase 2 (Voo para Frente):* Avança horizontalmente pelo ar até 135px no desktop (55px no mobile) na direção para onde está olhando, nivelando com momentum pleno.
+      3. *Fase 3 (Subida em Arco & Rotação 360° Suave):* Converte o momentum em sustentação vertical ascendente em arco amplo ($\Delta y = -72\text{px}$), executando uma **rotação suave de 360°** no ar usando interpolação quíntica *Smootherstep* (Ken Perlin), com aceleração angular contínua $C^2$ (zero solavancos).
+      4. *Fase 4 (Retorno Suave à Posição Inicial):* Curva de volta na descida e estabiliza exatamente nas coordenadas originais de repouso ($\Delta x = 0, \Delta y = 0$), abrindo suavemente as asas em freio paraquedas para absorver o residual de velocidade.
+    - Duração ampliada de 1.2s para **2.0s** para proporcionar uma trajetória graciosa e majestosa.
+  - **Validação com Playwright (`scripts/test_macaw_interactive.ts`):**
+    - Capturadas as fases em imagens:
+      - `macaw_acrobatic_phase1_minidive.png` (mini-rasante e avanço).
+      - `macaw_acrobatic_phase2_highclimb_roll.png` (subida em arco com rotação de 360° e momentum).
+      - `macaw_acrobatic_phase3_return_settle.png` (pouso perfeito na posição inicial).
+- **Freio Aerodinâmico Tipo Paraquedas e Aceleração Dinâmica Anti-Sambando (`feat/landing-faq-macaw-scroll`):**
+  - **Freio Aerodinâmico Tipo Paraquedas ao Sair de Mergulhos:**
+    - Implementada a mecânica biológica de *flare maneuver* / frenagem aerodinâmica (`airBrake: 0 -> 1`): toda vez que a ave interrompe uma queda ou o usuário cessa a rolagem descendente, ela abre imediatamente as asas no limite máximo de envergadura e leque (`spread * 1.42`, `lm * 1.15`), empina o cotovelo e a mão contra o vento e abre a cauda em leque largo (`tailSpread * 1.85`).
+    - A resistência do ar desacelera drasticamente o vetor de queda (`vy *= 0.12`), simulando com fidelidade física um paraquedas de penas inflando contra o fluxo de ar para absorver a energia cinética.
+    - O corpo empina suavemente (+12° para cima) em ângulo de sustentação antes de se nivelar com perfeição na calha lateral.
+  - **Restauração da Cadência Ágil de Batimento de Asas:**
+    - Frequência de batimento alar restaurada para ritmo ativo, alerta e vivo (5.8 rad/s em repouso/pairada, 7.2 rad/s em cruzeiro, 9.2 rad/s em subida), eliminando a sensação de lentidão e mantendo vigor biológico.
+  - **Eliminação do "Sambando" e Travamentos em Scroll Rápido:**
+    - Causa raiz: quando o usuário rolava a página muito rápido por várias seções, a arara ficava presa perseguindo waypoints passados que alternavam esquerda/direita, gerando um efeito de serpentina desordenada ("sambando").
+    - Solução com *Dynamic Velocity Boost*: a velocidade máxima e a taxa de aceleração escalam proporcionalmente à velocidade instantânea do scroll (`speedBoost` até 4.0x) e à distância restante, permitindo que a ave ultrapasse o trecho e pouse diretamente no destino com velocidade `18 px/frame` no desktop e `12 px/frame` no mobile, com resposta imediata e sem engasgos do navegador.
+  - **Validação com Playwright (`scripts/test_macaw_airbrake_fastscroll.ts`):**
+    - Scroll rápido extremo de 4500px executado em 898ms sem travar o navegador (`macaw_fast_scroll_tracking.png`).
+    - Abertura de asas em freio paraquedas capturada em `macaw_parachute_airbrake_arrest.png` e pouso estável verificado em `macaw_post_airbrake_level_hover.png`.
+- **Controle Interativo do Lado da Arara e Easter Egg de Carinho (`feat/landing-faq-macaw-scroll`):**
+  - **Interatividade Manual e Anexação Inteligente aos Cantos:**
+    - O usuário agora pode arrastar livremente a Arara-Canindé com mouse ou toque na tela (`MacawCompanionCanvas.tsx` e `macaw.ts`).
+    - Durante o arraste, a ave acompanha o cursor organicamente, inclinando-se na direção do movimento e batendo asas alegremente.
+    - Ao soltar a arara, o sistema calcula o lado mais próximo da tela (`x < w / 2 ? 'left' : 'right'`) e acopla a ave suavemente na calha correspondente (`attachToSide`).
+    - **Inversão Dinâmica do Fluxo de Animação (`isMirrored`):** Se o usuário mover a arara para o lado oposto ao inicial (ex: colocá-la na direita no Hero em vez da esquerda), toda a coreografia se espelha deterministicamente ($rx' = 1 - rx$, $facing' = -facing$). O rasante da Seção 3 ocorre na esquerda, na Seção 4 na direita, etc., respeitando exatamente a inversão do fluxo solicitada.
+  - **Easter Egg de Carinho (5 Cliques Consecutivos):**
+    - Quando o usuário clica ou toca na arara 5 vezes seguidas (intervalo < 1.8s entre cliques):
+      - Cliques 1 a 4: produzem pequenos saltos afetuosos com emissão de corações vetoriais suaves.
+      - 5º clique: aciona uma pirueta acrobática natural de 360 graus no ar (`petSpinTimer = 1.2s`), com asas planadas em leque, elevação suave de 28px e explosão de afeto com 7 partículas de corações e estrelas douradas (`drawVectorHeart`).
+  - **Validação Automatizada com Playwright (`scripts/test_macaw_interactive.ts`):**
+    - Cursor de mãozinha (`grab`/`grabbing`) confirmado durante hover e arraste, com restauração para `pointerEvents: "none"` fora da ave para não bloquear botões da página.
+    - Arraste da esquerda para a direita verificado com sucesso (`macaw_interactive_mirrored_right.png`).
+    - Scroll após inversão confirmado com rasante ocorrendo na calha esquerda (`macaw_interactive_mirrored_dive_left.png`).
+    - Sequência de 5 cliques testada com captura do giro de 360° afetuoso (`macaw_interactive_petting_spin.png`) e retorno ao repouso estável (`macaw_interactive_post_petting_settle.png`).
+- **Eliminação de Movimento Frenético e Teletransporte da Arara-Canindé (`feat/landing-faq-macaw-scroll`):**
+  - **Causa Raiz Identificada:**
+    1. *Agitação Frenética:* A variável de respiração ociosa (`idleBreathing`) estava sendo somada diretamente ao `targetY` dentro do integrador de mola elástica, fazendo `this.vy` oscilar violentamente entre valores positivos e negativos em repouso. Isso ativava repetidamente a lógica de rasante (`targetBank = 0.9 rad` / 52°) alternada com subida (`targetBank = -0.3 rad` / -17°), gerando um balanço frenético constante do corpo e disparando batimentos espasmódicos das asas a 12 Hz.
+    2. *Teletransporte Horizontal:* Os keyframes da trajetória pré-gravada comprimiam as travessias entre as calhas direita e esquerda em um intervalo de scroll minúsculo ($\Delta p = 0.02$, correspondente a apenas ~150px de rolagem de mouse). Somado à falta de limitador de velocidade em `this.vx`, o vetor de perseguição acelerava a ave a mais de 300 px/frame, fazendo-a cruzar a tela em 4 frames (~70ms).
+  - **Correções Aplicadas:**
+    1. *Desacoplamento Físico do Movimento Ocioso:* O alvo físico (`targetX`, `targetY`) agora segue estritamente a linha de centro da trajetória do scroll. A flutuação orgânica corporal (`bobbing = 2.8px`, micro-deriva de 1.6px) foi movida com segurança para a etapa final de desenho no canvas (`render`), sem contaminar a velocidade física `this.vy` nem o cálculo da inclinação.
+    2. *Estabilidade e Serenidade do Voo:* Quando parada ou em rolagem suave, `targetBank` permanece perfeitamente em 0° (estável, sem tremulação corporal). A frequência de batimento de asas foi reajustada para a majestade biológica da arara-canindé (~3.6 rad/s / 0.57 Hz em pairada, 4.2 em cruzeiro, 5.0 em subida e encolhimento *delta tuck* planado no rasante).
+    3. *Eliminação Definitiva do Teletransporte:*
+       - Introduzido limitador estrito de velocidade horizontal: `maxSpeedX = 9.0 px/frame` no desktop e `6.5 px/frame` no mobile (~400 a 540 px/s), impedindo qualquer salto instantâneo independente da velocidade de rolagem do usuário.
+       - Ampliadas as janelas de transição entre seções no `DESKTOP_EYE_PATH` e `MOBILE_EYE_PATH` para $\Delta p = 0.06\text{ a }0.08$ (~500 a 650px de rolagem), transformando a mudança de lado em um voo transversal diagonal gracioso e gradual de ~2 a 2.5 segundos.
+       - Orientação da cabeça inteligente: durante o voo transversal, a ave olha para a frente (direção do deslocamento); ao estacionar nos cantos, vira a cabeça suavemente em direção ao miolo do site.
+  - **Validação com Teste Automatizado Determinístico Playwright:**
+    - Executado `scripts/test_macaw_companion_flight.ts` e `scripts/test_landing_playwright.ts` com 100% de aprovação:
+      - 20 frames de repouso verificados com desvio nulo de inclinação corporal.
+      - Rasante em ~83° confirmado durante o scroll ativo em "Por que criamos o Presco".
+      - Nivelamento automático confirmado assim que a rolagem para.
+      - Voo diagonal contínuo entre calhas capturado em `macaw_mid_transition_glide.png` comprovando ausência de teletransporte.
+      - Subida com corpo empinado para cima (-0.55 rad) comprovada em `macaw_stage5_climbing_up.png`.
+- **Correção da Sobreposição das Folhas Tropicais nos Textos e Divs (`feat/landing-faq-macaw-scroll`):**
+  - **Hierarquia Estrita de Camadas (Z-Index Sanitization):**
+    - Corrigido o `TropicalFaunaFloraCanvas` de `zIndex: 20` para `zIndex: 1` (tanto no container React Native quanto no elemento `<canvas>` nativo DOM).
+    - Atribuído `zIndex: 10` explícito ao `inner` e `zIndex: 15` ao `textContent` de `HeroSection.tsx`, garantindo que todos os textos, títulos, badges, botões e divs fiquem incondicionalmente à frente da vegetação ornamental de fundo.
+  - **Calibração Responsiva da Folhagem (Zero Text Occlusion):**
+    - **Mobile (< 640px):** Removida a folha intrusiva central (`y = 140px`) que ficava sobre a manchete ("Economize até 35%..."). As folhas agora ficam estritamente ancoradas nos cantos superiores do teto (`x: -25, y: 0`, escala `0.40`; `x: w + 15, y: 5`, escala `0.38`), emoldurando a tela organicamente sem jamais cobrir os títulos ou caixas de conteúdo.
+    - **Tablet (640-1024px) & Desktop (>= 1024px):** Folhagem distribuída harmoniosamente nas calhas externas de margem (gutters), preservando a legibilidade absoluta do container central de 1200px.
+  - **Reposicionamento Inicial da Arara-Canindé no Mobile:**
+    - Ajustado o keyframe inicial de repouso no mobile para `ry = 0.14` e escala `0.25`, posicionando a ave elegantemente na margem esquerda superior logo acima do badge, sem colidir nem sobrepor as palavras do título.
+  - **Validação Visual e Playwright:** Capturadas capturas de tela em 360×780 (Samsung Galaxy S25) e 1280×800 (Desktop) comprovando 100% de clareza tipográfica e ausência de sobreposição; suíte de testes Playwright e `typecheck` aprovados com 0 erros.
+- **Cinemática Biomecânica Aviária e Trajetória Determinística da Arara-Canindé (`feat/landing-faq-macaw-scroll`):**
+  - **Pesquisa Científica com Subagente Especializado:**
+    - Modelagem biomecânica baseada em Wu & Popović (ACM SIGGRAPH 2003) e Vazquez (1994, ligação de 4 barras paralela).
+    - Defasagem de fase articular proximal-distal: ombro ($\sin t$), cotovelo ($\Delta\phi = 0.42\text{ rad}$), punho/mão ($\Delta\phi = 0.95\text{ rad}$) e penas primárias P1–P10 ($\Delta\phi = 1.25\text{ a }1.65\text{ rad}$).
+    - Contraste anatômico da face inferior da asa (*underwing*): amarelo-canário e açafrão dourado vibrante na face ventral da asa distante contra o dorso azul-cobalto.
+    - Mergulho com retração aerodinâmica (*diveTuck*): cotovelo e punho recolhem em flecha (*delta sweep*), diminuindo arrasto e envergadura suavemente durante o rasante.
+  - **Ajuste de Escala e Dinamismo Solicitados:**
+    - **Tamanho Reduzido e Proporcional:** Escala ajustada para `0.42` no desktop e `0.30` no mobile, eliminando a sobrecarga visual e integrando-se elegantemente à tipografia.
+    - **Rasante em Quase 90 Graus:** O mergulho descendente agora rotaciona o corpo em até ~82° (`1.45 rad`), com o bico apontado quase verticalmente para baixo no rasante.
+    - **Dinamismo e Voo Ativo:** Aceleração ágil do scroll (`followRate = 0.22`), batimento contínuo acelerado (`6.8 Hz` a `12.0 Hz`) e flutuação vertical orgânica de sustentação (`bobbing = 5.2px` + micro-deriva horizontal), eliminando qualquer sensação de rigidez ou lentidão.
+  - **Trajetória e Posicionamento Estrito nos Cantos e Margens:**
+    - **Início no Hero (`scroll = 0`):** Estacionada no canto superior esquerdo (`x = 88px`), batendo asas ativamente em voo pairado (*hovering*) para se manter no ar.
+    - **Passagem por Baixo das Divs de Estatísticas:** Desce em curva suave cruzando a tela para a direita por baixo da linha de cards (Economia, Radar, Proximidade, 2FA).
+    - **Rasante no Canto Direito em "Por que criamos o Presco":** Permanece na calha direita (`x = w - 88px`), sem sobrepor texto nem cards, inclinando-se a ~82° no mergulho.
+    - **Cancelamento Suave e Subida Realista:** Ao cessar o scroll, o mergulho zera suavemente e a arara nivela pairando no ar; ao rolar para cima, empina o corpo para cima (-0.85 rad) e sobe com batimentos potentes.
+    - **Alternância de Cantos:** Alterna rigorosamente entre margem esquerda e direita nos blocos seguintes.
+  - **Expansão Suave do FAQ (`FaqSection.tsx`):**
+    - Animação com `cubic-bezier(0.16, 1, 0.3, 1)`, controlando `maxHeight: 0 -> 320px`, `opacity`, padding e rotação do chevron de 180° sem solavancos.
+  - **Equalização do Card de Segurança (`SecurityProtectionSection.tsx`):**
+    - Eliminado o gap de 140px acima do título, moldura do celular reduzida de 480px para 380px com foco nítido em "Privacidade & Segurança".
+  - **Header & Footer:**
+    - Auto-hide do cabeçalho ativado apenas após ultrapassar a primeira página (Hero). Logo do footer ampliado para 60×60px e remoção definitiva de menções a sistemas operacionais.
+  - **Auditoria de Testes 100% Aprovada:** 68 testes unitários/integração + Playwright em desktop e mobile. SemVer: `v1.5.2` (`versionCode: 33`).
+- **Correção da Cor da Asa Distante da Arara-Canindé (`macaw.ts`):**
+  - Identificado que a asa distante (asa de trás / superior) estava renderizando com uma paleta amarela/dourada com penas oliva (`WING_UNDER`), causando assimetria visual incorreta onde uma asa era azul e a outra amarela.
+  - Substituída a paleta da asa distante por `WING_FAR`, harmonizando ambas as asas com o azul turquesa/cobalto/marinho característico da *Ara ararauna*, com sombreamento suave de profundidade tridimensional.
+  - Recompilado o bundle web da landing page (`npm run landing:build`) com sucesso (0 erros).
 - **Auditoria Noturna de Alta Carga, Estresse Concorrente e Jornadas de Usuário (`feat/nightly-real-stress-audit`):**
   - **Transformação de Auditoria Noturna em Teste Real de Carga e Estresse:**
     - Erradicado o mascaramento com `|| true` no step de execução de testes k6 em `.github/workflows/nightly-audit.yml`.

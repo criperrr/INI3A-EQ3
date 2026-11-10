@@ -44,7 +44,7 @@ jobs:
           sleep 4
           timeout 30 bash -c 'until docker compose exec -T postgres pg_isready -U postgres -d presco_db; do sleep 1; done'
           timeout 20 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
-          echo "✅ Postgres e Redis online e saudáveis!"
+          echo "[OK] Postgres e Redis online e saudáveis!"
 
       - name: Configurar e Inicializar Backend para Auditoria Noturna
         env:
@@ -83,7 +83,7 @@ jobs:
           echo "Iniciando servidor backend em segundo plano..."
           npm run --prefix src/backend start > backend-nightly.log 2>&1 &
           timeout 30 bash -c 'until curl -s http://localhost:3333/health | grep -q "ok"; do sleep 1; done'
-          echo "✅ Backend online e respondendo em http://localhost:3333"
+          echo "[OK] Backend online e respondendo em http://localhost:3333"
 
       - name: Executar Simulação de Carga e Comportamento Real (Grafana k6)
         env:
@@ -134,7 +134,7 @@ jobs:
                 };
                 history.push(entry);
                 fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
-                console.log("✅ Benchmark registrado no histórico:", entry);
+                console.log("[OK] Benchmark registrado no histórico:", entry);
               } catch (e) {
                 console.warn("Aviso ao processar histórico k6:", e.message);
               }
@@ -163,14 +163,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node scripts/audit_failure_analyzer.js || {
-            echo "ℹ️ Auditoria encerrou com falha, mas a análise forense confirmou que NÃO se trata de um bug da aplicação (apenas instabilidade de ambiente/rede/SLA de teste). Nenhuma issue criada."
+            echo "[INFO] Auditoria encerrou com falha, mas a análise forense confirmou que NÃO se trata de um bug da aplicação (apenas instabilidade de ambiente/rede/SLA de teste). Nenhuma issue criada."
             exit 0
           }
 
-          echo "🚨 Bug real confirmado no backend! Criando issue técnica..."
+          echo "[ERRO] Bug real confirmado no backend! Criando issue técnica..."
           BUG_DETAILS=$(cat app-bug-report.md)
           gh issue create \
-            --title "🚨 [BUG APLICAÇÃO] Falha confirmada no backend durante auditoria noturna" \
+            --title "[BUG APLICAÇÃO] Falha confirmada no backend durante auditoria noturna" \
             --body "A auditoria noturna detectou uma falha real de execução no backend (erro 500, crash ou regressão de teste unitário):
 
           ${BUG_DETAILS}

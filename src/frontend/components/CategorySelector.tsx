@@ -160,7 +160,7 @@ const CategorySelector = memo(function CategorySelector({
                     { backgroundColor: accent + "25", borderColor: accent },
                   ]}
                 >
-                  <Text style={styles.selectedPillEmoji}>{def ? def.emoji : "🏷️"}</Text>
+                  <Ionicons name={((def?.icon as any) || "pricetag-outline")} size={13} color={accent} style={{ marginRight: 4 }} />
                   <Text style={[styles.selectedPillText, { color: isDark ? "#FFFFFF" : "#1A202C" }]}>
                     {displayName}
                   </Text>
@@ -209,7 +209,12 @@ const CategorySelector = memo(function CategorySelector({
                   },
                 ]}
               >
-                <Text style={styles.chipEmoji}>{item.emoji}</Text>
+                <Ionicons
+                  name={((item.icon as any) || "pricetag-outline")}
+                  size={15}
+                  color={isSelected ? accent : isDark ? "#A0AEC0" : "#4A5568"}
+                  style={{ marginRight: 6 }}
+                />
                 <Text
                   style={[
                     styles.chipText,

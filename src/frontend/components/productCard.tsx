@@ -3,7 +3,7 @@ import { StyleSheet, View, Text } from "react-native";
 import { Image } from "expo-image";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
-import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { getLocalizedCategoryName } from "../constants/productCategories";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 interface ProductCardProps {
@@ -165,7 +165,7 @@ const ProductInfo = memo(function ProductInfo({
               numberOfLines={1}
               ellipsizeMode="tail"
             >
-              {getCategoryEmoji(cat)} {getLocalizedCategoryName(cat, t).toUpperCase()}
+              {getLocalizedCategoryName(cat, t).toUpperCase()}
             </Text>
           ))}
           {displayCategories.length > 2 && (

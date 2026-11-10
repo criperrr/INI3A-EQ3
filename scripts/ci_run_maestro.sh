@@ -4,57 +4,57 @@ set -euo pipefail
 SUITE="${1:-quality}"
 export PATH="$HOME/.maestro/bin:$PATH"
 
-echo "📱 Aguardando emulador Android responder ao adb..."
+echo "[INFO] Aguardando emulador Android responder ao adb..."
 adb wait-for-device
 
-echo "📱 Dispositivos conectados:"
+echo "[INFO] Dispositivos conectados:"
 adb devices
 
-echo "📦 Instalando APK Debug do Presco..."
+echo "[INFO] Instalando APK Debug do Presco..."
 adb install -r src/frontend/android/app/build/outputs/apk/debug/app-debug.apk
 
-echo "🔍 Verificando pacote instalado no emulador..."
-adb shell pm list packages | grep com.presco.app || (echo "❌ Pacote com.presco.app não encontrado no emulador!" && exit 1)
-echo "✅ Pacote com.presco.app verificado com sucesso."
+echo "[INFO] Verificando pacote instalado no emulador..."
+adb shell pm list packages | grep com.presco.app || (echo "[ERRO] Pacote com.presco.app não encontrado no emulador!" && exit 1)
+echo "[OK] Pacote com.presco.app verificado com sucesso."
 
-echo "🔑 Concedendo permissões do sistema..."
+echo "[INFO] Concedendo permissões do sistema..."
 adb shell pm grant com.presco.app android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true
 adb shell pm grant com.presco.app android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true
 
-echo "🔀 Configurando redirecionamento de portas ADB..."
+echo "[INFO] Configurando redirecionamento de portas ADB..."
 adb reverse tcp:8081 tcp:8081
 adb reverse tcp:3333 tcp:3333
 
-echo "🚀 Iniciando Metro Bundler em background..."
+echo "[INFO] Iniciando Metro Bundler em background..."
 cd src/frontend
 npx expo start --host lan > /tmp/metro.log 2>&1 &
 METRO_PID=$!
 cd ../..
 
 cleanup() {
-  echo "🧹 Encerrando processos de suporte..."
+  echo "[INFO] Encerrando processos de suporte..."
   kill "$METRO_PID" 2>/dev/null || true
   pkill -f "expo start" 2>/dev/null || true
 }
 trap cleanup EXIT
 
-echo "⏳ Aguardando Metro Bundler responder..."
+echo "[INFO] Aguardando Metro Bundler responder..."
 timeout 60 bash -c 'until curl -s http://localhost:8081/status; do sleep 2; done'
-echo "✅ Metro Bundler pronto."
+echo "[OK] Metro Bundler pronto."
 
-echo "🔥 Pré-aquecendo bundle JavaScript no Metro..."
+echo "[INFO] Pré-aquecendo bundle JavaScript no Metro..."
 curl -s "http://localhost:8081/index.bundle?platform=android&dev=true&minify=false" > /dev/null 2>&1 || true
-echo "✅ Bundle pré-aquecido."
+echo "[OK] Bundle pré-aquecido."
 
-echo "🔗 Conectando app ao Metro Bundler via deep-link..."
+echo "[INFO] Conectando app ao Metro Bundler via deep-link..."
 adb shell am start -a android.intent.action.VIEW -d "presco://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081" 2>/dev/null || true
 sleep 8
 
-echo "🧪 Executando suíte Maestro ($SUITE)..."
+echo "[INFO] Executando suíte Maestro ($SUITE)..."
 mkdir -p reports/maestro
 if [ "$SUITE" = "quick" ]; then
   npm run test:maestro:quick
 else
   npm run test:maestro:quality
 fi
-echo "✅ Suíte Maestro finalizada com sucesso."
+echo "[OK] Suíte Maestro finalizada com sucesso."

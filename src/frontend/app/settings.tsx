@@ -546,8 +546,9 @@ const SettingsScreen: React.FC = () => {
           </Text>
         </View>
         {isSaved && (
-          <View style={styles.savedAlert}>
-            <Text style={styles.savedAlertText}>✓ {t("common.saved")}</Text>
+          <View style={[styles.savedAlert, { flexDirection: "row", alignItems: "center" }]}>
+            <Check size={13} color="#10B981" style={{ marginRight: 4 }} />
+            <Text style={styles.savedAlertText}>{t("common.saved")}</Text>
           </View>
         )}
       </View>
@@ -706,8 +707,8 @@ const SettingsScreen: React.FC = () => {
                 </Text>
                 <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
                   {isSystemLanguage
-                    ? `⚙️ ${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
-                    : `${languageInfo.flag} ${languageInfo.nativeName}`}
+                    ? `${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
+                    : `[${languageInfo.flag}] ${languageInfo.nativeName}`}
                 </Text>
               </View>
             </View>
@@ -1743,7 +1744,9 @@ const SettingsScreen: React.FC = () => {
                 }}
               >
                 <View style={styles.languageRowLeft}>
-                  <Text style={styles.flagEmoji}>⚙️</Text>
+                  <View style={[styles.flagBadgeBox, { backgroundColor: globalIsDark ? "#2D3748" : "#E2E8F0" }]}>
+                    <Settings size={16} color={accent} />
+                  </View>
                   <View>
                     <Text
                       style={[
@@ -1784,7 +1787,11 @@ const SettingsScreen: React.FC = () => {
                     }}
                   >
                     <View style={styles.languageRowLeft}>
-                      <Text style={styles.flagEmoji}>{item.flag}</Text>
+                      <View style={[styles.flagBadgeBox, { backgroundColor: isSelected ? accent : (globalIsDark ? "#2D3748" : "#E2E8F0") }]}>
+                        <Text style={[styles.flagBadgeText, { color: isSelected ? "#FFFFFF" : (globalIsDark ? "#E2E8F0" : "#2D3748") }]}>
+                          {item.flag}
+                        </Text>
+                      </View>
                       <View>
                         <Text
                           style={[
@@ -1941,6 +1948,17 @@ const styles = StyleSheet.create({
   },
   flagEmoji: {
     fontSize: 24,
+  },
+  flagBadgeBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  flagBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   languageNativeName: {
     fontSize: 15,

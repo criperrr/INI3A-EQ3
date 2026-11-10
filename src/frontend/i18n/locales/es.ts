@@ -584,7 +584,7 @@ export const es: TranslationSchema = {
     faq12Question: "¿Cómo equipar fondos de perfil, marcos de avatar e insignias?",
     faq12Answer: "Ve a la pestaña 'Perfil', toca en 'Personalizar' para abrir la Tienda. En 'Mi Inventario' o en las categorías disponibles, selecciona el ítem deseado y toca en 'Equipar'. Los cambios se guardan al instante.",
     faq13Question: "¿Cómo auditar y verificar precios reportados por otros usuarios?",
-    faq13Answer: "En los Detalles del Producto, revisa la lista de precios por tienda y utiliza los botones de curaduría (Correcto 👍 / Dudoso 👎). Cada auditoría válida te otorga +5 XP y mantiene la base de datos confiable.",
+    faq13Answer: "En los Detalles del Producto, revisa la lista de precios por tienda y utiliza los botones de curaduría (Correcto + / Dudoso -). Cada auditoría válida te otorga +5 XP y mantiene la base de datos confiable.",
     faq14Question: "¿Qué sucede si alguien registra un precio incorrecto o abusivo?",
     faq14Answer: "Nuestro algoritmo de moderación analiza los votos de la comunidad. Los registros con muchos votos negativos se suspenden automáticamente para revisión, y las cuentas con abusos reiterados pueden ser restringidas.",
     faq15Question: "¿Qué significan los sellos de 'Mejor Precio' y 'Promoción'?",

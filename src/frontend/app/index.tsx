@@ -717,9 +717,10 @@ const ItemsGrid = memo(function ItemsGrid({
                 transition={150}
               />
               {isProductView && item.isPromotion && (
-                <View style={styles.promoBadge}>
+                <View style={[styles.promoBadge, { flexDirection: "row", alignItems: "center" }]}>
+                  <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 2 }} />
                   <Text style={styles.promoBadgeText}>
-                    🔥 {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
+                    {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
                   </Text>
                 </View>
               )}

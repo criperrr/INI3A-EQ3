@@ -584,7 +584,7 @@ export const de: TranslationSchema = {
     faq12Question: "Wie rüste ich Banner, Avatar-Rahmen und Abzeichen aus?",
     faq12Answer: "Öffnen Sie 'Profil', tippen Sie auf 'Anpassen', um den Shop zu öffnen. Wählen Sie unter 'Mein Inventar' einen freigeschalteten Gegenstand aus und tippen Sie auf 'Ausrüsten'. Änderungen werden sofort übernommen.",
     faq13Question: "Wie überprüfe ich von anderen gemeldete Preise?",
-    faq13Answer: "In den Produktdetails sehen Sie alle gemeldeten Preise nach Geschäft und können diese mit den Daumen-Symbolen (Richtig 👍 / Zweifelhaft 👎) bewerten. Jede Prüfung bringt +5 XP und sichert die Datenqualität.",
+    faq13Answer: "In den Produktdetails sehen Sie alle gemeldeten Preise nach Geschäft und können diese mit den Daumen-Symbolen (Richtig + / Zweifelhaft -) bewerten. Jede Prüfung bringt +5 XP und sichert die Datenqualität.",
     faq14Question: "Was passiert, wenn jemand falsche oder missbräuchliche Preise meldet?",
     faq14Answer: "Unser Community-Algorithmus wertet alle Bewertungen aus. Einträge mit vielen negativen Stimmen werden automatisch zur Überprüfung gesperrt, und auffällige Konten können eingeschränkt werden.",
     faq15Question: "Was bedeuten die Kennzeichnungen 'Bester Preis' und 'Aktion'?",
