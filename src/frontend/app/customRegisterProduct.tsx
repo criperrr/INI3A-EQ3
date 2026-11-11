@@ -21,6 +21,7 @@ import { useAuth } from "../content/authContext";
 import { createCustomProduct } from "../services/productService";
 import CategorySelector from "../components/CategorySelector";
 import { formatLongDateWithWeekday } from "../utils/dateUtils";
+import { validateGs1Barcode } from "../utils/barcodeValidator";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import TwoFactorModal from "../components/TwoFactorModal";
@@ -145,6 +146,17 @@ export default function CustomRegisterProduct() {
       return;
     }
 
+    if (ean.trim()) {
+      const eanCheck = validateGs1Barcode(ean.trim());
+      if (!eanCheck.isValid) {
+        Alert.alert(
+          t("common.warning"),
+          eanCheck.reason || "O código de barras informado não possui um dígito verificador GS1 válido."
+        );
+        return;
+      }
+    }
+
     if (!isAuthenticated && !user) {
       promptLogin(executeRegistration);
       return;
@@ -206,8 +218,43 @@ export default function CustomRegisterProduct() {
                 value={ean}
                 onChangeText={setEan}
               />
+              {Boolean(ean.trim()) && (() => {
+                const check = validateGs1Barcode(ean.trim());
+                return (
+                  <Ionicons
+                    name={check.isValid ? "checkmark-circle" : "alert-circle"}
+                    size={20}
+                    color={check.isValid ? "#10B981" : "#F59E0B"}
+                    style={{ marginLeft: 8 }}
+                  />
+                );
+              })()}
             </View>
           </FocusedInputWrapper>
+          {Boolean(ean.trim()) && (() => {
+            const check = validateGs1Barcode(ean.trim());
+            return (
+              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 6 }}>
+                <Ionicons
+                  name={check.isValid ? "shield-checkmark-outline" : "information-circle-outline"}
+                  size={14}
+                  color={check.isValid ? "#10B981" : "#F59E0B"}
+                />
+                <Text
+                  style={{
+                    fontSize: 12,
+                    color: check.isValid ? "#10B981" : "#F59E0B",
+                    fontWeight: "600",
+                    flex: 1,
+                  }}
+                >
+                  {check.isValid
+                    ? `Código ${check.format} autenticado pelo algoritmo GS1${check.isBrazilianPrefix ? " (Brasil 789/790)" : ""}`
+                    : check.reason}
+                </Text>
+              </View>
+            );
+          })()}
         </View>
 
         <View style={styles.inputGroup}>
