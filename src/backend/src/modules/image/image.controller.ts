@@ -29,9 +29,10 @@ export class ImageOptimizerController {
       const parsedWidth = w ? parseInt(String(w), 10) : undefined;
       const width = parsedWidth && !isNaN(parsedWidth) ? Math.min(1920, Math.max(16, parsedWidth)) : undefined;
       const quality = Math.min(100, Math.max(10, parseInt(String(q), 10) || 80));
-      const format = String(fmt).toLowerCase();
+      const rawFmt = String(fmt).toLowerCase();
+      const safeFormat = rawFmt === "webp" ? "webp" : rawFmt === "avif" ? "avif" : "jpeg";
 
-      const cacheKey = `cache:img:${createHash("md5").update(`${url}_${width}_${quality}_${format}`).digest("hex")}`;
+      const cacheKey = `cache:img:${createHash("md5").update(`${url}_${width}_${quality}_${safeFormat}`).digest("hex")}`;
 
       // 1. Check cached binary buffer
       const cached = redisClient.isOpen 
@@ -46,15 +47,35 @@ export class ImageOptimizerController {
           return res.status(304).end();
         }
 
-        res.setHeader("Content-Type", `image/${format}`);
+        res.setHeader("Content-Type", `image/${safeFormat}`);
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
         res.setHeader("ETag", etag);
         res.setHeader("X-Cache", "HIT");
         return res.status(200).send(imageBuffer);
       }
 
-      // 2. Fetch origin media
-      const response = await fetch(url);
+      // 2. Fetch origin media with timeout and User-Agent
+      const fetchImageWithTimeout = async (targetUrl: string) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        try {
+          return await fetch(targetUrl, {
+            signal: controller.signal,
+            headers: {
+              "User-Agent": "PrescoApp/1.4.5 (+https://github.com/criperrr/INI3A-EQ3)",
+              "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            },
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      };
+
+      let response = await fetchImageWithTimeout(url);
+      if (response.status === 404 && url.includes("openfoodfacts.org") && url.includes(".400.jpg")) {
+        response = await fetchImageWithTimeout(url.replace(".400.jpg", ".full.jpg"));
+      }
+
       if (!response.ok) {
         return res.status(response.status).json({ error: "Failed to retrieve source image." });
       }
@@ -69,9 +90,9 @@ export class ImageOptimizerController {
         pipeline = pipeline.resize({ width, withoutEnlargement: true });
       }
 
-      if (format === "webp") {
+      if (safeFormat === "webp") {
         pipeline = pipeline.webp({ quality, effort: 4 });
-      } else if (format === "avif") {
+      } else if (safeFormat === "avif") {
         pipeline = pipeline.avif({ quality, effort: 4 });
       } else {
         pipeline = pipeline.jpeg({ quality, mozjpeg: true });
@@ -90,7 +111,7 @@ export class ImageOptimizerController {
         inMemoryStore.set(cacheKey, base64Data, ttl);
       }
 
-      res.setHeader("Content-Type", `image/${format}`);
+      res.setHeader("Content-Type", `image/${safeFormat}`);
       res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       res.setHeader("ETag", etag);
       res.setHeader("X-Cache", "MISS");

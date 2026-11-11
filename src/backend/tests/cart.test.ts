@@ -284,5 +284,43 @@ test("CartService - optimizeCart attaches availableMarkets indicating product pr
   }
 });
 
+test("CartService - optimizeCart returns empty storeGroups and unassignedItems without throwing 404 when cart items have no registered prices", async () => {
+  const { MarketRepository } = await import("../src/shared/database/repositories/market.repository.ts");
+  const { CartRepository } = await import("../src/shared/database/repositories/cart.repository.ts");
+
+  const origGetMarketsByRadius = MarketRepository.getMarketsByRadius;
+  const origGetAllMarkets = MarketRepository.getAllMarkets;
+  const origGetPrices = CartRepository.getPricesForProductsAcrossMarkets;
+
+  try {
+    (MarketRepository as any).getMarketsByRadius = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+    ];
+    (MarketRepository as any).getAllMarkets = async () => [
+      { id: 1, name: "Mercado Sul", location: { coordinates: [-46.63, -23.55] }, distance: 2000 },
+    ];
+    (CartRepository as any).getPricesForProductsAcrossMarkets = async () => [];
+
+    const result = await CartService.optimizeCart({
+      items: [{ productId: 1, quantity: 1, productName: "Nestlé Leite Condensado Integral moça" }],
+      preferences: { strategy: "balanced", maxStops: 3 },
+    });
+
+    assert.equal(result.storeGroups.length, 0, "No fake store groups should be generated when items have no price");
+    assert.equal(result.totalGroceryCost, 0);
+    assert.equal(result.totalTravelCost, 0);
+    assert.equal(result.totalCombinedCost, 0);
+    assert.equal(result.totalDurationMinutes, 0);
+    assert.equal(result.unassignedItems.length, 1);
+    assert.equal(result.unassignedItems[0]?.productId, 1);
+    assert.equal(result.unassignedItems[0]?.unitPrice, undefined);
+  } finally {
+    (MarketRepository as any).getMarketsByRadius = origGetMarketsByRadius;
+    (MarketRepository as any).getAllMarkets = origGetAllMarkets;
+    (CartRepository as any).getPricesForProductsAcrossMarkets = origGetPrices;
+  }
+});
+
+
 
 
