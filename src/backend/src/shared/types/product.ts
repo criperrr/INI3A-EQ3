@@ -60,6 +60,8 @@ export interface ProductDTO {
   matchScore?: number | undefined;
   isExactMatch?: boolean | undefined;
   scannedEan?: string | null | undefined;
+  isGs1Valid?: boolean | undefined;
+  verificationStatus?: "verified_catalog" | "verified_gs1" | "community_verified" | "community_submitted" | undefined;
 }
 
 export interface ProductDetailDTO extends ProductDTO {
@@ -69,6 +71,8 @@ export interface ProductDetailDTO extends ProductDTO {
 export interface SearchProductsQuery {
   search?: string | undefined;
   category?: string | undefined;
+  marketId?: number | undefined;
+  marketName?: string | undefined;
   page?: number | undefined;
   limit?: number | undefined;
   sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;

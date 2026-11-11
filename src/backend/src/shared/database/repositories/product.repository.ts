@@ -170,6 +170,17 @@ class ProductRepositoryClass {
     return result[0] || null;
   }
 
+  async getProductByExactName(name: string) {
+    if (!name || !name.trim()) return null;
+    const normalized = name.trim().replace(/\s+/g, " ");
+    const result = await db
+      .select()
+      .from(product)
+      .where(sql`LOWER(TRIM(${product.name})) = LOWER(${normalized})`)
+      .limit(1);
+    return result[0] || null;
+  }
+
   async findSimilarProductByBarcode(
     scannedBarcode: string,
     minScore = 0.65
@@ -228,6 +239,8 @@ class ProductRepositoryClass {
   async searchProducts(params: {
     search?: string | undefined;
     category?: string | undefined;
+    marketId?: number | undefined;
+    marketName?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
     sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
@@ -240,6 +253,8 @@ class ProductRepositoryClass {
     const {
       search,
       category,
+      marketId,
+      marketName,
       limit = 20,
       offset = 0,
       sortBy = "id",
@@ -258,6 +273,8 @@ class ProductRepositoryClass {
         radius,
         search,
         category,
+        marketId,
+        marketName,
         limit,
         offset,
         sortBy,
@@ -265,8 +282,8 @@ class ProductRepositoryClass {
         onlyPromotions,
       });
 
-      // If nearby items found, return them directly
-      if (nearbyResults && nearbyResults.length > 0) {
+      // If market filter is active or nearby items found, return them directly
+      if (marketId || marketName || (nearbyResults && nearbyResults.length > 0)) {
         return nearbyResults;
       }
     }
@@ -316,6 +333,17 @@ class ProductRepositoryClass {
       }
     }
 
+    if (marketId) {
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency o WHERE o.product_id = ${product.id} AND o.is_suspended = false AND o.market_id = ${marketId})`
+      );
+    } else if (marketName && marketName.trim()) {
+      const mTerm = `%${marketName.trim()}%`;
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency o JOIN market m ON o.market_id = m.id WHERE o.product_id = ${product.id} AND o.is_suspended = false AND m.name ILIKE ${mTerm})`
+      );
+    }
+
     let query = db.select().from(product);
 
     if (conditions.length > 0) {
@@ -335,6 +363,8 @@ class ProductRepositoryClass {
     radius?: number;
     search?: string | undefined;
     category?: string | undefined;
+    marketId?: number | undefined;
+    marketName?: string | undefined;
     limit?: number | undefined;
     offset?: number | undefined;
     sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount" | undefined;
@@ -347,6 +377,8 @@ class ProductRepositoryClass {
       radius = 15000,
       search,
       category,
+      marketId,
+      marketName,
       limit = 20,
       offset = 0,
       sortBy = "id",
@@ -381,6 +413,17 @@ class ProductRepositoryClass {
 
     if (onlyPromotions) {
       filterClauses.push(sql`ps.is_promotion = TRUE`);
+    }
+
+    if (marketId) {
+      filterClauses.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency om WHERE om.product_id = p.id AND om.is_suspended = false AND om.market_id = ${marketId})`
+      );
+    } else if (marketName && marketName.trim()) {
+      const mTerm = `%${marketName.trim()}%`;
+      filterClauses.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency om JOIN market mm ON om.market_id = mm.id WHERE om.product_id = p.id AND om.is_suspended = false AND mm.name ILIKE ${mTerm})`
+      );
     }
 
     // Determine ordering clause
@@ -533,12 +576,14 @@ class ProductRepositoryClass {
   async countProducts(params: {
     search?: string | undefined;
     category?: string | undefined;
+    marketId?: number | undefined;
+    marketName?: string | undefined;
     latitude?: number | undefined;
     longitude?: number | undefined;
     radius?: number | undefined;
     onlyPromotions?: boolean | undefined;
   }): Promise<number> {
-    const { search, category, latitude, longitude, radius = 15000, onlyPromotions = false } = params;
+    const { search, category, marketId, marketName, latitude, longitude, radius = 15000, onlyPromotions = false } = params;
 
     // If coordinates provided, count nearby matching products
     if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
@@ -567,6 +612,17 @@ class ProductRepositoryClass {
 
       if (onlyPromotions) {
         filterClauses.push(sql`ps.is_promotion = TRUE`);
+      }
+
+      if (marketId) {
+        filterClauses.push(
+          sql`EXISTS (SELECT 1 FROM ocurrency om WHERE om.product_id = p.id AND om.is_suspended = false AND om.market_id = ${marketId})`
+        );
+      } else if (marketName && marketName.trim()) {
+        const mTerm = `%${marketName.trim()}%`;
+        filterClauses.push(
+          sql`EXISTS (SELECT 1 FROM ocurrency om JOIN market mm ON om.market_id = mm.id WHERE om.product_id = p.id AND om.is_suspended = false AND mm.name ILIKE ${mTerm})`
+        );
       }
 
       const countQuery = sql`
@@ -600,7 +656,7 @@ class ProductRepositoryClass {
         const res = await db.execute(countQuery);
         const rows = (res.rows || res) as any[];
         const count = Number(rows[0]?.count || 0);
-        if (count > 0) return count;
+        if (marketId || marketName || count > 0) return count;
       } catch (err) {
         console.warn("[ProductRepository] Erro ao contar produtos por proximidade:", err);
       }
@@ -649,6 +705,17 @@ class ProductRepositoryClass {
       } else {
         conditions.push(ilike(product.description, `%${cleanCat}%`));
       }
+    }
+
+    if (marketId) {
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency o WHERE o.product_id = ${product.id} AND o.is_suspended = false AND o.market_id = ${marketId})`
+      );
+    } else if (marketName && marketName.trim()) {
+      const mTerm = `%${marketName.trim()}%`;
+      conditions.push(
+        sql`EXISTS (SELECT 1 FROM ocurrency o JOIN market m ON o.market_id = m.id WHERE o.product_id = ${product.id} AND o.is_suspended = false AND m.name ILIKE ${mTerm})`
+      );
     }
 
     let query = db.select({ count: sql<number>`count(*)::int` }).from(product);

@@ -7,11 +7,12 @@ import { ValidationError } from "@/shared/errors/errors";
 class ProductControllerClass {
   async getAllProducts(req: Request, res: Response, next: NextFunction) {
     try {
-      const { search, category, page, limit, sortBy, sortOrder, latitude, longitude, radius, onlyPromotions } = req.query;
+      const { search, category, marketId, marketName, page, limit, sortBy, sortOrder, latitude, longitude, radius, onlyPromotions } = req.query;
 
       const lat = latitude !== undefined && latitude !== null && latitude !== "" ? Number(latitude) : undefined;
       const lng = longitude !== undefined && longitude !== null && longitude !== "" ? Number(longitude) : undefined;
       const rad = radius !== undefined && radius !== null && radius !== "" ? Number(radius) : undefined;
+      const mId = marketId !== undefined && marketId !== null && marketId !== "" ? Number(marketId) : undefined;
       const promoOnly = String(onlyPromotions) === "true" || String(onlyPromotions) === "1";
 
       const errors: Array<{ field: string; message: string }> = [];
@@ -24,12 +25,17 @@ class ProductControllerClass {
       if (rad !== undefined && (isNaN(rad) || rad <= 0 || rad > 1000000)) {
         errors.push({ field: "radius", message: "Raio deve ser um valor positivo em metros (máximo 1000km)." });
       }
+      if (mId !== undefined && (isNaN(mId) || mId <= 0)) {
+        errors.push({ field: "marketId", message: "ID do mercado inválido." });
+      }
 
       if (errors.length > 0) throw new ValidationError(errors);
 
       const result = await productService.listProducts({
         search: typeof search === "string" ? search : undefined,
         category: typeof category === "string" ? category : undefined,
+        marketId: mId,
+        marketName: typeof marketName === "string" && marketName.trim() ? marketName.trim() : undefined,
         page: page ? Number(page) : undefined,
         limit: limit ? Number(limit) : undefined,
         sortBy: (sortBy as "name" | "createdAt" | "id" | "distance" | "price" | "discount") || "id",
