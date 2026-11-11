@@ -2,6 +2,7 @@ import { ProductRepository } from "@/shared/database/repositories/product.reposi
 import { ConflictError, NotFoundError, ValidationError, UnauthorizedError } from "@/shared/errors/errors";
 import { normalizeCategoryName } from "@/shared/constants/productCategories";
 import { invalidateCachePattern } from "@/shared/middlewares/cacheMiddleware";
+import { validateGs1Barcode } from "@/shared/util/barcodeValidator";
 import type {
   CreateProductDTO,
   PaginatedProductsResult,
@@ -78,6 +79,20 @@ class ProductServiceClass {
       }
     }
 
+    const occurrencesCount = raw.occurrencesCount !== undefined ? Number(raw.occurrencesCount) : undefined;
+    const barcodeCheck = raw.ean ? validateGs1Barcode(raw.ean) : null;
+    const isGs1Valid = Boolean(barcodeCheck?.isValid);
+    const hasCatalogImage = Boolean(raw.icon && typeof raw.icon === "string" && raw.icon.trim().startsWith("http"));
+
+    let verificationStatus: ProductDTO["verificationStatus"] = "community_submitted";
+    if (isGs1Valid && hasCatalogImage) {
+      verificationStatus = "verified_catalog";
+    } else if (isGs1Valid) {
+      verificationStatus = "verified_gs1";
+    } else if ((occurrencesCount ?? 0) >= 2) {
+      verificationStatus = "community_verified";
+    }
+
     return {
       id: raw.id,
       barcode: raw.ean || `ID-${raw.id}`,
@@ -96,13 +111,15 @@ class ProductServiceClass {
       minPrice: minPriceFormatted,
       maxPrice: maxPriceFormatted,
       avgPrice: avgPriceFormatted,
-      occurrencesCount: raw.occurrencesCount !== undefined ? Number(raw.occurrencesCount) : undefined,
+      occurrencesCount,
       nearestMarketName: raw.nearestMarketName || null,
       nearestMarketDistance: raw.nearestMarketDistance !== undefined ? raw.nearestMarketDistance : null,
       nearestMarketCoordinate: raw.nearestMarketCoordinate || null,
       formattedDistance,
       isPromotion: Boolean(raw.isPromotion),
       discountPercentage: raw.discountPercentage ? Number(raw.discountPercentage) : 0,
+      isGs1Valid,
+      verificationStatus,
     };
   }
 
@@ -290,6 +307,10 @@ class ProductServiceClass {
     ]);
 
     const dto = this.formatProductDTO(localProduct, latestPrice);
+    const verificationStatus: ProductDTO["verificationStatus"] =
+      dto.verificationStatus === "community_submitted" && stats.count >= 2
+        ? "community_verified"
+        : dto.verificationStatus;
 
     return {
       ...dto,
@@ -297,6 +318,7 @@ class ProductServiceClass {
       maxPrice: stats.maxPrice,
       avgPrice: stats.avgPrice,
       occurrencesCount: stats.count,
+      verificationStatus,
       priceHistory,
     };
   }
@@ -310,6 +332,8 @@ class ProductServiceClass {
       ProductRepository.searchProducts({
         search: query.search,
         category: query.category,
+        marketId: query.marketId,
+        marketName: query.marketName,
         limit,
         offset,
         sortBy: query.sortBy,
@@ -322,6 +346,8 @@ class ProductServiceClass {
       ProductRepository.countProducts({
         search: query.search,
         category: query.category,
+        marketId: query.marketId,
+        marketName: query.marketName,
         latitude: query.latitude,
         longitude: query.longitude,
         radius: query.radius,
@@ -359,11 +385,36 @@ class ProductServiceClass {
       throw new UnauthorizedError("É necessário estar autenticado para cadastrar um produto customizado.");
     }
 
-    const trimmedEan = data.ean?.trim();
+    const trimmedEan = data.ean?.trim().replace(/\s+/g, "");
     if (trimmedEan) {
+      const eanValidation = validateGs1Barcode(trimmedEan);
+      if (!eanValidation.isValid) {
+        throw new ValidationError([
+          {
+            field: "ean",
+            message: eanValidation.reason || "Código de barras (EAN) inválido pelo padrão GS1.",
+          },
+        ]);
+      }
+
       const existing = await ProductRepository.getProductByEan(trimmedEan);
       if (existing) {
-        throw new ConflictError("Já existe um produto cadastrado com este código de barras (EAN).");
+        const latestPrice = await ProductRepository.getLatestPriceForProduct(existing.id);
+        const dto = this.formatProductDTO(existing, latestPrice);
+        if (data.isPromotion !== undefined) {
+          dto.isPromotion = data.isPromotion;
+        }
+        return dto;
+      }
+    } else {
+      const existingByName = await ProductRepository.getProductByExactName(data.name.trim());
+      if (existingByName) {
+        const latestPrice = await ProductRepository.getLatestPriceForProduct(existingByName.id);
+        const dto = this.formatProductDTO(existingByName, latestPrice);
+        if (data.isPromotion !== undefined) {
+          dto.isPromotion = data.isPromotion;
+        }
+        return dto;
       }
     }
 
@@ -420,8 +471,18 @@ class ProductServiceClass {
       throw new NotFoundError("Produto não encontrado para atualização.");
     }
 
-    const trimmedEan = data.ean?.trim();
+    const trimmedEan = data.ean?.trim().replace(/\s+/g, "");
     if (trimmedEan && trimmedEan !== existing.ean) {
+      const eanValidation = validateGs1Barcode(trimmedEan);
+      if (!eanValidation.isValid) {
+        throw new ValidationError([
+          {
+            field: "ean",
+            message: eanValidation.reason || "Código de barras (EAN) inválido pelo padrão GS1.",
+          },
+        ]);
+      }
+
       const conflict = await ProductRepository.getProductByEan(trimmedEan);
       if (conflict && conflict.id !== id) {
         throw new ConflictError("Já existe outro produto cadastrado com este código de barras (EAN).");

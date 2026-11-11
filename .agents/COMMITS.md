@@ -4551,3 +4551,81 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
 - **Files Modified:**
   - `.github/workflows/nightly-audit.yml`
 - **Impact / Next Steps:** Prevents 1-hour job timeout during nightly stability and chaos testing. Ready to trigger and verify the workflow run.
+
+
+## `2026-11-11 15:10` - `fix(maps,images)`: Resolução de erros do mapa, filtragem de mercados inexistentes e blindagem do pipeline de fotos (v1.5.3)
+
+- **Description:** Integração das correções de taxonomia HERE Places v7 (substituição de códigos de vestuário/papelaria por açougue/peixaria/hortifruti sob `600-6300`), bloqueio de falsos mercados, resolução do deadlock de localização no mapa nativo, preservação de metadados na deduplicação e blindagem full-stack do carregamento de fotos da OpenFoodFacts contra erros HTTP 404 com fallback visual. Removido o protocolo IACP por overengineering e sincronizado o SemVer para `v1.5.3` (`versionCode: 34`).
+- **Files Modified:**
+  - `src/backend/src/modules/image/image.controller.ts`
+  - `src/backend/src/shared/services/hereMarketDiscovery.service.ts`
+  - `src/frontend/app/index.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `src/frontend/app/registerProduct.tsx`
+  - `src/frontend/app/scannerConfirmation.tsx`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/components/cart/StoreGroupCard.tsx`
+  - `src/frontend/components/productCard.tsx`
+  - `src/frontend/utils/imageUtils.ts`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+- **Impact / Next Steps:** Mapas livres de estabelecimentos falsos e imagens protegidas contra falhas de corte na OpenFoodFacts, pronto para validação em dispositivo e merge em `dev`.
+
+## `2026-11-11 18:18` - `fix(cart)`: remove fake price simulation for unpriced cart items
+
+- **Description:** Prevented `CartService.optimizeCart` from throwing `NotFoundError` (HTTP 404) when no cart items have registered prices in candidate markets, returning `storeGroups: []` and placing all unpriced items in `unassignedItems`. Removed the deterministic fake price generator (`((it.productId * 13) % 18) + 6.5` = R$ 19,50 in `"Supermercado Econômico"`) from `generateLocalFallbackOptimization` in `cartService.ts`, hid the `"Distribuição por Supermercado"` section header in `cart.tsx` when `storeGroups` is empty, and added unit test coverage in `src/backend/tests/cart.test.ts`.
+- **Files Modified:**
+  - `src/backend/src/modules/cart/cart.service.ts`
+  - `src/backend/tests/cart.test.ts`
+  - `src/frontend/services/cartService.ts`
+  - `src/frontend/app/cart.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Unpriced products in the cart now accurately show `R$ 0,00` and `"Sem preço registrado"` under `"Itens sem preço recente"` without creating fictitious supermarket entries.
+
+## `2026-11-11 18:55` - `feat(product)`: implement GS1 Modulo-10 barcode checksum validation and product verification badges
+
+- **Description:** Implemented mathematical GS1 Modulo-10 check digit validation (`EAN-8`, `UPC-A`, `EAN-13`, `GTIN-14`), repeated-digit rejection, and Brazilian GS1 prefix detection (`789`/`790`) in both backend (`src/backend/src/shared/util/barcodeValidator.ts`) and frontend (`src/frontend/utils/barcodeValidator.ts`). Enforced GS1 checksum validation on optional EANs in `ProductService.createCustomProduct` and `ProductService.updateProduct`, added real-time visual feedback on the EAN input in `customRegisterProduct.tsx`, and added verification status badges (`Verificado GS1`, `Confirmado pela Comunidade` when >= 2 price occurrences exist, or `Cadastro Comunitário`) in `productDetails.tsx`.
+- **Files Modified:**
+  - `src/backend/src/shared/util/barcodeValidator.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/tests/barcodeValidator.test.ts`
+  - `src/frontend/utils/barcodeValidator.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/productDetails.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Prevents arbitrary/fake barcode numbers from being registered while providing clear trust badges for GS1-verified and community-confirmed products.
+
+## `2026-11-11 19:49` - `feat(search)`: add market filter in product search and map pin deep-link
+
+- **Description:** Added `marketId` and `marketName` filtering support to `GET /products` (`product.controller.ts`, `product.service.ts`, `product.repository.ts` in both proximity and standard queries), added horizontal market filter chips in `src/frontend/app/search.tsx`, and added a `"Ver Produtos deste Mercado"` action button inside `MarketDetailModal` in `src/frontend/app/map.native.tsx` to navigate directly to the Search screen with that market selected. Also removed the expected check-digit hint from `barcodeValidator.ts` error messages to prevent users from forging GS1 barcodes.
+- **Files Modified:**
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/util/barcodeValidator.ts`
+  - `src/backend/tests/barcodeValidator.test.ts`
+  - `src/frontend/utils/barcodeValidator.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/search.tsx`
+  - `src/frontend/app/map.native.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Users can filter products by supermarket directly in the Search tab or tap any market pin on the map and jump straight to its catalog in Search.
+
+
+## `2026-11-11 20:17` - `fix(map)`: Fallback automático da capa de mercados para o proxy `/images/optimize`
+
+- **Description:** Atualizado o `MarketDetailModal` em `src/frontend/app/map.native.tsx` para tentar carregar a capa do estabelecimento via URL otimizada direta (`direct`) e, em caso de erro de rede externa no aparelho (ex.: conexão restrita ao túnel USB local), tentar automaticamente via proxy do backend (`/images/optimize?url=...&w=320&q=70`) antes de exibir o ícone vetorial de fallback.
+- **Files Modified:**
+  - `src/frontend/app/map.native.tsx`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Garante carregamento das imagens de capa de mercados tanto em redes externas quanto via servidor local de desenvolvimento.

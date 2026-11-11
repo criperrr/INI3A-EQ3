@@ -1,4 +1,4 @@
-import React, { ReactNode, memo } from "react";
+import React, { ReactNode, memo, useState, useEffect } from "react";
 import { StyleSheet, View, Text } from "react-native";
 import { Image } from "expo-image";
 import { useTheme } from "../theme";
@@ -80,6 +80,11 @@ const ProductImage = memo(function ProductImage({
   const { semantic } = tokens;
 
   const optimizedUri = getOptimizedImageUrl(imageUri, 280, 70);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [optimizedUri]);
 
   return (
     <View
@@ -92,7 +97,7 @@ const ProductImage = memo(function ProductImage({
         },
       ]}
     >
-      {optimizedUri ? (
+      {optimizedUri && !imgError ? (
         <Image
           source={{ uri: optimizedUri }}
           style={styles.productImage}
@@ -100,6 +105,7 @@ const ProductImage = memo(function ProductImage({
           cachePolicy="memory-disk"
           recyclingKey={optimizedUri}
           transition={150}
+          onError={() => setImgError(true)}
         />
       ) : (
         <View style={styles.imagePlaceholder}>

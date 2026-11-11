@@ -20,6 +20,7 @@ import {
   getLocalizedCategoryName,
 } from "../constants/productCategories";
 import { parseDateSafeMs } from "../utils/dateUtils";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 
 export default function ScannerConfirmation() {
   const router = useRouter();
@@ -51,7 +52,7 @@ export default function ScannerConfirmation() {
     id: params.id,
     category: params.category || t("scanner.confirmProduct"),
     name: params.name || t("scanner.productFound"),
-    imageUri: params.imageUri || undefined,
+    imageUri: getOptimizedImageUrl(params.imageUri, 400),
     lastPrice: params.lastPrice || t("productDetails.noOccurrences"),
     barcode: params.barcode || params.ean || "",
     ean: params.ean || params.barcode || "",
@@ -59,6 +60,12 @@ export default function ScannerConfirmation() {
     isApproximate,
     scannedBarcode,
   };
+
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [product.imageUri]);
 
   useEffect(() => {
     if (!user?.id || !product.id) {
@@ -223,13 +230,14 @@ export default function ScannerConfirmation() {
               },
             ]}
           >
-            {product.imageUri ? (
+            {product.imageUri && !imgError ? (
               <Image
                 source={{ uri: product.imageUri }}
                 style={styles.productImage}
                 contentFit="contain"
                 cachePolicy="memory-disk"
                 transition={200}
+                onError={() => setImgError(true)}
               />
             ) : (
               <View style={styles.imagePlaceholder}>

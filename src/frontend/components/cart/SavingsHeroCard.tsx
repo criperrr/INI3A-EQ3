@@ -15,6 +15,7 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
   const { t } = useI18n();
 
   const isMulti = optimization.recommendedType === "multi_store";
+  const hasStores = optimization.storeGroups.length > 0;
   const netSavings = optimization.netSavingsVsSingleStore;
   const singleBest = optimization.singleStoreComparison;
 
@@ -45,14 +46,29 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
           ]}
         >
           <Ionicons
-            name={isMulti && netSavings > 0 ? "trending-down" : "storefront-outline"}
+            name={
+              !hasStores
+                ? "information-circle-outline"
+                : isMulti && netSavings > 0
+                ? "trending-down"
+                : "storefront-outline"
+            }
             size={22}
             color={isMulti && netSavings > 0 ? accent : semantic.colors.icon.primary}
           />
         </View>
 
         <View style={styles.bannerTextCol}>
-          {isMulti && netSavings > 0 ? (
+          {!hasStores ? (
+            <>
+              <Text style={[styles.bannerTitle, { color: semantic.colors.text.primary }]}>
+                {t("cart.noPriceRegistered")}
+              </Text>
+              <Text style={[styles.bannerSubtitle, { color: semantic.colors.text.secondary }]}>
+                {t("cart.missingItems")}
+              </Text>
+            </>
+          ) : isMulti && netSavings > 0 ? (
             <>
               <Text style={[styles.bannerTitle, { color: semantic.colors.text.primary }]}>
                 {t("cart.savingsBannerSavings", {
@@ -69,7 +85,7 @@ export const SavingsHeroCard = memo(function SavingsHeroCard({ optimization }: S
             <>
               <Text style={[styles.bannerTitle, { color: semantic.colors.text.primary }]}>
                 {t("cart.savingsBannerSingle", {
-                  store: singleBest?.marketName || optimization.storeGroups[0]?.marketName || "",
+                  store: singleBest?.marketName || optimization.storeGroups[0]?.marketName || t("cart.singleStoreBest"),
                 })}
               </Text>
               <Text style={[styles.bannerSubtitle, { color: semantic.colors.text.secondary }]}>

@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
@@ -20,6 +20,7 @@ import { DesignSystemTokens } from "../theme/types";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import { fetchProducts, fetchCategories, ProductData } from "../services/productService";
+import { fetchMarkets, MarketData } from "../services/marketService";
 import {
   findCategoryDefinition,
   getCategoryEmoji,
@@ -35,10 +36,18 @@ export default function SearchScreen() {
   const { semantic } = tokens;
   const { t } = useI18n();
   const router = useRouter();
+  const params = useLocalSearchParams<{ marketId?: string; marketName?: string }>();
 
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [categories, setCategories] = useState<string[]>([t("search.filterAll")]);
+  const [markets, setMarkets] = useState<MarketData[]>([]);
+  const [selectedMarketId, setSelectedMarketId] = useState<number | null>(
+    params.marketId && !isNaN(Number(params.marketId)) ? Number(params.marketId) : null
+  );
+  const [selectedMarketName, setSelectedMarketName] = useState<string | null>(
+    params.marketName?.trim() || null
+  );
   const [products, setProducts] = useState<ProductData[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,8 +83,42 @@ export default function SearchScreen() {
     }
   }, [allCategoryLabel]);
 
+  useEffect(() => {
+    if (params.marketId && !isNaN(Number(params.marketId))) {
+      setSelectedMarketId(Number(params.marketId));
+    } else if (params.marketName?.trim()) {
+      setSelectedMarketId(null);
+    }
+    if (params.marketName?.trim()) {
+      setSelectedMarketName(params.marketName.trim());
+    }
+  }, [params.marketId, params.marketName]);
+
+  const loadMarkets = useCallback(async () => {
+    try {
+      const loc = await getUserLocation();
+      const list = await fetchMarkets({
+        latitude: loc?.latitude,
+        longitude: loc?.longitude,
+        radius: 15000,
+      });
+      if (Array.isArray(list)) {
+        setMarkets(list);
+      }
+    } catch {
+      // Ignore market filter fetch errors
+    }
+  }, []);
+
   const loadProducts = useCallback(
-    async (searchTerm: string, category: string, isRefresh = false, pageNum = 1) => {
+    async (
+      searchTerm: string,
+      category: string,
+      marketIdFilter: number | null,
+      marketNameFilter: string | null,
+      isRefresh = false,
+      pageNum = 1
+    ) => {
       if (pageNum === 1) {
         if (!isRefresh) setLoading(true);
       } else {
@@ -89,6 +132,8 @@ export default function SearchScreen() {
         const response = await fetchProducts({
           search: searchTerm.trim() || undefined,
           category: !isAll ? category : undefined,
+          marketId: marketIdFilter || undefined,
+          marketName: !marketIdFilter && marketNameFilter ? marketNameFilter : undefined,
           latitude: loc?.latitude,
           longitude: loc?.longitude,
           radius: 15000,
@@ -124,31 +169,32 @@ export default function SearchScreen() {
 
   useEffect(() => {
     loadCategories();
-  }, [loadCategories]);
+    loadMarkets();
+  }, [loadCategories, loadMarkets]);
 
   useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
     debounceTimer.current = setTimeout(() => {
-      loadProducts(searchText, selectedCategory, false, 1);
+      loadProducts(searchText, selectedCategory, selectedMarketId, selectedMarketName, false, 1);
     }, 280);
 
     return () => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
     };
-  }, [searchText, selectedCategory, loadProducts]);
+  }, [searchText, selectedCategory, selectedMarketId, selectedMarketName, loadProducts]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadProducts(searchText, selectedCategory, true, 1);
-  }, [searchText, selectedCategory, loadProducts]);
+    loadProducts(searchText, selectedCategory, selectedMarketId, selectedMarketName, true, 1);
+  }, [searchText, selectedCategory, selectedMarketId, selectedMarketName, loadProducts]);
 
   const handleLoadMore = useCallback(() => {
     if (page < totalPages && !loadingMore && !loading && !refreshing) {
-      loadProducts(searchText, selectedCategory, false, page + 1);
+      loadProducts(searchText, selectedCategory, selectedMarketId, selectedMarketName, false, page + 1);
     }
-  }, [page, totalPages, loadingMore, loading, refreshing, searchText, selectedCategory, loadProducts]);
+  }, [page, totalPages, loadingMore, loading, refreshing, searchText, selectedCategory, selectedMarketId, selectedMarketName, loadProducts]);
 
   const handleProductPress = useCallback(
     (product: ProductData) => {
@@ -281,6 +327,133 @@ export default function SearchScreen() {
         t={t}
         allCategoryLabel={allCategoryLabel}
       />
+
+      {(markets.length > 0 || selectedMarketId || selectedMarketName) && (
+        <View style={styles.categoriesWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScroll}
+          >
+            <TouchableOpacity
+              testID="search-market-chip-all"
+              style={[
+                styles.categoryChip,
+                {
+                  backgroundColor: !selectedMarketId && !selectedMarketName ? accent : semantic.colors.surface.card,
+                  borderColor: !selectedMarketId && !selectedMarketName ? accent : semantic.colors.border.default,
+                  borderRadius: semantic.radius.chip,
+                },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                setSelectedMarketId(null);
+                setSelectedMarketName(null);
+              }}
+            >
+              <Ionicons
+                name="storefront-outline"
+                size={13}
+                color={!selectedMarketId && !selectedMarketName ? "#FFFFFF" : semantic.colors.text.secondary}
+                style={{ marginRight: 5 }}
+              />
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  {
+                    color: !selectedMarketId && !selectedMarketName ? "#FFFFFF" : semantic.colors.text.primary,
+                    fontWeight: !selectedMarketId && !selectedMarketName ? "700" : "500",
+                  },
+                ]}
+              >
+                Todos os Mercados
+              </Text>
+            </TouchableOpacity>
+
+            {selectedMarketName &&
+              !markets.some(
+                (m) =>
+                  (selectedMarketId && m.id === selectedMarketId) ||
+                  m.name.toLowerCase() === selectedMarketName.toLowerCase()
+              ) && (
+                <TouchableOpacity
+                  key={`selected_${selectedMarketName}`}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor: accent,
+                      borderColor: accent,
+                      borderRadius: semantic.radius.chip,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    setSelectedMarketId(null);
+                    setSelectedMarketName(null);
+                  }}
+                >
+                  <Ionicons name="location" size={13} color="#FFFFFF" style={{ marginRight: 5 }} />
+                  <Text style={[styles.categoryChipText, { color: "#FFFFFF", fontWeight: "700" }]} numberOfLines={1}>
+                    {selectedMarketName}
+                  </Text>
+                  <Ionicons name="close-circle" size={14} color="#FFFFFF" style={{ marginLeft: 5 }} />
+                </TouchableOpacity>
+              )}
+
+            {markets.map((m) => {
+              const isSelected =
+                (selectedMarketId !== null && m.id === selectedMarketId) ||
+                (!selectedMarketId &&
+                  Boolean(selectedMarketName) &&
+                  m.name.toLowerCase() === selectedMarketName?.toLowerCase());
+
+              return (
+                <TouchableOpacity
+                  key={m.id}
+                  testID={`search-market-chip-${m.id}`}
+                  style={[
+                    styles.categoryChip,
+                    {
+                      backgroundColor: isSelected ? accent : semantic.colors.surface.card,
+                      borderColor: isSelected ? accent : semantic.colors.border.default,
+                      borderRadius: semantic.radius.chip,
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => {
+                    if (isSelected) {
+                      setSelectedMarketId(null);
+                      setSelectedMarketName(null);
+                    } else {
+                      setSelectedMarketId(m.id);
+                      setSelectedMarketName(m.name);
+                    }
+                  }}
+                >
+                  <Ionicons
+                    name="storefront-outline"
+                    size={13}
+                    color={isSelected ? "#FFFFFF" : semantic.colors.text.secondary}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      {
+                        color: isSelected ? "#FFFFFF" : semantic.colors.text.primary,
+                        fontWeight: isSelected ? "700" : "500",
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {m.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {loading && !refreshing ? (
         <View style={styles.centerBox}>
@@ -528,6 +701,11 @@ const ProductCardItem = memo(function ProductCardItem({
   const { semantic } = tokens;
   const { isAuthenticated } = useAuth();
   const imageSource = getOptimizedImageUrl(product.imageUri || product.icon, 280, 70);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [imageSource]);
 
   const isUnquoted =
     !product.bestPrice ||
@@ -563,7 +741,7 @@ const ProductCardItem = memo(function ProductCardItem({
           },
         ]}
       >
-        {imageSource ? (
+        {Boolean(imageSource && !imgError) ? (
           <Image
             source={{ uri: imageSource }}
             style={styles.productImage}
@@ -571,6 +749,7 @@ const ProductCardItem = memo(function ProductCardItem({
             cachePolicy="memory-disk"
             recyclingKey={imageSource || String(product.id)}
             transition={150}
+            onError={() => setImgError(true)}
           />
         ) : (
           <View

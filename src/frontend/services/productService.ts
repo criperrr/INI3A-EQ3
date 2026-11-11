@@ -37,6 +37,8 @@ export interface ProductData {
   matchScore?: number | null;
   isExactMatch?: boolean | null;
   scannedEan?: string | null;
+  isGs1Valid?: boolean;
+  verificationStatus?: "verified_catalog" | "verified_gs1" | "community_verified" | "community_submitted";
 }
 
 export interface ProductDetailData extends ProductData {
@@ -54,6 +56,8 @@ export interface PaginatedProductsData {
 export interface FetchProductsParams {
   search?: string;
   category?: string;
+  marketId?: number;
+  marketName?: string;
   page?: number;
   limit?: number;
   sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount";
@@ -97,6 +101,8 @@ export const fetchProducts = async (params?: FetchProductsParams): Promise<Pagin
   const queryParts: string[] = [];
   if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
   if (params?.category && params.category !== "Todos") queryParts.push(`category=${encodeURIComponent(params.category.trim())}`);
+  if (params?.marketId) queryParts.push(`marketId=${params.marketId}`);
+  if (params?.marketName && params.marketName.trim()) queryParts.push(`marketName=${encodeURIComponent(params.marketName.trim())}`);
   if (params?.page) queryParts.push(`page=${params.page}`);
   if (params?.limit) queryParts.push(`limit=${params.limit}`);
   if (params?.sortBy) queryParts.push(`sortBy=${params.sortBy}`);

@@ -719,10 +719,9 @@ class CartServiceClass {
     let chosenPlan: any = null;
 
     if (!bestSingle && !bestMulti) {
-      throw new NotFoundError("Nenhum preço registrado encontrado para os itens nos mercados próximos.");
-    }
-
-    if (!bestMulti) {
+      recommendedType = "single_store";
+      chosenPlan = null;
+    } else if (!bestMulti) {
       recommendedType = "single_store";
       chosenPlan = bestSingle;
     } else if (!bestSingle) {
@@ -854,7 +853,9 @@ class CartServiceClass {
         ? (bestSingle?.distanceKm ?? 0)
         : (bestMulti?.route.totalDistanceKm ?? 0);
     const totalDurationMinutes =
-      recommendedType === "single_store"
+      totalDistanceKm === 0
+        ? 0
+        : recommendedType === "single_store"
         ? Math.max(1, Math.round(totalDistanceKm * 2))
         : (bestMulti?.route.totalDurationMinutes ?? 0);
 
