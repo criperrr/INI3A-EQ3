@@ -4629,3 +4629,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Garante carregamento das imagens de capa de mercados tanto em redes externas quanto via servidor local de desenvolvimento.
+
+## `2026-11-12 17:51` - `docs(gestao)`: Reorganize gestao documents and remove duplicates
+
+- **Description:** Removed 4 exact duplicate files (`CTI_2 (1).png`, `Unespi.png`, `Foto-Arthur.jpg`, `EQ03 INI3-A - Entrega Parcial 1 – TAP.pdf`), standardized filenames, grouped all management, manuals, presentations, architecture diagrams, and visual assets into 6 numbered subdirectories (`01-planejamento` through `06-identidade-e-assets`), and added `gestao/README.md`.
+- **Files Modified:**
+  - `gestao/` (reorganized structure + `gestao/README.md`)
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Clear separation of project management, quality, academic deliverables, presentations, and assets.
