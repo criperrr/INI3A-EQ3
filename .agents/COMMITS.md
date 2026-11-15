@@ -4638,3 +4638,62 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `.agents/CURRENT.md`
   - `.agents/COMMITS.md`
 - **Impact / Next Steps:** Clear separation of project management, quality, academic deliverables, presentations, and assets.
+
+
+## `2026-11-14 18:14` - `feat(product)`: Motor de validacao existencial em cascata, deteccao de codigo de balanca PLU e quarentena GS1 (v1.6.0)
+
+- **Description:** Implementacao do motor de validacao existencial e enriquecimento de produtos em cascata (Passo 0 PostgreSQL/Cache -> Nivel 1 OpenFoodFacts/OpenProducts/UPCitemdb com prioridade para imagens de licenca aberta -> Nivel 2 Catalogos Varejistas VTEX com Circuit Breaker de 3 falhas/5min e timeout de 1.8s -> Nivel 3 API Oficial Bluesoft Cosmos via COSMOS_API_TOKEN). Adicionada deteccao de codigos de balanca/peso variavel iniciados em 2 (PLU de hortifruti/acougue/padaria), fallback humano de quarentena (`pending_review`) para novos codigos GS1 validos ainda nao indexados, endpoint `GET /products/validate-existence` e auto-preenchimento em tempo real em `customRegisterProduct.tsx`. Bump de versao SemVer para `1.6.0` (`versionCode: 35`).
+- **Files Modified:**
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/util/barcodeValidator.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/tests/barcodeValidator.test.ts`
+  - `src/frontend/utils/barcodeValidator.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Validacao existencial de produtos de supermercado (alimentos, limpeza, higiene, bebidas, pets, utilidades e itens de balanca) operando em <1.5s com 50/50 testes aprovados e 0 erros de tipagem.
+
+
+## `2026-11-14 20:06` - `feat(product)`: Quarantine system and 3-distinct-user anti-sybil quorum for unverified products
+
+- **Description:** Implemented database-backed product quarantine (`product.is_suspended` and `product_submission` table) so custom products not found in national catalogs are hidden from public searches (`GET /products`), redirected to Home after submission with quorum feedback, and only released to public search when 3 distinct users (`PRODUCT_QUORUM_TARGET = 3`) register the same item or an Administrator approves it in `adminModeration.tsx`.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/tests/barcodeValidator.test.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unverified products (including `"Lucasfilme Teste"`, `id: 7`) are now immediately isolated from public searches and routed to the Admin Moderation queue and 3-distinct-user community quorum.
+
+
+## `2026-11-14 21:02` - `feat(admin)`: Rich diagnostic telemetry for quarantined products and suspended prices in Admin Moderation
+
+- **Description:** Expanded `GET /products/admin/pending`, `GET /ocurrency/admin/pending`, and `src/frontend/app/adminModeration.tsx` so each quarantined product and suspended price card displays comprehensive audit telemetry (GS1 format, Modulo-10 check digit, origin prefix, NCM, 3-tier national catalog status chips, visual Anti-Sybil quorum progress bar, list of distinct contributors with XP & timestamps, and statistical Z-Score/median/min-max range for prices).
+- **Files Modified:**
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/frontend/app/adminModeration.tsx`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Administrators now have full technical and statistical visibility when evaluating quarantined products and suspended prices.
