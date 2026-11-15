@@ -1,7 +1,7 @@
 import type { CreateProductDTO, OpenFoodFactsResponse, PriceHistoryItem, UpdateProductDTO } from "@/shared/types/product";
 import { PREDEFINED_CATEGORY_NAMES, PREDEFINED_PRODUCT_CATEGORIES, findPredefinedCategory } from "@/shared/constants/productCategories";
 import { db } from "../database";
-import { cartProduct, market, ocurrency, product, productReport } from "../schema";
+import { cartProduct, market, ocurrency, product, productReport, productSubmission, user } from "../schema";
 import { and, asc, desc, eq, gte, ilike, inArray, or, sql, isNotNull } from "drizzle-orm";
 
 export function calculateBarcodeSimilarity(codeA: string, codeB: string): number {
@@ -57,27 +57,414 @@ export function calculateBarcodeSimilarity(codeA: string, codeB: string): number
   return Math.max(0, Math.min(1, Math.max(editSimilarity, positionalSimilarity * 0.9)));
 }
 
+const BRAZILIAN_RETAIL_CATALOG_STORES = [
+  "https://www.savegnago.com.br",
+  "https://www.covabra.com.br",
+  "https://www.mambo.com.br",
+  "https://www.bistek.com.br",
+  "https://www.prezunic.com.br",
+  "https://www.supermuffato.com.br",
+];
+
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 class ProductRepositoryClass {
   private categoryCache: { data: string[]; expiry: number } | null = null;
+  private externalProductCache = new Map<string, { data: OpenFoodFactsResponse | null; expiry: number }>();
+  private storeCircuitBreaker = new Map<string, { failures: number; openUntil: number }>();
 
+  private isCircuitOpen(hostKey: string): boolean {
+    const state = this.storeCircuitBreaker.get(hostKey);
+    if (!state) return false;
+    if (state.openUntil > Date.now()) return true;
+    this.storeCircuitBreaker.delete(hostKey);
+    return false;
+  }
+
+  private recordCircuitFailure(hostKey: string): void {
+    const state = this.storeCircuitBreaker.get(hostKey) || { failures: 0, openUntil: 0 };
+    state.failures += 1;
+    if (state.failures >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+      state.openUntil = Date.now() + CIRCUIT_BREAKER_COOLDOWN_MS;
+    }
+    this.storeCircuitBreaker.set(hostKey, state);
+  }
+
+  private recordCircuitSuccess(hostKey: string): void {
+    if (this.storeCircuitBreaker.has(hostKey)) {
+      this.storeCircuitBreaker.delete(hostKey);
+    }
+  }
+
+  private setExternalCache(key: string, data: OpenFoodFactsResponse | null) {
+    if (this.externalProductCache.size >= 500) {
+      const firstKey = this.externalProductCache.keys().next().value;
+      if (firstKey) this.externalProductCache.delete(firstKey);
+    }
+    const ttlMs = data ? 30 * 60 * 1000 : 3 * 60 * 1000;
+    this.externalProductCache.set(key, { data, expiry: Date.now() + ttlMs });
+  }
+
+  private async fetchFromBrazilianRetailCatalogs(
+    codesToTry: string[],
+    timeoutMs = 1800
+  ): Promise<OpenFoodFactsResponse | null> {
+    const primaryCode = codesToTry[0];
+    if (!primaryCode) return null;
+
+    const availableStores = BRAZILIAN_RETAIL_CATALOG_STORES.filter((s) => !this.isCircuitOpen(s));
+    if (availableStores.length === 0) return null;
+
+    const fetchStoreEan = async (storeUrl: string, code: string): Promise<OpenFoodFactsResponse | null> => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        const url = `${storeUrl}/api/catalog_system/pub/products/search?fq=alternateIds_Ean:${encodeURIComponent(code)}`;
+
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (res.status === 403 || res.status === 429 || res.status >= 500) {
+          this.recordCircuitFailure(storeUrl);
+          return null;
+        }
+        if (!res.ok) return null;
+
+        const json = await res.json();
+        this.recordCircuitSuccess(storeUrl);
+        if (!Array.isArray(json) || json.length === 0) return null;
+
+        const item = json[0];
+        const sku = item?.items?.[0];
+        const rawName = (item?.productName || sku?.nameComplete || sku?.name || "").trim();
+        if (!rawName) return null;
+
+        const brand = (item?.brand || "").trim();
+        const rawCategories: string[] = Array.isArray(item?.categories) ? item.categories : [];
+        const categorySegments = rawCategories
+          .flatMap((c: string) => String(c).split("/"))
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 1 && !/^(mambo|bistek|savegnago|covabra|prezunic|muffato)$/i.test(s));
+
+        const imageUrl = (sku?.images?.[0]?.imageUrl || "").trim();
+        const offerPrice = Number(sku?.sellers?.[0]?.commertialOffer?.Price || 0);
+        const storeDomain = storeUrl.replace(/^https?:\/\/(www\.)?/, "");
+
+        return {
+          code,
+          status: 1,
+          status_verbose: "product found",
+          source: "brazilian_retail_catalog",
+          product: {
+            product_name: rawName,
+            product_name_pt: rawName,
+            brands: brand,
+            categories: categorySegments.join(", ") || "Outros",
+            image_url: imageUrl,
+            image_front_url: imageUrl,
+            reference_price: offerPrice > 0 ? offerPrice : null,
+            external_source: "brazilian_retail_catalog",
+            external_store: storeDomain,
+          },
+        };
+      } catch {
+        this.recordCircuitFailure(storeUrl);
+        return null;
+      }
+    };
+
+    return new Promise((resolve) => {
+      const tasks: Promise<OpenFoodFactsResponse | null>[] = [];
+      for (const store of availableStores) {
+        tasks.push(fetchStoreEan(store, primaryCode));
+      }
+      if (tasks.length === 0) return resolve(null);
+
+      let completed = 0;
+      let resolved = false;
+      let fallbackWithoutImage: OpenFoodFactsResponse | null = null;
+
+      tasks.forEach((p) => {
+        p.then((res) => {
+          if (resolved) return;
+          if (res && res.product?.product_name) {
+            if (res.product.image_front_url) {
+              resolved = true;
+              resolve(res);
+              return;
+            }
+            if (!fallbackWithoutImage) {
+              fallbackWithoutImage = res;
+            }
+          }
+          completed++;
+          if (completed >= tasks.length) {
+            resolve(fallbackWithoutImage);
+          }
+        });
+      });
+    });
+  }
+
+  private async fetchFromUpcItemDb(code: string, timeoutMs = 1800): Promise<OpenFoodFactsResponse | null> {
+    if (this.isCircuitOpen("upcitemdb")) return null;
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const url = `https://api.upcitemdb.com/prod/trial/lookup?upc=${encodeURIComponent(code)}`;
+
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": "PrescoApp/1.5",
+          "Accept": "application/json",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (res.status === 429 || res.status >= 500) {
+        this.recordCircuitFailure("upcitemdb");
+        return null;
+      }
+      if (!res.ok) return null;
+      this.recordCircuitSuccess("upcitemdb");
+
+      const data: any = await res.json();
+      const item = data?.items?.[0];
+      if (!item || !item.title) return null;
+
+      const imageUrl = Array.isArray(item.images) && item.images.length > 0 ? String(item.images[0]).trim() : "";
+      return {
+        code,
+        status: 1,
+        status_verbose: "product found",
+        source: "upcitemdb",
+        product: {
+          product_name: String(item.title).trim(),
+          product_name_pt: String(item.title).trim(),
+          brands: item.brand ? String(item.brand).trim() : "",
+          categories: item.category ? String(item.category).trim() : "Outros",
+          image_url: imageUrl,
+          image_front_url: imageUrl,
+          external_source: "upcitemdb",
+        },
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Level 3 Fallback: Official Bluesoft Cosmos REST API via X-Cosmos-Token (when configured in .env)
+   * Respects daily quota and avoids any web/search engine HTML scraping.
+   */
+  private async fetchFromCosmosOfficialApi(code: string, timeoutMs = 2000): Promise<OpenFoodFactsResponse | null> {
+    const cosmosToken = process.env.COSMOS_API_TOKEN?.trim();
+    if (!cosmosToken || !code || code.length < 8) return null;
+    if (this.isCircuitOpen("cosmos_api")) return null;
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const url = `https://api.cosmos.bluesoft.com.br/gtins/${encodeURIComponent(code)}.json`;
+
+      const res = await fetch(url, {
+        headers: {
+          "X-Cosmos-Token": cosmosToken,
+          "User-Agent": "Cosmos-API-Client",
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+
+      if (res.status === 429 || res.status === 401 || res.status === 403) {
+        this.recordCircuitFailure("cosmos_api");
+        return null;
+      }
+      if (!res.ok) return null;
+      this.recordCircuitSuccess("cosmos_api");
+
+      const data: any = await res.json();
+      const description = String(data?.description || "").trim();
+      if (!description) return null;
+
+      const brand = String(data?.brand?.name || "").trim();
+      const ncmCode = String(data?.ncm?.code || "").replace(/\D/g, "").trim();
+      const gpcDesc = String(data?.gpc?.description || data?.ncm?.description || "Outros").trim();
+      const thumbnail = String(data?.thumbnail || "").trim();
+      const avgPrice = Number(data?.avg_price || data?.price || 0);
+
+      return {
+        code,
+        status: 1,
+        status_verbose: "product found",
+        source: "cosmos_official_api",
+        product: {
+          product_name: description,
+          product_name_pt: description,
+          brands: brand,
+          ncm: ncmCode || undefined,
+          categories: gpcDesc,
+          image_url: thumbnail,
+          image_front_url: thumbnail,
+          reference_price: avgPrice > 0 ? avgPrice : null,
+          external_source: "cosmos_official_api",
+        },
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async searchExternalProductByName(nameQuery: string, timeoutMs = 1800): Promise<OpenFoodFactsResponse | null> {
+    const cleanQuery = (nameQuery || "").trim();
+    if (cleanQuery.length < 3) return null;
+
+    const cacheKey = `name:${cleanQuery.toLowerCase()}`;
+    const cached = this.externalProductCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
+    const queryTokens = cleanQuery
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .split(/\s+/)
+      .filter((t) => t.length >= 3);
+
+    if (queryTokens.length === 0) return null;
+
+    const searchStores = BRAZILIAN_RETAIL_CATALOG_STORES.filter((s) => !this.isCircuitOpen(s)).slice(0, 3);
+    if (searchStores.length === 0) return null;
+
+    const fetchStoreByName = async (storeUrl: string): Promise<OpenFoodFactsResponse | null> => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        const url = `${storeUrl}/api/catalog_system/pub/products/search?ft=${encodeURIComponent(cleanQuery)}&_from=0&_to=2`;
+
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        if (res.status === 403 || res.status === 429 || res.status >= 500) {
+          this.recordCircuitFailure(storeUrl);
+          return null;
+        }
+        if (!res.ok) return null;
+        this.recordCircuitSuccess(storeUrl);
+
+        const json = await res.json();
+        if (!Array.isArray(json) || json.length === 0) return null;
+
+        for (const item of json) {
+          const sku = item?.items?.[0];
+          const rawName = (item?.productName || sku?.nameComplete || sku?.name || "").trim();
+          if (!rawName) continue;
+
+          const normalizedCandidate = rawName
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+          const matchedTokens = queryTokens.filter((tk) => normalizedCandidate.includes(tk));
+          const tokenOverlap = matchedTokens.length / queryTokens.length;
+          if (tokenOverlap < 0.6) continue;
+
+          const eanCode = (sku?.ean || "").trim();
+          const brand = (item?.brand || "").trim();
+          const rawCategories: string[] = Array.isArray(item?.categories) ? item.categories : [];
+          const categorySegments = rawCategories
+            .flatMap((c: string) => String(c).split("/"))
+            .map((s: string) => s.trim())
+            .filter((s: string) => s.length > 1 && !/^(mambo|bistek|savegnago|covabra|prezunic|muffato)$/i.test(s));
+
+          const imageUrl = (sku?.images?.[0]?.imageUrl || "").trim();
+          const offerPrice = Number(sku?.sellers?.[0]?.commertialOffer?.Price || 0);
+          const storeDomain = storeUrl.replace(/^https?:\/\/(www\.)?/, "");
+
+          return {
+            code: eanCode,
+            status: 1,
+            status_verbose: "product found",
+            source: "brazilian_retail_catalog",
+            product: {
+              product_name: rawName,
+              product_name_pt: rawName,
+              brands: brand,
+              categories: categorySegments.join(", ") || "Outros",
+              image_url: imageUrl,
+              image_front_url: imageUrl,
+              reference_price: offerPrice > 0 ? offerPrice : null,
+              external_source: "brazilian_retail_catalog",
+              external_store: storeDomain,
+            },
+          };
+        }
+        return null;
+      } catch {
+        this.recordCircuitFailure(storeUrl);
+        return null;
+      }
+    };
+
+    const results = await Promise.all(searchStores.map((s) => fetchStoreByName(s)));
+    const found = results.find((r) => r && r.product?.image_front_url) || results.find(Boolean) || null;
+    this.setExternalCache(cacheKey, found);
+    return found;
+  }
+
+  /**
+   * Waterfall Execution Order:
+   * - Skips external network lookups for variable-weight scale codes (13 digits starting with '2').
+   * - Level 1: OpenFoodFacts / OpenBeautyFacts / OpenProductsFacts / OpenPetFoodFacts (open license) + UPCitemdb.
+   * - Level 2: Brazilian Retail Catalogs (VTEX) in parallel with 1.8s timeout & Circuit Breaker.
+   * - Level 3: Official Bluesoft Cosmos API via COSMOS_API_TOKEN as final fallback.
+   */
   async getProductFromOpenFoodFacts(barcode: string): Promise<OpenFoodFactsResponse | null> {
     if (!barcode) return null;
     const cleanBarcode = barcode.trim();
     if (!cleanBarcode) return null;
 
     const digitsOnly = cleanBarcode.replace(/\D/g, "");
+    // Variable-weight scale barcodes (prefix 2, 13 digits) are store-internal and never exist in global catalogs
+    if (digitsOnly.length === 13 && digitsOnly.startsWith("2")) {
+      return null;
+    }
+
+    const cacheKey = `ean:${digitsOnly || cleanBarcode}`;
+    const cached = this.externalProductCache.get(cacheKey);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.data;
+    }
+
     const digitsWithoutZero = digitsOnly.replace(/^0+/, "");
     const pad13 = digitsWithoutZero ? digitsWithoutZero.padStart(13, "0") : "";
     const codesToTry = Array.from(new Set([digitsOnly, digitsWithoutZero, pad13, cleanBarcode].filter(Boolean)));
 
-    const fetchUrl = async (url: string, timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
+    const fetchUrl = async (url: string, timeoutMs = 1800): Promise<OpenFoodFactsResponse | null> => {
       try {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
         const response = await fetch(url, {
           headers: {
-            "User-Agent": "PrescoApp - Mobile/Backend - Version 1.0 (contato@presco.app)",
+            "User-Agent": "PrescoApp - Mobile/Backend - Version 1.5 (contato@presco.app)",
             "Accept": "application/json",
           },
           signal: controller.signal,
@@ -89,6 +476,8 @@ class ProductRepositoryClass {
 
         const data = (await response.json()) as OpenFoodFactsResponse;
         if (data && (data.status === 1 || (data as any).status_verbose === "product found") && data.product) {
+          data.source = "openfoodfacts";
+          data.product.external_source = "openfoodfacts";
           return data;
         }
         return null;
@@ -97,8 +486,7 @@ class ProductRepositoryClass {
       }
     };
 
-    // Helper: race multiple URLs and resolve as soon as the first one returns a valid product
-    const fetchFastest = (urls: string[], timeoutMs = 2200): Promise<OpenFoodFactsResponse | null> => {
+    const fetchFastest = (urls: string[], timeoutMs = 1800): Promise<OpenFoodFactsResponse | null> => {
       return new Promise((resolve) => {
         let completed = 0;
         let hasResolved = false;
@@ -121,27 +509,86 @@ class ProductRepositoryClass {
       });
     };
 
-    // Phase 1: High priority primary food databases (world & br openfoodfacts) - resolves in ~800ms
-    const primaryUrls: string[] = [];
+    // LEVEL 1: Open-license databases (OpenFoodFacts BR/World + OpenBeauty + OpenProducts + OpenPetFood + UPCitemdb)
+    const level1Urls: string[] = [];
     for (const code of codesToTry) {
-      primaryUrls.push(
+      level1Urls.push(
+        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
         `https://world.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
-        `https://br.openfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
-      );
-    }
-    const primaryResult = await fetchFastest(Array.from(new Set(primaryUrls)), 2200);
-    if (primaryResult) return primaryResult;
-
-    // Phase 2: Secondary niche databases (beauty, pet food, products) with fast 1600ms timeout
-    const secondaryUrls: string[] = [];
-    for (const code of codesToTry) {
-      secondaryUrls.push(
         `https://world.openbeautyfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
         `https://world.openproductsfacts.org/api/v0/product/${encodeURIComponent(code)}.json`,
         `https://world.openpetfoodfacts.org/api/v0/product/${encodeURIComponent(code)}.json`
       );
     }
-    return await fetchFastest(Array.from(new Set(secondaryUrls)), 1600);
+
+    const [offResult, upcResult] = await Promise.all([
+      fetchFastest(Array.from(new Set(level1Urls)), 1800),
+      this.fetchFromUpcItemDb(digitsOnly || cleanBarcode, 1600),
+    ]);
+
+    const level1Hit = offResult || upcResult;
+    const level1Name = (
+      level1Hit?.product?.product_name_pt ||
+      level1Hit?.product?.product_name ||
+      ""
+    ).trim();
+    const level1Image = (
+      level1Hit?.product?.image_front_url ||
+      level1Hit?.product?.image_url ||
+      ""
+    ).trim();
+
+    // If Level 1 returned a complete product with name AND open-license image, return immediately!
+    if (level1Hit && level1Name.length >= 4 && level1Image) {
+      this.setExternalCache(cacheKey, level1Hit);
+      return level1Hit;
+    }
+
+    // LEVEL 2: Brazilian Retail Catalogs (VTEX Federation with 1.8s timeout & Circuit Breaker)
+    const retailResult = await this.fetchFromBrazilianRetailCatalogs(codesToTry, 1800);
+
+    if (level1Hit && retailResult) {
+      // Prioritize OpenFoodFacts open-license image if present, while enriching Portuguese name/category from Retail Catalog
+      const merged: OpenFoodFactsResponse = {
+        ...retailResult,
+        source: offResult ? "openfoodfacts" : retailResult.source,
+        product: {
+          ...retailResult.product,
+          ...offResult?.product,
+          product_name_pt:
+            retailResult.product.product_name_pt ||
+            level1Hit.product.product_name_pt ||
+            retailResult.product.product_name,
+          product_name:
+            retailResult.product.product_name ||
+            level1Hit.product.product_name,
+          categories:
+            retailResult.product.categories && retailResult.product.categories !== "Outros"
+              ? retailResult.product.categories
+              : level1Hit.product.categories,
+          // OpenFoodFacts image takes priority for open licensing
+          image_front_url: level1Image || retailResult.product.image_front_url,
+          image_url: level1Image || retailResult.product.image_url,
+        },
+      };
+      this.setExternalCache(cacheKey, merged);
+      return merged;
+    }
+
+    if (retailResult) {
+      this.setExternalCache(cacheKey, retailResult);
+      return retailResult;
+    }
+
+    if (level1Hit) {
+      this.setExternalCache(cacheKey, level1Hit);
+      return level1Hit;
+    }
+
+    // LEVEL 3: Official Bluesoft Cosmos API via Token (when COSMOS_API_TOKEN is configured)
+    const cosmosResult = await this.fetchFromCosmosOfficialApi(digitsOnly || cleanBarcode, 2000);
+    this.setExternalCache(cacheKey, cosmosResult);
+    return cosmosResult;
   }
 
   async getProductByEan(ean: string) {
@@ -189,11 +636,11 @@ class ProductRepositoryClass {
     const cleanRaw = scannedBarcode.trim();
     if (!cleanRaw) return null;
 
-    // Fetch all products that have an EAN defined
+    // Fetch all non-suspended products that have an EAN defined
     const candidates = await db
       .select()
       .from(product)
-      .where(isNotNull(product.ean))
+      .where(and(isNotNull(product.ean), eq(product.isSuspended, false)))
       .limit(300);
 
     if (!candidates || candidates.length === 0) return null;
@@ -289,7 +736,7 @@ class ProductRepositoryClass {
     }
 
     // 2. Standard Catalog Query Fallback (when no coordinates or no nearby occurrences found)
-    const conditions = [];
+    const conditions: any[] = [eq(product.isSuspended, false)];
 
     if (search && search.trim().length > 0) {
       const cleanSearch = search.trim();
@@ -389,7 +836,7 @@ class ProductRepositoryClass {
     const wktPoint = `POINT(${longitude} ${latitude})`;
 
     // Construct search & category SQL fragments safely
-    const filterClauses: any[] = [sql`1=1`];
+    const filterClauses: any[] = [sql`p.is_suspended = FALSE`];
 
     if (search && search.trim().length > 0) {
       const cleanSearch = search.trim();
@@ -588,7 +1035,7 @@ class ProductRepositoryClass {
     // If coordinates provided, count nearby matching products
     if (latitude !== undefined && longitude !== undefined && !isNaN(latitude) && !isNaN(longitude)) {
       const wktPoint = `POINT(${longitude} ${latitude})`;
-      const filterClauses: any[] = [sql`1=1`];
+      const filterClauses: any[] = [sql`p.is_suspended = FALSE`];
 
       if (search && search.trim().length > 0) {
         const cleanSearch = search.trim();
@@ -663,7 +1110,7 @@ class ProductRepositoryClass {
     }
 
     // Standard count fallback
-    const conditions = [];
+    const conditions: any[] = [eq(product.isSuspended, false)];
 
     if (search && search.trim().length > 0) {
       const cleanSearch = search.trim();
@@ -729,7 +1176,7 @@ class ProductRepositoryClass {
   }
 
   async createProduct(
-    data: CreateProductDTO & { createdByUserId?: number | undefined },
+    data: CreateProductDTO & { createdByUserId?: number | undefined; isSuspended?: boolean | undefined },
     createdByUserId?: number,
   ) {
     this.categoryCache = null;
@@ -747,6 +1194,7 @@ class ProductRepositoryClass {
       name: safeName,
       description: safeDescription,
       icon: data.icon?.trim() || "",
+      isSuspended: Boolean(data.isSuspended),
       createdByUserId: userId !== undefined ? userId : null,
     };
 
@@ -761,7 +1209,7 @@ class ProductRepositoryClass {
     return result[0];
   }
 
-  async updateProduct(id: number, data: UpdateProductDTO) {
+  async updateProduct(id: number, data: UpdateProductDTO & { isSuspended?: boolean | undefined }) {
     this.categoryCache = null;
     const updatePayload: Record<string, any> = {};
     if (data.name !== undefined) updatePayload.name = data.name;
@@ -773,6 +1221,7 @@ class ProductRepositoryClass {
       updatePayload.description = data.description ?? data.category;
     }
     if (data.icon !== undefined) updatePayload.icon = data.icon;
+    if (data.isSuspended !== undefined) updatePayload.isSuspended = data.isSuspended;
     if (data.createdAt !== undefined) {
       const parsedDate = new Date(data.createdAt);
       if (!isNaN(parsedDate.getTime())) {
@@ -791,6 +1240,7 @@ class ProductRepositoryClass {
 
   async deleteProduct(id: number) {
     this.categoryCache = null;
+    await db.delete(productSubmission).where(eq(productSubmission.productId, id)).catch(() => {});
     await db.delete(cartProduct).where(eq(cartProduct.productId, id)).catch(() => {});
     await db.delete(productReport).where(eq(productReport.productId, id)).catch(() => {});
     await db.delete(ocurrency).where(eq(ocurrency.productId, id)).catch(() => {});
@@ -800,11 +1250,110 @@ class ProductRepositoryClass {
 
   async purgeAllProducts() {
     this.categoryCache = null;
+    await db.execute(sql`DELETE FROM product_submission;`).catch(() => {});
     await db.execute(sql`DELETE FROM cart_product;`);
     await db.execute(sql`DELETE FROM product_report;`);
     await db.execute(sql`DELETE FROM ocurrency;`);
     const res = await db.execute(sql`DELETE FROM product;`);
     return { purged: true, rowCount: res.rowCount ?? 0 };
+  }
+
+  async recordProductSubmission(
+    productId: number,
+    userId: number,
+  ): Promise<{ isNewSubmission: boolean; quorumUsersCount: number; contributorUserIds: number[] }> {
+    if (productId && userId) {
+      const inserted = await db
+        .insert(productSubmission)
+        .values({ productId, userId })
+        .onConflictDoNothing()
+        .returning();
+
+      const rows = await db
+        .select({ userId: productSubmission.userId })
+        .from(productSubmission)
+        .where(eq(productSubmission.productId, productId));
+
+      const contributorUserIds = Array.from(new Set(rows.map((r) => Number(r.userId)).filter(Boolean)));
+      return {
+        isNewSubmission: inserted.length > 0,
+        quorumUsersCount: contributorUserIds.length,
+        contributorUserIds,
+      };
+    }
+    return { isNewSubmission: false, quorumUsersCount: 0, contributorUserIds: [] };
+  }
+
+  async getProductSubmissionContributors(productId: number): Promise<number[]> {
+    const rows = await db
+      .select({ userId: productSubmission.userId })
+      .from(productSubmission)
+      .where(eq(productSubmission.productId, productId));
+    return Array.from(new Set(rows.map((r) => Number(r.userId)).filter(Boolean)));
+  }
+
+  async getPendingProducts() {
+    const rows = await db
+      .select({
+        id: product.id,
+        ean: product.ean,
+        ncm: product.ncm,
+        name: product.name,
+        description: product.description,
+        icon: product.icon,
+        isSuspended: product.isSuspended,
+        createdByUserId: product.createdByUserId,
+        userName: user.name,
+        userEmail: user.email,
+        userPoints: user.points,
+        createdAt: product.createdAt,
+        quorumUsersCount: sql<number>`(
+          SELECT GREATEST(
+            COUNT(DISTINCT ps.user_id)::int,
+            CASE WHEN ${product.createdByUserId} IS NOT NULL THEN 1 ELSE 0 END
+          )
+          FROM product_submission ps
+          WHERE ps.product_id = ${product.id}
+        )::int`,
+        pendingOccurrencesCount: sql<number>`(
+          SELECT COUNT(*)::int
+          FROM ocurrency o
+          WHERE o.product_id = ${product.id}
+        )::int`,
+      })
+      .from(product)
+      .leftJoin(user, eq(product.createdByUserId, user.id))
+      .where(eq(product.isSuspended, true))
+      .orderBy(desc(product.createdAt));
+
+    return rows;
+  }
+
+  async getProductSubmissionDetails(productId: number) {
+    const rows = await db
+      .select({
+        userId: productSubmission.userId,
+        userName: user.name,
+        userEmail: user.email,
+        points: user.points,
+        submittedAt: productSubmission.createdAt,
+      })
+      .from(productSubmission)
+      .leftJoin(user, eq(productSubmission.userId, user.id))
+      .where(eq(productSubmission.productId, productId))
+      .orderBy(asc(productSubmission.createdAt));
+
+    return rows;
+  }
+
+  async approveProduct(id: number) {
+    this.categoryCache = null;
+    const [updated] = await db
+      .update(product)
+      .set({ isSuspended: false })
+      .where(eq(product.id, id))
+      .returning();
+    return updated || null;
   }
 
   async getPredefinedCategories() {
