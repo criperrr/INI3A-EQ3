@@ -290,6 +290,7 @@ export const product = pgTable(
     name: varchar({ length: 200 }).notNull(),
     description: text(),
     icon: text(),
+    isSuspended: boolean("is_suspended").default(false).notNull(),
     createdByUserId: integer("created_by_user_id"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
@@ -474,4 +475,32 @@ export const productReport = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+export const productSubmission = pgTable(
+  "product_submission",
+  {
+    productId: integer("product_id").notNull(),
+    userId: integer("user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.productId],
+      foreignColumns: [product.id],
+      name: "product_submission_product_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.userId],
+      foreignColumns: [user.id],
+      name: "product_submission_user_id_fkey",
+    }).onDelete("cascade"),
+    primaryKey({
+      columns: [table.productId, table.userId],
+      name: "product_submission_pkey",
+    }),
+  ],
+);
+
 
