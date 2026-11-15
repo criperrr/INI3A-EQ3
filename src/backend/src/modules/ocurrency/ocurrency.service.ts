@@ -398,16 +398,33 @@ class OcurrencyServiceClass {
         const stats = await OcurrencyRepository.getAdaptivePriceStats(item.productId, Number(item.value));
         const numVal = Number(item.value);
         const avg = stats.avgPrice;
+        const sigma = stats.stddevPrice;
         let diffPercent = 0;
+        let zScore = 0;
         if (avg && avg > 0) {
           diffPercent = Math.round(((numVal - avg) / avg) * 100);
+          zScore = sigma > 0 ? Number((Math.abs(numVal - avg) / sigma).toFixed(2)) : 0;
         }
+
+        const suspensionReason =
+          stats.count === 0
+            ? "Primeira cotação deste produto (Cold Start): retida preventivamente até segunda confirmação independente ou aprovação de moderador."
+            : `Desvio estatístico extremo (Z-Score ${zScore.toFixed(2)}σ, variação de ${diffPercent > 0 ? `+${diffPercent}%` : `${diffPercent}%`} sobre a média de R$ ${avg?.toFixed(2).replace(".", ",")}).`;
 
         return {
           ...item,
           baselineAvgPrice: avg,
+          medianPrice: stats.medianPrice,
+          minPrice: stats.minPrice,
+          maxPrice: stats.maxPrice,
           stddevPrice: stats.stddevPrice,
+          madPrice: stats.madPrice,
+          activeSamplesCount: stats.count,
+          distinctUsersCount: stats.distinctUsers,
+          zScore,
           diffPercent,
+          suspensionReason,
+          rewardXp: 15,
           hasTrendQuorum: stats.hasQuorumForCandidate,
           quorumUsersCount: stats.quorumCount,
         };

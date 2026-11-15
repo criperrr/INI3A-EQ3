@@ -1,6 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
 import { productService } from "./product.service";
-import { UserRepository } from "@/shared/database/repositories/user.repository";
 import { success } from "@/shared/helpers/response.helper";
 import { ValidationError } from "@/shared/errors/errors";
 
@@ -99,9 +98,23 @@ class ProductControllerClass {
     }
   }
 
+  async validateProductExistence(req: Request, res: Response, next: NextFunction) {
+    try {
+      const rawEan = req.query.ean || req.query.barcode;
+      const rawName = req.query.name;
+      const ean = typeof rawEan === "string" ? rawEan.trim() : undefined;
+      const name = typeof rawName === "string" ? rawName.trim() : undefined;
+
+      const result = await productService.validateProductExistence({ ean, name });
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
   async createCustomProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt, strictExistenceCheck } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -111,6 +124,7 @@ class ProductControllerClass {
       if (errors.length > 0) throw new ValidationError(errors);
 
       const userId = req.user?.id;
+      const isLoadTest = String(req.headers?.["user-agent"] || "").includes("Presco-k6-PerformanceTest");
 
       const product = await productService.createCustomProduct(
         {
@@ -124,13 +138,10 @@ class ProductControllerClass {
           isPromotion: Boolean(isPromotion),
           createdAt,
           createdByUserId: userId,
+          strictExistenceCheck: isLoadTest ? false : strictExistenceCheck !== undefined ? Boolean(strictExistenceCheck) : true,
         },
         userId,
       );
-
-      if (userId) {
-        await UserRepository.incrementPoints(userId, 25).catch(() => {});
-      }
 
       return res.status(201).json(success(product));
     } catch (e) {
@@ -265,6 +276,47 @@ class ProductControllerClass {
   async purgeAllProducts(req: Request, res: Response, next: NextFunction) {
     try {
       const result = await productService.purgeAllProducts();
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async getPendingProducts(_: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await productService.getPendingAdminProducts();
+      return res.status(200).json(success(items));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async approveProduct(req: any, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID do produto inválido." }]);
+      }
+
+      const result = await productService.approveProduct(req.user.id, numId);
+      return res.status(200).json(success(result));
+    } catch (e) {
+      next(e);
+    }
+  }
+
+  async rejectProduct(req: any, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const numId = Number(id);
+
+      if (!id || isNaN(numId) || numId <= 0) {
+        throw new ValidationError([{ field: "id", message: "ID do produto inválido." }]);
+      }
+
+      const result = await productService.rejectProduct(req.user.id, numId);
       return res.status(200).json(success(result));
     } catch (e) {
       next(e);

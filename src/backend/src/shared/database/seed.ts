@@ -46,6 +46,27 @@ export async function seedDatabase() {
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL;
+
+    CREATE TABLE IF NOT EXISTS product_submission (
+      product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (product_id, user_id)
+    );
+
+    UPDATE "product" p
+    SET is_suspended = TRUE
+    WHERE (p.icon IS NULL OR TRIM(p.icon) = '')
+      AND NOT EXISTS (SELECT 1 FROM ocurrency o WHERE o.product_id = p.id AND o.is_suspended = FALSE);
+
+    INSERT INTO product_submission (product_id, user_id)
+    SELECT p.id, p.created_by_user_id
+    FROM "product" p
+    WHERE p.is_suspended = TRUE AND p.created_by_user_id IS NOT NULL
+    ON CONFLICT (product_id, user_id) DO NOTHING;
+
     ALTER TABLE "ocurrency" ADD COLUMN IF NOT EXISTS is_promotion BOOLEAN DEFAULT FALSE;
     ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
     ALTER TABLE "user" ALTER COLUMN points SET DEFAULT 0;

@@ -58,6 +58,7 @@ import { resetTutorialStatus } from "../utils/tutorialStorage";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 import { Image as ExpoImage } from "expo-image";
 import { fetchPendingOccurrences } from "../services/ocurrencyService";
+import { fetchPendingProducts } from "../services/productService";
 import OpenFoodFactsStatusTab from "../components/OpenFoodFactsStatusTab";
 
 interface SettingsState {
@@ -241,10 +242,15 @@ const SettingsScreen: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
     if (isAdmin) {
-      fetchPendingOccurrences()
-        .then((data) => {
+      Promise.all([
+        fetchPendingOccurrences().catch(() => []),
+        fetchPendingProducts().catch(() => []),
+      ])
+        .then(([occurrences, products]) => {
           if (isMounted) {
-            setPendingModerationCount(Array.isArray(data) ? data.length : 0);
+            const occCount = Array.isArray(occurrences) ? occurrences.length : 0;
+            const prodCount = Array.isArray(products) ? products.length : 0;
+            setPendingModerationCount(occCount + prodCount);
           }
         })
         .catch(() => {

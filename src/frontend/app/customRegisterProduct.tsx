@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -13,15 +13,21 @@ import {
   TouchableWithoutFeedback,
   Switch,
 } from "react-native";
+import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
-import { createCustomProduct } from "../services/productService";
+import {
+  createCustomProduct,
+  validateProductExistence,
+  type ProductExistenceValidationData,
+} from "../services/productService";
 import CategorySelector from "../components/CategorySelector";
 import { formatLongDateWithWeekday } from "../utils/dateUtils";
 import { validateGs1Barcode } from "../utils/barcodeValidator";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import TwoFactorModal from "../components/TwoFactorModal";
@@ -33,9 +39,12 @@ export default function CustomRegisterProduct() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [brand, setBrand] = useState("");
   const [unitInfo, setUnitInfo] = useState("");
+  const [catalogIcon, setCatalogIcon] = useState<string>("");
   const [isPromotion, setIsPromotion] = useState(false);
   const [recordDate] = useState<Date>(new Date());
   const [loading, setLoading] = useState(false);
+  const [validatingExistence, setValidatingExistence] = useState(false);
+  const [existenceData, setExistenceData] = useState<ProductExistenceValidationData | null>(null);
   const router = useRouter();
   const { themeStyles, accent, isDark, tokens } = useTheme();
   const { semantic } = tokens;
@@ -45,6 +54,82 @@ export default function CustomRegisterProduct() {
   const [pending2FASubmit, setPending2FASubmit] = useState<(() => Promise<void>) | null>(null);
 
   const formattedRecordDate = formatLongDateWithWeekday(recordDate, language);
+
+  const applyMatchedProduct = useCallback(
+    (matched: NonNullable<ProductExistenceValidationData["matchedProduct"]>, forceOverwrite = false) => {
+      if (matched.name && (forceOverwrite || !name.trim())) {
+        setName(matched.name);
+      }
+      if (matched.brand && (forceOverwrite || !brand.trim())) {
+        setBrand(matched.brand);
+      }
+      if (matched.categories && matched.categories.length > 0 && (forceOverwrite || selectedCategories.length === 0)) {
+        setSelectedCategories(matched.categories);
+      } else if (matched.category && (forceOverwrite || selectedCategories.length === 0)) {
+        setSelectedCategories([matched.category]);
+      }
+      if (matched.imageUri) {
+        setCatalogIcon(matched.imageUri);
+      }
+    },
+    [name, brand, selectedCategories]
+  );
+
+  // Live existential validation when user enters a valid GS1 barcode
+  useEffect(() => {
+    const clean = ean.trim().replace(/\s+/g, "");
+    if (!clean) {
+      setExistenceData(null);
+      setValidatingExistence(false);
+      return;
+    }
+
+    const gs1Check = validateGs1Barcode(clean);
+    if (!gs1Check.isValid) {
+      setExistenceData(null);
+      setValidatingExistence(false);
+      return;
+    }
+
+    let cancelled = false;
+    setValidatingExistence(true);
+
+    const timer = setTimeout(async () => {
+      const result = await validateProductExistence({ ean: clean });
+      if (cancelled) return;
+      setValidatingExistence(false);
+      setExistenceData(result);
+      if (result?.exists && result.matchedProduct) {
+        applyMatchedProduct(result.matchedProduct, false);
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [ean]);
+
+  const handleManualNameValidation = async () => {
+    const cleanName = name.trim();
+    if (cleanName.length < 3) {
+      Alert.alert(t("common.warning"), "Digite pelo menos 3 caracteres do nome do produto para validar sua existência.");
+      return;
+    }
+    setValidatingExistence(true);
+    const result = await validateProductExistence({
+      ean: ean.trim() || undefined,
+      name: cleanName,
+    });
+    setValidatingExistence(false);
+    setExistenceData(result);
+    if (result?.exists && result.matchedProduct) {
+      applyMatchedProduct(result.matchedProduct, false);
+      if (!ean.trim() && result.ean) {
+        setEan(result.ean);
+      }
+    }
+  };
 
   const promptLogin = (onSuccessAction?: () => Promise<void>) => {
     Alert.alert(
@@ -91,12 +176,32 @@ export default function CustomRegisterProduct() {
         categories: selectedCategories.length > 0 ? selectedCategories : undefined,
         category: selectedCategories.join(", ") || undefined,
         ean: ean.trim() || undefined,
+        icon: catalogIcon || undefined,
         isPromotion,
         brand: brand.trim() || undefined,
         createdAt: recordDate.toISOString(),
+        strictExistenceCheck: true,
       });
 
       setLoading(false);
+
+      if (created.isSuspended || created.pendingApproval || created.verificationStatus === "pending_review") {
+        const quorumCount = created.quorumUsersCount ?? 1;
+        const quorumTarget = created.quorumTarget ?? 3;
+        const message = created.alreadySubmittedByUser
+          ? `Você já registrou este produto anteriormente. Para evitar duplicidade de um único usuário, ele permanece em análise até atingir o quórum de ${quorumTarget} usuários distintos (${quorumCount}/${quorumTarget} confirmações) ou ser aprovado pela moderação.`
+          : `Este produto não consta nas bases nacionais e entrou em Quarentena de Validação (${quorumCount}/${quorumTarget} usuários distintos). Assim que ${quorumTarget} usuários diferentes registrarem o mesmo item (ou um moderador aprovar), ele ficará público nas buscas e concederá +25 XP!`;
+
+        Alert.alert("Enviado para Análise (Quarentena)", message, [
+          {
+            text: t("common.done") || "Entendi",
+            onPress: () => {
+              router.replace("/");
+            },
+          },
+        ]);
+        return;
+      }
 
       Alert.alert(t("common.success"), t("products.productRegisteredSuccess"), [
         {
@@ -255,10 +360,129 @@ export default function CustomRegisterProduct() {
               </View>
             );
           })()}
+
+          {validatingExistence ? (
+            <View
+              style={[
+                styles.existenceCard,
+                {
+                  backgroundColor: isDark ? "rgba(59, 130, 246, 0.12)" : "rgba(59, 130, 246, 0.08)",
+                  borderColor: "#3B82F6",
+                },
+              ]}
+            >
+              <ActivityIndicator size="small" color="#3B82F6" style={{ marginRight: 10 }} />
+              <Text style={[styles.existenceText, { color: isDark ? "#93C5FD" : "#1D4ED8" }]}>
+                Verificando existência real nas bases nacionais (Varejo BR, OpenFoodFacts e GTIN)...
+              </Text>
+            </View>
+          ) : existenceData ? (
+            existenceData.exists && existenceData.matchedProduct ? (
+              <View
+                testID="custom-product-existence-verified"
+                style={[
+                  styles.existenceCard,
+                  {
+                    backgroundColor: isDark ? "rgba(16, 185, 129, 0.14)" : "rgba(16, 185, 129, 0.10)",
+                    borderColor: "#10B981",
+                  },
+                ]}
+              >
+                {existenceData.matchedProduct.imageUri ? (
+                  <Image
+                    source={{ uri: getOptimizedImageUrl(existenceData.matchedProduct.imageUri, 160) }}
+                    style={styles.existenceImage}
+                    contentFit="contain"
+                  />
+                ) : (
+                  <View style={[styles.existenceIconBadge, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
+                    <Ionicons
+                      name={existenceData.isVariableWeightCode ? "scale-outline" : "checkmark-done-circle"}
+                      size={24}
+                      color="#10B981"
+                    />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 2 }}>
+                    <Ionicons
+                      name={existenceData.isVariableWeightCode ? "scale" : "shield-checkmark"}
+                      size={14}
+                      color="#10B981"
+                    />
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: "#10B981" }}>
+                      {existenceData.isVariableWeightCode
+                        ? `ETIQUETA DE BALANÇA (PLU ${existenceData.pluCode})`
+                        : "PRODUTO REAL CONFIRMADO"}
+                    </Text>
+                  </View>
+                  <Text style={[styles.existenceTitle, themeStyles.text]} numberOfLines={2}>
+                    {existenceData.matchedProduct.name}
+                  </Text>
+                  <Text style={[styles.existenceMeta, themeStyles.subText]} numberOfLines={2}>
+                    Fonte: {existenceData.sourceLabel}
+                    {existenceData.matchedProduct.category ? ` • ${existenceData.matchedProduct.category}` : ""}
+                    {existenceData.matchedProduct.referencePrice
+                      ? ` • Ref: R$ ${existenceData.matchedProduct.referencePrice.toFixed(2).replace(".", ",")}`
+                      : ""}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={[styles.applyCatalogBtn, { backgroundColor: "#10B981" }]}
+                  onPress={() => {
+                    if (existenceData.matchedProduct) {
+                      applyMatchedProduct(existenceData.matchedProduct, true);
+                    }
+                  }}
+                >
+                  <Ionicons name="sparkles" size={14} color="#FFF" />
+                  <Text style={styles.applyCatalogBtnText}>Usar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View
+                testID="custom-product-existence-pending"
+                style={[
+                  styles.existenceCard,
+                  {
+                    backgroundColor: isDark ? "rgba(245, 158, 11, 0.14)" : "rgba(245, 158, 11, 0.08)",
+                    borderColor: "#F59E0B",
+                  },
+                ]}
+              >
+                <Ionicons name="time-outline" size={22} color="#F59E0B" style={{ marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "700", color: "#F59E0B", marginBottom: 2 }}>
+                    Novo Código GS1 (Cadastro em Análise)
+                  </Text>
+                  <Text style={[styles.existenceMeta, themeStyles.subText]}>
+                    {existenceData.reason ||
+                      "EAN matematicamente válido, mas ainda não indexado nas bases nacionais. Será enviado como Pendente de Verificação."}
+                  </Text>
+                </View>
+              </View>
+            )
+          ) : null}
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={[styles.label, themeStyles.text]} numberOfLines={1}>{t("productDetails.productName")} *</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <Text style={[styles.label, themeStyles.text, { marginBottom: 0 }]} numberOfLines={1}>
+              {t("productDetails.productName")} *
+            </Text>
+            {name.trim().length >= 3 && !validatingExistence && (
+              <TouchableOpacity
+                testID="custom-product-verify-name-btn"
+                onPress={handleManualNameValidation}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <Ionicons name="search-circle-outline" size={16} color={accent} />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: accent }}>
+                  Confirmar nas Bases Nacionais
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <FocusedInputWrapper borderRadius={12}>
             <View style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}>
               <TextInput
@@ -558,5 +782,58 @@ const styles = StyleSheet.create({
   dateSubText: {
     fontSize: 11,
     lineHeight: 15,
+  },
+  existenceCard: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  existenceImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: "#FFFFFF",
+    marginRight: 10,
+  },
+  existenceIconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  existenceText: {
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+    lineHeight: 16,
+  },
+  existenceTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  existenceMeta: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  applyCatalogBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  applyCatalogBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

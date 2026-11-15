@@ -7,6 +7,8 @@ export interface BarcodeValidationResult {
   expectedCheckDigit: number | null;
   actualCheckDigit: number | null;
   isBrazilianPrefix: boolean;
+  isVariableWeightCode: boolean;
+  pluCode: string | null;
   reason?: string;
 }
 
@@ -47,6 +49,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
       expectedCheckDigit: null,
       actualCheckDigit: null,
       isBrazilianPrefix: false,
+      isVariableWeightCode: false,
+      pluCode: null,
       reason: "Código de barras vazio.",
     };
   }
@@ -59,6 +63,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
       expectedCheckDigit: null,
       actualCheckDigit: null,
       isBrazilianPrefix: false,
+      isVariableWeightCode: false,
+      pluCode: null,
       reason: "O código de barras (EAN) deve conter apenas dígitos numéricos.",
     };
   }
@@ -72,6 +78,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
       expectedCheckDigit: null,
       actualCheckDigit: null,
       isBrazilianPrefix: false,
+      isVariableWeightCode: false,
+      pluCode: null,
       reason: "O código de barras deve ter 8 (EAN-8), 12 (UPC-A), 13 (EAN-13) ou 14 (GTIN-14) dígitos.",
     };
   }
@@ -84,6 +92,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
       expectedCheckDigit: null,
       actualCheckDigit: null,
       isBrazilianPrefix: false,
+      isVariableWeightCode: false,
+      pluCode: null,
       reason: "Sequência repetitiva inválida para código de barras GS1.",
     };
   }
@@ -91,6 +101,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
   const payload = cleanCode.slice(0, -1);
   const actualCheckDigit = Number(cleanCode[cleanCode.length - 1]);
   const expectedCheckDigit = computeGs1CheckDigit(payload);
+  const isVariableWeightCode = cleanCode.length === 13 && cleanCode.startsWith("2");
+  const pluCode = isVariableWeightCode ? cleanCode.slice(2, 7) : null;
 
   if (actualCheckDigit !== expectedCheckDigit) {
     return {
@@ -100,6 +112,8 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
       expectedCheckDigit,
       actualCheckDigit,
       isBrazilianPrefix: cleanCode.startsWith("789") || cleanCode.startsWith("790"),
+      isVariableWeightCode,
+      pluCode,
       reason: "Código de barras inválido pelo padrão GS1.",
     };
   }
@@ -111,5 +125,7 @@ export function validateGs1Barcode(raw: string | null | undefined): BarcodeValid
     expectedCheckDigit,
     actualCheckDigit,
     isBrazilianPrefix: cleanCode.startsWith("789") || cleanCode.startsWith("790"),
+    isVariableWeightCode,
+    pluCode,
   };
 }
