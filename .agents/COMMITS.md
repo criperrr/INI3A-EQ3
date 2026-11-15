@@ -4697,3 +4697,34 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app/adminModeration.tsx`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Administrators now have full technical and statistical visibility when evaluating quarantined products and suspended prices.
+
+
+## `2026-11-14 21:46` - `feat(product)`: Waterfall existential product validation, 3-user quarantine quorum, rich admin telemetry and CI hardening
+
+- **Description:** Implemented the 3-level Waterfall Existential Product Validation Engine (Local DB/LRU -> OpenFoodFacts/UPCitemdb -> Brazilian Retail Catalog VTEX Federation with Circuit Breaker -> Official Bluesoft Cosmos API -> Prefix `2` Variable-Weight Scale PLU detection -> Human Fallback Quarantine), the Anti-Sybil 3-User Quarantine Quorum (`product_submission`, `PRODUCT_QUORUM_TARGET = 3`), enriched Admin Moderation telemetry for quarantined products and suspended prices (`adminModeration.tsx`), isolated unit test mocks in `barcodeValidator.test.ts` for PR Gatekeeper, and hardened Metro bundle pre-warming and React Native context readiness in `ci_run_maestro.sh`.
+- **Files Modified:**
+  - `src/backend/src/shared/database/schema.ts`
+  - `src/backend/src/shared/database/seed.ts`
+  - `src/backend/src/shared/database/migrate.ts`
+  - `src/backend/src/shared/types/product.ts`
+  - `src/backend/src/shared/database/repositories/product.repository.ts`
+  - `src/backend/src/shared/database/repositories/ocurrency.repository.ts`
+  - `src/backend/src/modules/product/product.service.ts`
+  - `src/backend/src/modules/product/product.controller.ts`
+  - `src/backend/src/modules/product/product.routes.ts`
+  - `src/backend/src/modules/ocurrency/ocurrency.service.ts`
+  - `src/backend/tests/barcodeValidator.test.ts`
+  - `src/frontend/services/productService.ts`
+  - `src/frontend/services/ocurrencyService.ts`
+  - `src/frontend/app/customRegisterProduct.tsx`
+  - `src/frontend/app/adminModeration.tsx`
+  - `src/frontend/app/settings.tsx`
+  - `scripts/ci_run_maestro.sh`
+  - `tests/maestro/flows/frontend_quality_audit.yaml`
+  - `tests/maestro/flows/smoke_suite.yaml`
+  - `package.json`
+  - `src/backend/package.json`
+  - `src/frontend/package.json`
+  - `src/frontend/app.json`
+  - `.agents/CURRENT.md`
+- **Impact / Next Steps:** Unverified products are isolated in quarantine until 3 distinct users register them or an Admin approves them; PR #49 checks updated for merge into `dev`.
