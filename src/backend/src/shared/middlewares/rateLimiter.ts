@@ -1,5 +1,6 @@
+import crypto from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
-import { redisClient } from "@/shared/redis/server";
+import { redisClient, redisKey, withRedisTimeout } from "@/shared/redis/server";
 import { TooManyRequestsError } from "@/shared/errors/errors";
 
 interface RateLimiterOptions {
@@ -9,8 +10,47 @@ interface RateLimiterOptions {
   message?: string;
 }
 
+const MAX_MEMORY_BUCKETS = 5000;
+const RATE_LIMIT_LUA =
+  "local c = redis.call('INCR', KEYS[1]); if c == 1 or redis.call('TTL', KEYS[1]) < 0 then redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1])) end; return c";
+
 // In-memory fallback bucket for when Redis is disconnected or during local tests
 const memoryBuckets = new Map<string, { count: number; resetTime: number }>();
+
+function sweepExpiredMemoryBuckets(now: number): void {
+  for (const [k, b] of memoryBuckets.entries()) {
+    if (now > b.resetTime) {
+      memoryBuckets.delete(k);
+    }
+  }
+}
+
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    sweepExpiredMemoryBuckets(Date.now());
+  }, 60 * 1000).unref();
+}
+
+export function isAuthorizedTestBypass(req: Request): boolean {
+  if (process.env.NODE_ENV !== "test") {
+    return false;
+  }
+  const expectedSecret = (process.env.K6_TEST_SECRET || "").trim();
+  if (!expectedSecret) {
+    return false;
+  }
+  const rawHeader = req.headers?.["x-k6-test-secret"];
+  const provided = Array.isArray(rawHeader) ? rawHeader[0] : rawHeader;
+  if (!provided || typeof provided !== "string") {
+    return false;
+  }
+  const expectedBuf = Buffer.from(expectedSecret, "utf8");
+  const providedBuf = Buffer.from(provided, "utf8");
+  if (expectedBuf.length !== providedBuf.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expectedBuf, providedBuf);
+}
 
 export function createRateLimiter(options: RateLimiterOptions) {
   const { windowMs, maxRequests, keyPrefix, message } = options;
@@ -18,29 +58,23 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
   return async (req: Request, _: Response, next: NextFunction) => {
     try {
-      // In test mode or when triggered by the k6 performance test suite, bypass rate limiting
-      if (
-        process.env.NODE_ENV === "test" ||
-        req.headers["x-bypass-rate-limit"] === "true" ||
-        (req.headers["user-agent"] && req.headers["user-agent"].includes("Presco-k6-PerformanceTest"))
-      ) {
+      if (isAuthorizedTestBypass(req)) {
         return next();
       }
 
-      const ip =
-        (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
-        req.socket.remoteAddress ||
-        "127.0.0.1";
+      const ip = req.ip || req.socket?.remoteAddress || "127.0.0.1";
+      const key = redisKey(`ratelimit:${keyPrefix}:${ip}`);
 
-      const key = `ratelimit:${keyPrefix}:${ip}`;
-
-      if (redisClient.isOpen) {
+      if (redisClient.isReady) {
         try {
-          // Atomic Redis increment
-          const count = await redisClient.incr(key);
-          if (count === 1) {
-            await redisClient.expire(key, windowSeconds);
-          }
+          const rawCount = await withRedisTimeout(
+            redisClient.eval(RATE_LIMIT_LUA, {
+              keys: [key],
+              arguments: [String(windowSeconds)],
+            }),
+            1500,
+          );
+          const count = Number(rawCount);
 
           if (count > maxRequests) {
             throw new TooManyRequestsError(
@@ -52,15 +86,26 @@ export function createRateLimiter(options: RateLimiterOptions) {
           if (err instanceof TooManyRequestsError) {
             throw err;
           }
-          // On transient Redis network error, fall through to in-memory bucket
+          // On transient Redis network/timeout error, fall through to bounded in-memory bucket
         }
       }
 
-      // In-memory fallback
+      // Bounded in-memory fallback
       const now = Date.now();
       const bucket = memoryBuckets.get(key);
 
       if (!bucket || now > bucket.resetTime) {
+        if (bucket) {
+          memoryBuckets.delete(key);
+        }
+        if (memoryBuckets.size >= MAX_MEMORY_BUCKETS) {
+          sweepExpiredMemoryBuckets(now);
+          while (memoryBuckets.size >= MAX_MEMORY_BUCKETS) {
+            const oldestKey = memoryBuckets.keys().next().value;
+            if (!oldestKey) break;
+            memoryBuckets.delete(oldestKey);
+          }
+        }
         memoryBuckets.set(key, { count: 1, resetTime: now + windowMs });
       } else {
         bucket.count += 1;
@@ -78,7 +123,15 @@ export function createRateLimiter(options: RateLimiterOptions) {
   };
 }
 
-// 10 requests per minute for sensitive authentication actions (login, register, password change)
+// 120 requests per minute global protection per IP
+export const globalRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 120,
+  keyPrefix: "global",
+  message: "Muitas requisições detectadas. Aguarde um momento antes de continuar.",
+});
+
+// 10 requests per minute for sensitive authentication actions (login, register, refresh, password change)
 export const authRateLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   maxRequests: 10,
@@ -92,4 +145,20 @@ export const searchRateLimiter = createRateLimiter({
   maxRequests: 60,
   keyPrefix: "search",
   message: "Limite de consultas excedido. Aguarde alguns instantes.",
+});
+
+// 20 requests per minute for CPU/network-heavy compute routes (image optimization, route solver)
+export const heavyComputeRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 20,
+  keyPrefix: "compute",
+  message: "Limite de processamento intensivo excedido. Aguarde alguns instantes.",
+});
+
+// 30 requests per minute for write/mutation routes
+export const writeRateLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  maxRequests: 30,
+  keyPrefix: "write",
+  message: "Limite de envios excedido. Aguarde alguns instantes.",
 });
