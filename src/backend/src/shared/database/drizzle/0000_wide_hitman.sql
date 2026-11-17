@@ -33,7 +33,7 @@ CREATE TABLE "cured" (
 CREATE TABLE "market" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(200) NOT NULL,
-	"location" "geography" NOT NULL,
+	"location" public.geography NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -94,7 +94,7 @@ CREATE TABLE "user" (
 	"birthdate" date,
 	"points" integer DEFAULT 0 NOT NULL,
 	"danger_flag" boolean DEFAULT false NOT NULL,
-	"location" "geography",
+	"location" public.geography,
 	"role_id" integer DEFAULT 1 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -123,12 +123,12 @@ ALTER TABLE "user" ADD CONSTRAINT "user_role_id_fkey" FOREIGN KEY ("role_id") RE
 ALTER TABLE "user_badge" ADD CONSTRAINT "user_badge_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_badge" ADD CONSTRAINT "user_badge_badge_id_fkey" FOREIGN KEY ("badge_id") REFERENCES "public"."badge"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "idx_cured_ocurrency_id_date_asc" ON "cured" USING btree ("ocurrency_id","date");--> statement-breakpoint
-CREATE INDEX "idx_market_location" ON "market" USING gist ("location" gist_geography_ops);--> statement-breakpoint
+CREATE INDEX "idx_market_location" ON "market" USING gist ("location" public.gist_geography_ops);--> statement-breakpoint
 CREATE INDEX "idx_ocurrency_market_id_created_at_desc" ON "ocurrency" USING btree ("market_id","created_at" timestamptz_ops);--> statement-breakpoint
 CREATE INDEX "idx_ocurrency_product_id_created_at_desc" ON "ocurrency" USING btree ("product_id","created_at" timestamptz_ops);--> statement-breakpoint
 CREATE INDEX "idx_ocurrency_unresolved_partial" ON "ocurrency" USING btree ("is_resolved","created_at" timestamptz_ops) WHERE is_resolved = false;--> statement-breakpoint
 CREATE INDEX "idx_product_ean_partial" ON "product" USING btree ("ean" text_ops) WHERE (ean IS NOT NULL);--> statement-breakpoint
-CREATE INDEX "idx_product_name_trgm" ON "product" USING gin ("name" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "idx_product_name_trgm" ON "product" USING gin ("name" public.gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "idx_product_ncm" ON "product" USING btree ("ncm" text_ops);--> statement-breakpoint
-CREATE INDEX "idx_user_location" ON "user" USING gist ("location" gist_geography_ops);--> statement-breakpoint
+CREATE INDEX "idx_user_location" ON "user" USING gist ("location" public.gist_geography_ops);--> statement-breakpoint
 CREATE INDEX "idx_user_role_id" ON "user" USING btree ("role_id" int4_ops);

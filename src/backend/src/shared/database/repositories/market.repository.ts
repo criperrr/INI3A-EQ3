@@ -17,7 +17,7 @@ class MarketRepositoryClass {
       .returning({
         id: Market.id,
         name: Market.name,
-        location: sql`ST_AsGeoJson(${Market.location})`,
+        location: sql`public.ST_AsGeoJson(${Market.location})`,
       });
   }
 
@@ -28,7 +28,7 @@ class MarketRepositoryClass {
       .returning({
         id: Market.id,
         name: Market.name,
-        location: sql`ST_AsGeoJson(${Market.location})`,
+        location: sql`public.ST_AsGeoJson(${Market.location})`,
       })
       .where(eq(Market.id, Number(id)));
   }
@@ -42,7 +42,7 @@ class MarketRepositoryClass {
       .select({
         id: Market.id,
         name: Market.name,
-        location: sql`ST_AsGeoJson(${Market.location})`,
+        location: sql`public.ST_AsGeoJson(${Market.location})`,
       })
       .from(Market)
       .where(eq(Market.id, Number(id)));
@@ -55,18 +55,18 @@ class MarketRepositoryClass {
         .select({
           id: Market.id,
           name: Market.name,
-          location: sql`ST_AsGeoJson(${Market.location})`,
-          distance: sql<number>`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint}))`,
+          location: sql`public.ST_AsGeoJson(${Market.location})`,
+          distance: sql<number>`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint}))`,
         })
         .from(Market)
-        .orderBy(sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC`);
+        .orderBy(sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC`);
     }
 
     return db
       .select({
         id: Market.id,
         name: Market.name,
-        location: sql`ST_AsGeoJson(${Market.location})`,
+        location: sql`public.ST_AsGeoJson(${Market.location})`,
       })
       .from(Market);
   }
@@ -78,18 +78,18 @@ class MarketRepositoryClass {
       .select({
         id: Market.id,
         name: Market.name,
-        location: sql`ST_AsGeoJson(${Market.location})`,
-        distance: sql<number>`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint}))`,
+        location: sql`public.ST_AsGeoJson(${Market.location})`,
+        distance: sql<number>`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint}))`,
       })
       .from(Market)
       .where(sql`
-        ST_DWithin(
+        public.ST_DWithin(
           ${Market.location},
-          ST_GeographyFromText(${wktPoint}),
+          public.ST_GeographyFromText(${wktPoint}),
           ${radius}
         )
       `)
-      .orderBy(sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC`);
+      .orderBy(sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC`);
   }
 }
 

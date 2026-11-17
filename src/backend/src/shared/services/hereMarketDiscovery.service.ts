@@ -15,6 +15,27 @@ export interface DiscoveredMarket {
 class HereMarketDiscoveryClass {
   private memoryCache = new Map<string, { timestamp: number; data: DiscoveredMarket[] }>();
   private CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+  private readonly MAX_CACHE_ENTRIES = 100;
+
+  private setMemoryCache(key: string, data: DiscoveredMarket[]): void {
+    const now = Date.now();
+    if (this.memoryCache.has(key)) {
+      this.memoryCache.delete(key);
+    }
+    if (this.memoryCache.size >= this.MAX_CACHE_ENTRIES) {
+      for (const [k, entry] of this.memoryCache.entries()) {
+        if (now - entry.timestamp >= this.CACHE_TTL_MS) {
+          this.memoryCache.delete(k);
+        }
+      }
+      while (this.memoryCache.size >= this.MAX_CACHE_ENTRIES) {
+        const oldestKey = this.memoryCache.keys().next().value;
+        if (!oldestKey) break;
+        this.memoryCache.delete(oldestKey);
+      }
+    }
+    this.memoryCache.set(key, { timestamp: now, data });
+  }
 
   /**
    * Discovers real-world supermarkets, grocery stores and convenience stores around GPS coordinates
@@ -27,8 +48,13 @@ class HereMarketDiscoveryClass {
   ): Promise<DiscoveredMarket[]> {
     const cacheKey = `${latitude.toFixed(2)}:${longitude.toFixed(2)}`;
     const cached = this.memoryCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      return cached.data;
+    if (cached) {
+      if (Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+        this.memoryCache.delete(cacheKey);
+        this.memoryCache.set(cacheKey, cached);
+        return cached.data;
+      }
+      this.memoryCache.delete(cacheKey);
     }
 
     const apiKey = env.HERE_API_KEY || process.env.HERE_API_KEY || "";
@@ -98,7 +124,7 @@ class HereMarketDiscoveryClass {
         await this.syncWithDatabase(discovered);
       }
 
-      this.memoryCache.set(cacheKey, { timestamp: Date.now(), data: discovered });
+      this.setMemoryCache(cacheKey, discovered);
       return discovered;
     } catch (err) {
       console.warn("[HereMarketDiscovery] Erro durante descoberta via HERE API:", err);
@@ -299,16 +325,16 @@ class HereMarketDiscoveryClass {
           .from(market)
           .where(
             sql`
-              ST_DWithin(
+              public.ST_DWithin(
                 ${market.location},
-                ST_GeographyFromText(${wktPoint}),
+                public.ST_GeographyFromText(${wktPoint}),
                 50
               )
               OR (
                 LOWER(TRIM(${market.name})) ILIKE ${brandMatch}
-                AND ST_DWithin(
+                AND public.ST_DWithin(
                   ${market.location},
-                  ST_GeographyFromText(${wktPoint}),
+                  public.ST_GeographyFromText(${wktPoint}),
                   600
                 )
               )
