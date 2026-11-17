@@ -86,7 +86,6 @@ class EmailServiceClass {
                 },
               }
             : {}),
-          ...(env.NODE_ENV !== "production" ? { tls: { rejectUnauthorized: false } } : {}),
         });
 
         const info = await transporter.sendMail({
