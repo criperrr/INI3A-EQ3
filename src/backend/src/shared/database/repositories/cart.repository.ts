@@ -139,7 +139,7 @@ class CartRepositoryClass {
         marketName: Market.name,
         productName: Product.name,
         productIcon: Product.icon,
-        marketLocation: sql`ST_AsGeoJson(${Market.location})`,
+        marketLocation: sql`public.ST_AsGeoJson(${Market.location})`,
         value: Ocurrency.value,
         isPromotion: Ocurrency.isPromotion,
         createdAt: Ocurrency.createdAt,

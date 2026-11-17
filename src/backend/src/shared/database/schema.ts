@@ -41,7 +41,7 @@ export const statusRec = pgEnum("status_rec", ["SAT", "INS", "NC", "NAC"]);
 
 export const geography = customType<{ data: Point; driverData: string }>({
   dataType() {
-    return "geography";
+    return "public.geography";
   },
   toDriver(point: Point): string {
     return `SRID=4326;POINT(${point.lng} ${point.lat})`;
@@ -123,7 +123,7 @@ export const user = pgTable(
   (table) => [
     index("idx_user_location").using(
       "gist",
-      table.location.asc().nullsLast().op("gist_geography_ops"),
+      table.location.asc().nullsLast().op("public.gist_geography_ops"),
     ),
     index("idx_user_role_id").using(
       "btree",
@@ -276,7 +276,7 @@ export const market = pgTable(
   (table) => [
     index("idx_market_location").using(
       "gist",
-      table.location.asc().nullsLast().op("gist_geography_ops"),
+      table.location.asc().nullsLast().op("public.gist_geography_ops"),
     ),
   ],
 );
@@ -302,7 +302,7 @@ export const product = pgTable(
       .where(sql`(ean IS NOT NULL)`),
     index("idx_product_name_trgm").using(
       "gin",
-      table.name.asc().nullsLast().op("gin_trgm_ops"),
+      table.name.asc().nullsLast().op("public.gin_trgm_ops"),
     ),
     index("idx_product_ncm").using(
       "btree",
