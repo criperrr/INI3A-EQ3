@@ -11,7 +11,7 @@ trigger: always_on
 
 ---
 
-## 🌐 Language Handling
+## Language Handling
 
 When user's prompt is NOT in English:
 
@@ -21,7 +21,7 @@ When user's prompt is NOT in English:
 
 ---
 
-## 🧹 Clean Code (Global Mandatory)
+## Clean Code (Global Mandatory)
 
 **ALL code MUST follow `@[skills/clean-code]` rules. No exceptions.**
 
@@ -32,7 +32,7 @@ When user's prompt is NOT in English:
 
 ---
 
-## 🚫 Axioma Fundamental de Erradicação de Emojis (No Emojis Policy)
+## Axioma Fundamental de Erradicação de Emojis (No Emojis Policy)
 
 **Proibição Absoluta de Emojis em Código, Interface e Workflows:**
 - **Interface Gráfica (UI):** É terminantemente proibido utilizar emojis como ícones ou elementos visuais na UI. Qualquer representação visual/ícone DEVE utilizar bibliotecas vetoriais SVG (`@expo/vector-icons` como `Ionicons`, ou `lucide-react-native`).

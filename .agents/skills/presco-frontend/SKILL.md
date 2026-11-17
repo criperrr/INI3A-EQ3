@@ -2,7 +2,7 @@
 name: presco-frontend
 description: Diretrizes de React Native, Expo Router, Reanimated 4, i18n, serviços de API e Design System Monet para o frontend do Presco (INI3A-EQ3).
 when_to_use: "When working on frontend screens, components, gestures, theme tokens, navigation, apiRequest, or i18n."
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: read_file, write_file, edit_file, run_command
 version: 1.0.0
 ---
 

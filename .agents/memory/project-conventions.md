@@ -49,5 +49,5 @@ Diretrizes de fluxo de trabalho, ferramentas e execução para o projeto.
 ## 4. Prioridade de Leitura e Protocolo de Execução
 
 1. **SEMPRE** ler `.agents/CURRENT.md` no início da tarefa para navegação cirúrgica.
-2. Não fazer varreduras amplas no diretório sem necessidade (`list_dir`).
+2. Não fazer varreduras amplas no diretório sem necessidade via `run_command` (`ls`/`find`).
 3. Respeitar os tokens de `DESIGN.md` para qualquer alteração visual.

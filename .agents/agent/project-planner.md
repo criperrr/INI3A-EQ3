@@ -148,7 +148,7 @@ File:         ./dashboard-analytics.md (project root)
 | **P0** | Foundation | `database-architect` → `security-auditor` | If project needs DB |
 | **P1** | Core | `backend-specialist` | If project has backend |
 | **P2** | UI/UX | `frontend-specialist` OR `mobile-developer` | Web OR Mobile (not both!) |
-| **P3** | Polish | `test-engineer`, `performance-optimizer`, `seo-specialist` | Based on needs |
+| **P3** | Polish | `test-engineer`, `performance-optimizer` | Based on needs |
 
 > 🔴 **Agent Selection Rule:**
 > - Web app → `frontend-specialist` (NO `mobile-developer`)
@@ -330,7 +330,7 @@ npm run lint && npx tsc --noEmit
 python .agents/skills/vulnerability-scanner/scripts/security_scan.py .
 
 # P1: UX Audit
-python .agents/skills/frontend-design/scripts/ux_audit.py .
+python .agents/skills/web-design-guidelines/scripts/ux_audit.py .
 
 # P3: Lighthouse (requires running server)
 python .agents/skills/performance-profiling/scripts/lighthouse_audit.py http://localhost:3000

@@ -154,7 +154,6 @@
           "clean-code": "^2.0.0",
           "design-spec": "^1.0.0",
           "frontend-architecture": "^1.0.0",
-          "frontend-design": "^1.0.0",
           "lint-and-validate": "^1.0.0",
           "presco-frontend": "^1.0.0",
           "web-design-guidelines": "^1.0.0"
@@ -695,22 +694,6 @@
       "scripts": [],
       "version": "1.0.0"
     },
-    "frontend-design": {
-      "allowedTools": [
-        "Read",
-        "Write",
-        "Edit",
-        "Glob",
-        "Grep",
-        "Bash"
-      ],
-      "path": "skills/frontend-design/SKILL.md",
-      "scripts": [
-        "skills/frontend-design/scripts/accessibility_checker.py",
-        "skills/frontend-design/scripts/ux_audit.py"
-      ],
-      "version": "1.0.0"
-    },
     "i18n-localization": {
       "allowedTools": [
         "Read",
@@ -732,6 +715,17 @@
       "path": "skills/intelligent-routing/SKILL.md",
       "scripts": [],
       "version": "1.1.0"
+    },
+    "landing-page": {
+      "allowedTools": [
+        "read_file",
+        "write_file",
+        "edit_file",
+        "run_command"
+      ],
+      "path": "skills/landing-page/SKILL.md",
+      "scripts": [],
+      "version": "1.0.0"
     },
     "lint-and-validate": {
       "allowedTools": [
@@ -844,11 +838,10 @@
     },
     "presco-backend": {
       "allowedTools": [
-        "Read",
-        "Write",
-        "Edit",
-        "Glob",
-        "Grep"
+        "read_file",
+        "write_file",
+        "edit_file",
+        "run_command"
       ],
       "path": "skills/presco-backend/SKILL.md",
       "scripts": [],
@@ -856,33 +849,21 @@
     },
     "presco-frontend": {
       "allowedTools": [
-        "Read",
-        "Write",
-        "Edit",
-        "Glob",
-        "Grep"
+        "read_file",
+        "write_file",
+        "edit_file",
+        "run_command"
       ],
       "path": "skills/presco-frontend/SKILL.md",
       "scripts": [],
       "version": "1.0.0"
     },
-    "semantic-versioning": {
-      "allowedTools": [
-        "Read",
-        "Write",
-        "Edit",
-        "Bash"
-      ],
-      "path": "skills/semantic-versioning/SKILL.md",
-      "scripts": [],
-      "version": "1.0.0"
-    },
     "semver": {
       "allowedTools": [
-        "Read",
-        "Write",
-        "Edit",
-        "Bash"
+        "read_file",
+        "write_file",
+        "edit_file",
+        "run_command"
       ],
       "path": "skills/semver/SKILL.md",
       "scripts": [
@@ -997,7 +978,10 @@
         "WebFetch"
       ],
       "path": "skills/web-design-guidelines/SKILL.md",
-      "scripts": [],
+      "scripts": [
+        "skills/web-design-guidelines/scripts/accessibility_checker.py",
+        "skills/web-design-guidelines/scripts/ux_audit.py"
+      ],
       "version": "1.0.0"
     },
     "webapp-testing": {

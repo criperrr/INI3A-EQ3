@@ -17,7 +17,7 @@ $ARGUMENTS
 
 1. **Localização Cirúrgica (Sem varrer pastas)**
    - Consulte `.agents/CURRENT.md` para encontrar os arquivos exatos da funcionalidade.
-   - Abra apenas os arquivos necessários usando `view_file` com `StartLine` e `EndLine`.
+   - Abra apenas os arquivos necessários usando `read_file` com `StartLine` e `EndLine`.
 
 2. **Detecção de Especialista**
    - **Frontend:** Se a mudança for visual, telas em `src/frontend/app/` ou componentes, utilize as diretrizes do `presco-frontend` (Expo SDK 57, Reanimated, ThemeTokens).

@@ -2,7 +2,7 @@
 name: presco-backend
 description: Diretrizes de arquitetura, encapsulamento em camadas, Drizzle ORM, PostGIS, Redis e autenticação para o backend do Presco (INI3A-EQ3).
 when_to_use: "When working on backend modules, Express routes, controllers, services, repositories, Drizzle schema, PostGIS or Redis."
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: read_file, write_file, edit_file, run_command
 version: 1.0.0
 ---
 

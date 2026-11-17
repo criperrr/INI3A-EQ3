@@ -10,7 +10,7 @@ globs: "**/*.{tsx,jsx,vue,svelte,css,scss},**/components/**,**/app/**/page.tsx"
 
 > Loaded when touching UI files. Design rules live in the specialist agents, NOT here.
 
-## 🛑 GATE: DESIGN.md before any UI code (MANDATORY)
+## [CRITICAL] GATE: DESIGN.md before any UI code (MANDATORY)
 
 Before writing or editing UI (components, pages, styles — web or mobile), a **`DESIGN.md` must exist at the project root**.
 
@@ -27,8 +27,8 @@ Before writing or editing UI (components, pages, styles — web or mobile), a **
 
 ---
 
-| Task         | Read                            |
-| ------------ | ------------------------------- |
+| Task         | Read                                   |
+| ------------ | -------------------------------------- |
 | Web UI/UX    | `.agents/agent/frontend-specialist.md` |
 | Mobile UI/UX | `.agents/agent/mobile-developer.md`    |
 
@@ -36,9 +36,9 @@ Before writing or editing UI (components, pages, styles — web or mobile), a **
 
 - Purple Ban (no purple by default — brand/brief override allowed)
 - Template Ban (no standard layouts)
-- Anti-cliché rules
+- Anti-cliche rules
 - Deep Design Thinking protocol
 
-> 🔴 **For design work:** Open and READ the agent file. Rules are there.
+> **[CRITICAL] For design work:** Open and READ the agent file. Rules are there.
 
 ---

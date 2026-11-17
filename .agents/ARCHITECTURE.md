@@ -10,11 +10,12 @@ Presco é uma aplicação full-stack de comparação de preços e leitura de có
 - **Backend**: Express 5, TypeScript, Drizzle ORM, PostgreSQL com extensão PostGIS e Redis.
 - **Frontend**: React Native 0.86.3, Expo SDK 57, Expo Router, Reanimated 4 e Design System com tokens Monet.
 - **Autoridade Máxima (P0)**:
-  - [AGENTS.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/AGENTS.md)
-  - [CURRENT.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/CURRENT.md)
-  - [COMMITS.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/COMMITS.md)
-  - [DESIGN.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/DESIGN.md)
-  - [ISSUES.md](file:///c:/Users/leona/Desktop/INI3A-EQ3/.agents/ISSUES.md)
+  - [AGENTS.md](AGENTS.md)
+  - [CURRENT.md](CURRENT.md)
+  - [HISTORY.md](HISTORY.md)
+  - [COMMITS.md](COMMITS.md)
+  - [DESIGN.md](DESIGN.md)
+  - [ISSUES.md](ISSUES.md)
 
 ---
 
@@ -23,7 +24,7 @@ Presco é uma aplicação full-stack de comparação de preços e leitura de có
 | Componente | Quantidade |
 |---|---|
 | **Total Agents** | 18 |
-| **Total Skills** | 44 |
+| **Total Skills** | 43 |
 | **Total Workflows** | 13 |
 | **Total Skill Scripts** | 15 |
 

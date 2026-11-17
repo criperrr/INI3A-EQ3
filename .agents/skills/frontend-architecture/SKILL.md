@@ -1,7 +1,7 @@
 ---
 name: frontend-architecture
 description: How to organize frontend code — separation of concerns (UI / logic / data / type), file responsibility, state tiers, API services, schema validation, and framework conventions for React/Next and Vue. Structural rules, not visual design.
-when_to_use: "When structuring a frontend codebase or reviewing how frontend code is organized — where logic, API calls, state, types, and validation should live; component vs hook boundaries. NOT for visual design (use frontend-design or design-spec)."
+when_to_use: "When structuring a frontend codebase or reviewing how frontend code is organized — where logic, API calls, state, types, and validation should live; component vs hook boundaries. NOT for visual design (use presco-frontend, mobile-design, or design-spec)."
 allowed-tools: Read, Write, Edit, Glob, Grep
 version: 1.0.0
 ---
@@ -9,7 +9,7 @@ version: 1.0.0
 # Frontend Architecture
 
 > How to organize frontend code so it scales. Separation of concerns over file-type folders.
-> Applies to React and React Native. For visual design, see [frontend-design](../frontend-design/SKILL.md) and [presco-frontend](../presco-frontend/SKILL.md).
+> Applies to React and React Native. For visual design, see [design-spec](../design-spec/SKILL.md) and [presco-frontend](../presco-frontend/SKILL.md).
 
 ---
 

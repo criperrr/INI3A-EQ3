@@ -1,7 +1,7 @@
 ---
 name: design-spec
 description: How to author a DESIGN.md file — the machine-readable design-token + human-rationale format that must exist before any UI is built. YAML front-matter token schema (colors, typography, spacing, rounded, components), type system, token references, and canonical section order.
-when_to_use: "BEFORE writing any UI code (web or mobile). Read when creating or updating a project's DESIGN.md, defining design tokens, or when a UI task needs a design source-of-truth. Pair with frontend-design (web aesthetics) or mobile-design (mobile)."
+when_to_use: "BEFORE writing any UI code (web or mobile). Read when creating or updating a project's DESIGN.md, defining design tokens, or when a UI task needs a design source-of-truth. Pair with presco-frontend / mobile-design (mobile) or web-design-guidelines (web)."
 allowed-tools: Read, Write, Edit, Glob, Grep
 version: 1.0.0
 ---
@@ -178,7 +178,7 @@ Accessibility-first: high contrast, generous touch targets.
 
 ## Workflow
 
-1. Read the brief and infer the design direction (see `frontend-design` / `mobile-design`).
+1. Read the brief and infer the design direction (see `presco-frontend` / `mobile-design`).
 2. **ALWAYS read [collection.md](collection.md) first** — 70+ real-world DESIGN.md files. Find the 1–2 closest in vibe/industry to the brief, open their `DESIGN.md` on GitHub, and study how they structure tokens. Adapt, never blindly copy.
 3. **Write `DESIGN.md` at the project root** — tokens first, then rationale prose.
 4. Build UI strictly against the tokens. Descriptive names in prose must map to token names.

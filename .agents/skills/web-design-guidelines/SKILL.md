@@ -47,13 +47,14 @@ If no files specified, ask the user which files to review.
 
 | Skill | When to Use |
 |-------|-------------|
-| **[frontend-design](../frontend-design/SKILL.md)** | Before coding - Learn design principles (color, typography, UX psychology) |
+| **[design-spec](../design-spec/SKILL.md)** | Before coding - Define or verify `DESIGN.md` design tokens |
+| **[presco-frontend](../presco-frontend/SKILL.md)** | Presco mobile React Native UI, theme tokens, and i18n |
 | **web-design-guidelines** (this) | After coding - Audit for accessibility, performance, and best practices |
 
 ## Design Workflow
 
 ```
-1. DESIGN   → Read frontend-design principles
+1. DESIGN   → Read design-spec / DESIGN.md principles
 2. CODE     → Implement the design
 3. AUDIT    → Run web-design-guidelines review ← YOU ARE HERE
 4. FIX      → Address findings from audit

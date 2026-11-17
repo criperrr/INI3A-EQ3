@@ -7,12 +7,12 @@ Strict behavioral rules, code encapsulation patterns, project architecture, and 
 ## 1. Context Efficiency & Navigation Rules
 
 ### 1.1. Read CURRENT.md First
-Always read `.agents/CURRENT.md` at the start of any task before calling `list_dir` or running broad `grep_search`. It contains the active task context and direct relative file pointers.
+Always read `.agents/CURRENT.md` at the start of any task before scanning directories or running broad searches with `run_command` (`rg`/`grep`). It contains the active task context and direct relative file pointers.
 
 ### 1.2. Surgical Tool Usage
-- Use `view_file` with `StartLine` and `EndLine` to inspect only the function you need.
-- Use `grep_search` with exact symbol names (e.g., `authController`, `ProductRepository`) to get line numbers before opening files.
-- Avoid `list_dir` unless creating new folders or updating `CURRENT.md`.
+- Use `read_file` with `StartLine` and `EndLine` to inspect only the function or block you need (max 800 lines / 46,080 bytes per call).
+- Use `run_command` (`rg -n` or `grep -rn`) with exact symbol names (e.g., `authController`, `ProductRepository`) to locate line numbers before calling `read_file`.
+- Avoid directory listing commands via `run_command` unless creating new folders or updating `.agents/CURRENT.md`.
 
 ### 1.3. Skills (Load Only When Relevant)
 Deep architecture references are split into skills — load them only if the task touches that area:
@@ -22,186 +22,42 @@ Deep architecture references are split into skills — load them only if the tas
 - **Frontend** (React Native, Expo Router, services, gestures, i18n): `.agents/skills/presco-frontend/SKILL.md`
   Covers: `apiRequest`, domain service patterns, screen map, component list, design token spec, Reanimated swipe navigation, localization in 7 languages.
 - **Design tokens** (colors, typography, spacing, Monet): `.agents/DESIGN.md` or root `DESIGN.md`.
-- **CRITICAL TOKEN RULE:** NEVER load `frontend-design` (23.5k tokens, web-only desktop CSS). For all Presco visual and UI tasks, use `presco-frontend`, `mobile-design`, and `DESIGN.md`.
+- **CRITICAL TOKEN RULE:** NEVER load generic desktop/web UI design skills for Presco mobile tasks. For all Presco visual and UI tasks, use `presco-frontend`, `mobile-design`, `design-spec`, and `DESIGN.md`.
 
 ---
 
 ## 2. Project Architecture
 
-### 2.1. Technology Stack
-- **Backend:** Node.js, Express 5, TypeScript. Path alias `@/*` resolves to `src/backend/src/*`.
-- **ORM:** Drizzle ORM targeting PostgreSQL with PostGIS extension (for `geography` columns on `user` and `market`).
-- **Session layer:** Redis (`redis` package). All token data lives in Redis; no token columns on DB tables.
-- **Auth:** JWT access tokens (15 min, signed with `JWT_SECRET`, carry `id, email, name, roleId, jti`). Refresh tokens are 96-byte hex strings stored in Redis as `refresh:<token> → userId`.
-- **Permissions:** Multi-role authority system with `requireAuth`, `requireAdmin` (roleId 5), `requireMinAuthority`.
-- **Frontend:** React Native 0.86.3, Expo SDK 57, Expo Router for file-based routing, AsyncStorage for token persistence.
-- **Motion & Gestures:** React Native Reanimated 4 with 1:1 finger tracking, `react-native-gesture-handler` 2, and `expo-haptics`.
-- **Design:** Dynamic theming with Light, Dark, and AMOLED modes + System Monet color extraction via `useTheme()`.
-- **i18n:** Type-safe translation engine with 7 languages (pt-BR, en-US, es-ES, de-DE, ru-RU, zh-CN, ja-JP).
-
-### 2.2. Environment & Startup
-Required `.env` variables for the backend (`src/backend/.env`):
-```env
-DATABASE_URL=postgres://user:password@localhost:5432/dbname
-REDIS_URL=redis://localhost:6379
-SERVER_PORT=3333
-JWT_SECRET=<secret>
-```
-
-Dev startup: run `./start_project.sh` from project root:
-- Default: Tunneling mode (`ini3a-eq3-api` on port 3333 and `ini3a-eq3-app` on port 8081).
-- Local Wi-Fi NAT mode: `./start_project.sh --local-nat` (or `npm run dev:local`) for zero-latency local network testing with Expo Go QR code scanning.
-- Services manager: `npm run db:status`, `npm run db:restart`, `npm run db:reload`, `npm run db:check`.
+- **Stack & Env:** Node.js + Express 5 + TypeScript + Drizzle ORM (PostgreSQL + PostGIS) + Redis sessions on backend; React Native 0.86.3 + Expo SDK 57 + Expo Router + Reanimated 4 + Monet theming + 7-language i18n on frontend. Full stack specs live in `.agents/skills/presco-backend/SKILL.md` and `.agents/skills/presco-frontend/SKILL.md`.
+- **Required Backend Env (`src/backend/.env`):** `DATABASE_URL`, `REDIS_URL`, `SERVER_PORT=3333`, `JWT_SECRET`.
+- **Startup & Services:** `./start_project.sh` (tunnel default), `./start_project.sh --local-nat` or `npm run dev:local` (local Wi-Fi), `npm run db:status`, `npm run db:restart`, `npm run db:reload`, `npm run db:check`.
 
 ---
 
 ## 3. Backend: Code Encapsulation Rules
 
-### 3.1. Layer Responsibilities and Flow
-
-Request flow: `Routes → Controller → Service → Repository → DB/Redis`
-
-**Routes** (`modules/[module]/[module].routes.ts`)
-- Instantiate `Router()`. Mount middleware (`requireAuth`, `requireAdmin`) on protected routes. Delegate to controller method. No logic here.
-- Protected routes pass `req` as `Api.Request` (augmented with `req.user: { id, email, name, roleId, jti, exp }`).
-- Mounting in `app.ts`: `app.use("/auth", authRouter)`, `app.use("/products", productRouter)`, `app.use("/ocurrency", ocurrencyRouter)`, `app.use("/markets", marketRouter)`.
-
-**Controller** (`modules/[module]/[module].controller.ts`)
-- Class singleton: `export const xController = new XControllerClass()`.
-- Every method signature: `async method(req, res, next)` — always wrap in `try/catch`, forward to `next(e)` on error.
-- Validate `req.body`/`req.params` here. Build `errors: { field, message }[]` array and throw `new ValidationError(errors)` if invalid.
-- On success: `return res.status(200 | 201).json(success(result))`. The `success()` helper returns `{ success: true, code: 200, data }`.
-
-**Service** (`modules/[module]/[module].service.ts`)
-- Class singleton: `export const xService = new XServiceClass()`.
-- All business logic, hashing (`bcrypt` cost 10), JWT signing (`signAccessToken`), token rotation, gamification XP calculation, and domain validation live here.
-- Throws typed AppError subclasses (see Section 3.3). Never returns HTTP status codes.
-- Calls only Repository singletons for data access.
-
-**Repository** (`shared/database/repositories/[entity].repository.ts`)
-- Class singleton: `export const EntityRepository = new EntityRepositoryClass(db)` (or without `db` for Redis-only repos).
-- The ONLY location where Drizzle ORM calls or Redis calls are made. No ORM/Redis outside repositories.
-
-### 3.2. Database Schema (Drizzle — `shared/database/schema.ts`)
-
-| Table | Key columns |
-|---|---|
-| `role` | `id, name, minPoints, authority` |
-| `scope` | `id, scopeName` |
-| `role_scope` | `roleId, scopeId` (composite PK) |
-| `user` | `id, name, email, passHash, birthdate, points, dangerFlag, location (geography/PostGIS), roleId (FK→role), createdAt, updatedAt` |
-| `badge` | `id, name, icon, minPoints` |
-| `user_badge` | `userId, badgeId, awardedAt` (composite PK) |
-| `product` | `id, ean (nullable text), ncm, name, description, icon, createdAt` — GIN index on `name` for trigram search |
-| `market` | `id, name, location (geography/PostGIS), createdAt` — GiST index for proximity queries |
-| `ocurrency` | `id, userId, marketId, productId, value (numeric 12,2), trustFlag, isSuspended, isResolved, upvoteCount, downvoteCount, volate, createdAt` — core price report entity |
-| `cart` | `id, userId, createdAt` |
-| `cart_product` | `cartId, productId, addedAt` (composite PK) |
-| `cured` | `userId, ocurrencyId, verdict, date` — user moderation votes on ocurrencies |
-
-Important: `geography` is a custom Drizzle type wrapping PostGIS. To write it: `{ lat, lng }`. To read it use `ST_AsGeoJson(col)` via `sql\`\``. Direct Drizzle `.select()` on geography columns returns raw WKB — always wrap with `sql`.
-
-### 3.3. Error Classes (`shared/errors/errors.ts`)
-
-All extend `AppError(internalCode, customMessage, httpCode)`:
-
-| Class | `internalCode` | `httpCode` | Notes |
-|---|---|---|---|
-| `ForbiddenError` | `FORBIDDEN` | 403 | Insufficient role or authority |
-| `NotFoundError` | `NOT_FOUND` | 404 | Resource not found in database |
-| `ValidationError` | `VALIDATION_ERROR` | 422 | Carries `errors: { field, message }[]` |
-| `UnauthorizedError` | `UNAUTHORIZED` | 401 | Default message: "Invalid credentials." |
-| `ConflictError` | `CONFLICT` | 409 | Default message: "Resource already exists." |
-| `JTIrefused` | `JTI_REFUSED` | 401 | JTI blacklisted or missing |
-| `MultipleApiError` | `MULTIPLE_ERRORS` | 400 (configurable) | Carries `errors: any[]` |
-| `NotImplemented` | `<code>` | 501 | Stub placeholder |
-| `InternalError` | `<code>` | `<code>` | Generic internal |
-
-`errorHandler` middleware (last `app.use`) catches all `AppError` subclasses and produces:
-```json
-{ "success": false, "code": "INTERNAL_CODE", "message": "...", "errors": [...] }
-```
-Non-`AppError` exceptions produce HTTP 500 with `INTERNAL_SERVER_ERROR`.
-
-### 3.4. Auth Middleware (`requireAuth`, `requireAdmin`)
-
-- `requireAuth` (`shared/middlewares/authMiddleware.ts`):
-  1. Reads `Authorization: Bearer <token>` header.
-  2. Calls `verifyAccessToken(token)`.
-  3. Checks Redis `blacklist:<jti>` via `AuthRepository.isAccessTokenBlacklisted(jti)`.
-  4. Attaches decoded payload to `req.user: { id, email, name, roleId, jti, exp }`.
-- `requireAdmin`: Ensures `req.user.roleId >= 5` or authority level matches administrator privilege.
-
-### 3.5. Redis Key Schema
-
-Managed exclusively through `AuthRepository`:
-- `refresh:<token>` → `userId` string. TTL = `REFRESH_TOKEN_EXPIRY_SECONDS` (7 days).
-- `blacklist:<jti>` → `"1"`. TTL = remaining seconds of the access token's lifetime.
-
-Rotation (on `/auth/refresh`): atomic Redis multi — sets new `refresh:` key, deletes old one.
+- **Strict Layer Flow:** `Routes -> Controller -> Service -> Repository -> DB/Redis`. Full rules for Express singletons, Drizzle ORM/PostGIS (`ST_AsGeoJson`), `AppError` subclasses, `requireAuth`/`requireAdmin`, and Redis keys (`refresh:<token>`, `blacklist:<jti>`) are defined in `.agents/skills/presco-backend/SKILL.md` (Sections 1–4).
 
 ---
 
 ## 4. Frontend: Code Encapsulation Rules
 
-### 4.1. HTTP Layer (`services/api.ts`)
-
-`apiRequest<T>(endpoint, options, retry = true)`:
-- Prepends `EXPO_PUBLIC_API_URL` (or `http://localhost:3333` fallback).
-- Injects `Authorization: Bearer <token>` from AsyncStorage key `@presco:accessToken`.
-- Sets `Bypass-Tunnel-Reminder: true` header (required for localtunnel).
-- Enforces 15-second timeout via `AbortController`. Throws `ApiError(408, "TIMEOUT", ...)` on abort.
-- On HTTP 401 with `retry = true`: calls `tryRefreshToken()`, then retries once.
-- Throws `ApiError(status, code, message, errors)` on non-OK responses.
-
-Storage keys (`STORAGE_KEYS`):
-- `@presco:accessToken`
-- `@presco:refreshToken`
-
-Never call `fetch` directly inside screens or components. Always use `apiRequest` or a domain service.
-
-### 4.2. Domain Services (`services/`)
-
-- `auth.ts`: Authentication, profile data, password change, account deletion.
-- `productService.ts`: Product CRUD, barcode search, category filter, price stats and history.
-- `ocurrencyService.ts`: Price reports submission (+15 XP), product occurrence lists, voting (+5 XP), edit/delete.
-- `marketService.ts`: Market listings and registration.
-
-### 4.3. Screens (`app/`) & Expo Router
-
-Key screens:
-- `_layout.tsx` — root stack + theme, i18n and gesture providers
-- `index.tsx` — home / dashboard screen
-- `login.tsx` / `registerUser.tsx` — authentication flows (with 1-tap dev login)
-- `scannerProduct.tsx` — camera EAN barcode scanning
-- `scannerConfirmation.tsx` — confirm scanned product
-- `customRegisterProduct.tsx` — manual product entry (+25 XP)
-- `registerProduct.tsx` — price submission for a product (+15 XP)
-- `search.tsx` — text-based and barcode debounced search
-- `productDetails.tsx` — dynamic product view with statistics, charts, occurrences and voting
-- `profile.tsx` — 100% dynamic profile with XP progress bar, unlocked badges and contribution grid
-- `settings.tsx` — preferences, Monet palettes, backup export/import, cache clear, account controls
-- `map.native.tsx` / `map.web.tsx` / `map.tsx` — proximity markets map
+- **HTTP & Screens:** Never call `fetch` directly inside screens or components; always use `apiRequest<T>` (`src/frontend/services/api.ts`) or domain services (`auth.ts`, `productService.ts`, `ocurrencyService.ts`, `marketService.ts`, `cartService.ts`). Full screen map, Reanimated gestures, Monet tokens, and 7-language i18n rules are defined in `.agents/skills/presco-frontend/SKILL.md` (Sections 1–6).
 
 ---
 
 ## 5. Adding New Backend Endpoints (Checklist)
 
-1. Schema/Types: add table or column to `shared/database/schema.ts`; add DTO types to `shared/types/services.ts` and `shared/types/repositories.ts`.
-2. Repository: add method(s) to the relevant class in `shared/database/repositories/`.
-3. Service: add method(s) to the relevant class in `modules/[module]/[module].service.ts`.
-4. Controller: add method to the class in `modules/[module]/[module].controller.ts`. Validate inputs, call service, respond with `success()`.
-5. Routes: wire method in `modules/[module]/[module].routes.ts`. Apply `requireAuth` or `requireAdmin` if protected.
-6. Mount: if a new module, `app.use("/route", newRouter)` in `src/backend/src/app.ts`.
+- Follow the 6-step endpoint checklist (`schema/types -> Repository -> Service -> Controller -> Routes -> app.ts`) in `.agents/skills/presco-backend/SKILL.md` (Section 5).
 
 ---
 
 ## 6. Mandatory Update Rules
 
 After any file modification or addition:
-1. Update `.agents/CURRENT.md`: refresh task status, executive summary, and add new files to the Navigation Index.
+1. Update `.agents/CURRENT.md`: refresh task status, executive summary, and Navigation Index (archive old sprint items to `.agents/HISTORY.md` if approaching 15 KB).
 2. Append entry to `.agents/COMMITS.md`.
-   > **CRITICAL TOKEN RULE:** NEVER read `COMMITS.md` before appending (it contains 52k+ tokens of historical logs). Append directly to the end using this exact template:
+   > **CRITICAL TOKEN RULE:** NEVER read `.agents/COMMITS.md` before appending (it exceeds 390 KB of historical logs). Append directly to the end using this exact template:
    ```markdown
    ## `YYYY-MM-DD HH:MM` - `type(scope)`: Short title
 
@@ -213,137 +69,73 @@ After any file modification or addition:
 
 ### 6.1. Git Commit Policy (Atomic Commits Strictly On Request)
 
-- **NO SPONTANEOUS COMMITS (CRITICAL):** The AI must NEVER execute `git commit` or stage files spontaneously. Commits are executed **ONLY IF AND WHEN THE USER EXPLICITLY REQUESTS IT** (e.g., "commita", "pode commitar", "faça os commits"). Otherwise, all modifications must remain in the working directory.
-- **ISOLAMENTO DE ESCOPO POR CHAT/SESSÃO (COMMIT & PUSH CIRÚRGICO):** Quando o usuário solicitar commit e/ou push em uma sessão de chat, a IA DEVE realizar o commit e push **ESTRITAMENTE dos arquivos modificados, criados ou tocados na sessão daquele chat específico**, ignorando e preservando intocadas as alterações de outros chats ou tarefas:
-  - **Proibição Absoluta de Adição Global:** NUNCA execute `git add .`, `git add -A`, `git add -u` ou `git commit -a`.
-  - **Adição Cirúrgica de Arquivos:** Inspecione os arquivos manipulados no chat atual e execute `git add <arquivo1> <arquivo2> ...` apenas para os arquivos pertencentes ao escopo daquela solicitação.
-  - **Preservação da Working Tree:** Quaisquer alterações pendentes deixadas por outros chats concorrentes ou intervenções manuais não relacionadas ao chat solicitante devem permanecer intocadas na working tree (unstaged).
-  - **Push Isolado:** O push deve refletir e sincronizar apenas o conjunto de commits originados da tarefa do chat em questão.
-- **Decomposition of Large Tasks (Atomic Commits):** When explicitly asked to commit after complex multi-file or multi-layer changes:
-  1. Inspect modified files (`git status`).
-  2. DO NOT create a single monolithic commit (`git add . && git commit`).
-  3. Decompose and slice the changes into distinct, logical atomic commits grouped by architectural layer/domain:
-     - Database & Schema (`feat(db): ...`)
-     - Backend API, Services, Repositories (`feat(api): ...`)
-     - Frontend UI, Screens, Components (`feat(ui): ...`)
-     - Configuration, Tooling, Dependencies (`chore: ...` or `build: ...`)
-     - Documentation & Tests (`docs: ...` or `test: ...`)
-  4. Use Conventional Commits with clear, descriptive messages.
+- **NO SPONTANEOUS COMMITS (CRITICAL):** NEVER execute `git commit` or stage files unless the user explicitly requests it (e.g., "commita", "pode commitar", "faça os commits"). Otherwise leave edits in the working tree.
+- **ISOLAMENTO DE ESCOPO POR CHAT/SESSÃO (COMMIT & PUSH CIRÚRGICO):** When asked to commit or push, stage and push **STRICTLY** the files modified, created, or touched in that specific chat session:
+  - **Proibição Absoluta de Adição Global:** NEVER run `git add .`, `git add -A`, `git add -u`, or `git commit -a`. Use explicit `git add <file1> <file2> ...` only for files in the session scope.
+  - **Preservação da Working Tree:** Leave unrelated pending changes from other chats or manual edits untouched (unstaged).
+- **Atomic Decomposition:** When committing multi-layer changes, inspect `git status` and slice into logical Conventional Commits grouped by domain: `feat(db): ...`, `feat(api): ...`, `feat(ui): ...`, `chore:`/`build:`, `docs:`/`test:`.
 
 ### 6.2. Semantic Versioning & Release Policy (`semver`)
 
-- **Format:** Segue estritamente `MAJOR.MINOR.PATCH` (ex: `1.0.0`, `1.0.1`).
-  - `MAJOR`: Quebras de compatibilidade de API ou arquitetura (`feat!:`, `fix!:`, `BREAKING CHANGE:`).
-  - `MINOR`: Novas funcionalidades compatíveis com versões anteriores (`feat:`).
-  - `PATCH`: Correções de bugs, ajustes de estilo e melhorias de performance (`fix:`, `perf:`).
+- **Format:** Strict `MAJOR.MINOR.PATCH` (`MAJOR` for breaking changes `feat!:`/`fix!:`/`BREAKING CHANGE:`, `MINOR` for `feat:`, `PATCH` for `fix:`/`perf:`).
 - **Escopo Estrito de Alteração de SemVer (Front-end ou Back-end Obrigatório):**
-  - **REGRA MANDATORIA:** A versao do projeto (SemVer) **DEVE ser alterada SOMENTE E EXCLUSIVAMENTE quando houver alteracoes em codigo-fonte de aplicacao no Front-end (`src/frontend/**`) ou no Back-end (`src/backend/**`)**.
-  - **PROIBICAO ABSOLUTA DE BUMP PARA DEMAIS ESCOPOS:** E terminantemente proibido alterar o SemVer (`package.json`, `app.json`, etc.) quando as modificacoes forem restritas a:
-    - CI/CD (`.github/**`, workflows)
-    - Testes isolados de infraestrutura ou carga (`tests/k6/**`, testes que nao toquem no codigo de producao)
-    - Scripts utilitarios de dev ou ferramentas (`scripts/**`, exceto se integrar diretamente ao build da aplicacao)
-    - Documentacao (`docs/**`, `*.md`, `.agents/**`)
-    - Landing page isolada (`src/landing/**`)
-    - Ferramentas, linters ou tarefas de manutencao (`chore`, `build`, etc.) sem impacto no app ou API.
-- **Instruções Obrigatórias para Modelos Agenticos (IA):**
-  - **O agente deve alterar a versao SOMENTE apos modificacao de front ou back:** Sempre que concluir uma modificacao de codigo em `src/frontend/` ou `src/backend/`, o modelo agentico **DEVE atualizar a versao do projeto** nos arquivos de manifesto de acordo com a skill `@[skills/semantic-versioning]`. Se a tarefa tocar apenas em CI, testes de carga, documentacao ou scripts, **NAO altere a versao**.
-  - **Sem scripts no nome do APK:** O nome ou artefato do APK gerado nao deve depender de scripts magicos de concatenacao de versao em tempo de execucao; a versao oficial e lida diretamente dos arquivos de manifesto versionados (`package.json` e `app.json`).
-  - **Protocolo de Atualizacao Direta pelo Agente:**
-    1. Analisar a natureza da alteracao segundo o Conventional Commits (`fix` -> Patch, `feat` -> Minor, breaking -> Major).
-    2. Atualizar simultaneamente:
-       - `package.json` (raiz): campo `"version"`.
-       - `src/backend/package.json`: campo `"version"`.
-       - `src/frontend/package.json`: campo `"version"`.
-       - `src/frontend/app.json`: campo `expo.version` (mesmo valor SemVer) e incrementar `expo.android.versionCode` (+1 inteiro).
-    3. Alternativamente, o agente pode invocar `npm run version:bump` (Patch), `npm run version:bump:minor` (Minor) ou `npm run version:bump:major` (Major) para sincronizacao automatica. O script valida automaticamente se ha modificacoes em `src/frontend/` ou `src/backend/`.
-- **Pipeline de Release & GitHub Actions:**
-  - Releases e builds autônomas do APK Android são acionadas via GitHub Actions (`.github/workflows/release.yml`).
-  - Todo push de tag `v*.*.*` ou disparo manual via `workflow_dispatch` executa a suíte de testes (`npm test`, `npm run typecheck`), gera o APK release nativo e publica automaticamente o artefato no **GitHub Releases** com changelog gerado dinamicamente.
+  - **REGRA MANDATÓRIA:** Bump SemVer **ONLY AND EXCLUSIVELY** when modifying application source code in `src/frontend/**` or `src/backend/**`.
+  - **PROIBIÇÃO ABSOLUTA:** NEVER alter SemVer (`package.json`, `app.json`) when changes are restricted to CI/CD (`.github/**`), load/infra tests (`tests/k6/**`), utility scripts (`scripts/**`), docs (`docs/**`, `*.md`, `.agents/**`), isolated landing page (`src/landing/**`), or tooling/chore tasks without app/API impact.
+- **Protocolo do Agente:** Follow `@[skills/semver]`. Do NOT use dynamic runtime scripts to inject version strings into APK filenames; read version strictly from the 4 synchronized manifests (`package.json`, `src/backend/package.json`, `src/frontend/package.json`, `src/frontend/app.json` `expo.version` + `expo.android.versionCode + 1`), or run `npm run version:bump[:minor|:major]`.
+- **Release Pipeline:** `.github/workflows/release.yml` runs on `v*.*.*` tag push or `workflow_dispatch`, executing `npm test`, `npm run typecheck`, Android release APK build, and GitHub Releases publication.
 
 ### 6.3. Autonomous Backend Deployment Policy (CI/CD & Server Hygiene)
 
-- **Deploy Autônomo por Push no GitHub Actions:** Todo commit pushado para as branches `main` ou `tests` contendo alterações em `src/backend/**`, `deploy/**`, `ecosystem.config.cjs`, `scripts/deploy_remote.sh` ou `.github/workflows/deploy.yml` aciona automaticamente o workflow `Deploy Backend` (`.github/workflows/deploy.yml`). Ele valida a tipagem com `typecheck`, sincroniza cirurgicamente os arquivos essenciais e reexecuta migrações, seed e reinício limpo do PM2 no servidor remoto.
-- **Diretriz para Modelos e Agentes:** Sempre que realizar alterações importantes no backend (novos endpoints, correções de regras de negócio, migrações Drizzle, etc.) e o usuário solicitar o push/commit, o agente deve orientar ou confirmar que o deploy será executado automaticamente pelo GitHub Actions. Caso o usuário solicite o deploy imediato via terminal ou sem push, o agente pode invocar `npm run deploy` ou disparar manualmente o workflow com `gh workflow run deploy.yml --ref <branch>`.
-- **Higiene Estrita do Servidor de Produção:**
-  - O servidor remoto em `/var/www/equipes/26-presco` hospeda **estritamente o runtime essencial do backend**:
-    - `src/backend/` (código-fonte compilado/executado via `tsx`, migrações, `package.json` isolado e `node_modules`).
-    - `deploy/deploy.sh` (orquestrador local do servidor).
-    - `ecosystem.config.cjs` (declaração PM2).
-    - `.htaccess` (proxy reverso Apache para `127.0.0.1:3333`).
-    - `logs/` (streams de logs do PM2 e histórico de deploys).
-    - `README.md` (o **ÚNICO** arquivo markdown permitido no servidor remoto, explicando que se trata do backend e apontando para o GitHub).
-  - É **ESTRITAMENTE PROIBIDO** subir ou manter no servidor: `.agents/`, `docs/`, `sprints/`, `gestao/`, `src/frontend/`, scripts de dev (`scripts/`), ou quaisquer outros markdowns (`.md`). O script de deploy higieniza e expurga automaticamente qualquer resíduo não essencial.
+- **Deploy Autônomo via CI:** Pushes to `main` or `tests` modifying `src/backend/**`, `deploy/**`, `ecosystem.config.cjs`, `scripts/deploy_remote.sh`, or `.github/workflows/deploy.yml` trigger `.github/workflows/deploy.yml` (`typecheck`, surgical sync, migrations, seed, clean PM2 restart). If asked for immediate/manual deploy, run `npm run deploy` or `gh workflow run deploy.yml --ref <branch>`.
+- **Higiene Estrita do Servidor de Produção (`/var/www/equipes/26-presco`):** Host strictly `src/backend/`, `deploy/deploy.sh`, `ecosystem.config.cjs`, `.htaccess`, `logs/`, and a single `README.md`. Strictly forbidden on server: `.agents/`, `docs/`, `sprints/`, `gestao/`, `src/frontend/`, `scripts/`, or extra `.md` files.
 
 ---
 
 ## 7. Code Style & Conventions
 
-- **Comments:** Write minimal comments. Self-documenting code through clear naming.
-- **TypeScript:** Use `type` for DTOs; `interface` for extensible object shapes. Use `import type` for type-only imports. Use `async/await` throughout.
-- **Singletons:** Controllers and Services are exported as singleton instances (`export const authController = new AuthControllerClass()`).
-- **Geography/PostGIS:** Write as `{ lat, lng }`; read with `sql`ST_AsGeoJson(${table.location})``.
+- **Comments:** Minimal comments; self-documenting code via clear naming.
+- **TypeScript:** `type` for DTOs, `interface` for extensible shapes, `import type` for type-only imports, `async/await` throughout.
+- **Singletons:** Export Controllers and Services as singleton instances (`export const authController = new AuthControllerClass()`).
+- **Geography/PostGIS:** Write `{ lat, lng }`; read with ``sql`ST_AsGeoJson(${table.location})` ``.
 
 ---
 
 ## 8. Governança Rígida de Branches, Commits, CI/CD e Blindagem de Testes
 
 ### 8.1. Axioma de Commits (Sintaxe Obrigatória e Isolamento por Chat)
-- **Formato Estrito:** `<category>/<short-description>` ou `<category>(<scope>): <short-description>`.
-- **Categorias Permitidas:** `feat`, `fix`, `test`, `refactor`, `chore`, `docs`.
-- **Regra de Sintaxe:** Mensagens fora desta sintaxe ou commits sem propósito atômico claro são rejeitados pelo pipeline de CI (`pr-gatekeeper.yml`).
-- **Isolamento de Escopo por Chat (Commit & Push):** Ao receber comando para commitar e/ou dar push, o agente deve selecionar cirurgicamente APENAS os arquivos que foram modificados ou criados na sessão do chat atual. Nunca utilizar `git add .` ou incluir alterações originadas de outros chats ou tarefas simultâneas na working tree.
+- **Formato Estrito:** `<category>/<short-description>` or `<category>(<scope>): <short-description>`.
+- **Categorias Permitidas:** `feat`, `fix`, `test`, `refactor`, `chore`, `docs` (enforced by `pr-gatekeeper.yml`).
+- **Isolamento por Chat:** Stage surgically only files from the current chat session; never `git add .`.
 
 ### 8.2. Axioma de Criação de Branches (Regra Prévia Obrigatória)
-- **Criação Prévia Mandatória:** O modelo DEVE OBRIGATORIAMENTE E SEMPRE criar uma branch temática a partir de `dev` (`git checkout -b <categoria>/<nome-da-task> dev`) ANTES de realizar qualquer modificação em qualquer arquivo do projeto.
-- **Proibição Absoluta de Trabalho Direto em `main` ou `dev`:** É EXPRESSAMENTE PROIBIDO realizar alterações diretamente na branch `main` ou na branch `dev`. A working tree deve ser ramificada imediatamente no início de qualquer tarefa.
-- **Branch Base Obrigatória:** Toda nova tarefa, feature ou correção deve nascer exclusivamente a partir da branch `dev`.
-- **Nomenclatura Obrigatória:** `<categoria>/<nome-da-task>` (ex: `feat/real-time-alerts`, `fix/login-session`, `test/concurrency-shop`).
-- **Proibição:** É expressamente proibido ramificar a partir de `main`, com a única exceção de hotfixes emergenciais de produção (`fix/hotfix-...`).
+- **Criação Prévia Mandatória:** Always create a thematic branch from `dev` (`git checkout -b <categoria>/<nome-da-task> dev`) BEFORE modifying any file in the project.
+- **Proibição Absoluta:** NEVER modify files directly on `main` or `dev`, and NEVER branch from `main` (sole exception: emergency production hotfixes `fix/hotfix-...`).
+- **Nomenclatura Obrigatória:** `<categoria>/<nome-da-task>` (e.g., `feat/real-time-alerts`, `fix/login-session`, `test/concurrency-shop`).
 
 ### 8.3. Axioma de Merge Autônomo e Validação Obrigatória de PRs (Regra Absoluta)
-- **Proibição de Merge Local:** Agentes e modelos de IA **NUNCA** executam `git merge` localmente em `dev` ou `main`.
+- **Proibição de Merge Local:** AI agents **NEVER** run `git merge` locally into `dev` or `main`.
 - **Fluxo Exclusivo de Integração:**
-  1. Criar branch temática a partir de `dev` antes de tocar no código: `git checkout -b <categoria>/<nome-da-task> dev`.
-  2. Implementar e validar código e testes localmente (`npm test`, `npm run typecheck`).
-     - **Teste Obrigatório com Maestro para Frontend:** Caso a modificação infira ou toque no frontend mobile (`src/frontend/**`, componentes, telas, rotas Expo, tokens de design ou i18n), o agente **DEVE OBRIGATORIAMENTE testar a estabilidade da aplicação usando o Maestro** (`npm run test:maestro:full` ou `npm run test:maestro:quick` ou `npm run test:maestro:docker`) antes de prosseguir com o commit e push para o remoto.
-  3. Enviar branch para o repositório remoto: `git push origin <categoria>/<nome-da-task>`.
-  4. Abrir Pull Request apontando para `dev`: `gh pr create --base dev --title "..." --body "..."`.
-  5. **Verificação Obrigatória de Testes:** O agente DEVE acompanhar ativamente a esteira de CI (`gh pr checks <PR> --watch` ou consulta equivalente) para verificar se todos os testes passaram (`SUCCESS`). A tarefa NUNCA deve ser considerada finalizada sem essa verificação.
-  6. **Merge via GitHub CLI (`gh`):**
-     - Se os testes passarem: o agente DEVE obrigatoriamente utilizar a CLI `gh` da máquina do usuário para realizar o merge do PR na branch `dev` (`gh pr merge --squash --auto` ou `gh pr merge <PR> --squash`).
-     - Se os testes falharem: o agente DEVE investigar a causa raiz da falha na esteira, corrigir o código, subir novo commit cirúrgico e aguardar a nova execução do CI até que seja aprovado.
-- **Pré-requisito Mandatório da CLI `gh` (Instalação e Login):**
-  - O agente deve verificar se o GitHub CLI está instalado (`which gh`). Se não estiver instalado, DEVE interromper e orientar o desenvolvedor a instalá-lo de acordo com o sistema operacional (`sudo apt install gh`, `brew install gh`, `pacman -S github-cli` ou via `winget install --id GitHub.cli`).
-  - O agente deve verificar se o GitHub CLI está autenticado (`gh auth status`). Se não estiver, DEVE interromper a automação e solicitar explicitamente que o usuário realize o login via terminal (`gh auth login`).
-- **Resolução Autônoma de Falhas de CI via Download de Logs e Artefatos:**
-  - Quando a esteira de CI do GitHub Actions falhar, o modelo DEVE inspecionar os passos com erro diretamente via terminal:
-    - Ver logs detalhados da falha: `gh run view <run-id> --log-failed`
-    - Baixar pacote de diagnóstico completo (screenshots de erro, relatório HTML, dump XML de UI e logcat): `gh run download <run-id> -n maestro-e2e-audit-reports`
-  - O modelo deve analisar os artefatos baixados para identificar a causa raiz com precisão cirúrgica sem onerar o desenvolvedor com execuções locais lentas.
+  1. Branch from `dev` before editing (`git checkout -b <categoria>/<nome-da-task> dev`).
+  2. Validate locally (`npm test`, `npm run typecheck`). If changes touch or affect mobile frontend (`src/frontend/**`, components, screens, Expo routes, tokens, i18n), **MUST** run Maestro stability tests (`npm run test:maestro:full`, `npm run test:maestro:quick`, or `npm run test:maestro:docker`) before commit/push.
+  3. Push branch: `git push origin <categoria>/<nome-da-task>`.
+  4. Open PR targeting `dev`: `gh pr create --base dev --title "..." --body "..."`.
+  5. **Verificação Obrigatória de CI:** Monitor active checks (`gh pr checks <PR> --watch`); never mark a task complete until all checks report `SUCCESS`.
+  6. **Merge via `gh`:** If checks pass, merge via `gh pr merge --squash --auto` or `gh pr merge <PR> --squash`. If checks fail, investigate, fix, push surgical commit, and re-verify.
+- **Pré-requisito da CLI `gh`:** Verify `which gh` and `gh auth status`; if missing or unauthenticated, halt and instruct developer to install `gh` or run `gh auth login`.
+- **Diagnóstico Autônomo de CI:** Inspect failures with `gh run view <run-id> --log-failed` and download artifacts via `gh run download <run-id> -n maestro-e2e-audit-reports`.
 
 ### 8.4. Proteção contra Testes Falsos (Anti-Tautologia) e Zonas Protegidas
-- **Proibição de Testes Tautológicos:** Proibido criar testes com asserções genéricas ou vazias (ex: `expect(true).toBe(true)`, `expect(res).toBeDefined()`), testes sem validação de mutação de estado real ou mocks excessivos que disfarcem falhas de integração.
-- **Barreira de Cobertura de Código:** Cobertura mínima de **80%** de linhas e branches nos arquivos criados ou modificados.
-- **Zonas Protegidas (Arquivos Intocáveis por IA para Burlar CI):**
-  - Diretórios estruturais de teste: `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/` e `.github/workflows/`.
-  - **Regra Inegociável:** Modelos e agentes de IA **NÃO têm permissão** para relaxar thresholds de performance (SLAs de latência/erros no k6), alterar asserções para falsos-positivos ou desativar steps de validação para forçar a passagem de pipelines de CI. Se um teste falhar, a causa raiz na implementação deve ser investigada e corrigida.
+- **Proibição de Testes Tautológicos:** Never write empty/generic assertions (`expect(true).toBe(true)`, `expect(res).toBeDefined()`), tests without real state mutation verification, or excessive mocks hiding integration failures.
+- **Cobertura Mínima:** Minimum **80%** line and branch coverage on created or modified files.
+- **Zonas Protegidas:** `tests/e2e/`, `tests/load/`, `tests/concurrency/`, `tests/k6/`, `tests/maestro/`, and `.github/workflows/`. AI agents MUST NEVER relax SLA/latency thresholds, alter assertions into false positives, or disable CI validation steps to force green builds; fix the root cause in code.
 
 ### 8.5. Axioma de Títulos e Descrições de Pull Requests (PRs)
-- **Estilo Idêntico a Mensagens de Commit (Proibição de Slop de IA):** Expressamente proibido o uso de templates corporativos, prolixos e gerados por IA em títulos ou bodies de PR (sem `### Resumo`, sem listas com negrito `**`, sem emojis, sem tabelas e sem qualquer formatação de markdown).
-- **Regras Estritas de Escrita:**
-  - **Idioma:** Exclusivamente em inglês (`en-US`).
-  - **Caixa:** Totalmente em minúsculas (`lowercase`), tanto no título quanto no `--body`.
-  - **Sem Markdown:** Texto puro, corrido, sem headers, bullet points rebuscados ou negrito.
-  - **Tom:** Informal, direto e despojado ("meio jogado"), mas com vocabulário tecnicamente denso e preciso (estilo clássico de engenheiro sênior no terminal).
-- **Exemplo de Título:**
-  `feat(ci): add conditional expo bundle check to gatekeeper`
-- **Exemplo de Body (`--body`):**
-  `added conditional expo export step in pr-gatekeeper.yml that only triggers when src/frontend files are changed, bumped semver patch to 1.2.2 and cleaned up tests branch from workflows`
+- **Proibição de Slop de IA:** Strictly forbidden: corporate AI templates, `### Resumo`, bold lists, emojis, tables, or markdown formatting in PR titles or `--body`.
+- **Regras Estritas:** `en-US` only, all `lowercase` (title and `--body`), plain unformatted text, direct informal-yet-technically-dense senior terminal tone.
+- **Exemplo:** Title `feat(ci): add conditional expo bundle check to gatekeeper`; Body `added conditional expo export step in pr-gatekeeper.yml that only triggers when src/frontend files are changed, bumped semver patch to 1.2.2 and cleaned up tests branch from workflows`.
 
 ### 8.6. Axioma Fundamental de Erradicação de Emojis (Proibição Absoluta e Ícones Vetoriais SVG)
-- **Proibição Total na Interface Gráfica (UI):** O uso de emojis como ícones, marcadores, ilustrações ou avatares em qualquer componente ou tela do frontend é estritamente proibido. Todas as representações visuais devem utilizar bibliotecas de ícones vetoriais SVG (`@expo/vector-icons` como `Ionicons`, ou `lucide-react-native`).
-- **Proibição em Workflows e Pipelines de CI/CD:** Nenhum workflow do GitHub Actions deve conter emojis em nomes de jobs, steps, mensagens de log ou echoes de validação. Use identificadores textuais padronizados (`[OK]`, `[INFO]`, `[ERRO]`, `[AVISO]`).
-- **Proibição no Backend e Banco de Dados:** Proibido o uso de emojis em logs de servidor, mensagens de erro de API, seed data ou identificadores de tabelas.
-- **Exceção Exclusiva para Mensagens Externas de Compartilhamento:** A única e exclusiva exceção aceita é o formato de texto plano voltado ao compartilhamento externo para outros aplicativos (como mensagens de texto da lista de compras enviadas para WhatsApp ou copiadas para a área de transferência via `src/frontend/utils/mapQueryBuilder.ts`).
-
-
+- **UI Mobile & Frontend:** Zero emojis allowed as icons, markers, badges, illustrations, or avatars; always use SVG vector libraries (`@expo/vector-icons` such as `Ionicons`, or `lucide-react-native`).
+- **Workflows & CI/CD:** Zero emojis in GitHub Actions job names, steps, logs, or echoes; use standardized prefixes (`[OK]`, `[INFO]`, `[ERRO]`, `[AVISO]`).
+- **Backend & DB:** Zero emojis in server logs, API errors, seed data, or internal docs.
+- **Exceção Exclusiva:** Plain-text external share messages sent outside the app (e.g., shopping list shared via WhatsApp or clipboard in `src/frontend/utils/mapQueryBuilder.ts`).

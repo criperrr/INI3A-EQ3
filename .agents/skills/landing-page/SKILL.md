@@ -1,6 +1,9 @@
 ---
 name: landing-page
 description: Use when designing or rewriting a high-converting landing page (single-offer page) for SaaS/apps/services. Covers structure, layout patterns, conversion strategies, copywriting, SEO/AEO, and common pitfalls.
+when_to_use: "When designing, auditing, or rewriting sections of the Presco web landing page in src/landing/."
+allowed-tools: read_file, write_file, edit_file, run_command
+version: 1.0.0
 ---
 
 # Landing Page (High‑Conversion) — Web Design Skill

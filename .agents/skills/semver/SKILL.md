@@ -3,7 +3,7 @@ name: semver
 description: "Strict Semantic Versioning (SemVer 2.0.0) standard and release management for Presco. Enforces MAJOR.MINOR.PATCH rules, Conventional Commits version bumping, synchronized multi-package updates (package.json, src/backend, src/frontend, app.json), and GitHub Actions release automation. Use when bumping versions, cutting releases, managing breaking changes, or tagging commits."
 when_to_use: "Always active when modifying code or preparing releases. Enforces SemVer 2.0.0 rules (MAJOR, MINOR, PATCH), multi-package synchronization, and Android versionCode increments."
 version: 1.0.0
-allowed-tools: Read, Write, Edit, Bash
+allowed-tools: read_file, write_file, edit_file, run_command
 compatibility: "Node.js >= 18, TypeScript, Git, npm, GitHub Actions"
 metadata:
   author: "Presco Engineering"
@@ -66,7 +66,7 @@ No ecossistema do Presco, o incremento de versão **NUNCA** deve ser aplicado em
 
 ## 3. Comandos de Versionamento Automatizado
 
-O repositório já dispõe do script oficial [`scripts/bump_version.ts`](file:///scripts/bump_version.ts) e de atalhos configurados no `package.json`:
+O repositório já dispõe do script oficial `scripts/bump_version.ts` e de atalhos configurados no `package.json`:
 
 ```bash
 # Incrementar versão Patch (ex: 1.2.0 -> 1.2.1, versionCode +1)
@@ -111,7 +111,7 @@ feat(api)!: remove deprecated v1 products endpoint
 
 ## 5. Pipeline de Release & GitHub Actions
 
-O workflow [`.github/workflows/release.yml`](file:///.github/workflows/release.yml) reage automaticamente ao versionamento:
+O workflow `.github/workflows/release.yml` reage automaticamente ao versionamento:
 1. Ao enviar tags com o padrão `v*.*.*` (ex: `git push origin v1.2.0`) ou disparar via `workflow_dispatch`.
 2. Executa a suíte de validação: `npm run typecheck` e `npm test`.
 3. Compila o APK Android release nativo via Gradle (`assembleRelease`).
