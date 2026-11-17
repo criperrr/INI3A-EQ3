@@ -259,6 +259,15 @@ function AppAlertHost() {
                 return (
                   <ScalePressable
                     key={`${currentAlert.id}-btn-${index}`}
+                    testID={
+                      isCancel
+                        ? "app-alert-cancel-btn"
+                        : index === orderedButtons.length - 1 ||
+                            orderedButtons.filter((b) => b.style !== "cancel")
+                              .length === 1
+                          ? "app-alert-confirm-btn"
+                          : `app-alert-btn-${index}`
+                    }
                     onPress={() => handleButtonPress(btn)}
                     style={[
                       styles.actionButton,
