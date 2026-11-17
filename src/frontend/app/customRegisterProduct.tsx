@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   ScrollView,
   Keyboard,
   TouchableWithoutFeedback,
@@ -28,9 +27,11 @@ import CategorySelector from "../components/CategorySelector";
 import { formatLongDateWithWeekday } from "../utils/dateUtils";
 import { validateGs1Barcode } from "../utils/barcodeValidator";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import TwoFactorModal from "../components/TwoFactorModal";
+import { appAlert } from "../components/AppAlertProvider";
 
 export default function CustomRegisterProduct() {
   const params = useLocalSearchParams<{ ean?: string }>();
@@ -54,6 +55,11 @@ export default function CustomRegisterProduct() {
   const [pending2FASubmit, setPending2FASubmit] = useState<(() => Promise<void>) | null>(null);
 
   const formattedRecordDate = formatLongDateWithWeekday(recordDate, language);
+
+  const eanCheck = useMemo(() => {
+    const trimmed = ean.trim();
+    return trimmed ? validateGs1Barcode(trimmed) : null;
+  }, [ean]);
 
   const applyMatchedProduct = useCallback(
     (matched: NonNullable<ProductExistenceValidationData["matchedProduct"]>, forceOverwrite = false) => {
@@ -113,7 +119,7 @@ export default function CustomRegisterProduct() {
   const handleManualNameValidation = async () => {
     const cleanName = name.trim();
     if (cleanName.length < 3) {
-      Alert.alert(t("common.warning"), "Digite pelo menos 3 caracteres do nome do produto para validar sua existência.");
+      appAlert(t("common.warning"), "Digite pelo menos 3 caracteres do nome do produto para validar sua existência.");
       return;
     }
     setValidatingExistence(true);
@@ -132,7 +138,7 @@ export default function CustomRegisterProduct() {
   };
 
   const promptLogin = (onSuccessAction?: () => Promise<void>) => {
-    Alert.alert(
+    appAlert(
       t("auth.loginRequired"),
       t("auth.loginToRegisterProduct"),
       [
@@ -148,7 +154,7 @@ export default function CustomRegisterProduct() {
               }
             } catch (err: any) {
               setLoading(false);
-              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              appAlert(t("common.error"), err?.message || t("errors.genericError"));
             }
           },
         },
@@ -192,7 +198,7 @@ export default function CustomRegisterProduct() {
           ? `Você já registrou este produto anteriormente. Para evitar duplicidade de um único usuário, ele permanece em análise até atingir o quórum de ${quorumTarget} usuários distintos (${quorumCount}/${quorumTarget} confirmações) ou ser aprovado pela moderação.`
           : `Este produto não consta nas bases nacionais e entrou em Quarentena de Validação (${quorumCount}/${quorumTarget} usuários distintos). Assim que ${quorumTarget} usuários diferentes registrarem o mesmo item (ou um moderador aprovar), ele ficará público nas buscas e concederá +25 XP!`;
 
-        Alert.alert("Enviado para Análise (Quarentena)", message, [
+        appAlert("Enviado para Análise (Quarentena)", message, [
           {
             text: t("common.done") || "Entendi",
             onPress: () => {
@@ -203,7 +209,7 @@ export default function CustomRegisterProduct() {
         return;
       }
 
-      Alert.alert(t("common.success"), t("products.productRegisteredSuccess"), [
+      appAlert(t("common.success"), t("products.productRegisteredSuccess"), [
         {
           text: t("common.done"),
           onPress: () => {
@@ -241,25 +247,22 @@ export default function CustomRegisterProduct() {
         return;
       }
 
-      Alert.alert(t("common.error"), error.message || t("errors.genericError"));
+      appAlert(t("common.error"), error.message || t("errors.genericError"));
     }
   };
 
   const handleRegister = async () => {
     if (!name.trim()) {
-      Alert.alert(t("common.warning"), t("auth.nameRequired"));
+      appAlert(t("common.warning"), t("auth.nameRequired"));
       return;
     }
 
-    if (ean.trim()) {
-      const eanCheck = validateGs1Barcode(ean.trim());
-      if (!eanCheck.isValid) {
-        Alert.alert(
-          t("common.warning"),
-          eanCheck.reason || "O código de barras informado não possui um dígito verificador GS1 válido."
-        );
-        return;
-      }
+    if (eanCheck && !eanCheck.isValid) {
+      appAlert(
+        t("common.warning"),
+        eanCheck.reason || "O código de barras informado não possui um dígito verificador GS1 válido."
+      );
+      return;
     }
 
     if (!isAuthenticated && !user) {
@@ -278,7 +281,7 @@ export default function CustomRegisterProduct() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, themeStyles.bg]}>
+      <AnimatedScreenContainer style={[styles.container, themeStyles.bg]}>
         <KeyboardAwareScrollView 
           contentContainerStyle={styles.content}
           extraScrollHeight={100}
@@ -323,43 +326,37 @@ export default function CustomRegisterProduct() {
                 value={ean}
                 onChangeText={setEan}
               />
-              {Boolean(ean.trim()) && (() => {
-                const check = validateGs1Barcode(ean.trim());
-                return (
-                  <Ionicons
-                    name={check.isValid ? "checkmark-circle" : "alert-circle"}
-                    size={20}
-                    color={check.isValid ? "#10B981" : "#F59E0B"}
-                    style={{ marginLeft: 8 }}
-                  />
-                );
-              })()}
+              {eanCheck && (
+                <Ionicons
+                  name={eanCheck.isValid ? "checkmark-circle" : "alert-circle"}
+                  size={20}
+                  color={eanCheck.isValid ? "#10B981" : "#F59E0B"}
+                  style={{ marginLeft: 8 }}
+                />
+              )}
             </View>
           </FocusedInputWrapper>
-          {Boolean(ean.trim()) && (() => {
-            const check = validateGs1Barcode(ean.trim());
-            return (
-              <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 6 }}>
-                <Ionicons
-                  name={check.isValid ? "shield-checkmark-outline" : "information-circle-outline"}
-                  size={14}
-                  color={check.isValid ? "#10B981" : "#F59E0B"}
-                />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    color: check.isValid ? "#10B981" : "#F59E0B",
-                    fontWeight: "600",
-                    flex: 1,
-                  }}
-                >
-                  {check.isValid
-                    ? `Código ${check.format} autenticado pelo algoritmo GS1${check.isBrazilianPrefix ? " (Brasil 789/790)" : ""}`
-                    : check.reason}
-                </Text>
-              </View>
-            );
-          })()}
+          {eanCheck && (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 6, gap: 6 }}>
+              <Ionicons
+                name={eanCheck.isValid ? "shield-checkmark-outline" : "information-circle-outline"}
+                size={14}
+                color={eanCheck.isValid ? "#10B981" : "#F59E0B"}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  color: eanCheck.isValid ? "#10B981" : "#F59E0B",
+                  fontWeight: "600",
+                  flex: 1,
+                }}
+              >
+                {eanCheck.isValid
+                  ? `Código ${eanCheck.format} autenticado pelo algoritmo GS1${eanCheck.isBrazilianPrefix ? " (Brasil 789/790)" : ""}`
+                  : eanCheck.reason}
+              </Text>
+            </View>
+          )}
 
           {validatingExistence ? (
             <View
@@ -630,7 +627,7 @@ export default function CustomRegisterProduct() {
         }}
         actionDescription="Para cadastrar novos produtos na comunidade, confirme o código enviado para seu e-mail."
       />
-    </View>
+    </AnimatedScreenContainer>
     </TouchableWithoutFeedback>
   );
 }
