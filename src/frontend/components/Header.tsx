@@ -1,6 +1,5 @@
-import React, { memo, useState, useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity, Platform, Text } from "react-native";
-import { Image } from "expo-image";
+import React, { memo, useState, useEffect, useCallback } from "react";
+import { View, StyleSheet, TouchableOpacity, Platform, Text, Image } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRouter, usePathname } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -16,6 +15,7 @@ interface HeaderProps {
 
 const LOGO_DARK = require("./images/logo-darkmode.png");
 const LOGO_LIGHT = require("./images/logo-presco.png");
+const UTILITY_ROUTES = new Set(["/cart", "/settings", "/about", "/help"]);
 
 const LogoBrand = memo(function LogoBrand({
   isDark,
@@ -33,10 +33,8 @@ const LogoBrand = memo(function LogoBrand({
       <Image
         source={isDark ? LOGO_DARK : LOGO_LIGHT}
         style={styles.logoImage}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-        transition={150}
-        priority="high"
+        resizeMode="contain"
+        fadeDuration={0}
       />
     </TouchableOpacity>
   );
@@ -62,8 +60,10 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
   }, []);
 
   const isHomeScreen = !pathname || pathname === "/";
+  const isCartScreen = pathname === "/cart";
+  const isSettingsScreen = pathname === "/settings";
 
-  const handleLeftPress = () => {
+  const handleLeftPress = useCallback(() => {
     if (Platform.OS !== "web") {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -79,20 +79,25 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
         navigateToTab("/", "left", true);
       }
     }
-  };
+  }, [isHomeScreen, onPressMenu, router, navigateToTab]);
 
-  const handleLogoPress = () => {
+  const handleLogoPress = useCallback(() => {
     navigateToTab("/", "left", true);
-  };
+  }, [navigateToTab]);
 
-  const handleCartPress = () => {
+  const handleCartPress = useCallback(() => {
+    if (pathname === "/cart") return;
     if (Platform.OS !== "web") {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch {}
     }
-    router.push("/cart" as any);
-  };
+    if (UTILITY_ROUTES.has(pathname)) {
+      router.replace("/cart" as any);
+    } else {
+      router.push("/cart" as any);
+    }
+  }, [pathname, router]);
 
   return (
     <View
@@ -133,40 +138,48 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
       <LogoBrand isDark={isDark} onPress={handleLogoPress} />
 
       <View style={styles.rightButtonsRow}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          testID="header-cart-btn"
-          style={styles.iconButton}
-          onPress={handleCartPress}
-          accessibilityRole="button"
-          accessibilityLabel="Lista de Compras"
-        >
-          <Ionicons
-            name={cartCount > 0 ? "cart" : "cart-outline"}
-            size={24}
-            color={cartCount > 0 ? accent : semantic.colors.icon.primary}
-          />
-          {cartCount > 0 && (
-            <View style={[styles.badgeContainer, { backgroundColor: accent }]}>
-              <Text style={styles.badgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {!isCartScreen ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            testID="header-cart-btn"
+            style={styles.iconButton}
+            onPress={handleCartPress}
+            accessibilityRole="button"
+            accessibilityLabel="Lista de Compras"
+          >
+            <Ionicons
+              name={cartCount > 0 ? "cart" : "cart-outline"}
+              size={24}
+              color={cartCount > 0 ? accent : semantic.colors.icon.primary}
+            />
+            {cartCount > 0 && (
+              <View style={[styles.badgeContainer, { backgroundColor: accent }]}>
+                <Text style={styles.badgeText}>{cartCount > 99 ? "99+" : cartCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButton} />
+        )}
 
-        <TouchableOpacity
-          activeOpacity={0.7}
-          testID="header-settings-btn"
-          style={styles.iconButton}
-          onPress={onPressSettings}
-          accessibilityRole="button"
-          accessibilityLabel="Configurações"
-        >
-          <Ionicons
-            name="settings-outline"
-            size={24}
-            color={semantic.colors.icon.primary}
-          />
-        </TouchableOpacity>
+        {!isSettingsScreen ? (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            testID="header-settings-btn"
+            style={styles.iconButton}
+            onPress={onPressSettings}
+            accessibilityRole="button"
+            accessibilityLabel="Configurações"
+          >
+            <Ionicons
+              name="settings-outline"
+              size={24}
+              color={semantic.colors.icon.primary}
+            />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.iconButton} />
+        )}
       </View>
     </View>
   );

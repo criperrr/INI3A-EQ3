@@ -1,21 +1,26 @@
-import React, { memo } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   StyleSheet,
   View,
   Text,
   TouchableOpacity,
-  Dimensions,
+  Image,
+  useWindowDimensions,
 } from "react-native";
-import { Image } from "expo-image";
-import { useRouter, usePathname } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  runOnJS,
+} from "react-native-reanimated";
+import { useRouter, usePathname, useGlobalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import { useTabNavigation } from "../content/tabNavigationContext";
-
-const { width, height } = Dimensions.get("window");
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,6 +36,8 @@ interface MenuItem {
 
 const LOGO_DARK = require("./images/logo-darkmode.png");
 const LOGO_LIGHT = require("./images/logo-presco.png");
+const UTILITY_ROUTES = new Set(["/cart", "/settings", "/about", "/help"]);
+const MAIN_TAB_ROUTES = new Set(["/", "/map", "/scannerProduct", "/search", "/profile"]);
 
 const SidebarHeader = memo(function SidebarHeader({
   isDark,
@@ -54,9 +61,8 @@ const SidebarHeader = memo(function SidebarHeader({
         <Image
           source={isDark ? LOGO_DARK : LOGO_LIGHT}
           style={styles.brandLogo}
-          contentFit="contain"
-          cachePolicy="memory-disk"
-          transition={150}
+          resizeMode="contain"
+          fadeDuration={0}
         />
         <View style={styles.brandInfo}>
           <Text
@@ -117,17 +123,23 @@ const NavigationLinks = memo(function NavigationLinks({
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { navigateToTab } = useTabNavigation();
+  const { view } = useGlobalSearchParams<{ view?: string }>();
 
   return (
     <View style={styles.linksContainer}>
       {menuLinks.map((link) => {
         const isActive =
-          pathname === link.route ||
-          (link.route.startsWith("/?") && pathname === "/");
+          link.id === "home"
+            ? pathname === "/" && view !== "products"
+            : link.id === "products"
+            ? pathname === "/" && view === "products"
+            : pathname === link.route;
 
         return (
           <TouchableOpacity
             key={link.id}
+            testID={`sidebar-item-${link.id}`}
+            accessibilityState={{ selected: isActive }}
             style={[
               styles.linkItem,
               { borderRadius: semantic.radius.chip },
@@ -143,9 +155,25 @@ const NavigationLinks = memo(function NavigationLinks({
                 navigateToTab("/", "left", true);
               } else if (link.route.startsWith("/?view=")) {
                 const viewParam = link.route.split("view=")[1];
-                router.push({ pathname: "/", params: { view: viewParam } });
+                if (pathname === "/") {
+                  router.setParams({ view: viewParam });
+                } else if (!MAIN_TAB_ROUTES.has(pathname)) {
+                  router.dismissAll();
+                  requestAnimationFrame(() => {
+                    router.replace({ pathname: "/", params: { view: viewParam } });
+                  });
+                } else {
+                  router.replace({ pathname: "/", params: { view: viewParam } });
+                }
+              } else if (MAIN_TAB_ROUTES.has(link.route)) {
+                navigateToTab(link.route);
               } else {
-                router.push(link.route as any);
+                if (pathname === link.route) return;
+                if (UTILITY_ROUTES.has(pathname)) {
+                  router.replace(link.route as any);
+                } else {
+                  router.push(link.route as any);
+                }
               }
             }}
           >
@@ -204,6 +232,7 @@ const UserProfileCard = memo(function UserProfileCard({
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
   const { t } = useI18n();
+  const { navigateToTab } = useTabNavigation();
 
   const displayName = profile?.name || user?.name || t("common.guest");
   const userInitial = displayName.charAt(0).toUpperCase();
@@ -213,7 +242,7 @@ const UserProfileCard = memo(function UserProfileCard({
   const handleProfilePress = () => {
     onClose();
     if (isAuthenticated) {
-      router.push("/profile");
+      navigateToTab("/profile");
     } else {
       router.push("/login");
     }
@@ -304,7 +333,11 @@ const UserProfileCard = memo(function UserProfileCard({
   );
 });
 
-const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
+const SidebarContent = memo(function SidebarContent({
+  isOpen,
+  onClose,
+  onFinishClose,
+}: SidebarProps & { onFinishClose: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
@@ -312,85 +345,127 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { semantic } = tokens;
   const { t } = useI18n();
 
-  const menuLinks: MenuItem[] = [
-    {
-      id: "home",
-      label: t("navigation.home"),
-      icon: "home-outline",
-      route: "/",
-    },
-    {
-      id: "products",
-      label: t("navigation.products"),
-      icon: "cube-outline",
-      route: "/?view=products",
-    },
-    {
-      id: "markets",
-      label: t("navigation.map"),
-      icon: "location-outline",
-      route: "/map",
-    },
-    {
-      id: "scanner",
-      label: t("navigation.scanner"),
-      icon: "barcode-outline",
-      route: "/scannerProduct",
-    },
-    {
-      id: "search",
-      label: t("navigation.search"),
-      icon: "search-outline",
-      route: "/search",
-    },
-    {
-      id: "account",
-      label: t("navigation.profile"),
-      icon: "person-outline",
-      route: "/profile",
-    },
-    {
-      id: "settings",
-      label: t("settings.title"),
-      icon: "settings-outline",
-      route: "/settings",
-    },
-    {
-      id: "help",
-      label: t("navigation.help"),
-      icon: "help-circle-outline",
-      route: "/help",
-    },
-    {
-      id: "about",
-      label: t("navigation.about"),
-      icon: "information-circle-outline",
-      route: "/about",
-    },
-  ];
+  const menuLinks = useMemo<MenuItem[]>(
+    () => [
+      {
+        id: "home",
+        label: t("navigation.home"),
+        icon: "home-outline",
+        route: "/",
+      },
+      {
+        id: "products",
+        label: t("navigation.products"),
+        icon: "cube-outline",
+        route: "/?view=products",
+      },
+      {
+        id: "markets",
+        label: t("navigation.map"),
+        icon: "location-outline",
+        route: "/map",
+      },
+      {
+        id: "scanner",
+        label: t("navigation.scanner"),
+        icon: "barcode-outline",
+        route: "/scannerProduct",
+      },
+      {
+        id: "search",
+        label: t("navigation.search"),
+        icon: "search-outline",
+        route: "/search",
+      },
+      {
+        id: "account",
+        label: t("navigation.profile"),
+        icon: "person-outline",
+        route: "/profile",
+      },
+      {
+        id: "settings",
+        label: t("settings.title"),
+        icon: "settings-outline",
+        route: "/settings",
+      },
+      {
+        id: "help",
+        label: t("navigation.help"),
+        icon: "help-circle-outline",
+        route: "/help",
+      },
+      {
+        id: "about",
+        label: t("navigation.about"),
+        icon: "information-circle-outline",
+        route: "/about",
+      },
+    ],
+    [t]
+  );
 
-  if (!isOpen) return null;
+  const { width } = useWindowDimensions();
+  const drawerWidth = Math.min(width * 0.8, 330);
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      progress.value = withTiming(1, {
+        duration: 240,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else {
+      progress.value = withTiming(
+        0,
+        {
+          duration: 200,
+          easing: Easing.in(Easing.cubic),
+        },
+        (finished) => {
+          if (finished) {
+            runOnJS(onFinishClose)();
+          }
+        }
+      );
+    }
+  }, [isOpen, onFinishClose, progress]);
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+  }));
+
+  const panelAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (progress.value - 1) * drawerWidth }],
+  }));
 
   const panelTopPadding = Math.max(insets.top + semantic.spacing.microGap, 36);
   const panelBottomPadding = Math.max(insets.bottom + semantic.spacing.itemGap, 24);
 
   return (
     <View
-      style={[
-        styles.overlay,
-        { backgroundColor: semantic.colors.surface.overlay },
-      ]}
+      style={styles.overlay}
+      pointerEvents={isOpen ? "auto" : "none"}
     >
-      <TouchableOpacity
-        style={styles.blurTouch}
-        activeOpacity={1}
-        onPress={onClose}
-      />
+      <Animated.View
+        style={[
+          styles.backdropLayer,
+          { backgroundColor: semantic.colors.surface.overlay },
+          backdropAnimatedStyle,
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.blurTouch}
+          activeOpacity={1}
+          onPress={onClose}
+        />
+      </Animated.View>
 
-      <View
+      <Animated.View
         style={[
           styles.menuPanel,
           {
+            width: drawerWidth,
             backgroundColor: semantic.colors.surface.card,
             borderRightColor: semantic.colors.border.default,
             paddingHorizontal: semantic.spacing.screenPaddingHorizontal,
@@ -400,6 +475,7 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
             paddingBottom: panelBottomPadding,
             ...semantic.elevation.modal,
           },
+          panelAnimatedStyle,
         ]}
       >
         <SidebarHeader isDark={isDark} onClose={onClose} />
@@ -414,8 +490,34 @@ const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
         <View style={styles.footerSection}>
           <UserProfileCard onClose={onClose} router={router} />
         </View>
-      </View>
+      </Animated.View>
     </View>
+  );
+});
+
+const Sidebar = memo(function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const [isMounted, setIsMounted] = useState(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsMounted(true);
+    }
+  }, [isOpen]);
+
+  const handleFinishClose = useCallback(() => {
+    setIsMounted(false);
+  }, []);
+
+  if (!isMounted && !isOpen) {
+    return null;
+  }
+
+  return (
+    <SidebarContent
+      isOpen={isOpen}
+      onClose={onClose}
+      onFinishClose={handleFinishClose}
+    />
   );
 });
 
@@ -431,13 +533,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     zIndex: 100,
   },
+  backdropLayer: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
   blurTouch: {
     position: "absolute",
-    width: width,
-    height: height,
+    width: "100%",
+    height: "100%",
   },
   menuPanel: {
-    width: Math.min(width * 0.8, 330),
     height: "100%",
     borderRightWidth: 1,
     justifyContent: "space-between",
