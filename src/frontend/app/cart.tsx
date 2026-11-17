@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Platform,
+  InteractionManager,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
@@ -27,10 +27,17 @@ import { fetchProductById } from "../services/productService";
 import { getUserLocation } from "../utils/userLocation";
 import { shareCartList } from "../utils/mapNavigation";
 import { SavingsHeroCard } from "../components/cart/SavingsHeroCard";
+import { appAlert } from "../components/AppAlertProvider";
+
+const EMPTY_OTHER_STORES: { marketId: number; marketName: string }[] = [];
 import { OptimizationStrategyControl } from "../components/cart/OptimizationStrategyControl";
 import { StoreGroupCard } from "../components/cart/StoreGroupCard";
 import { TravelSettingsModal } from "../components/cart/TravelSettingsModal";
 import { RoutePreviewModal } from "../components/cart/RoutePreviewModal";
+import {
+  AnimatedScreenContainer,
+  AnimatedSection,
+} from "../components/AnimatedMotion";
 
 export default function CartScreen() {
   const router = useRouter();
@@ -57,13 +64,31 @@ export default function CartScreen() {
   const settingsRef = useRef(settings);
   const selectedSingleMarketIdRef = useRef(selectedSingleMarketId);
   const prioritizedProductIdRef = useRef(prioritizedProductId);
+  const optimizeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skipNextSubscribeOptRef = useRef(false);
 
   useEffect(() => {
     cartItemsRef.current = cartItems;
     settingsRef.current = settings;
     selectedSingleMarketIdRef.current = selectedSingleMarketId;
     prioritizedProductIdRef.current = prioritizedProductId;
-  });
+  }, [cartItems, settings, selectedSingleMarketId, prioritizedProductId]);
+
+  const otherStoresByMarketId = useMemo(() => {
+    const map = new Map<number, { marketId: number; marketName: string }[]>();
+    if (!optimization?.storeGroups) return map;
+    const allStores = optimization.storeGroups.map((g) => ({
+      marketId: g.marketId,
+      marketName: g.marketName,
+    }));
+    for (const g of optimization.storeGroups) {
+      map.set(
+        g.marketId,
+        allStores.filter((s) => s.marketId !== g.marketId)
+      );
+    }
+    return map;
+  }, [optimization?.storeGroups]);
 
   // Background optimizer trigger: does not block UI, resilient to 404/offline
   const triggerOptimization = useCallback(
@@ -151,6 +176,7 @@ export default function CartScreen() {
   // Mount: fast initial load from AsyncStorage (takes <5ms), then trigger background optimization
   useEffect(() => {
     let isMounted = true;
+    let interactionHandle: ReturnType<typeof InteractionManager.runAfterInteractions> | null = null;
 
     (async () => {
       try {
@@ -165,8 +191,6 @@ export default function CartScreen() {
         setLoading(false); // Instant unblock so user sees their cart immediately!
 
         if (items.length > 0) {
-          triggerOptimization(items, loadedSettings);
-
           // Auto-heal any items that are missing real product names, prices or named "Produto #..."
           const itemsNeedingHeal = items.filter(
             (it) =>
@@ -176,6 +200,7 @@ export default function CartScreen() {
               !it.estimatedPrice ||
               it.estimatedPrice <= 0
           );
+
           if (itemsNeedingHeal.length > 0) {
             Promise.all(
               itemsNeedingHeal.map(async (item) => {
@@ -209,8 +234,19 @@ export default function CartScreen() {
             ).then(async () => {
               if (isMounted) {
                 setCartItems([...items]);
-                await cartService.saveCartItems(items);
+                skipNextSubscribeOptRef.current = true;
+                try {
+                  await cartService.saveCartItems(items);
+                } finally {
+                  skipNextSubscribeOptRef.current = false;
+                }
                 triggerOptimization([...items], loadedSettings);
+              }
+            });
+          } else {
+            interactionHandle = InteractionManager.runAfterInteractions(() => {
+              if (isMounted) {
+                triggerOptimization(items, loadedSettings);
               }
             });
           }
@@ -223,8 +259,21 @@ export default function CartScreen() {
     const unsubscribe = cartService.subscribe((updatedItems) => {
       if (!isMounted) return;
       setCartItems(updatedItems);
+      if (skipNextSubscribeOptRef.current) {
+        skipNextSubscribeOptRef.current = false;
+        return;
+      }
+      if (optimizeDebounceRef.current) {
+        clearTimeout(optimizeDebounceRef.current);
+        optimizeDebounceRef.current = null;
+      }
       if (updatedItems.length > 0) {
-        triggerOptimization(updatedItems);
+        optimizeDebounceRef.current = setTimeout(() => {
+          optimizeDebounceRef.current = null;
+          if (isMounted) {
+            triggerOptimization(updatedItems);
+          }
+        }, 350);
       } else {
         setOptimization(null);
         setOptimizing(false);
@@ -233,6 +282,11 @@ export default function CartScreen() {
 
     return () => {
       isMounted = false;
+      interactionHandle?.cancel();
+      if (optimizeDebounceRef.current) {
+        clearTimeout(optimizeDebounceRef.current);
+        optimizeDebounceRef.current = null;
+      }
       unsubscribe();
     };
   }, [triggerOptimization]);
@@ -342,7 +396,7 @@ export default function CartScreen() {
   };
 
   const handleClearCart = () => {
-    Alert.alert(
+    appAlert(
       t("cart.clearCartTitle"),
       t("cart.clearCartConfirm"),
       [
@@ -417,7 +471,7 @@ export default function CartScreen() {
   const totalItemCount = cartItems.reduce((sum, it) => sum + (it.quantity || 1), 0);
 
   return (
-    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+    <AnimatedScreenContainer style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
       {/* Main Content */}
       {loading ? (
         <View style={styles.centeredBox}>
@@ -428,7 +482,7 @@ export default function CartScreen() {
         </View>
       ) : cartItems.length === 0 ? (
         /* Empty State */
-        <View style={styles.emptyContainer}>
+        <AnimatedSection style={styles.emptyContainer}>
           <View style={[styles.emptyIconCircle, { backgroundColor: semantic.colors.surface.input }]}>
             <Ionicons name="cart-outline" size={56} color={semantic.colors.icon.secondary} />
           </View>
@@ -446,7 +500,7 @@ export default function CartScreen() {
             <Ionicons name="search" size={18} color="#FFFFFF" />
             <Text style={styles.exploreBtnText}>{t("cart.exploreProducts")}</Text>
           </TouchableOpacity>
-        </View>
+        </AnimatedSection>
       ) : (
         /* Populated Cart */
         <ScrollView
@@ -707,16 +761,15 @@ export default function CartScreen() {
                   </View>
 
                   {optimization.storeGroups.map((group) => (
-                    <StoreGroupCard
-                      key={group.marketId}
-                      group={group}
-                      otherStores={optimization.storeGroups
-                        .filter((g) => g.marketId !== group.marketId)
-                        .map((g) => ({ marketId: g.marketId, marketName: g.marketName }))}
-                      onUpdateItemQty={handleUpdateItemQty}
-                      onRemoveItem={handleRemoveItem}
-                      onReallocateItem={handleReallocateItem}
-                    />
+                    <View key={group.marketId}>
+                      <StoreGroupCard
+                        group={group}
+                        otherStores={otherStoresByMarketId.get(group.marketId) ?? EMPTY_OTHER_STORES}
+                        onUpdateItemQty={handleUpdateItemQty}
+                        onRemoveItem={handleRemoveItem}
+                        onReallocateItem={handleReallocateItem}
+                      />
+                    </View>
                   ))}
                 </>
               )}
@@ -944,12 +997,14 @@ export default function CartScreen() {
       )}
 
       {/* Travel Settings Modal */}
-      <TravelSettingsModal
-        visible={isTravelModalVisible}
-        onClose={() => setIsTravelModalVisible(false)}
-        settings={settings}
-        onSave={handleUpdateSettings}
-      />
+      {isTravelModalVisible && (
+        <TravelSettingsModal
+          visible={isTravelModalVisible}
+          onClose={() => setIsTravelModalVisible(false)}
+          settings={settings}
+          onSave={handleUpdateSettings}
+        />
+      )}
 
       {/* Route Preview Modal */}
       {optimization && (
@@ -959,7 +1014,7 @@ export default function CartScreen() {
           optimization={optimization}
         />
       )}
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 

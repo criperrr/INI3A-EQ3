@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {
   StyleSheet,
   View,
@@ -9,63 +9,41 @@ import {
   Switch,
   Modal,
   Share,
-  Alert,
   Platform,
   Keyboard,
   TouchableWithoutFeedback,
   ActivityIndicator,
   KeyboardAvoidingView,
+  InteractionManager,
 } from "react-native";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
+import { appAlert } from "../components/AppAlertProvider";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
-import {
-  Settings,
-  Sun,
-  Moon,
-  Bell,
-  User,
-  X,
-  Shield,
-  Download,
-  Upload,
-  Trash2,
-  AlertCircle,
-  Palette,
-  Smartphone,
-  Zap,
-  Check,
-  RefreshCw,
-  Info,
-  Vibrate,
-  KeyRound,
-  Globe,
-  Share2,
-  Code2,
-  BookOpen,
-  FlaskConical,
-  ChevronRight,
-  Activity,
-} from "lucide-react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Constants from "expo-constants";
-import { useTheme, MONET_PRESETS } from "../theme";
+import { useTheme, MONET_PRESETS, getCachedAppSettings, setCachedAppSettings } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import { changePassword, deleteAccount } from "../services/auth";
 import { BASE_URL } from "../services/api";
 import { resetTutorialStatus } from "../utils/tutorialStorage";
-import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
 import { Image as ExpoImage } from "expo-image";
 import { fetchPendingOccurrences } from "../services/ocurrencyService";
 import { fetchPendingProducts } from "../services/productService";
-import OpenFoodFactsStatusTab from "../components/OpenFoodFactsStatusTab";
 
-interface SettingsState {
-  theme: "light" | "dark";
+const OpenFoodFactsStatusTab = React.lazy(
+  () => import("../components/OpenFoodFactsStatusTab"),
+);
+const OnboardingTutorialModal = React.lazy(
+  () => import("../components/OnboardingTutorialModal"),
+);
+
+interface LocalSettingsState {
   notifications: boolean;
   emailNotifications: boolean;
-  language: string;
   privacy: "public" | "private";
   twoFactorAuth: boolean;
   dataCollection: boolean;
@@ -75,17 +53,47 @@ interface SettingsState {
 
 const STORAGE_KEY = "app_settings";
 
-const DEFAULT_SETTINGS: SettingsState = {
-  theme: "light",
+const DEFAULT_LOCAL_SETTINGS: LocalSettingsState = {
   notifications: true,
   emailNotifications: false,
-  language: "pt-BR",
   privacy: "private",
   twoFactorAuth: false,
   dataCollection: false,
   hapticsEnabled: true,
   autoConfirmScan: false,
 };
+
+function buildLocalSettingsFromCache(): LocalSettingsState {
+  const cached = getCachedAppSettings();
+  if (!cached) return DEFAULT_LOCAL_SETTINGS;
+  return {
+    notifications:
+      typeof cached.notifications === "boolean"
+        ? cached.notifications
+        : DEFAULT_LOCAL_SETTINGS.notifications,
+    emailNotifications:
+      typeof cached.emailNotifications === "boolean"
+        ? cached.emailNotifications
+        : DEFAULT_LOCAL_SETTINGS.emailNotifications,
+    privacy: cached.privacy === "public" ? "public" : "private",
+    twoFactorAuth:
+      typeof cached.twoFactorAuth === "boolean"
+        ? cached.twoFactorAuth
+        : DEFAULT_LOCAL_SETTINGS.twoFactorAuth,
+    dataCollection:
+      typeof cached.dataCollection === "boolean"
+        ? cached.dataCollection
+        : DEFAULT_LOCAL_SETTINGS.dataCollection,
+    hapticsEnabled:
+      typeof cached.hapticsEnabled === "boolean"
+        ? cached.hapticsEnabled
+        : DEFAULT_LOCAL_SETTINGS.hapticsEnabled,
+    autoConfirmScan:
+      typeof cached.autoConfirmScan === "boolean"
+        ? cached.autoConfirmScan
+        : DEFAULT_LOCAL_SETTINGS.autoConfirmScan,
+  };
+}
 
 // ─── Base64 Code Serialization Helpers ───────────────────────────
 declare const Buffer: any;
@@ -138,12 +146,935 @@ function decodeCodeToSettings(codeStr: string): any {
   return JSON.parse(jsonStr);
 }
 
+const AppearanceSection = React.memo(
+  ({
+    isDark,
+    amoledEnabled,
+    accent,
+    themeStyles,
+    t,
+    isSystemLanguage,
+    languageInfo,
+    onToggleTheme,
+    onToggleAmoled,
+    onOpenLanguageModal,
+  }: {
+    isDark: boolean;
+    amoledEnabled: boolean;
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    isSystemLanguage: boolean;
+    languageInfo: { flag: string; nativeName: string };
+    onToggleTheme: () => void;
+    onToggleAmoled: (val: boolean) => void;
+    onOpenLanguageModal: () => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons
+          name={isDark ? "moon-outline" : "sunny-outline"}
+          size={20}
+          color={accent}
+        />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {t("settings.appearance")}
+        </Text>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
+            {t("settings.themeDark")}
+          </Text>
+          <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
+            {isDark ? t("settings.active") : t("settings.inactive")}
+          </Text>
+        </View>
+        <Switch
+          testID="theme-dark-switch"
+          value={isDark}
+          trackColor={{ false: "#D4DCC8", true: accent }}
+          onValueChange={onToggleTheme}
+        />
+      </View>
+
+      {isDark && (
+        <View style={[styles.row, styles.indentedRow]}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="flash-outline" size={16} color={accent} />
+              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
+                {t("settings.amoledDark")}
+              </Text>
+            </View>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={2}>
+              {t("settings.amoledSubtitle")}
+            </Text>
+          </View>
+          <Switch
+            testID="theme-amoled-switch"
+            value={amoledEnabled}
+            trackColor={{ false: "#D4DCC8", true: accent }}
+            onValueChange={onToggleAmoled}
+          />
+        </View>
+      )}
+
+      <TouchableOpacity style={styles.row} onPress={onOpenLanguageModal}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingRight: 10 }}>
+          <Ionicons name="globe-outline" size={18} color={accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
+              {t("settings.language")}
+            </Text>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
+              {isSystemLanguage
+                ? `${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
+                : `[${languageInfo.flag}] ${languageInfo.nativeName}`}
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.linkText, { color: accent, flexShrink: 0 }]}>
+          {t("common.edit")}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  ),
+);
+
+const MonetSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    monetEnabled,
+    syncWithSystemAndroid,
+    monetSeedColor,
+    hapticsEnabled,
+    onToggleMonet,
+    onToggleSystemSync,
+    onSelectSeedColor,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    monetEnabled: boolean;
+    syncWithSystemAndroid: boolean;
+    monetSeedColor: string;
+    hapticsEnabled: boolean;
+    onToggleMonet: (val: boolean) => void;
+    onToggleSystemSync: (val: boolean) => void;
+    onSelectSeedColor: (hex: string) => void;
+  }) => {
+    const warnUnavailable = () => {
+      if (hapticsEnabled && Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(
+          () => {},
+        );
+      }
+      appAlert(
+        t("settings.systemSyncUnavailableTitle"),
+        t("settings.systemSyncUnavailableMsg"),
+        [{ text: t("common.ok") }],
+      );
+    };
+
+    return (
+      <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="color-palette-outline" size={20} color={accent} />
+          <Text style={[styles.sectionTitle, themeStyles.text]}>
+            {t("settings.monetColors")}
+          </Text>
+        </View>
+
+        <View style={styles.row}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={[styles.rowLabel, themeStyles.text]}>
+              {t("settings.monetColors")}
+            </Text>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+              {t("settings.monetSubtitle")}
+            </Text>
+          </View>
+          <Switch
+            value={monetEnabled}
+            trackColor={{ false: "#D4DCC8", true: accent }}
+            onValueChange={onToggleMonet}
+          />
+        </View>
+
+        {monetEnabled && (
+          <View style={styles.monetColorsContainer}>
+            <TouchableOpacity
+              style={[
+                styles.row,
+                { borderBottomWidth: 0, paddingVertical: 8 },
+              ]}
+              activeOpacity={Platform.OS !== "android" ? 0.7 : 1}
+              onPress={() => {
+                if (Platform.OS !== "android") {
+                  warnUnavailable();
+                }
+              }}
+            >
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  <Ionicons name="phone-portrait-outline" size={16} color={accent} />
+                  <Text style={[styles.rowLabel, themeStyles.text]}>
+                    {t("settings.systemSync")}
+                  </Text>
+                </View>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                  {t("settings.systemSyncSubtitle")}
+                </Text>
+              </View>
+              <Switch
+                testID="monet-system-sync-switch"
+                value={Platform.OS === "android" ? syncWithSystemAndroid : false}
+                trackColor={{ false: "#D4DCC8", true: accent }}
+                onValueChange={(val) => {
+                  if (Platform.OS !== "android" && val) {
+                    warnUnavailable();
+                    onToggleSystemSync(false);
+                    return;
+                  }
+                  onToggleSystemSync(val);
+                }}
+              />
+            </TouchableOpacity>
+
+            {(!syncWithSystemAndroid || Platform.OS !== "android") && (
+              <View style={{ marginTop: 10 }}>
+                <Text
+                  style={[
+                    styles.rowSubLabel,
+                    themeStyles.subText,
+                    { marginBottom: 10 },
+                  ]}
+                >
+                  {t("settings.chooseSeedColor")}
+                </Text>
+                <View style={styles.colorGrid}>
+                  {MONET_PRESETS.map((preset) => {
+                    const isSelected = monetSeedColor === preset.hex;
+                    const presetLabel =
+                      preset.name === "Verde"
+                        ? t("settings.colorPrescoGreen")
+                        : preset.name === "Azul"
+                        ? t("settings.colorOceanBlue")
+                        : preset.name === "Roxo"
+                        ? t("settings.colorLavenderPurple")
+                        : preset.name === "Rosa"
+                        ? t("settings.colorCoralPink")
+                        : preset.name === "Laranja"
+                        ? t("settings.colorGoldenAmber")
+                        : preset.name === "Teal"
+                        ? t("settings.colorMintGreen")
+                        : preset.name;
+                    return (
+                      <TouchableOpacity
+                        key={preset.hex}
+                        testID={`monet-seed-${preset.name.toLowerCase()}`}
+                        style={[
+                          styles.colorOption,
+                          {
+                            borderColor: isSelected ? accent : "transparent",
+                          },
+                        ]}
+                        onPress={() => onSelectSeedColor(preset.hex)}
+                        activeOpacity={0.7}
+                      >
+                        <View
+                          style={[
+                            styles.colorCircle,
+                            { backgroundColor: preset.hex },
+                          ]}
+                        >
+                          {isSelected && <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+                        </View>
+                        <Text
+                          style={[
+                            styles.colorName,
+                            themeStyles.subText,
+                            isSelected && {
+                              color: accent,
+                              fontWeight: "700",
+                            },
+                          ]}
+                        >
+                          {presetLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  },
+);
+
+const ScannerSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    hapticsEnabled,
+    autoConfirmScan,
+    onToggleHaptics,
+    onToggleAutoConfirm,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    hapticsEnabled: boolean;
+    autoConfirmScan: boolean;
+    onToggleHaptics: (val: boolean) => void;
+    onToggleAutoConfirm: (val: boolean) => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="pulse-outline" size={20} color={accent} />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {t("settings.scannerHaptics")}
+        </Text>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={[styles.rowLabel, themeStyles.text]}>
+            {t("settings.scannerHaptics")}
+          </Text>
+          <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+            {t("settings.scannerHapticsSubtitle")}
+          </Text>
+        </View>
+        <Switch
+          value={hapticsEnabled}
+          trackColor={{ false: "#D4DCC8", true: accent }}
+          onValueChange={onToggleHaptics}
+        />
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={[styles.rowLabel, themeStyles.text]}>
+            {t("settings.autoConfirmScan")}
+          </Text>
+          <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+            {t("settings.autoConfirmScanSubtitle")}
+          </Text>
+        </View>
+        <Switch
+          value={autoConfirmScan}
+          trackColor={{ false: "#D4DCC8", true: accent }}
+          onValueChange={onToggleAutoConfirm}
+        />
+      </View>
+    </View>
+  ),
+);
+
+const NotificationsSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    isAuthenticated,
+    notifications,
+    emailNotifications,
+    onToggleNotifications,
+    onToggleEmailNotifications,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    isAuthenticated: boolean;
+    notifications: boolean;
+    emailNotifications: boolean;
+    onToggleNotifications: (val: boolean) => void;
+    onToggleEmailNotifications: (val: boolean) => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="notifications-outline" size={20} color={accent} />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {t("settings.notifications")}
+        </Text>
+      </View>
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={[styles.rowLabel, themeStyles.text]}>
+            {t("settings.notifications")}
+          </Text>
+          <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+            {t("settings.notificationsSubtitle")}
+          </Text>
+        </View>
+        <Switch
+          value={notifications}
+          trackColor={{ false: "#D4DCC8", true: accent }}
+          onValueChange={onToggleNotifications}
+        />
+      </View>
+
+      {isAuthenticated && (
+        <View style={styles.row}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={[styles.rowLabel, themeStyles.text]}>
+              {t("settings.emailNotifications")}
+            </Text>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+              {t("settings.emailNotificationsSubtitle")}
+            </Text>
+          </View>
+          <Switch
+            value={emailNotifications}
+            trackColor={{ false: "#D4DCC8", true: accent }}
+            onValueChange={onToggleEmailNotifications}
+          />
+        </View>
+      )}
+    </View>
+  ),
+);
+
+const PrivacySection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    isAuthenticated,
+    isPrivate,
+    twoFactorAuth,
+    dataCollection,
+    onTogglePrivate,
+    onToggleTwoFactor,
+    onToggleDataCollection,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    isAuthenticated: boolean;
+    isPrivate: boolean;
+    twoFactorAuth: boolean;
+    dataCollection: boolean;
+    onTogglePrivate: (val: boolean) => void;
+    onToggleTwoFactor: (val: boolean) => void;
+    onToggleDataCollection: (val: boolean) => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="shield-outline" size={20} color={accent} />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {t("settings.privacy")}
+        </Text>
+      </View>
+
+      {isAuthenticated && (
+        <>
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[styles.rowLabel, themeStyles.text]}>
+                {t("settings.privateProfile")}
+              </Text>
+              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                {t("settings.privateProfileSubtitle")}
+              </Text>
+            </View>
+            <Switch
+              value={isPrivate}
+              trackColor={{ false: "#D4DCC8", true: accent }}
+              onValueChange={onTogglePrivate}
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={{ flex: 1, paddingRight: 10 }}>
+              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
+                {t("settings.twoFactor")}
+              </Text>
+            </View>
+            <Switch
+              value={twoFactorAuth}
+              trackColor={{ false: "#D4DCC8", true: accent }}
+              onValueChange={onToggleTwoFactor}
+            />
+          </View>
+        </>
+      )}
+
+      <View style={styles.row}>
+        <View style={{ flex: 1, paddingRight: 10 }}>
+          <Text style={[styles.rowLabel, themeStyles.text]}>
+            {t("settings.dataCollection")}
+          </Text>
+          <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+            {t("settings.dataCollectionSubtitle")}
+          </Text>
+        </View>
+        <Switch
+          value={dataCollection}
+          trackColor={{ false: "#D4DCC8", true: accent }}
+          onValueChange={onToggleDataCollection}
+        />
+      </View>
+    </View>
+  ),
+);
+
+const BackupSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    globalIsDark,
+    isAuthenticated,
+    onOpenExport,
+    onOpenImport,
+    onOpenClearCache,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    globalIsDark: boolean;
+    isAuthenticated: boolean;
+    onOpenExport: () => void;
+    onOpenImport: () => void;
+    onOpenClearCache: () => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="code-slash-outline" size={20} color={accent} />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {isAuthenticated ? t("settings.backupExport") : t("settings.clearCache")}
+        </Text>
+      </View>
+
+      <View style={styles.actionButtonGroup}>
+        {isAuthenticated && (
+          <>
+            <TouchableOpacity
+              style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
+              onPress={onOpenExport}
+            >
+              <Ionicons
+                name="download-outline"
+                size={16}
+                color={globalIsDark ? "#FFF" : "#000"}
+                style={{ marginRight: 8 }}
+              />
+              <Text style={[styles.actionBtnText, themeStyles.text]}>
+                {t("settings.backupExport")}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
+              onPress={onOpenImport}
+            >
+              <Ionicons
+                name="cloud-upload-outline"
+                size={16}
+                color={globalIsDark ? "#FFF" : "#000"}
+                style={{ marginRight: 8 }}
+              />
+              <Text style={[styles.actionBtnText, themeStyles.text]}>
+                {t("settings.importSettings")}
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        <TouchableOpacity
+          testID="btn-clear-cache"
+          style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
+          onPress={onOpenClearCache}
+        >
+          <Ionicons
+            name="refresh-outline"
+            size={16}
+            color={globalIsDark ? "#FFF" : "#000"}
+            style={{ marginRight: 8 }}
+          />
+          <Text style={[styles.actionBtnText, themeStyles.text]}>
+            {t("settings.clearCache")}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  ),
+);
+
+const AccountSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    globalIsDark,
+    onOpenChangePassword,
+    onOpenDeleteAccount,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    globalIsDark: boolean;
+    onOpenChangePassword: () => void;
+    onOpenDeleteAccount: () => void;
+  }) => (
+    <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+      <View style={styles.sectionHeader}>
+        <Ionicons name="person-outline" size={20} color={accent} />
+        <Text style={[styles.sectionTitle, themeStyles.text]}>
+          {t("settings.accountSecurity")}
+        </Text>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
+        onPress={onOpenChangePassword}
+      >
+        <Ionicons
+          name="key-outline"
+          size={16}
+          color={globalIsDark ? "#FFF" : "#000"}
+          style={{ marginRight: 8 }}
+        />
+        <Text style={[styles.actionBtnText, themeStyles.text]}>
+          {t("auth.changePassword")}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.actionBtn, styles.btnRedLight, styles.rowCenter]}
+        onPress={onOpenDeleteAccount}
+      >
+        <Ionicons name="trash-outline" size={16} color="#DC2626" style={{ marginRight: 8 }} />
+        <Text style={styles.textRed}>{t("auth.deleteAccount")}</Text>
+      </TouchableOpacity>
+    </View>
+  ),
+);
+
+const AboutSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    apiStatus,
+    onOpenAbout,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    apiStatus: "checking" | "online" | "offline";
+    onOpenAbout: () => void;
+  }) => {
+    const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+    const buildNumber =
+      Constants.expoConfig?.android?.versionCode ??
+      Constants.expoConfig?.ios?.buildNumber;
+
+    return (
+      <View style={[styles.section, themeStyles.card, themeStyles.border]}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="information-circle-outline" size={20} color={accent} />
+          <Text style={[styles.sectionTitle, themeStyles.text]}>
+            {t("about.title")}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text
+            style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
+            numberOfLines={1}
+          >
+            {t("common.version")}
+          </Text>
+          <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+            {buildNumber ? `${appVersion} (${buildNumber})` : appVersion}
+          </Text>
+        </View>
+
+        {__DEV__ && (
+          <>
+            <View style={styles.infoRow}>
+              <Text
+                style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
+                numberOfLines={1}
+              >
+                {t("common.environment")}
+              </Text>
+              <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+                {Platform.OS.toUpperCase()} • Expo SDK 57 (RN 0.86)
+              </Text>
+            </View>
+
+            <View style={styles.infoRow}>
+              <Text
+                style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
+                numberOfLines={1}
+              >
+                {t("settings.backendStatus")}
+              </Text>
+              <View style={styles.badgeContainer}>
+                <View
+                  style={[
+                    styles.statusDot,
+                    {
+                      backgroundColor:
+                        apiStatus === "online"
+                          ? "#10B981"
+                          : apiStatus === "offline"
+                          ? "#EF4444"
+                          : "#F59E0B",
+                    },
+                  ]}
+                />
+                <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+                  {apiStatus === "online"
+                    ? t("settings.connected")
+                    : apiStatus === "offline"
+                    ? t("settings.offline")
+                    : t("settings.connecting")}
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+
+        <TouchableOpacity
+          testID="btn-about"
+          style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 2 }]}
+          activeOpacity={0.7}
+          onPress={onOpenAbout}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Ionicons name="book-outline" size={16} color={accent} />
+            <Text style={[styles.infoLabel, themeStyles.text, { fontWeight: "500" }]}>
+              {t("about.title")}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={themeStyles.subText.color} />
+        </TouchableOpacity>
+      </View>
+    );
+  },
+);
+
+const AdminPanelSection = React.memo(
+  ({
+    accent,
+    themeStyles,
+    t,
+    globalIsDark,
+    pendingModerationCount,
+    onOpenOffStatus,
+    onOpenModeration,
+    onOpenTutorial,
+    onResetTutorial,
+  }: {
+    accent: string;
+    themeStyles: any;
+    t: ReturnType<typeof useI18n>["t"];
+    globalIsDark: boolean;
+    pendingModerationCount: number;
+    onOpenOffStatus: () => void;
+    onOpenModeration: () => void;
+    onOpenTutorial: () => void;
+    onResetTutorial: () => void;
+  }) => (
+    <View
+      style={[
+        styles.section,
+        themeStyles.card,
+        themeStyles.border,
+        { borderColor: accent + "50" },
+      ]}
+    >
+      <View style={styles.sectionHeader}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Ionicons name="flask-outline" size={20} color={accent} />
+          <Text style={[styles.sectionTitle, themeStyles.text]}>
+            Painel de Testes (Admin)
+          </Text>
+        </View>
+        <View style={[styles.adminBadgePill, { backgroundColor: accent + "20" }]}>
+          <Text style={[styles.adminBadgeText, { color: accent }]}>ADMIN ONLY</Text>
+        </View>
+      </View>
+
+      <Text style={[styles.rowSubLabel, themeStyles.subText, { marginBottom: 12 }]}>
+        Ferramentas exclusivas de depuração e validação de primeiro acesso.
+      </Text>
+
+      <TouchableOpacity
+        style={[
+          styles.adminActionCard,
+          {
+            backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+            borderColor: accent + "30",
+            marginBottom: 10,
+          },
+        ]}
+        activeOpacity={0.7}
+        onPress={onOpenOffStatus}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+            <Ionicons name="pulse-outline" size={18} color={accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+              {t("admin.offDirectStatusCard") || "Status da API OpenFoodFacts"}
+            </Text>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+              {t("admin.offDirectStatusDesc") ||
+                "Consulte a disponibilidade de EAN e fotos em tempo real"}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={accent} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        testID="btn-admin-moderation"
+        style={[
+          styles.adminActionCard,
+          {
+            backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+            borderColor: accent + "30",
+            marginBottom: __DEV__ ? 10 : 0,
+          },
+        ]}
+        activeOpacity={0.7}
+        onPress={onOpenModeration}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+          <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+            <Ionicons name="shield-outline" size={18} color={accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                {t("admin.moderationTitle") || "Moderação de Preços"}
+              </Text>
+              {pendingModerationCount > 0 && (
+                <View
+                  style={{
+                    backgroundColor: "#EF4444",
+                    paddingHorizontal: 6,
+                    paddingVertical: 1,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "800" }}>
+                    {pendingModerationCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+              {t("admin.moderationSub") ||
+                "Auditar e aprovar preços retidos por desvio atípico"}
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={accent} />
+      </TouchableOpacity>
+
+      {__DEV__ && (
+        <>
+          <TouchableOpacity
+            style={[
+              styles.adminActionCard,
+              {
+                backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                borderColor: accent + "30",
+              },
+            ]}
+            activeOpacity={0.7}
+            onPress={onOpenTutorial}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+              <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
+                <Ionicons name="book-outline" size={18} color={accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                  Testar Tutorial de Boas-Vindas
+                </Text>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                  Abre imediatamente o fluxo guiado simplificado
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.linkText, { color: accent, fontWeight: "700" }]}>
+              Testar
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.adminActionCard,
+              {
+                backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
+                borderColor: "rgba(0,0,0,0.06)",
+                marginTop: 8,
+              },
+            ]}
+            activeOpacity={0.7}
+            onPress={onResetTutorial}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+              <View
+                style={[
+                  styles.adminIconBox,
+                  { backgroundColor: "rgba(245, 158, 11, 0.2)" },
+                ]}
+              >
+                <Ionicons name="refresh-outline" size={18} color="#F59E0B" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
+                  Simular Conta Nova (Reset)
+                </Text>
+                <Text style={[styles.rowSubLabel, themeStyles.subText]}>
+                  Limpa a flag @presco:hasSeenTutorial no armazenamento
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.linkText, { color: "#F59E0B", fontWeight: "700" }]}>
+              Resetar
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  ),
+);
+
 const SettingsScreen: React.FC = () => {
   const router = useRouter();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { isAdmin } = useAuth();
-  const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
+  const { isAdmin, isAuthenticated } = useAuth();
+  const [localSettings, setLocalSettings] = useState<LocalSettingsState>(
+    buildLocalSettingsFromCache,
+  );
+  const [sectionsReady, setSectionsReady] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<"general" | "off_status">("general");
 
@@ -211,37 +1142,34 @@ const SettingsScreen: React.FC = () => {
   }, []);
 
   const triggerHaptic = useCallback(async () => {
-    if (settings.hapticsEnabled && Platform.OS !== "web") {
+    if (localSettings.hapticsEnabled && Platform.OS !== "web") {
       try {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       } catch {
         // Silently ignore if unsupported
       }
     }
-  }, [settings.hapticsEnabled]);
+  }, [localSettings.hapticsEnabled]);
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const savedSettings = await AsyncStorage.getItem(STORAGE_KEY);
-        if (savedSettings) {
-          const parsed = JSON.parse(savedSettings);
-          setSettings((prev) => ({ ...prev, ...parsed }));
-        }
-      } catch (error) {
-        console.error("Erro ao carregar configurações:", error);
+    let cancelled = false;
+    const rafId = requestAnimationFrame(() => {
+      if (!cancelled) {
+        setSectionsReady(true);
       }
-    };
-    loadSettings();
+    });
 
     return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, []);
 
   useEffect(() => {
     let isMounted = true;
-    if (isAdmin) {
+    if (!isAdmin) return;
+    const handle = InteractionManager.runAfterInteractions(() => {
       Promise.all([
         fetchPendingOccurrences().catch(() => []),
         fetchPendingProducts().catch(() => []),
@@ -256,13 +1184,15 @@ const SettingsScreen: React.FC = () => {
         .catch(() => {
           if (isMounted) setPendingModerationCount(0);
         });
-    }
+    });
     return () => {
       isMounted = false;
+      handle.cancel();
     };
   }, [isAdmin]);
 
   useEffect(() => {
+    if (!__DEV__) return;
     let isMounted = true;
     const checkApiHealth = async () => {
       try {
@@ -281,62 +1211,71 @@ const SettingsScreen: React.FC = () => {
         if (isMounted) setApiStatus("offline");
       }
     };
-    checkApiHealth();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      checkApiHealth();
+    });
     return () => {
       isMounted = false;
+      handle.cancel();
     };
   }, []);
 
   // Persists settings immediately on any change
   const persistSettingImmediate = useCallback(
-    async <K extends keyof SettingsState>(
-      key: K,
-      value: SettingsState[K],
-      overrideSettings?: SettingsState,
-    ) => {
+    async (nextLocal: LocalSettingsState, overrides?: { theme?: "light" | "dark"; language?: string }) => {
       try {
         const currentStored = await AsyncStorage.getItem(STORAGE_KEY);
         const parsedStored = currentStored ? JSON.parse(currentStored) : {};
-        const base = overrideSettings || settings;
         const updated = {
           ...parsedStored,
-          ...base,
-          [key]: value,
+          ...nextLocal,
+          theme: overrides?.theme ?? (globalIsDark ? "dark" : "light"),
+          language: overrides?.language ?? (isSystemLanguage ? "system" : currentLanguage),
           amoledEnabled,
           monetEnabled,
           syncWithSystemAndroid,
           monetSeedColor,
         };
+        setCachedAppSettings(updated);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         showSavedIndicator();
       } catch (error) {
         console.error("Erro ao salvar automaticamente:", error);
       }
     },
-    [settings, amoledEnabled, monetEnabled, syncWithSystemAndroid, monetSeedColor, showSavedIndicator],
+    [
+      globalIsDark,
+      isSystemLanguage,
+      currentLanguage,
+      amoledEnabled,
+      monetEnabled,
+      syncWithSystemAndroid,
+      monetSeedColor,
+      showSavedIndicator,
+    ],
   );
 
-  const handleSettingChange = <K extends keyof SettingsState>(
-    key: K,
-    value: SettingsState[K],
-  ) => {
-    triggerHaptic();
-    setSettings((prev) => {
-      const next = { ...prev, [key]: value };
-      persistSettingImmediate(key, value, next);
-      return next;
-    });
-    setPasswordError("");
-  };
+  const handleSettingChange = useCallback(
+    <K extends keyof LocalSettingsState>(key: K, value: LocalSettingsState[K]) => {
+      triggerHaptic();
+      setLocalSettings((prev) => {
+        const next = { ...prev, [key]: value };
+        persistSettingImmediate(next);
+        return next;
+      });
+      setPasswordError("");
+    },
+    [triggerHaptic, persistSettingImmediate],
+  );
 
-  const handleLanguageSelect = () => {
+  const handleLanguageSelect = useCallback(() => {
     triggerHaptic();
     setLanguageModalOpen(true);
-  };
+  }, [triggerHaptic]);
 
-  const handleReset = async () => {
+  const handleReset = useCallback(() => {
     triggerHaptic();
-    Alert.alert(
+    appAlert(
       t("settings.resetSettings"),
       t("settings.resetConfirm"),
       [
@@ -345,24 +1284,30 @@ const SettingsScreen: React.FC = () => {
           text: t("settings.resetSettings"),
           style: "destructive",
           onPress: async () => {
-            setSettings(DEFAULT_SETTINGS);
+            setLocalSettings(DEFAULT_LOCAL_SETTINGS);
             await applyThemeSettingsBatch({
-              theme: DEFAULT_SETTINGS.theme,
+              theme: "light",
               amoledEnabled: false,
               monetEnabled: false,
               syncWithSystemAndroid: false,
               monetSeedColor: MONET_PRESETS[0].hex,
             });
+            const resetPayload = {
+              ...DEFAULT_LOCAL_SETTINGS,
+              theme: "light",
+              language: "pt-BR",
+            };
+            setCachedAppSettings(resetPayload);
             await AsyncStorage.setItem(
               STORAGE_KEY,
-              JSON.stringify(DEFAULT_SETTINGS),
+              JSON.stringify(resetPayload),
             );
             showSavedIndicator();
           },
         },
       ],
     );
-  };
+  }, [triggerHaptic, t, applyThemeSettingsBatch, showSavedIndicator]);
 
   const handleChangePassword = async () => {
     setPasswordError("");
@@ -383,15 +1328,13 @@ const SettingsScreen: React.FC = () => {
       setIsChangingPassword(true);
       await changePassword(currentPassword, newPassword);
       triggerHaptic();
-      Alert.alert(t("common.success"), t("auth.passwordChangedSuccess"));
+      appAlert(t("common.success"), t("auth.passwordChangedSuccess"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
       setChangePasswordOpen(false);
     } catch (err: any) {
-      setPasswordError(
-        err?.message || t("errors.serverError"),
-      );
+      setPasswordError(err?.message || t("errors.serverError"));
     } finally {
       setIsChangingPassword(false);
     }
@@ -402,33 +1345,33 @@ const SettingsScreen: React.FC = () => {
       setIsDeletingAccount(true);
       triggerHaptic();
       await deleteAccount();
+      setCachedAppSettings(null);
       await AsyncStorage.removeItem(STORAGE_KEY);
       setDeleteModalOpen(false);
-      Alert.alert(t("auth.deleteAccount"), t("auth.deleteAccountWarning"), [
+      appAlert(t("auth.deleteAccount"), t("auth.deleteAccountWarning"), [
         {
           text: t("common.ok"),
           onPress: () => router.replace("/login" as any),
         },
       ]);
     } catch (err: any) {
-      Alert.alert(
-        t("common.error"),
-        err?.message || t("errors.serverError"),
-      );
+      appAlert(t("common.error"), err?.message || t("errors.serverError"));
     } finally {
       setIsDeletingAccount(false);
     }
   };
 
   // Generate & Open Export Code Modal
-  const handleOpenExportModal = () => {
+  const handleOpenExportModal = useCallback(() => {
     triggerHaptic();
     const exportBundle = {
       app: "PResco",
       version: "1.0",
       exportedAt: new Date().toISOString(),
       settings: {
-        ...settings,
+        ...localSettings,
+        theme: globalIsDark ? "dark" : "light",
+        language: isSystemLanguage ? "system" : currentLanguage,
         amoledEnabled,
         monetEnabled,
         syncWithSystemAndroid,
@@ -439,7 +1382,17 @@ const SettingsScreen: React.FC = () => {
     const code = encodeSettingsToCode(exportBundle);
     setGeneratedCode(code);
     setExportModalOpen(true);
-  };
+  }, [
+    triggerHaptic,
+    localSettings,
+    globalIsDark,
+    isSystemLanguage,
+    currentLanguage,
+    amoledEnabled,
+    monetEnabled,
+    syncWithSystemAndroid,
+    monetSeedColor,
+  ]);
 
   // Share Export Code
   const handleShareExportCode = async () => {
@@ -470,32 +1423,28 @@ const SettingsScreen: React.FC = () => {
         throw new Error("Formato inválido.");
       }
 
-      const mergedSettings: SettingsState = {
-        theme: incoming.theme === "dark" ? "dark" : "light",
-        notifications: Boolean(incoming.notifications ?? settings.notifications),
+      const mergedLocal: LocalSettingsState = {
+        notifications: Boolean(incoming.notifications ?? localSettings.notifications),
         emailNotifications: Boolean(
-          incoming.emailNotifications ?? settings.emailNotifications,
+          incoming.emailNotifications ?? localSettings.emailNotifications,
         ),
-        language: incoming.language || settings.language,
         privacy: incoming.privacy === "public" ? "public" : "private",
-        twoFactorAuth: Boolean(
-          incoming.twoFactorAuth ?? settings.twoFactorAuth,
-        ),
+        twoFactorAuth: Boolean(incoming.twoFactorAuth ?? localSettings.twoFactorAuth),
         dataCollection: Boolean(
-          incoming.dataCollection ?? settings.dataCollection,
+          incoming.dataCollection ?? localSettings.dataCollection,
         ),
         hapticsEnabled: Boolean(
-          incoming.hapticsEnabled ?? settings.hapticsEnabled,
+          incoming.hapticsEnabled ?? localSettings.hapticsEnabled,
         ),
         autoConfirmScan: Boolean(
-          incoming.autoConfirmScan ?? settings.autoConfirmScan,
+          incoming.autoConfirmScan ?? localSettings.autoConfirmScan,
         ),
       };
 
-      setSettings(mergedSettings);
+      setLocalSettings(mergedLocal);
 
       await applyThemeSettingsBatch({
-        theme: mergedSettings.theme,
+        theme: incoming.theme === "dark" ? "dark" : "light",
         amoledEnabled: incoming.amoledEnabled ?? amoledEnabled,
         monetEnabled: incoming.monetEnabled ?? monetEnabled,
         syncWithSystemAndroid:
@@ -507,7 +1456,7 @@ const SettingsScreen: React.FC = () => {
       showSavedIndicator();
       setImportModalOpen(false);
       setImportCodeText("");
-      Alert.alert(t("common.success"), t("settings.importSuccess"));
+      appAlert(t("common.success"), t("settings.importSuccess"));
     } catch {
       setImportError(t("settings.importInvalidCode"));
     }
@@ -528,32 +1477,164 @@ const SettingsScreen: React.FC = () => {
       await ExpoImage.clearMemoryCache().catch(() => {});
       await ExpoImage.clearDiskCache().catch(() => {});
       setClearCacheModalOpen(false);
-      Alert.alert(t("settings.clearCache"), t("settings.cacheCleared"));
+      appAlert(t("settings.clearCache"), t("settings.cacheCleared"));
     } catch {
-      Alert.alert(t("common.error"), t("errors.serverError"));
+      appAlert(t("common.error"), t("errors.serverError"));
     } finally {
       setIsClearingCache(false);
     }
   };
 
-  const isSettingsDark = settings.theme === "dark";
+  const handleToggleTheme = useCallback(() => {
+    triggerHaptic();
+    const newTheme = globalIsDark ? "light" : "dark";
+    setGlobalTheme(newTheme);
+    persistSettingImmediate(localSettings, { theme: newTheme });
+  }, [triggerHaptic, globalIsDark, setGlobalTheme, persistSettingImmediate, localSettings]);
+
+  const handleToggleAmoled = useCallback(
+    (val: boolean) => {
+      triggerHaptic();
+      setAmoledEnabled(val);
+      showSavedIndicator();
+    },
+    [triggerHaptic, setAmoledEnabled, showSavedIndicator],
+  );
+
+  const handleToggleMonet = useCallback(
+    (val: boolean) => {
+      triggerHaptic();
+      setMonetEnabled(val);
+      showSavedIndicator();
+    },
+    [triggerHaptic, setMonetEnabled, showSavedIndicator],
+  );
+
+  const handleToggleSystemSync = useCallback(
+    (val: boolean) => {
+      if (Platform.OS !== "android") {
+        setSyncWithSystemAndroid(false);
+        return;
+      }
+      triggerHaptic();
+      setSyncWithSystemAndroid(val);
+      showSavedIndicator();
+    },
+    [triggerHaptic, setSyncWithSystemAndroid, showSavedIndicator],
+  );
+
+  const handleSelectSeedColor = useCallback(
+    (hex: string) => {
+      triggerHaptic();
+      setMonetSeedColor(hex);
+      showSavedIndicator();
+    },
+    [triggerHaptic, setMonetSeedColor, showSavedIndicator],
+  );
+
+  const handleToggleHaptics = useCallback(
+    (val: boolean) => handleSettingChange("hapticsEnabled", val),
+    [handleSettingChange],
+  );
+  const handleToggleAutoConfirm = useCallback(
+    (val: boolean) => handleSettingChange("autoConfirmScan", val),
+    [handleSettingChange],
+  );
+  const handleToggleNotifications = useCallback(
+    (val: boolean) => handleSettingChange("notifications", val),
+    [handleSettingChange],
+  );
+  const handleToggleEmailNotifications = useCallback(
+    (val: boolean) => handleSettingChange("emailNotifications", val),
+    [handleSettingChange],
+  );
+  const handleTogglePrivate = useCallback(
+    (val: boolean) => handleSettingChange("privacy", val ? "private" : "public"),
+    [handleSettingChange],
+  );
+  const handleToggleTwoFactor = useCallback(
+    (val: boolean) => handleSettingChange("twoFactorAuth", val),
+    [handleSettingChange],
+  );
+  const handleToggleDataCollection = useCallback(
+    (val: boolean) => handleSettingChange("dataCollection", val),
+    [handleSettingChange],
+  );
+
+  const handleOpenImport = useCallback(() => {
+    triggerHaptic();
+    setImportError("");
+    setImportModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenClearCache = useCallback(() => {
+    triggerHaptic();
+    setClearCacheModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenChangePassword = useCallback(() => {
+    triggerHaptic();
+    setPasswordError("");
+    setChangePasswordOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenDeleteAccount = useCallback(() => {
+    triggerHaptic();
+    setDeleteModalOpen(true);
+  }, [triggerHaptic]);
+
+  const handleOpenAbout = useCallback(() => {
+    router.push("/about");
+  }, [router]);
+
+  const handleOpenOffStatus = useCallback(() => {
+    triggerHaptic();
+    setActiveTab("off_status");
+  }, [triggerHaptic]);
+
+  const handleOpenModeration = useCallback(() => {
+    triggerHaptic();
+    router.push("/adminModeration" as any);
+  }, [triggerHaptic, router]);
+
+  const handleOpenTutorial = useCallback(() => {
+    triggerHaptic();
+    setShowTutorialModal(true);
+  }, [triggerHaptic]);
+
+  const handleResetTutorial = useCallback(async () => {
+    triggerHaptic();
+    await resetTutorialStatus();
+    appAlert(
+      "Primeiro Acesso Resetado",
+      "O status de tutorial visto foi removido. Ao acessar a tela inicial, o tutorial abrirá automaticamente como em uma conta nova.",
+      [
+        { text: "OK" },
+        {
+          text: "Abrir Tutorial Agora",
+          onPress: () => setShowTutorialModal(true),
+        },
+      ],
+    );
+  }, [triggerHaptic]);
 
   return (
-    <ScrollView
-      style={[styles.container, themeStyles.bg]}
-      keyboardShouldPersistTaps="handled"
-    >
+    <AnimatedScreenContainer style={[styles.container, themeStyles.bg]}>
+      <ScrollView
+        style={[styles.container, themeStyles.bg]}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Header */}
       <View style={[styles.header, themeStyles.headerBg]}>
         <View style={styles.headerTitleContainer}>
-          <Settings size={26} color={accent} />
+          <Ionicons name="settings-outline" size={26} color={accent} />
           <Text style={[styles.headerTitle, themeStyles.text]}>
             {t("settings.title")}
           </Text>
         </View>
         {isSaved && (
           <View style={[styles.savedAlert, { flexDirection: "row", alignItems: "center" }]}>
-            <Check size={13} color="#10B981" style={{ marginRight: 4 }} />
+            <Ionicons name="checkmark" size={13} color="#10B981" style={{ marginRight: 4 }} />
             <Text style={styles.savedAlertText}>{t("common.saved")}</Text>
           </View>
         )}
@@ -582,7 +1663,8 @@ const SettingsScreen: React.FC = () => {
             }}
             activeOpacity={0.7}
           >
-            <Settings
+            <Ionicons
+              name="settings-outline"
               size={16}
               color={activeTab === "general" ? accent : themeStyles.subText.color}
             />
@@ -612,7 +1694,8 @@ const SettingsScreen: React.FC = () => {
             }}
             activeOpacity={0.7}
           >
-            <Activity
+            <Ionicons
+              name="pulse-outline"
               size={16}
               color={activeTab === "off_status" ? accent : themeStyles.subText.color}
             />
@@ -636,794 +1719,160 @@ const SettingsScreen: React.FC = () => {
       {/* Content */}
       <View style={styles.content}>
         {isAdmin && activeTab === "off_status" ? (
-          <OpenFoodFactsStatusTab onBackToGeneral={() => setActiveTab("general")} />
+          <Suspense
+            fallback={
+              <ActivityIndicator
+                size="small"
+                color={accent}
+                style={{ marginVertical: 24 }}
+              />
+            }
+          >
+            <OpenFoodFactsStatusTab
+              onBackToGeneral={() => setActiveTab("general")}
+            />
+          </Suspense>
         ) : (
           <>
-            {/* Appearance Section */}
-
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            {isSettingsDark ? (
-              <Moon size={20} color={accent} />
-            ) : (
-              <Sun size={20} color={accent} />
-            )}
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.appearance")}
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
-                {t("settings.themeDark")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
-                {isSettingsDark ? t("settings.active") : t("settings.inactive")}
-              </Text>
-            </View>
-            <Switch
-              testID="theme-dark-switch"
-              value={isSettingsDark}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={() => {
-                const newTheme = isSettingsDark ? "light" : "dark";
-                handleSettingChange("theme", newTheme);
-                setGlobalTheme(newTheme);
-                showSavedIndicator();
-              }}
+            <AppearanceSection
+              isDark={globalIsDark}
+              amoledEnabled={amoledEnabled}
+              accent={accent}
+              themeStyles={themeStyles}
+              t={t}
+              isSystemLanguage={isSystemLanguage}
+              languageInfo={languageInfo}
+              onToggleTheme={handleToggleTheme}
+              onToggleAmoled={handleToggleAmoled}
+              onOpenLanguageModal={handleLanguageSelect}
             />
-          </View>
 
-          {/* AMOLED Sub-Option */}
-          {isSettingsDark && (
-            <View style={[styles.row, styles.indentedRow]}>
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <View
-                  style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
-                >
-                  <Zap size={16} color={accent} />
-                  <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
-                    {t("settings.amoledDark")}
-                  </Text>
-                </View>
-                <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={2}>
-                  {t("settings.amoledSubtitle")}
-                </Text>
-              </View>
-              <Switch
-                testID="theme-amoled-switch"
-                value={amoledEnabled}
-                trackColor={{ false: "#D4DCC8", true: accent }}
-                onValueChange={(val) => {
-                  triggerHaptic();
-                  setAmoledEnabled(val);
-                  showSavedIndicator();
-                }}
-              />
-            </View>
-          )}
-
-          <TouchableOpacity style={styles.row} onPress={handleLanguageSelect}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, paddingRight: 10 }}>
-              <Globe size={18} color={accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
-                  {t("settings.language")}
-                </Text>
-                <Text style={[styles.rowSubLabel, themeStyles.subText]} numberOfLines={1}>
-                  {isSystemLanguage
-                    ? `${t("settings.systemDefaultLanguage")} (${languageInfo.nativeName})`
-                    : `[${languageInfo.flag}] ${languageInfo.nativeName}`}
-                </Text>
-              </View>
-            </View>
-            <Text style={[styles.linkText, { color: accent, flexShrink: 0 }]}>{t("common.edit")}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Material You / Monet Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Palette size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.monetColors")}
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.monetColors")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.monetSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={monetEnabled}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(value) => {
-                triggerHaptic();
-                setMonetEnabled(value);
-                showSavedIndicator();
-              }}
+            <MonetSection
+              accent={accent}
+              themeStyles={themeStyles}
+              t={t}
+              monetEnabled={monetEnabled}
+              syncWithSystemAndroid={syncWithSystemAndroid}
+              monetSeedColor={monetSeedColor}
+              hapticsEnabled={localSettings.hapticsEnabled}
+              onToggleMonet={handleToggleMonet}
+              onToggleSystemSync={handleToggleSystemSync}
+              onSelectSeedColor={handleSelectSeedColor}
             />
-          </View>
 
-          {monetEnabled && (
-            <View style={styles.monetColorsContainer}>
-              {/* Android System Sync Toggle */}
-              <TouchableOpacity
-                style={[
-                  styles.row,
-                  { borderBottomWidth: 0, paddingVertical: 8 },
-                ]}
-                activeOpacity={Platform.OS !== "android" ? 0.7 : 1}
-                onPress={() => {
-                  if (Platform.OS !== "android") {
-                    if (settings.hapticsEnabled && Platform.OS !== "web") {
-                      Haptics.notificationAsync(
-                        Haptics.NotificationFeedbackType.Warning
-                      ).catch(() => {});
-                    }
-                    Alert.alert(
-                      t("settings.systemSyncUnavailableTitle"),
-                      t("settings.systemSyncUnavailableMsg"),
-                      [{ text: t("common.ok") }]
-                    );
-                  }
-                }}
-              >
-                <View style={{ flex: 1, paddingRight: 10 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <Smartphone size={16} color={accent} />
-                    <Text style={[styles.rowLabel, themeStyles.text]}>
-                      {t("settings.systemSync")}
-                    </Text>
-                  </View>
-                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    {t("settings.systemSyncSubtitle")}
-                  </Text>
-                </View>
-                <Switch
-                  testID="monet-system-sync-switch"
-                  value={Platform.OS === "android" ? syncWithSystemAndroid : false}
-                  trackColor={{ false: "#D4DCC8", true: accent }}
-                  onValueChange={(val) => {
-                    if (Platform.OS !== "android" && val) {
-                      if (settings.hapticsEnabled && Platform.OS !== "web") {
-                        Haptics.notificationAsync(
-                          Haptics.NotificationFeedbackType.Warning
-                        ).catch(() => {});
-                      }
-                      Alert.alert(
-                        t("settings.systemSyncUnavailableTitle"),
-                        t("settings.systemSyncUnavailableMsg"),
-                        [{ text: t("common.ok") }]
-                      );
-                      setSyncWithSystemAndroid(false);
-                      return;
-                    }
-                    triggerHaptic();
-                    setSyncWithSystemAndroid(val);
-                    showSavedIndicator();
-                  }}
+            {sectionsReady && (
+              <>
+                <ScannerSection
+                  accent={accent}
+                  themeStyles={themeStyles}
+                  t={t}
+                  hapticsEnabled={localSettings.hapticsEnabled}
+                  autoConfirmScan={localSettings.autoConfirmScan}
+                  onToggleHaptics={handleToggleHaptics}
+                  onToggleAutoConfirm={handleToggleAutoConfirm}
                 />
-              </TouchableOpacity>
 
-              {/* Seed Color Palette Picker */}
-              {(!syncWithSystemAndroid || Platform.OS !== "android") && (
-                <View style={{ marginTop: 10 }}>
-                  <Text
-                    style={[
-                      styles.rowSubLabel,
-                      themeStyles.subText,
-                      { marginBottom: 10 },
-                    ]}
-                  >
-                    {t("settings.chooseSeedColor")}
-                  </Text>
-                  <View style={styles.colorGrid}>
-                    {MONET_PRESETS.map((preset) => {
-                      const isSelected = monetSeedColor === preset.hex;
-                      const presetLabel =
-                        preset.name === "Verde"
-                          ? t("settings.colorPrescoGreen")
-                          : preset.name === "Azul"
-                          ? t("settings.colorOceanBlue")
-                          : preset.name === "Roxo"
-                          ? t("settings.colorLavenderPurple")
-                          : preset.name === "Rosa"
-                          ? t("settings.colorCoralPink")
-                          : preset.name === "Laranja"
-                          ? t("settings.colorGoldenAmber")
-                          : preset.name === "Teal"
-                          ? t("settings.colorMintGreen")
-                          : preset.name;
-                      return (
-                        <TouchableOpacity
-                          key={preset.hex}
-                          testID={`monet-seed-${preset.name.toLowerCase()}`}
-                          style={[
-                            styles.colorOption,
-                            {
-                              borderColor: isSelected ? accent : "transparent",
-                            },
-                          ]}
-                          onPress={() => {
-                            triggerHaptic();
-                            setMonetSeedColor(preset.hex);
-                            showSavedIndicator();
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <View
-                            style={[
-                              styles.colorCircle,
-                              { backgroundColor: preset.hex },
-                            ]}
-                          >
-                            {isSelected && (
-                              <Check size={18} color="#FFFFFF" />
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              styles.colorName,
-                              themeStyles.subText,
-                              isSelected && {
-                                color: accent,
-                                fontWeight: "700",
-                              },
-                            ]}
-                          >
-                            {presetLabel}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
+                <NotificationsSection
+                  accent={accent}
+                  themeStyles={themeStyles}
+                  t={t}
+                  isAuthenticated={isAuthenticated}
+                  notifications={localSettings.notifications}
+                  emailNotifications={localSettings.emailNotifications}
+                  onToggleNotifications={handleToggleNotifications}
+                  onToggleEmailNotifications={handleToggleEmailNotifications}
+                />
+
+                <PrivacySection
+                  accent={accent}
+                  themeStyles={themeStyles}
+                  t={t}
+                  isAuthenticated={isAuthenticated}
+                  isPrivate={localSettings.privacy === "private"}
+                  twoFactorAuth={localSettings.twoFactorAuth}
+                  dataCollection={localSettings.dataCollection}
+                  onTogglePrivate={handleTogglePrivate}
+                  onToggleTwoFactor={handleToggleTwoFactor}
+                  onToggleDataCollection={handleToggleDataCollection}
+                />
+
+                <BackupSection
+                  accent={accent}
+                  themeStyles={themeStyles}
+                  t={t}
+                  globalIsDark={globalIsDark}
+                  isAuthenticated={isAuthenticated}
+                  onOpenExport={handleOpenExportModal}
+                  onOpenImport={handleOpenImport}
+                  onOpenClearCache={handleOpenClearCache}
+                />
+
+                {isAuthenticated && (
+                  <AccountSection
+                    accent={accent}
+                    themeStyles={themeStyles}
+                    t={t}
+                    globalIsDark={globalIsDark}
+                    onOpenChangePassword={handleOpenChangePassword}
+                    onOpenDeleteAccount={handleOpenDeleteAccount}
+                  />
+                )}
+
+                <AboutSection
+                  accent={accent}
+                  themeStyles={themeStyles}
+                  t={t}
+                  apiStatus={apiStatus}
+                  onOpenAbout={handleOpenAbout}
+                />
+
+                {isAdmin && (
+                  <AdminPanelSection
+                    accent={accent}
+                    themeStyles={themeStyles}
+                    t={t}
+                    globalIsDark={globalIsDark}
+                    pendingModerationCount={pendingModerationCount}
+                    onOpenOffStatus={handleOpenOffStatus}
+                    onOpenModeration={handleOpenModeration}
+                    onOpenTutorial={handleOpenTutorial}
+                    onResetTutorial={handleResetTutorial}
+                  />
+                )}
+
+                {__DEV__ && (
+                  <View style={styles.footerActions}>
+                    <TouchableOpacity
+                      style={[styles.resetOnlyBtn, themeStyles.btnToggleOff]}
+                      onPress={handleReset}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name="close"
+                        size={18}
+                        color={globalIsDark ? "#FFF" : "#000"}
+                        style={{ marginRight: 6 }}
+                      />
+                      <Text style={[styles.resetBtnText, themeStyles.text]}>
+                        {t("settings.resetSettings")}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Scanner & Interaction Preferences */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Vibrate size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.scannerHaptics")}
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.scannerHaptics")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.scannerHapticsSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.hapticsEnabled}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) => handleSettingChange("hapticsEnabled", val)}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.autoConfirmScan")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.autoConfirmScanSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.autoConfirmScan}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) =>
-                handleSettingChange("autoConfirmScan", val)
-              }
-            />
-          </View>
-        </View>
-
-        {/* Notifications Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Bell size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.notifications")}
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.notifications")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.notificationsSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.notifications}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) => handleSettingChange("notifications", val)}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.emailNotifications")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.emailNotificationsSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.emailNotifications}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) =>
-                handleSettingChange("emailNotifications", val)
-              }
-            />
-          </View>
-        </View>
-
-        {/* Privacy & Security Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Shield size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.privacy")}
-            </Text>
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.privateProfile")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.privateProfileSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.privacy === "private"}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) =>
-                handleSettingChange("privacy", val ? "private" : "public")
-              }
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
-                {t("settings.twoFactor")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.twoFactorAuth}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) => handleSettingChange("twoFactorAuth", val)}
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={{ flex: 1, paddingRight: 10 }}>
-              <Text style={[styles.rowLabel, themeStyles.text]}>
-                {t("settings.dataCollection")}
-              </Text>
-              <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                {t("settings.dataCollectionSubtitle")}
-              </Text>
-            </View>
-            <Switch
-              value={settings.dataCollection}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={(val) =>
-                handleSettingChange("dataCollection", val)
-              }
-            />
-          </View>
-        </View>
-
-        {/* Backup & Code Transfer Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Code2 size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("settings.backupExport")}
-            </Text>
-          </View>
-
-          <View style={styles.actionButtonGroup}>
-            <TouchableOpacity
-              style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
-              onPress={handleOpenExportModal}
-            >
-              <Download
-                size={16}
-                color={globalIsDark ? "#FFF" : "#000"}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={[styles.actionBtnText, themeStyles.text]}>
-                {t("settings.backupExport")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
-              onPress={() => {
-                triggerHaptic();
-                setImportError("");
-                setImportModalOpen(true);
-              }}
-            >
-              <Upload
-                size={16}
-                color={globalIsDark ? "#FFF" : "#000"}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={[styles.actionBtnText, themeStyles.text]}>
-                {t("settings.importSettings")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              testID="btn-clear-cache"
-              style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
-              onPress={() => {
-                triggerHaptic();
-                setClearCacheModalOpen(true);
-              }}
-            >
-              <RefreshCw
-                size={16}
-                color={globalIsDark ? "#FFF" : "#000"}
-                style={{ marginRight: 8 }}
-              />
-              <Text style={[styles.actionBtnText, themeStyles.text]}>
-                {t("settings.clearCache")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Account Management Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <User size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>{t("settings.accountSecurity")}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, themeStyles.btnToggleOff, styles.rowCenter]}
-            onPress={() => {
-              triggerHaptic();
-              setPasswordError("");
-              setChangePasswordOpen(true);
-            }}
-          >
-            <KeyRound
-              size={16}
-              color={globalIsDark ? "#FFF" : "#000"}
-              style={{ marginRight: 8 }}
-            />
-            <Text style={[styles.actionBtnText, themeStyles.text]}>
-              {t("auth.changePassword")}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.btnRedLight, styles.rowCenter]}
-            onPress={() => {
-              triggerHaptic();
-              setDeleteModalOpen(true);
-            }}
-          >
-            <Trash2 size={16} color="#DC2626" style={{ marginRight: 8 }} />
-            <Text style={styles.textRed}>{t("auth.deleteAccount")}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* System & About Section */}
-        <View style={[styles.section, themeStyles.card, themeStyles.border]}>
-          <View style={styles.sectionHeader}>
-            <Info size={20} color={accent} />
-            <Text style={[styles.sectionTitle, themeStyles.text]}>
-              {t("about.title")}
-            </Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
-              {t("common.version")}
-            </Text>
-            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-              {Constants.expoConfig?.version ?? "1.0.0"} (Build 2026.09)
-            </Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
-              {t("common.environment")}
-            </Text>
-            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-              {Platform.OS.toUpperCase()} • Expo SDK 57 (RN 0.86)
-            </Text>
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]} numberOfLines={1}>
-              {t("settings.backendStatus")}
-            </Text>
-            <View style={styles.badgeContainer}>
-              <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor:
-                      apiStatus === "online"
-                        ? "#10B981"
-                        : apiStatus === "offline"
-                        ? "#EF4444"
-                        : "#F59E0B",
-                  },
-                ]}
-              />
-              <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-                {apiStatus === "online"
-                  ? t("settings.connected")
-                  : apiStatus === "offline"
-                  ? t("settings.offline")
-                  : t("settings.connecting")}
-              </Text>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            testID="btn-about"
-            style={[styles.infoRow, { borderBottomWidth: 0, paddingBottom: 2 }]}
-            activeOpacity={0.7}
-            onPress={() => router.push("/about")}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <BookOpen size={16} color={accent} />
-              <Text style={[styles.infoLabel, themeStyles.text, { fontWeight: "500" }]}>
-                {t("about.title")}
-              </Text>
-            </View>
-            <ChevronRight size={18} color={themeStyles.subText.color} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Exclusive Admin Developer & QA Testing Panel */}
-        {isAdmin && (
-          <View
-            style={[
-              styles.section,
-              themeStyles.card,
-              themeStyles.border,
-              { borderColor: accent + "50" },
-            ]}
-          >
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <FlaskConical size={20} color={accent} />
-                <Text style={[styles.sectionTitle, themeStyles.text]}>
-                  Painel de Testes (Admin)
-                </Text>
-              </View>
-              <View style={[styles.adminBadgePill, { backgroundColor: accent + "20" }]}>
-                <Text style={[styles.adminBadgeText, { color: accent }]}>ADMIN ONLY</Text>
-              </View>
-            </View>
-
-            <Text style={[styles.rowSubLabel, themeStyles.subText, { marginBottom: 12 }]}>
-              Ferramentas exclusivas de depuração e validação de primeiro acesso.
-            </Text>
-
-            {/* Status da API OpenFoodFacts (Upptime) */}
-            <TouchableOpacity
-              style={[
-                styles.adminActionCard,
-                {
-                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
-                  borderColor: accent + "30",
-                  marginBottom: 10,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => {
-                triggerHaptic();
-                setActiveTab("off_status");
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
-                  <Activity size={18} color={accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
-                    {t("admin.offDirectStatusCard") || "Status da API OpenFoodFacts"}
-                  </Text>
-                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    {t("admin.offDirectStatusDesc") || "Consulte a disponibilidade de EAN e fotos em tempo real"}
-                  </Text>
-                </View>
-              </View>
-              <ChevronRight size={18} color={accent} />
-            </TouchableOpacity>
-
-            {/* Moderação de Preços Pendentes */}
-            <TouchableOpacity
-              testID="btn-admin-moderation"
-              style={[
-                styles.adminActionCard,
-                {
-                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
-                  borderColor: accent + "30",
-                  marginBottom: 10,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => {
-                triggerHaptic();
-                router.push("/adminModeration" as any);
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
-                  <Shield size={18} color={accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
-                      {t("admin.moderationTitle") || "Moderação de Preços"}
-                    </Text>
-                    {pendingModerationCount > 0 && (
-                      <View
-                        style={{
-                          backgroundColor: "#EF4444",
-                          paddingHorizontal: 6,
-                          paddingVertical: 1,
-                          borderRadius: 10,
-                        }}
-                      >
-                        <Text style={{ color: "#FFF", fontSize: 11, fontWeight: "800" }}>
-                          {pendingModerationCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    {t("admin.moderationSub") || "Auditar e aprovar preços retidos por desvio atípico"}
-                  </Text>
-                </View>
-              </View>
-              <ChevronRight size={18} color={accent} />
-            </TouchableOpacity>
-
-            {/* Testar Tutorial Agora */}
-            <TouchableOpacity
-              style={[
-                styles.adminActionCard,
-                {
-                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
-                  borderColor: accent + "30",
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={() => {
-                triggerHaptic();
-                setShowTutorialModal(true);
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                <View style={[styles.adminIconBox, { backgroundColor: accent + "20" }]}>
-                  <BookOpen size={18} color={accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
-                    Testar Tutorial de Boas-Vindas
-                  </Text>
-                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    Abre imediatamente o fluxo guiado simplificado
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.linkText, { color: accent, fontWeight: "700" }]}>Testar</Text>
-            </TouchableOpacity>
-
-            {/* Resetar Primeiro Acesso */}
-            <TouchableOpacity
-              style={[
-                styles.adminActionCard,
-                {
-                  backgroundColor: globalIsDark ? "#161F2E" : "#F8FAFC",
-                  borderColor: "rgba(0,0,0,0.06)",
-                  marginTop: 8,
-                },
-              ]}
-              activeOpacity={0.7}
-              onPress={async () => {
-                triggerHaptic();
-                await resetTutorialStatus();
-                Alert.alert(
-                  "Primeiro Acesso Resetado",
-                  "O status de tutorial visto foi removido. Ao acessar a tela inicial, o tutorial abrirá automaticamente como em uma conta nova.",
-                  [
-                    { text: "OK" },
-                    {
-                      text: "Abrir Tutorial Agora",
-                      onPress: () => setShowTutorialModal(true),
-                    },
-                  ]
-                );
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-                <View style={[styles.adminIconBox, { backgroundColor: "rgba(245, 158, 11, 0.2)" }]}>
-                  <RefreshCw size={18} color="#F59E0B" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowLabel, themeStyles.text, { fontWeight: "700" }]}>
-                    Simular Conta Nova (Reset)
-                  </Text>
-                  <Text style={[styles.rowSubLabel, themeStyles.subText]}>
-                    Limpa a flag @presco:hasSeenTutorial no armazenamento
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.linkText, { color: "#F59E0B", fontWeight: "700" }]}>Resetar</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Bottom Restore Defaults Action */}
-        <View style={styles.footerActions}>
-          <TouchableOpacity
-            style={[styles.resetOnlyBtn, themeStyles.btnToggleOff]}
-            onPress={handleReset}
-            activeOpacity={0.8}
-          >
-            <X
-              size={18}
-              color={globalIsDark ? "#FFF" : "#000"}
-              style={{ marginRight: 6 }}
-            />
-            <Text style={[styles.resetBtnText, themeStyles.text]}>
-              {t("settings.resetSettings")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        </>
+                )}
+              </>
+            )}
+          </>
         )}
       </View>
 
       {/* Export Code Modal */}
+      {exportModalOpen && (
       <Modal transparent visible={exportModalOpen} animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, themeStyles.card]}>
               <View style={styles.rowCenter}>
-                <Code2 size={22} color={accent} />
+                <Ionicons name="code-slash-outline" size={22} color={accent} />
                 <Text
                   style={[
                     styles.modalTitle,
@@ -1471,7 +1920,7 @@ const SettingsScreen: React.FC = () => {
                   style={[styles.modalBtn, { backgroundColor: accent }]}
                   onPress={handleShareExportCode}
                 >
-                  <Share2 size={16} color="#FFF" style={{ marginRight: 6 }} />
+                  <Ionicons name="share-social-outline" size={16} color="#FFF" style={{ marginRight: 6 }} />
                   <Text style={styles.textWhite}>{t("settings.shareCode")}</Text>
                 </TouchableOpacity>
               </View>
@@ -1479,8 +1928,10 @@ const SettingsScreen: React.FC = () => {
           </View>
         </TouchableWithoutFeedback>
       </Modal>
+      )}
 
       {/* Import Code Modal */}
+      {importModalOpen && (
       <Modal transparent visible={importModalOpen} animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <KeyboardAvoidingView
@@ -1514,7 +1965,7 @@ const SettingsScreen: React.FC = () => {
 
               {importError ? (
                 <View style={styles.errorContainer}>
-                  <AlertCircle size={16} color="#991B1B" />
+                  <Ionicons name="alert-circle-outline" size={16} color="#991B1B" />
                   <Text style={styles.errorText}>{importError}</Text>
                 </View>
               ) : null}
@@ -1541,8 +1992,10 @@ const SettingsScreen: React.FC = () => {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+      )}
 
       {/* Change Password Modal */}
+      {changePasswordOpen && (
       <Modal transparent visible={changePasswordOpen} animationType="fade">
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <KeyboardAvoidingView
@@ -1589,7 +2042,7 @@ const SettingsScreen: React.FC = () => {
 
               {passwordError ? (
                 <View style={styles.errorContainer}>
-                  <AlertCircle size={16} color="#991B1B" />
+                  <Ionicons name="alert-circle-outline" size={16} color="#991B1B" />
                   <Text style={styles.errorText}>{passwordError}</Text>
                 </View>
               ) : null}
@@ -1622,13 +2075,15 @@ const SettingsScreen: React.FC = () => {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+      )}
 
       {/* Clear Cache Confirmation Modal */}
+      {clearCacheModalOpen && (
       <Modal transparent visible={clearCacheModalOpen} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, themeStyles.card]}>
             <View style={styles.rowCenter}>
-              <RefreshCw size={22} color={accent} />
+              <Ionicons name="refresh-outline" size={22} color={accent} />
               <Text
                 style={[styles.modalTitle, { marginLeft: 8 }, themeStyles.text]}
               >
@@ -1662,13 +2117,15 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+      )}
 
       {/* Delete Account Modal */}
+      {deleteModalOpen && (
       <Modal transparent visible={deleteModalOpen} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, themeStyles.card]}>
             <View style={styles.rowCenter}>
-              <AlertCircle size={24} color="#DC2626" />
+              <Ionicons name="alert-circle-outline" size={24} color="#DC2626" />
               <Text
                 style={[styles.modalTitle, { marginLeft: 8 }, themeStyles.text]}
               >
@@ -1701,8 +2158,10 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
+      )}
 
       {/* Language Selection Modal */}
+      {languageModalOpen && (
       <Modal transparent visible={languageModalOpen} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, themeStyles.card, { maxHeight: 540 }]}>
@@ -1713,7 +2172,7 @@ const SettingsScreen: React.FC = () => {
               ]}
             >
               <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Globe size={22} color={accent} style={{ marginRight: 8 }} />
+                <Ionicons name="globe-outline" size={22} color={accent} style={{ marginRight: 8 }} />
                 <Text style={[styles.modalTitle, themeStyles.text, { marginBottom: 0 }]}>
                   {t("settings.selectLanguage")}
                 </Text>
@@ -1722,7 +2181,7 @@ const SettingsScreen: React.FC = () => {
                 onPress={() => setLanguageModalOpen(false)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <X size={20} color={themeStyles.subText.color} />
+                <Ionicons name="close" size={20} color={themeStyles.subText.color} />
               </TouchableOpacity>
             </View>
 
@@ -1744,14 +2203,13 @@ const SettingsScreen: React.FC = () => {
                 onPress={async () => {
                   triggerHaptic();
                   await setI18nLanguage("system");
-                  handleSettingChange("language", "system");
-                  showSavedIndicator();
+                  persistSettingImmediate(localSettings, { language: "system" });
                   setTimeout(() => setLanguageModalOpen(false), 200);
                 }}
               >
                 <View style={styles.languageRowLeft}>
                   <View style={[styles.flagBadgeBox, { backgroundColor: globalIsDark ? "#2D3748" : "#E2E8F0" }]}>
-                    <Settings size={16} color={accent} />
+                    <Ionicons name="settings-outline" size={16} color={accent} />
                   </View>
                   <View>
                     <Text
@@ -1768,7 +2226,7 @@ const SettingsScreen: React.FC = () => {
                     </Text>
                   </View>
                 </View>
-                {isSystemLanguage && <Check size={20} color={accent} />}
+                {isSystemLanguage && <Ionicons name="checkmark" size={20} color={accent} />}
               </TouchableOpacity>
 
               {languages.map((item) => {
@@ -1787,8 +2245,7 @@ const SettingsScreen: React.FC = () => {
                     onPress={async () => {
                       triggerHaptic();
                       await setI18nLanguage(item.code);
-                      handleSettingChange("language", item.code);
-                      showSavedIndicator();
+                      persistSettingImmediate(localSettings, { language: item.code });
                       setTimeout(() => setLanguageModalOpen(false), 200);
                     }}
                   >
@@ -1813,7 +2270,7 @@ const SettingsScreen: React.FC = () => {
                         </Text>
                       </View>
                     </View>
-                    {isSelected && <Check size={20} color={accent} />}
+                    {isSelected && <Ionicons name="checkmark" size={20} color={accent} />}
                   </TouchableOpacity>
                 );
               })}
@@ -1821,14 +2278,18 @@ const SettingsScreen: React.FC = () => {
           </View>
         </View>
       </Modal>
-
-      {showTutorialModal && (
-        <OnboardingTutorialModal
-          visible={showTutorialModal}
-          onClose={() => setShowTutorialModal(false)}
-        />
       )}
-    </ScrollView>
+
+      {isAdmin && __DEV__ && showTutorialModal && (
+        <Suspense fallback={null}>
+          <OnboardingTutorialModal
+            visible={showTutorialModal}
+            onClose={() => setShowTutorialModal(false)}
+          />
+        </Suspense>
+      )}
+      </ScrollView>
+    </AnimatedScreenContainer>
   );
 };
 

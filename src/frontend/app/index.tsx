@@ -7,6 +7,7 @@ import {
   ScrollView,
   FlatList,
   Dimensions,
+  InteractionManager,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams, usePathname } from "expo-router";
@@ -23,6 +24,11 @@ import { hasSeenTutorial } from "../utils/tutorialStorage";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 import OnboardingTutorialModal from "../components/OnboardingTutorialModal";
+import {
+  AnimatedScreenContainer,
+  AnimatedSection,
+  ScalePressable,
+} from "../components/AnimatedMotion";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 32;
@@ -130,114 +136,125 @@ export default function HomeScreen() {
   const [hasLocation, setHasLocation] = useState<boolean>(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const actionTabs: TabType[] = [
-    {
-      id: "1",
-      label: t("navigation.map"),
-      icon: "location-outline",
-      actionType: "route",
-      actionValue: "/map",
-    },
-    {
-      id: "2",
-      label: t("navigation.products"),
-      icon: "cube-outline",
-      actionType: "route",
-      actionValue: "/search",
-    },
-    {
-      id: "3",
-      label: t("navigation.help"),
-      icon: "help-circle-outline",
-      actionType: "route",
-      actionValue: "/help",
-    },
-    {
-      id: "4",
-      label: t("navigation.about"),
-      icon: "information-circle-outline",
-      actionType: "route",
-      actionValue: "/about",
-    },
-  ];
+  const actionTabs: TabType[] = useMemo(
+    () => [
+      {
+        id: "1",
+        label: t("navigation.map"),
+        icon: "location-outline",
+        actionType: "route",
+        actionValue: "/map",
+      },
+      {
+        id: "2",
+        label: t("navigation.products"),
+        icon: "cube-outline",
+        actionType: "route",
+        actionValue: "/search",
+      },
+      {
+        id: "3",
+        label: t("navigation.help"),
+        icon: "help-circle-outline",
+        actionType: "route",
+        actionValue: "/help",
+      },
+      {
+        id: "4",
+        label: t("navigation.about"),
+        icon: "information-circle-outline",
+        actionType: "route",
+        actionValue: "/about",
+      },
+    ],
+    [t]
+  );
 
   const loadProductsAndMarkets = useCallback(async () => {
-    let loc = null;
-    try {
-      loc = await getUserLocation();
-      if (loc) setHasLocation(true);
+    const loc = await getUserLocation().catch(() => null);
+    if (loc) setHasLocation(true);
 
-      const res = await fetchProducts({
-        latitude: loc?.latitude,
-        longitude: loc?.longitude,
-        radius: 15000,
-        limit: 12,
-      });
+    const loadProducts = async () => {
+      try {
+        const res = await fetchProducts({
+          latitude: loc?.latitude,
+          longitude: loc?.longitude,
+          radius: 15000,
+          limit: 12,
+        });
 
-      // Filtra estritamente apenas produtos com preço informado
-      const validItems = (res.items || []).filter((p) =>
-        hasValidPrice(p.bestPrice || p.lastPrice)
-      );
+        // Filtra estritamente apenas produtos com preço informado
+        const validItems = (res.items || []).filter((p) =>
+          hasValidPrice(p.bestPrice || p.lastPrice)
+        );
 
-      if (validItems.length > 0) {
-        const mapped: GridItemType[] = validItems.slice(0, 6).map((p) => ({
-          id: p.id || Math.random(),
-          name: p.name,
-          category: p.category,
-          price: p.bestPrice || p.lastPrice,
-          image: getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) || "",
-          isPromotion: p.isPromotion,
-          discountPercentage: p.discountPercentage,
-          formattedDistance: p.formattedDistance,
-          nearestMarketName: p.nearestMarketName,
-          nearestMarketCoordinate: p.nearestMarketCoordinate,
-        }));
-        setRealProducts(mapped);
-      } else {
+        if (validItems.length > 0) {
+          const mapped: GridItemType[] = validItems.slice(0, 6).map((p) => ({
+            id: p.id || Math.random(),
+            name: p.name,
+            category: p.category,
+            price: p.bestPrice || p.lastPrice,
+            image: getOptimizedImageUrl(p.imageUri || p.icon, 280, 70) || "",
+            isPromotion: p.isPromotion,
+            discountPercentage: p.discountPercentage,
+            formattedDistance: p.formattedDistance,
+            nearestMarketName: p.nearestMarketName,
+            nearestMarketCoordinate: p.nearestMarketCoordinate,
+          }));
+          setRealProducts(mapped);
+        } else {
+          setRealProducts([]);
+        }
+      } catch {
         setRealProducts([]);
       }
-    } catch {
-      setRealProducts([]);
-    }
+    };
 
-    try {
-      let markets = await fetchMarkets(
-        loc
-          ? {
-              latitude: loc.latitude,
-              longitude: loc.longitude,
-              radius: 15000,
-            }
-          : undefined
-      );
-      if (!markets || markets.length === 0) {
-        // Fallback: busca todos os mercados cadastrados no sistema se não houver no raio imediato
-        markets = await fetchMarkets();
-      }
-      if (markets && markets.length > 0) {
-        const marketImages = [
-          "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
-          "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=280&h=280&fit=crop&q=70&auto=format",
-          "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=280&h=280&fit=crop&q=70&auto=format",
-          "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=280&h=280&fit=crop&q=70&auto=format",
-        ];
-        // Limita a prévia da Home estritamente aos 6 mercados mais próximos, evitando renderizar dezenas de cards na ScrollView
-        const mapped: GridItemType[] = markets.slice(0, 6).map((m, idx) => ({
-          id: m.id,
-          name: m.name,
-          image: marketImages[idx % marketImages.length]!,
-        }));
-        setRealMarkets(mapped);
-      } else {
+    const loadMarkets = async () => {
+      try {
+        let markets = await fetchMarkets(
+          loc
+            ? {
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                radius: 15000,
+              }
+            : undefined
+        );
+        if (!markets || markets.length === 0) {
+          // Fallback: busca todos os mercados cadastrados no sistema se não houver no raio imediato
+          markets = await fetchMarkets();
+        }
+        if (markets && markets.length > 0) {
+          const marketImages = [
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=280&h=280&fit=crop&q=70&auto=format",
+            "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=280&h=280&fit=crop&q=70&auto=format",
+            "https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=280&h=280&fit=crop&q=70&auto=format",
+            "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=280&h=280&fit=crop&q=70&auto=format",
+          ];
+          // Limita a prévia da Home estritamente aos 6 mercados mais próximos, evitando renderizar dezenas de cards na ScrollView
+          const mapped: GridItemType[] = markets.slice(0, 6).map((m, idx) => ({
+            id: m.id,
+            name: m.name,
+            image: marketImages[idx % marketImages.length]!,
+          }));
+          setRealMarkets(mapped);
+        } else {
+          setRealMarkets([]);
+        }
+      } catch {
         setRealMarkets([]);
       }
-    } catch {
-      setRealMarkets([]);
-    }
+    };
+
+    await Promise.all([loadProducts(), loadMarkets()]);
   }, []);
 
   useEffect(() => {
-    loadProductsAndMarkets();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      loadProductsAndMarkets();
+    });
+    return () => handle.cancel();
   }, [loadProductsAndMarkets]);
 
   useEffect(() => {
@@ -299,7 +316,7 @@ export default function HomeScreen() {
   const gridSubtitle = activeView === "products" ? t("home.radiusFilter15km") : undefined;
 
   return (
-    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+    <AnimatedScreenContainer style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
       <ScrollView
         ref={scrollViewRef}
         style={[styles.scrollView, { backgroundColor: semantic.colors.surface.background }]}
@@ -312,12 +329,16 @@ export default function HomeScreen() {
         bounces={true}
         overScrollMode="always"
       >
-        <Banner isFocused={isFocused} />
-        <ActionMenu
-          onTabPress={handleTabAction}
-          tabs={actionTabs}
-          activeView={activeView}
-        />
+        <AnimatedSection delay={0}>
+          <Banner isFocused={isFocused} />
+        </AnimatedSection>
+        <AnimatedSection delay={45}>
+          <ActionMenu
+            onTabPress={handleTabAction}
+            tabs={actionTabs}
+            activeView={activeView}
+          />
+        </AnimatedSection>
         <ItemsGrid
           title={gridTitle}
           subtitle={gridSubtitle}
@@ -333,7 +354,7 @@ export default function HomeScreen() {
           onClose={() => setShowTutorialModal(false)}
         />
       )}
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 
@@ -426,13 +447,111 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
     return () => clearInterval(timer);
   }, [isFocused, banners.length]);
 
-  const handleScroll = useCallback((event: any) => {
-    const scrollPosition = event.nativeEvent.contentOffset.x;
-    const index = Math.round(scrollPosition / CARD_WIDTH);
-    if (index !== activeIndex) {
-      setActiveIndex(index);
-    }
-  }, [activeIndex]);
+  const handleScroll = useCallback(
+    (event: any) => {
+      const scrollPosition = event.nativeEvent.contentOffset.x;
+      const index = Math.round(scrollPosition / CARD_WIDTH);
+      if (index >= 0 && index < banners.length && index !== activeIndexRef.current) {
+        activeIndexRef.current = index;
+        setActiveIndex(index);
+      }
+    },
+    [banners.length]
+  );
+
+  const keyExtractor = useCallback((item: { id: string }) => item.id, []);
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({
+      length: CARD_WIDTH,
+      offset: CARD_WIDTH * index,
+      index,
+    }),
+    []
+  );
+
+  const renderBannerItem = useCallback(
+    ({ item }: { item: (typeof banners)[number] }) => (
+      <View style={{ width: CARD_WIDTH }}>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => {
+            if (item.route) {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              router.push(item.route as any);
+            }
+          }}
+          style={[
+            styles.bannerCardFull,
+            {
+              backgroundColor: semantic.colors.surface.card,
+              borderColor: semantic.colors.border.default,
+              borderRadius: semantic.radius.button,
+              padding: semantic.spacing.elementGap,
+            },
+          ]}
+        >
+          <Image
+            source={{ uri: item.image }}
+            style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={item.id}
+            transition={150}
+          />
+          <Text
+            style={[
+              styles.bannerTitle,
+              {
+                color: semantic.colors.text.primary,
+                ...semantic.typography.bodyBold,
+              },
+            ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.title}
+          </Text>
+          <Text
+            style={[
+              styles.bannerSubtitle,
+              {
+                color: semantic.colors.text.secondary,
+                ...semantic.typography.caption,
+              },
+            ]}
+            numberOfLines={2}
+            ellipsizeMode="tail"
+          >
+            {item.subtitle}
+          </Text>
+          <View style={styles.bannerActionRow}>
+            <Text
+              style={[
+                styles.bannerLink,
+                {
+                  color: accent,
+                  ...semantic.typography.caption,
+                  fontWeight: "600",
+                },
+              ]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.linkText}
+            </Text>
+            <Ionicons
+              name="chevron-forward"
+              size={13}
+              color={accent}
+              style={{ marginLeft: 2, marginTop: 1 }}
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+    ),
+    [accent, router, semantic]
+  );
 
   return (
     <View style={styles.bannerSection}>
@@ -440,7 +559,7 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         testID="home-banner-carousel"
         ref={flatListRef}
         data={banners}
-        keyExtractor={(item) => item.id}
+        keyExtractor={keyExtractor}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
@@ -449,90 +568,9 @@ const Banner = memo(function Banner({ isFocused }: { isFocused: boolean }) {
         windowSize={5}
         onScroll={handleScroll}
         scrollEventThrottle={16}
-        getItemLayout={(_, index) => ({
-          length: CARD_WIDTH,
-          offset: CARD_WIDTH * index,
-          index,
-        })}
-        renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH }}>
-            <TouchableOpacity
-              activeOpacity={0.88}
-              onPress={() => {
-                if (item.route) {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                  router.push(item.route as any);
-                }
-              }}
-              style={[
-                styles.bannerCardFull,
-                {
-                  backgroundColor: semantic.colors.surface.card,
-                  borderColor: semantic.colors.border.default,
-                  borderRadius: semantic.radius.button,
-                  padding: semantic.spacing.elementGap,
-                },
-              ]}
-            >
-              <Image
-                source={{ uri: item.image }}
-                style={[styles.bannerImage, { borderRadius: semantic.radius.chip }]}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                recyclingKey={item.id}
-                transition={150}
-              />
-              <Text
-                style={[
-                  styles.bannerTitle,
-                  {
-                    color: semantic.colors.text.primary,
-                    ...semantic.typography.bodyBold,
-                  },
-                ]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.title}
-              </Text>
-              <Text
-                style={[
-                  styles.bannerSubtitle,
-                  {
-                    color: semantic.colors.text.secondary,
-                    ...semantic.typography.caption,
-                  },
-                ]}
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {item.subtitle}
-              </Text>
-              <View style={styles.bannerActionRow}>
-                <Text
-                  style={[
-                    styles.bannerLink,
-                    {
-                      color: accent,
-                      ...semantic.typography.caption,
-                      fontWeight: "600",
-                    },
-                  ]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {item.linkText}
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={13}
-                  color={accent}
-                  style={{ marginLeft: 2, marginTop: 1 }}
-                />
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
+        getItemLayout={getItemLayout}
+        style={styles.bannerList}
+        renderItem={renderBannerItem}
       />
 
       <View style={styles.paginationContainer}>
@@ -687,6 +725,125 @@ const GridItemImage = memo(function GridItemImage({
   );
 });
 
+const GridItemCard = memo(function GridItemCard({
+  item,
+  isProductView,
+  onItemPress,
+}: {
+  item: GridItemType;
+  isProductView: boolean;
+  onItemPress: (item: GridItemType) => void;
+}) {
+  const { tokens, accent } = useTheme();
+  const { semantic } = tokens;
+  const { t } = useI18n();
+  const { isAuthenticated } = useAuth();
+
+  const handlePress = useCallback(() => onItemPress(item), [onItemPress, item]);
+
+  const handleMapPress = useCallback(
+    (e: any) => {
+      if (item.nearestMarketName) {
+        e.stopPropagation();
+        openMarketInGoogleMaps({
+          marketName: item.nearestMarketName,
+          coordinate: item.nearestMarketCoordinate,
+          mode: "search",
+        });
+      }
+    },
+    [item.nearestMarketName, item.nearestMarketCoordinate]
+  );
+
+  return (
+    <View style={styles.productItemWrapper}>
+      <ScalePressable
+        testID="home-product-card"
+        style={[
+          styles.productItem,
+          {
+            width: "100%",
+            backgroundColor: semantic.colors.surface.card,
+            borderColor: item.isPromotion ? accent + "60" : semantic.colors.border.default,
+            borderRadius: semantic.radius.chip,
+            padding: semantic.spacing.elementGap,
+          },
+        ]}
+        onPress={handlePress}
+      >
+        <View style={styles.imageWrapper}>
+          <GridItemImage
+            imageUri={item.image}
+            itemId={item.id}
+            borderRadius={semantic.radius.badge}
+            backgroundColor={semantic.colors.surface.input}
+            accent={accent}
+          />
+          {isProductView && item.isPromotion && (
+            <View style={[styles.promoBadge, { flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 2 }} />
+              <Text style={styles.promoBadgeText}>
+                {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
+              </Text>
+            </View>
+          )}
+        </View>
+        <Text
+          style={[
+            styles.productName,
+            {
+              color: semantic.colors.text.primary,
+              ...semantic.typography.bodyMedium,
+            },
+          ]}
+          numberOfLines={2}
+        >
+          {item.name}
+        </Text>
+
+        {isProductView && item.price ? (
+          <View style={styles.priceRow}>
+            {isAuthenticated ? (
+              <Text style={[styles.productPrice, { color: accent }]}>
+                {item.price}
+              </Text>
+            ) : (
+              <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
+                <Ionicons name="lock-closed" size={10} color={accent} />
+                <Text style={[styles.lockedPriceText, { color: accent }]}>
+                  Ver preço
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : null}
+
+        {isProductView && item.formattedDistance && (
+          <TouchableOpacity
+            style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}
+            activeOpacity={item.nearestMarketName ? 0.7 : 1}
+            onPress={handleMapPress}
+            accessibilityRole="button"
+            accessibilityLabel={item.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${item.nearestMarketName}` : undefined}
+          >
+            <Ionicons name="location" size={11} color={accent} />
+            <Text
+              style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
+            </Text>
+            {Boolean(item.nearestMarketName) && (
+              <Ionicons name="open-outline" size={10} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
+            )}
+          </TouchableOpacity>
+        )}
+      </ScalePressable>
+    </View>
+  );
+});
+
 const ItemsGrid = memo(function ItemsGrid({
   title,
   subtitle,
@@ -702,8 +859,6 @@ const ItemsGrid = memo(function ItemsGrid({
 }) {
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
-  const { t } = useI18n();
-  const { isAuthenticated } = useAuth();
 
   const itemsToRender = useMemo(() => {
     if (!isProductView) return data;
@@ -737,99 +892,12 @@ const ItemsGrid = memo(function ItemsGrid({
       </View>
       <View style={styles.productGrid}>
         {itemsToRender.map((item) => (
-          <TouchableOpacity
+          <GridItemCard
             key={item.id}
-            testID="home-product-card"
-            style={[
-              styles.productItem,
-              {
-                backgroundColor: semantic.colors.surface.card,
-                borderColor: item.isPromotion ? accent + "60" : semantic.colors.border.default,
-                borderRadius: semantic.radius.chip,
-                padding: semantic.spacing.elementGap,
-              },
-            ]}
-            activeOpacity={0.8}
-            onPress={() => onItemPress(item)}
-          >
-            <View style={styles.imageWrapper}>
-              <GridItemImage
-                imageUri={item.image}
-                itemId={item.id}
-                borderRadius={semantic.radius.badge}
-                backgroundColor={semantic.colors.surface.input}
-                accent={accent}
-              />
-              {isProductView && item.isPromotion && (
-                <View style={[styles.promoBadge, { flexDirection: "row", alignItems: "center" }]}>
-                  <Ionicons name="flame" size={11} color="#FFFFFF" style={{ marginRight: 2 }} />
-                  <Text style={styles.promoBadgeText}>
-                    {item.discountPercentage ? `-${item.discountPercentage}%` : t("products.promoBadge")}
-                  </Text>
-                </View>
-              )}
-            </View>
-            <Text
-              style={[
-                styles.productName,
-                {
-                  color: semantic.colors.text.primary,
-                  ...semantic.typography.bodyMedium,
-                },
-              ]}
-              numberOfLines={2}
-            >
-              {item.name}
-            </Text>
-
-            {isProductView && item.price ? (
-              <View style={styles.priceRow}>
-                {isAuthenticated ? (
-                  <Text style={[styles.productPrice, { color: accent }]}>
-                    {item.price}
-                  </Text>
-                ) : (
-                  <View style={[styles.lockedPricePill, { backgroundColor: accent + "18", borderColor: accent + "35" }]}>
-                    <Ionicons name="lock-closed" size={10} color={accent} />
-                    <Text style={[styles.lockedPriceText, { color: accent }]}>
-                      Ver preço
-                    </Text>
-                  </View>
-                )}
-              </View>
-            ) : null}
-
-            {isProductView && item.formattedDistance && (
-              <TouchableOpacity
-                style={[styles.distancePill, { backgroundColor: semantic.colors.surface.input }]}
-                activeOpacity={item.nearestMarketName ? 0.7 : 1}
-                onPress={(e) => {
-                  if (item.nearestMarketName) {
-                    e.stopPropagation();
-                    openMarketInGoogleMaps({
-                      marketName: item.nearestMarketName,
-                      coordinate: item.nearestMarketCoordinate,
-                      mode: "search",
-                    });
-                  }
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={item.nearestMarketName ? `${t("productDetails.viewInGoogleMaps")}: ${item.nearestMarketName}` : undefined}
-              >
-                <Ionicons name="location" size={11} color={accent} />
-                <Text
-                  style={[styles.distanceText, { color: semantic.colors.text.secondary }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {item.formattedDistance}{item.nearestMarketName ? ` • ${item.nearestMarketName}` : ""}
-                </Text>
-                {Boolean(item.nearestMarketName) && (
-                  <Ionicons name="open-outline" size={10} color={semantic.colors.text.secondary} style={{ marginLeft: 3 }} />
-                )}
-              </TouchableOpacity>
-            )}
-          </TouchableOpacity>
+            item={item}
+            isProductView={isProductView}
+            onItemPress={onItemPress}
+          />
         ))}
       </View>
     </View>
@@ -842,8 +910,11 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { flexGrow: 1, paddingVertical: 16, paddingBottom: 32 },
   bannerSection: { paddingHorizontal: 16, marginBottom: 20 },
+  bannerList: { height: 236 },
   bannerCardFull: {
     width: "100%",
+    height: 236,
+    overflow: "hidden",
     borderWidth: 1,
   },
   bannerImage: {
@@ -856,7 +927,7 @@ const styles = StyleSheet.create({
   bannerActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: "auto",
   },
   bannerLink: {},
   paginationContainer: {
@@ -925,11 +996,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
-  productItem: {
+  productItemWrapper: {
     width: "48%",
+    marginBottom: 4,
+  },
+  productItem: {
+    width: "100%",
     alignItems: "flex-start",
     borderWidth: 1,
-    marginBottom: 4,
   },
   imageWrapper: {
     width: "100%",
