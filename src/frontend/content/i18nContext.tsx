@@ -186,8 +186,8 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
 
       if (params && typeof rawText === "string") {
-        return Object.entries(params).reduce((str, [paramKey, paramVal]) => {
-          return str.replace(new RegExp(`\\{${paramKey}\\}`, "g"), String(paramVal));
+        return Object.entries(params).reduce((acc, [paramKey, paramValue]) => {
+          return acc.split(`{${paramKey}}`).join(String(paramValue));
         }, rawText);
       }
 

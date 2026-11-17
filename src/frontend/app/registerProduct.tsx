@@ -9,8 +9,8 @@ import {
   ActivityIndicator,
   Keyboard,
   TouchableWithoutFeedback,
-  Alert,
   Switch,
+  InteractionManager,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -27,6 +27,8 @@ import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import TwoFactorModal from "../components/TwoFactorModal";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
+import { appAlert } from "../components/AppAlertProvider";
 
 const FALLBACK_PRODUCT: {
   category: string;
@@ -152,15 +154,18 @@ export default function RegisterProduct() {
     }
   }, [targetEan, targetId]);
 
+  const [cooldownUntilMs, setCooldownUntilMs] = useState<number | null>(null);
+
   useEffect(() => {
     const effectiveId = product?.id || targetId;
     if (!user?.id || !effectiveId) {
+      setCooldownUntilMs(null);
       setCooldownRemainingSeconds(0);
       return;
     }
 
     let isMounted = true;
-    const fetchAndCheckCooldown = async () => {
+    const handle = InteractionManager.runAfterInteractions(async () => {
       try {
         const occList = await fetchProductOccurrences(effectiveId);
         if (!isMounted) return;
@@ -175,21 +180,41 @@ export default function RegisterProduct() {
 
         if (userOcc) {
           const createdMs = parseDateSafeMs(userOcc.createdAt);
-          const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
+          const untilMs = createdMs + 5 * 60 * 1000;
+          const remaining = Math.max(0, Math.ceil((untilMs - Date.now()) / 1000));
+          setCooldownUntilMs(remaining > 0 ? untilMs : null);
           setCooldownRemainingSeconds(remaining);
         } else {
+          setCooldownUntilMs(null);
           setCooldownRemainingSeconds(0);
         }
       } catch {}
-    };
+    });
 
-    fetchAndCheckCooldown();
-    const interval = setInterval(fetchAndCheckCooldown, 1000);
     return () => {
       isMounted = false;
-      clearInterval(interval);
+      handle.cancel();
     };
   }, [user?.id, product?.id, targetId]);
+
+  useEffect(() => {
+    if (!cooldownUntilMs) {
+      setCooldownRemainingSeconds(0);
+      return;
+    }
+
+    const updateRemaining = () => {
+      const remaining = Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000));
+      setCooldownRemainingSeconds(remaining);
+      if (remaining <= 0) {
+        setCooldownUntilMs(null);
+      }
+    };
+
+    updateRemaining();
+    const interval = setInterval(updateRemaining, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownUntilMs]);
 
   const isCooldownActive = cooldownRemainingSeconds > 0;
 
@@ -224,7 +249,7 @@ export default function RegisterProduct() {
   };
 
   const promptLogin = (onSuccessAction?: () => Promise<void>) => {
-    Alert.alert(
+    appAlert(
       t("auth.loginRequired"),
       t("auth.loginToSubmitPrice"),
       [
@@ -240,7 +265,7 @@ export default function RegisterProduct() {
               }
             } catch (err: any) {
               setIsSubmitting(false);
-              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              appAlert(t("common.error"), err?.message || t("errors.genericError"));
             }
           },
         },
@@ -275,7 +300,7 @@ export default function RegisterProduct() {
         const currentFormatted = `R$ ${numPrice.toFixed(2).replace(".", ",")}`;
         const ratioNotice = response.stats?.ratio ? ` (${response.stats.ratio}x da média)` : "";
 
-        Alert.alert(
+        appAlert(
           t("products.outlierAlertTitle") || "Atenção ao Valor Informado",
           avgFormatted
             ? `${t("products.outlierAlertBody") || "O valor digitado difere da média recente deste produto"}: ${currentFormatted} vs ${avgFormatted}${ratioNotice}.\n\n${t("products.outlierAlertQuestion") || "Tem certeza de que o valor está correto?"}`
@@ -300,7 +325,7 @@ export default function RegisterProduct() {
       // 2. Extreme Outlier: Informs user that price is pending admin approval
       if (response?.pendingApproval) {
         await refreshProfile();
-        Alert.alert(
+        appAlert(
           t("products.pendingApprovalTitle") || "Preço em Análise",
           t("products.pendingApprovalBody") ||
             "Como o valor informado difere expressivamente da média histórica deste produto, ele foi retido para análise de um moderador antes de ser exibido publicamente.\n\nObrigado pela sua contribuição!",
@@ -327,7 +352,7 @@ export default function RegisterProduct() {
 
       await refreshProfile();
 
-      Alert.alert(
+      appAlert(
         t("common.success"),
         t("products.priceSubmittedSuccess"),
         [
@@ -368,11 +393,11 @@ export default function RegisterProduct() {
       }
 
       if (err?.status === 429 || err?.code === "TOO_MANY_REQUESTS") {
-        Alert.alert(t("common.warning"), err.message || t("products.cooldownError"));
+        appAlert(t("common.warning"), err.message || t("products.cooldownError"));
         return;
       }
 
-      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+      appAlert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -394,7 +419,7 @@ export default function RegisterProduct() {
     const numPrice = cleanDigits ? parseInt(cleanDigits, 10) / 100 : 0;
 
     if (!price.trim() || isNaN(numPrice) || numPrice <= 0) {
-      Alert.alert(t("common.error"), t("products.invalidPriceFormat"));
+      appAlert(t("common.error"), t("products.invalidPriceFormat"));
       return;
     }
 
@@ -414,7 +439,7 @@ export default function RegisterProduct() {
     }
 
     if (!selectedMarketId || selectedMarketId <= 0 || markets.length === 0) {
-      Alert.alert(
+      appAlert(
         t("common.warning"),
         markets.length === 0
           ? t("products.noMarketsWithinRadius")
@@ -424,13 +449,13 @@ export default function RegisterProduct() {
     }
 
     if (!effectiveProductId) {
-      Alert.alert(t("common.warning"), t("errors.notFound"));
+      appAlert(t("common.warning"), t("errors.notFound"));
       setIsSubmitting(false);
       return;
     }
 
     if (isCooldownActive) {
-      Alert.alert(
+      appAlert(
         t("common.warning"),
         t("products.cooldownError"),
       );
@@ -469,7 +494,7 @@ export default function RegisterProduct() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+      <AnimatedScreenContainer style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
         <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.content,
@@ -1235,7 +1260,7 @@ export default function RegisterProduct() {
           }}
           actionDescription="Para registrar preços na comunidade, confirme o código enviado para seu e-mail."
         />
-      </View>
+      </AnimatedScreenContainer>
     </TouchableWithoutFeedback>
   );
 }

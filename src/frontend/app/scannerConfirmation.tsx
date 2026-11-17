@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   Platform,
-  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Image } from "expo-image";
@@ -21,6 +20,8 @@ import {
 } from "../constants/productCategories";
 import { parseDateSafeMs } from "../utils/dateUtils";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { AnimatedScreenContainer, AnimatedSection } from "../components/AnimatedMotion";
+import { appAlert } from "../components/AppAlertProvider";
 
 export default function ScannerConfirmation() {
   const router = useRouter();
@@ -120,7 +121,7 @@ export default function ScannerConfirmation() {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
         } catch {}
       }
-      Alert.alert(
+      appAlert(
         t("common.warning"),
         t("products.cooldownError"),
       );
@@ -156,7 +157,7 @@ export default function ScannerConfirmation() {
   };
 
   return (
-    <View
+    <AnimatedScreenContainer
       style={[
         styles.container,
         themeStyles.bg,
@@ -164,7 +165,7 @@ export default function ScannerConfirmation() {
       ]}
     >
       {/* Header Compacto de Etapa */}
-      <View style={styles.headerSection}>
+      <AnimatedSection style={styles.headerSection}>
         <View
           style={[
             styles.headerBadge,
@@ -203,7 +204,7 @@ export default function ScannerConfirmation() {
         >
           {t("scanner.confirmProductSubtitle")}
         </Text>
-      </View>
+      </AnimatedSection>
 
       {/* Card Principal Preenchendo a Tela */}
       <View
@@ -549,7 +550,7 @@ export default function ScannerConfirmation() {
           </View>
         </View>
       </View>
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 

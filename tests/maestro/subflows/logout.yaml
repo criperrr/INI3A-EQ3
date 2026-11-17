@@ -4,6 +4,13 @@ appId: com.presco.app
 - runFlow:
     when:
       visible:
+        id: "app-alert-confirm-btn"
+    commands:
+      - tapOn:
+          id: "app-alert-confirm-btn"
+- runFlow:
+    when:
+      visible:
         id: "android:id/button1"
     commands:
       - tapOn:
@@ -47,10 +54,10 @@ appId: com.presco.app
                 id: "profile-logout-btn"
             - extendedWaitUntil:
                 visible:
-                  id: "android:id/button1"
+                  id: "app-alert-confirm-btn"
                 timeout: 5000
             - tapOn:
-                id: "android:id/button1"
+                id: "app-alert-confirm-btn"
 
 - extendedWaitUntil:
     visible:

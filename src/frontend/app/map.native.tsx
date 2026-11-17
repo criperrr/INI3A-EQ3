@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import {
     View,
     StyleSheet,
@@ -8,7 +8,8 @@ import {
     Modal,
     Pressable,
     ScrollView,
-    Linking
+    Linking,
+    InteractionManager
 } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -20,6 +21,7 @@ import { useI18n } from "../content/i18nContext";
 import { fetchMarkets } from "../services/marketService";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { openMarketInGoogleMaps } from "../utils/mapNavigation";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
 
 const THEME_COLORS = {
     darkBlue: "#1565C0",
@@ -117,6 +119,39 @@ interface MarketMarker {
     shopType?: string;
     address?: string;
 }
+
+const MARKER_ANCHOR = { x: 0.5, y: 1 };
+
+interface MarketPinProps {
+    marker: MarketMarker;
+    isSelected: boolean;
+    onSelect: (marker: MarketMarker) => void;
+}
+
+const MarketPin = memo(function MarketPin({ marker, isSelected, onSelect }: MarketPinProps) {
+    const config = (CATEGORY_CONFIG as any)[marker.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
+    const coordinate = useMemo(
+        () => ({
+            latitude: Number(marker.coordinate.latitude),
+            longitude: Number(marker.coordinate.longitude),
+        }),
+        [marker.coordinate.latitude, marker.coordinate.longitude]
+    );
+    const handlePress = useCallback(() => {
+        onSelect(marker);
+    }, [onSelect, marker]);
+
+    return (
+        <Marker
+            coordinate={coordinate}
+            pinColor={config.color}
+            tracksViewChanges={false}
+            anchor={MARKER_ANCHOR}
+            zIndex={isSelected ? 999 : 1}
+            onPress={handlePress}
+        />
+    );
+});
 
 const formatOpeningHours = (hours: string | null | undefined, t?: (key: any) => string): string => {
     if (!hours) return t ? t("map.hoursUnknown") : "Horário não informado";
@@ -547,7 +582,7 @@ export default function MapScreen() {
     const [userLocation, setUserLocation] = useState<Coordinate>(lastSessionLocation || DEFAULT_COORDINATE);
     const [isLocationResolved, setIsLocationResolved] = useState<boolean>(!!lastSessionLocation);
     const [visibleMarkers, setVisibleMarkers] = useState<MarketMarker[]>([]);
-    const [tracksViewChanges, setTracksViewChanges] = useState<boolean>(true);
+    const [isMapReady, setIsMapReady] = useState<boolean>(false);
     const [activeFilterModal, setActiveFilterModal] = useState<"type" | "distance" | "hours" | null>(null);
     const [selectedMarket, setSelectedMarket] = useState<MarketMarker | null>(null);
 
@@ -892,12 +927,21 @@ export default function MapScreen() {
         }
 
         return distributed.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
-    }, [userLocation, rawHereElements, backendMarketsList, filters]);
+    }, [userLocation.latitude, userLocation.longitude, rawHereElements, backendMarketsList, filters]);
+
+    const handleOpenTypeFilter = useCallback(() => setActiveFilterModal("type"), []);
+    const handleOpenDistanceFilter = useCallback(() => setActiveFilterModal("distance"), []);
+    const handleOpenHoursFilter = useCallback(() => setActiveFilterModal("hours"), []);
+
+    const lastSyncedMarketsRef = useRef<MarketMarker[] | null>(null);
 
     // Sync visible markers instantly, then enrich driving routes in background
     useEffect(() => {
         let isMounted = true;
-        setVisibleMarkers(nearbyMarkets);
+        if (lastSyncedMarketsRef.current !== nearbyMarkets) {
+            lastSyncedMarketsRef.current = nearbyMarkets;
+            setVisibleMarkers(nearbyMarkets);
+        }
 
         if (nearbyMarkets.length === 0) return;
 
@@ -910,10 +954,19 @@ export default function MapScreen() {
             fetchDrivingDistances(userLocation, nearbyMarkets.slice(0, 15)).then(refined => {
                 if (isMounted) {
                     const updatedMap = new Map(refined.map(m => [m.id, m.routeDistance]));
-                    setVisibleMarkers(prev =>
-                        prev.map(m => updatedMap.has(m.id) ? { ...m, routeDistance: updatedMap.get(m.id)! } : m)
-                            .sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)))
-                    );
+                    setVisibleMarkers(prev => {
+                        let changed = false;
+                        const next = prev.map(m => {
+                            const newDist = updatedMap.get(m.id);
+                            if (newDist !== undefined && newDist !== m.routeDistance) {
+                                changed = true;
+                                return { ...m, routeDistance: newDist };
+                            }
+                            return m;
+                        });
+                        if (!changed) return prev;
+                        return next.sort((a, b) => ((a.routeDistance ?? 0) - (b.routeDistance ?? 0)));
+                    });
                 }
             });
         }
@@ -921,14 +974,34 @@ export default function MapScreen() {
         return () => { isMounted = false; };
     }, [nearbyMarkets, userLocation]);
 
-    // Keep tracksViewChanges active briefly when markers or selection change, then freeze for 60fps pan/zoom
     useEffect(() => {
-        setTracksViewChanges(true);
-        const timer = setTimeout(() => {
-            setTracksViewChanges(false);
-        }, 600);
-        return () => clearTimeout(timer);
-    }, [visibleMarkers, selectedMarket?.id]);
+        const handle = InteractionManager.runAfterInteractions(() => {
+            setIsMapReady(true);
+        });
+        return () => handle.cancel();
+    }, []);
+
+    const handleSelectMarket = useCallback((marker: MarketMarker) => {
+        setSelectedMarket(marker);
+    }, []);
+
+    const validMarkers = useMemo(
+        () =>
+            visibleMarkers.filter(
+                marker =>
+                    marker &&
+                    marker.coordinate &&
+                    typeof marker.coordinate.latitude === "number" &&
+                    typeof marker.coordinate.longitude === "number" &&
+                    !isNaN(marker.coordinate.latitude) &&
+                    !isNaN(marker.coordinate.longitude) &&
+                    marker.coordinate.latitude >= -90 &&
+                    marker.coordinate.latitude <= 90 &&
+                    marker.coordinate.longitude >= -180 &&
+                    marker.coordinate.longitude <= 180
+            ),
+        [visibleMarkers]
+    );
 
     const centerMapOnUser = () => {
         if (mapRef.current) {
@@ -966,9 +1039,10 @@ export default function MapScreen() {
     };
 
     return (
-        <View style={[styles.container, themeStyles.bg]}>
+        <AnimatedScreenContainer style={[styles.container, themeStyles.bg]}>
             <Stack.Screen options={{ gestureEnabled: false }} />
             <View style={styles.mapContainer}>
+                {isMapReady ? (
                 <MapView
                     ref={mapRef}
                     style={styles.map}
@@ -990,46 +1064,24 @@ export default function MapScreen() {
                         longitudeDelta: 0.04,
                     }}
                 >
-                    {visibleMarkers
-                        .filter(marker =>
-                            marker &&
-                            marker.coordinate &&
-                            typeof marker.coordinate.latitude === 'number' &&
-                            typeof marker.coordinate.longitude === 'number' &&
-                            !isNaN(marker.coordinate.latitude) &&
-                            !isNaN(marker.coordinate.longitude) &&
-                            marker.coordinate.latitude >= -90 &&
-                            marker.coordinate.latitude <= 90 &&
-                            marker.coordinate.longitude >= -180 &&
-                            marker.coordinate.longitude <= 180
-                        )
-                        .map((marker) => {
-                            const isSelected = selectedMarket?.id === marker.id;
-                            const config = (CATEGORY_CONFIG as any)[marker.shopType || "supermarket"] || CATEGORY_CONFIG.supermarket;
-                            const markerColor = config.color;
-
-                            return (
-                                <Marker
-                                    key={marker.id}
-                                    coordinate={{
-                                        latitude: Number(marker.coordinate.latitude),
-                                        longitude: Number(marker.coordinate.longitude),
-                                    }}
-                                    pinColor={markerColor}
-                                    tracksViewChanges={tracksViewChanges}
-                                    anchor={{ x: 0.5, y: 1 }}
-                                    zIndex={isSelected ? 999 : 1}
-                                    onPress={() => setSelectedMarket(marker)}
-                                />
-                            );
-                        })}
+                    {validMarkers.map((marker) => (
+                        <MarketPin
+                            key={marker.id}
+                            marker={marker}
+                            isSelected={selectedMarket?.id === marker.id}
+                            onSelect={handleSelectMarket}
+                        />
+                    ))}
                 </MapView>
+                ) : (
+                    <View style={[styles.map, themeStyles.bg]} />
+                )}
 
                 <View style={styles.filtersWrapper}>
                     <FilterButton
                         icon="storefront-outline"
                         label={getFilterLabel("type")}
-                        onPress={() => setActiveFilterModal("type")}
+                        onPress={handleOpenTypeFilter}
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
@@ -1038,7 +1090,7 @@ export default function MapScreen() {
                     <FilterButton
                         icon="navigate-outline"
                         label={getFilterLabel("distance")}
-                        onPress={() => setActiveFilterModal("distance")}
+                        onPress={handleOpenDistanceFilter}
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
@@ -1047,7 +1099,7 @@ export default function MapScreen() {
                     <FilterButton
                         icon="time-outline"
                         label={getFilterLabel("hours")}
-                        onPress={() => setActiveFilterModal("hours")}
+                        onPress={handleOpenHoursFilter}
                         themeStyles={themeStyles}
                         isDark={isDark}
                         accentColor={themeAccentColor}
@@ -1219,11 +1271,11 @@ export default function MapScreen() {
                 accentColor={themeAccentColor}
                 t={t}
             />
-        </View>
+        </AnimatedScreenContainer>
     );
 }
 
-const FilterButton = ({ icon, label, onPress, themeStyles, isDark, accentColor, isActive }: any) => (
+const FilterButton = memo(({ icon, label, onPress, themeStyles, isDark, accentColor, isActive }: any) => (
     <TouchableOpacity
         style={[
             styles.filterCard,
@@ -1250,7 +1302,7 @@ const FilterButton = ({ icon, label, onPress, themeStyles, isDark, accentColor, 
             {label}
         </Text>
     </TouchableOpacity>
-);
+));
 
 const FilterSelectionModal = ({ activeModal, filters, onClose, onUpdateFilters, themeStyles, isDark, accentColor, t }: any) => {
     if (!activeModal) return null;

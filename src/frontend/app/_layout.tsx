@@ -1,20 +1,106 @@
 // app/_layout.tsx
-import React, { useState, useEffect } from "react";
-import { StyleSheet, View, StatusBar, Platform, AppState, LogBox } from "react-native";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Animated, Dimensions, StyleSheet, View, StatusBar, AppState, LogBox } from "react-native";
 
 LogBox.ignoreAllLogs(true);
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { Stack, usePathname, router } from "expo-router";
+import { usePathname, router } from "expo-router";
+import { Stack as JsStack } from "expo-router/js-stack";
+import {
+  TransitionSpecs,
+  type StackCardStyleInterpolator,
+  type StackNavigationOptions,
+  type TransitionPreset,
+} from "expo-router/build/react-navigation/stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Image } from "expo-image";
 import { ThemeProvider, useTheme } from "../theme";
 import { I18nProvider } from "../content/i18nContext";
 import { AuthProvider } from "../content/authContext";
 import { TabNavigationProvider, useTabNavigation } from "../content/tabNavigationContext";
+import { AppAlertProvider } from "../components/AppAlertProvider";
 import Header from "../components/Header";
 import Footer, { TabKey } from "../components/Footer";
 import Sidebar from "../components/Sidebar";
 import SwipeTabNavigator from "../components/SwipeTabNavigator";
+
+const MAIN_TAB_NAMES = new Set(["index", "search", "scannerProduct", "map", "profile"]);
+const UTILITY_ROUTES = new Set(["/cart", "/settings", "/about", "/help"]);
+
+const GESTURE_RESPONSE_DISTANCE = Math.round(Dimensions.get("window").width * 0.5);
+
+const INSTANT_SPEC: TransitionPreset["transitionSpec"]["open"] = {
+  animation: "timing",
+  config: {
+    duration: 0,
+  },
+};
+
+const instantTabInterpolator: StackCardStyleInterpolator = () => ({
+  cardStyle: {
+    opacity: 1,
+  },
+});
+
+const FAST_FADE_SPEC: TransitionPreset["transitionSpec"]["open"] = {
+  animation: "timing",
+  config: {
+    duration: 90,
+  },
+};
+
+const hybridFadeAndEdgeSwipeInterpolator: StackCardStyleInterpolator = ({
+  current,
+  inverted,
+  closing,
+  swiping,
+  layouts: { screen },
+}) => {
+  const isSliding = Animated.add(swiping, closing).interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
+  const slideX = Animated.multiply(
+    current.progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [screen.width, 0],
+      extrapolate: "clamp",
+    }),
+    inverted
+  );
+
+  const translateX = Animated.multiply(isSliding, slideX);
+
+  const notSliding = isSliding.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 0],
+    extrapolate: "clamp",
+  });
+
+  // 1 when swiping/closing (opaque slide), current.progress when opening via tap (90ms fade)
+  const opacity = Animated.add(
+    isSliding,
+    Animated.multiply(notSliding, current.progress)
+  );
+
+  const overlayOpacity = current.progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.08],
+    extrapolate: "clamp",
+  });
+
+  return {
+    cardStyle: {
+      opacity,
+      transform: [{ translateX }],
+    },
+    overlayStyle: {
+      opacity: overlayOpacity,
+    },
+  };
+};
 
 function LayoutContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -35,17 +121,65 @@ function LayoutContent() {
   }, []);
 
   const getActiveTab = (): TabKey | undefined => {
-    if (!pathname) return "home";
-    if (pathname === "/") return "home";
-    if (pathname.includes("/map")) return "map";
-    if (pathname.includes("/scannerProduct")) return "registerProduct";
-    if (pathname.includes("/search")) return "search";
-    if (pathname.includes("/profile")) return "profile";
+    if (!pathname || pathname === "/") return "home";
+    if (pathname === "/map") return "map";
+    if (pathname === "/scannerProduct") return "registerProduct";
+    if (pathname === "/search") return "search";
+    if (pathname === "/profile") return "profile";
     return undefined;
   };
 
   // Hide header/footer on auth screens
   const isAuthScreen = pathname === "/login" || pathname === "/registerUser";
+
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
+
+  const handleOpenMenu = useCallback(() => setIsMenuOpen(true), []);
+  const handleCloseMenu = useCallback(() => setIsMenuOpen(false), []);
+  const handlePressSettings = useCallback(() => {
+    if (pathnameRef.current === "/settings") return;
+    if (UTILITY_ROUTES.has(pathnameRef.current)) {
+      router.replace("/settings");
+    } else {
+      router.push("/settings");
+    }
+  }, []);
+
+  const stackScreenOptions = useCallback(
+    ({ route }: { route: { name: string } }): StackNavigationOptions => {
+      const isTabRoute = MAIN_TAB_NAMES.has(route.name);
+      if (isTabRoute) {
+        return {
+          headerShown: false,
+          gestureEnabled: false,
+          transitionSpec: {
+            open: INSTANT_SPEC,
+            close: INSTANT_SPEC,
+          },
+          cardStyleInterpolator: instantTabInterpolator,
+          cardStyle: { backgroundColor: semantic.colors.surface.background },
+        };
+      }
+
+      return {
+        headerShown: false,
+        gestureEnabled: true,
+        gestureDirection: "horizontal",
+        gestureResponseDistance: GESTURE_RESPONSE_DISTANCE,
+        cardOverlayEnabled: true,
+        transitionSpec: {
+          open: FAST_FADE_SPEC,
+          close: TransitionSpecs.TransitionIOSSpec,
+        },
+        cardStyleInterpolator: hybridFadeAndEdgeSwipeInterpolator,
+        cardStyle: { backgroundColor: semantic.colors.surface.background },
+      };
+    },
+    [semantic.colors.surface.background]
+  );
 
   return (
     <View style={[styles.container, themeStyles.bg]}>
@@ -56,34 +190,34 @@ function LayoutContent() {
       />
       {!isAuthScreen && (
         <Header
-          onPressMenu={() => setIsMenuOpen(true)}
-          onPressSettings={() => {
-            if (pathname !== "/settings") {
-              router.push("/settings");
-            }
-          }}
+          onPressMenu={handleOpenMenu}
+          onPressSettings={handlePressSettings}
         />
       )}
       {!isAuthScreen && (
-        <Sidebar isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+        <Sidebar isOpen={isMenuOpen} onClose={handleCloseMenu} />
       )}
       <View style={[styles.contentWrapper, { backgroundColor: semantic.colors.surface.background }]}>
         <SwipeTabNavigator>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              gestureEnabled: Platform.OS !== "web" && !isMainTab,
-              gestureDirection: "horizontal",
-              animation: isMainTab
-                ? "none"
-                : Platform.OS === "ios"
-                ? "default"
-                : "slide_from_right",
-              fullScreenGestureEnabled: false,
-              animationDuration: 220,
-              contentStyle: { backgroundColor: semantic.colors.surface.background },
-            }}
-          />
+          <JsStack detachInactiveScreens={true} screenOptions={stackScreenOptions}>
+            <JsStack.Screen name="index" options={{ gestureEnabled: false }} />
+            <JsStack.Screen name="search" options={{ gestureEnabled: false }} />
+            <JsStack.Screen name="map" options={{ gestureEnabled: false }} />
+            <JsStack.Screen name="profile" options={{ gestureEnabled: false }} />
+            <JsStack.Screen name="settings" />
+            <JsStack.Screen name="productDetails" />
+            <JsStack.Screen name="cart" />
+            <JsStack.Screen name="help" />
+            <JsStack.Screen name="about" />
+            <JsStack.Screen name="login" />
+            <JsStack.Screen name="registerUser" />
+            <JsStack.Screen name="scannerProduct" options={{ gestureEnabled: false }} />
+            <JsStack.Screen name="manualEanSearch" />
+            <JsStack.Screen name="scannerConfirmation" />
+            <JsStack.Screen name="registerProduct" />
+            <JsStack.Screen name="customRegisterProduct" />
+            <JsStack.Screen name="adminModeration" />
+          </JsStack>
         </SwipeTabNavigator>
       </View>
       {!isAuthScreen && <Footer activeTab={getActiveTab()} />}
@@ -97,11 +231,13 @@ export default function Layout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <I18nProvider>
-            <AuthProvider>
-              <TabNavigationProvider>
-                <LayoutContent />
-              </TabNavigationProvider>
-            </AuthProvider>
+            <AppAlertProvider>
+              <AuthProvider>
+                <TabNavigationProvider>
+                  <LayoutContent />
+                </TabNavigationProvider>
+              </AuthProvider>
+            </AppAlertProvider>
           </I18nProvider>
         </ThemeProvider>
       </SafeAreaProvider>

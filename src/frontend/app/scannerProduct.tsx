@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   Dimensions,
   Platform,
@@ -23,6 +22,8 @@ import * as Haptics from "expo-haptics";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
+import { appAlert } from "../components/AppAlertProvider";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const VIEWFINDER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 300);
@@ -102,7 +103,7 @@ export default function ScannerProduct() {
     }
 
     const showNotFoundAlert = () => {
-      Alert.alert(
+      appAlert(
         t("scanner.productNotFoundTitle"),
         t("scanner.productNotFoundMessage"),
         [
@@ -187,7 +188,7 @@ export default function ScannerProduct() {
         errorMsg = t("errors.timeoutError");
       }
 
-      Alert.alert(t("common.error"), errorMsg, [
+      appAlert(t("common.error"), errorMsg, [
         {
           text: t("common.retry"),
           onPress: () => {
@@ -202,7 +203,7 @@ export default function ScannerProduct() {
   };
 
   return (
-    <View style={styles.container}>
+    <AnimatedScreenContainer style={styles.container}>
       {!permission.granted ? (
         <PermissionNotice onRequestPermission={requestPermission} t={t} />
       ) : (
@@ -306,7 +307,7 @@ export default function ScannerProduct() {
           </View>
         </>
       )}
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 

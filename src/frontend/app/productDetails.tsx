@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, memo } from "react";
 import {
   View,
   StyleSheet,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Modal,
   TextInput,
   KeyboardAvoidingView,
@@ -23,7 +22,12 @@ import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
 import TwoFactorModal from "../components/TwoFactorModal";
+import { appAlert } from "../components/AppAlertProvider";
 import { openMarketInGoogleMaps } from "../utils/mapNavigation";
+import {
+  AnimatedScreenContainer,
+  AnimatedModalContent,
+} from "../components/AnimatedMotion";
 import {
   fetchProductById,
   fetchProductByEan,
@@ -55,6 +59,96 @@ import { validateGs1Barcode } from "../utils/barcodeValidator";
 
 
 const EMPTY_HISTORY: PriceHistoryItem[] = [];
+
+const formatCooldownTime = (totalSeconds: number) => {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+};
+
+const CooldownBanner = memo(function CooldownBanner({
+  cooldownUntilMs,
+  onPress,
+  accent,
+  semantic,
+  themeStyles,
+  t,
+}: {
+  cooldownUntilMs: number | null;
+  onPress: () => void;
+  accent: string;
+  semantic: any;
+  themeStyles: any;
+  t: ReturnType<typeof useI18n>["t"];
+}) {
+  const [remainingSeconds, setRemainingSeconds] = useState(() =>
+    cooldownUntilMs ? Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000)) : 0
+  );
+
+  useEffect(() => {
+    if (!cooldownUntilMs) {
+      setRemainingSeconds(0);
+      return;
+    }
+
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((cooldownUntilMs - Date.now()) / 1000));
+      setRemainingSeconds(remaining);
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownUntilMs]);
+
+  const isCooldownActive = remainingSeconds > 0;
+
+  return (
+    <>
+      <TouchableOpacity
+        testID="btn-register-price"
+        style={[
+          styles.primaryActionBtn,
+          isCooldownActive
+            ? [styles.disabledActionBtn, themeStyles.inputBg, themeStyles.border]
+            : { backgroundColor: accent },
+        ]}
+        activeOpacity={isCooldownActive ? 1 : 0.85}
+        onPress={onPress}
+        disabled={isCooldownActive}
+      >
+        <Ionicons
+          name={isCooldownActive ? "time-outline" : "pricetag-outline"}
+          size={20}
+          color={isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse}
+          style={styles.btnIcon}
+        />
+        <Text
+          style={[
+            styles.primaryActionText,
+            isCooldownActive
+              ? { color: semantic.colors.text.tertiary }
+              : { color: semantic.colors.text.inverse },
+          ]}
+          numberOfLines={1}
+        >
+          {isCooldownActive
+            ? `${t("productDetails.addPrice")} (${formatCooldownTime(remainingSeconds)})`
+            : t("productDetails.addPrice")}
+        </Text>
+      </TouchableOpacity>
+
+      {isCooldownActive && (
+        <View style={[styles.cooldownNoticeBox, themeStyles.inputBg, themeStyles.border]}>
+          <Ionicons name="hourglass-outline" size={15} color="#E6A100" />
+          <Text style={[styles.cooldownNoticeText, themeStyles.subText]}>
+            {t("products.cooldownNotice")} ({formatCooldownTime(remainingSeconds)})
+          </Text>
+        </View>
+      )}
+    </>
+  );
+});
 
 export default function ProductDetails() {
   const params = useLocalSearchParams<{
@@ -88,12 +182,12 @@ export default function ProductDetails() {
   const [selectedReportReason, setSelectedReportReason] = useState<string>("price");
   const [reportDescription, setReportDescription] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
-  const [cooldownRemainingSeconds, setCooldownRemainingSeconds] = useState(0);
 
   const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
   const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
   const [imgError, setImgError] = useState(false);
+  const [showAllOccurrences, setShowAllOccurrences] = useState(false);
 
   const resolvedImageUri = getOptimizedImageUrl(product?.imageUri || product?.icon || params.imageUri, 400);
 
@@ -154,19 +248,29 @@ export default function ProductDetails() {
     try {
       let data: ProductDetailData | null = null;
 
-      const coords = await getUserLocation().catch(() => null);
-      const coordParams = coords ? { latitude: coords.latitude, longitude: coords.longitude } : undefined;
+      const locationPromise = getUserLocation().catch(() => null);
 
       if (targetId && !isNaN(targetId) && targetId > 0) {
-        // Parallel fetch for product details and occurrences
+        // Parallel fetch for product details and occurrences without blocking on GPS
         setLoadingOccurrences(true);
         const [productData, occurrencesList] = await Promise.all([
           fetchProductById(targetId),
-          fetchProductOccurrences(targetId, coordParams).catch(() => []),
+          fetchProductOccurrences(targetId).catch(() => []),
         ]);
         data = productData;
         setOccurrences(occurrencesList);
         setLoadingOccurrences(false);
+
+        locationPromise.then((coords) => {
+          if (coords) {
+            fetchProductOccurrences(targetId, {
+              latitude: coords.latitude,
+              longitude: coords.longitude,
+            })
+              .then((list) => setOccurrences(list))
+              .catch(() => {});
+          }
+        });
       } else if (targetBarcode) {
         const byBarcode = await fetchProductByEan(targetBarcode);
         if (byBarcode) {
@@ -175,14 +279,26 @@ export default function ProductDetails() {
             priceHistory: [],
           };
           if (byBarcode.id) {
+            const resolvedId = byBarcode.id;
             setLoadingOccurrences(true);
             const [fullDetails, occurrencesList] = await Promise.all([
-              fetchProductById(byBarcode.id).catch(() => byBarcode),
-              fetchProductOccurrences(byBarcode.id, coordParams).catch(() => []),
+              fetchProductById(resolvedId).catch(() => byBarcode),
+              fetchProductOccurrences(resolvedId).catch(() => []),
             ]);
             if (fullDetails) data = fullDetails;
             setOccurrences(occurrencesList);
             setLoadingOccurrences(false);
+
+            locationPromise.then((coords) => {
+              if (coords) {
+                fetchProductOccurrences(resolvedId, {
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                })
+                  .then((list) => setOccurrences(list))
+                  .catch(() => {});
+              }
+            });
           }
         }
       }
@@ -219,43 +335,21 @@ export default function ProductDetails() {
     loadProductData();
   }, [loadProductData]);
 
-  useEffect(() => {
-    if (!user?.id || occurrences.length === 0) {
-      setCooldownRemainingSeconds(0);
-      return;
-    }
-
-    const checkCooldown = () => {
-      const currentUserId = Number(user.id);
-      const userRecentOcc = occurrences.find((occ) => {
-        if (Number(occ.userId) !== currentUserId) return false;
-        const createdMs = parseDateSafeMs(occ.createdAt);
-        if (!createdMs) return false;
-        const diff = Date.now() - createdMs;
-        return diff >= 0 && diff < 5 * 60 * 1000;
-      });
-
-      if (userRecentOcc) {
-        const createdMs = parseDateSafeMs(userRecentOcc.createdAt);
-        const remaining = Math.max(0, Math.ceil((createdMs + 5 * 60 * 1000 - Date.now()) / 1000));
-        setCooldownRemainingSeconds(remaining);
-      } else {
-        setCooldownRemainingSeconds(0);
-      }
-    };
-
-    checkCooldown();
-    const interval = setInterval(checkCooldown, 1000);
-    return () => clearInterval(interval);
+  const cooldownUntilMs = useMemo(() => {
+    if (!user?.id || occurrences.length === 0) return null;
+    const currentUserId = Number(user.id);
+    const now = Date.now();
+    const userRecentOcc = occurrences.find((occ) => {
+      if (Number(occ.userId) !== currentUserId) return false;
+      const createdMs = parseDateSafeMs(occ.createdAt);
+      if (!createdMs) return false;
+      const diff = now - createdMs;
+      return diff >= 0 && diff < 5 * 60 * 1000;
+    });
+    if (!userRecentOcc) return null;
+    const createdMs = parseDateSafeMs(userRecentOcc.createdAt);
+    return createdMs ? createdMs + 5 * 60 * 1000 : null;
   }, [user?.id, occurrences]);
-
-  const isCooldownActive = cooldownRemainingSeconds > 0;
-
-  const formatCooldownTime = (totalSeconds: number) => {
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
 
   useEffect(() => {
     if (product?.id) {
@@ -321,11 +415,11 @@ export default function ProductDetails() {
   };
 
   const handleRegisterPrice = () => {
-    if (isCooldownActive) {
+    if (cooldownUntilMs && cooldownUntilMs > Date.now()) {
       try {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch {}
-      Alert.alert(
+      appAlert(
         t("common.warning"),
         t("products.cooldownError") || "Você já enviou um preço para este produto recentemente. Aguarde 5 minutos antes de enviar novamente.",
       );
@@ -333,7 +427,7 @@ export default function ProductDetails() {
     }
 
     if (!isAuthenticated) {
-      Alert.alert(
+      appAlert(
         t("auth.loginRequired") || "Autenticação Necessária",
         "Você precisa estar conectado para registrar preços e ganhar XP. Deseja fazer login agora?",
         [
@@ -371,7 +465,7 @@ export default function ProductDetails() {
 
   const handleVote = async (occId: number, verdict: boolean) => {
     if (!isAuthenticated && !user) {
-      Alert.alert(
+      appAlert(
         t("auth.loginRequired"),
         t("auth.loginToVote"),
         [
@@ -396,7 +490,7 @@ export default function ProductDetails() {
 
     // Prevent voting on user's own price occurrence
     if (occ && user?.id && occ.userId === user.id) {
-      Alert.alert(
+      appAlert(
         t("common.warning"),
         t("productDetails.cannotVoteOwnPrice"),
       );
@@ -408,17 +502,17 @@ export default function ProductDetails() {
 
       // Display appropriate feedback based on vote action
       if (result.removed) {
-        Alert.alert(
+        appAlert(
           t("common.success"),
           t("productDetails.voteRemoved"),
         );
       } else if (result.isNewVote) {
-        Alert.alert(
+        appAlert(
           t("common.success"),
           t("productDetails.votedSuccess"),
         );
       } else if (result.changed) {
-        Alert.alert(
+        appAlert(
           t("common.success"),
           t("productDetails.voteUpdated"),
         );
@@ -428,8 +522,9 @@ export default function ProductDetails() {
       refreshProfile();
     } catch (err: any) {
       if (err?.code === "TWO_FACTOR_REQUIRED" || String(err?.message).includes("duas etapas")) {
-        // [DEMO DEV]: Ignora exigência de 2FA e executa voto
-        await handleVote(occId, verdict);
+        setTwoFactorActionDescription("Para votar na precisão dos preços e ganhar XP, confirme o código enviado para seu e-mail.");
+        setPending2FAAction(() => () => handleVote(occId, verdict));
+        setIsTwoFactorModalVisible(true);
         return;
       }
 
@@ -440,7 +535,7 @@ export default function ProductDetails() {
         String(err?.message).toLowerCase().includes("autentica");
 
       if (isAuthError) {
-        Alert.alert(
+        appAlert(
           t("auth.loginRequired"),
           t("auth.loginToVote"),
           [
@@ -454,12 +549,12 @@ export default function ProductDetails() {
         return;
       }
 
-      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+      appAlert(t("common.error"), err.message || t("errors.genericError"));
     }
   };
 
   const handleDeleteOccurrence = (occId: number) => {
-    Alert.alert(
+    appAlert(
       t("common.delete"),
       t("productDetails.deleteOccurrenceConfirm"),
       [
@@ -470,13 +565,13 @@ export default function ProductDetails() {
           onPress: async () => {
             try {
               await deleteOccurrence(occId);
-              Alert.alert(t("common.success"), t("common.success"));
+              appAlert(t("common.success"), t("common.success"));
               if (product?.id) {
                 loadOccurrences(product.id);
                 loadProductData();
               }
             } catch (err: any) {
-              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+              appAlert(t("common.error"), err.message || t("errors.genericError"));
             }
           },
         },
@@ -500,12 +595,12 @@ export default function ProductDetails() {
 
   const handleSaveEdit = async () => {
     if (!editName.trim()) {
-      Alert.alert(t("common.warning"), t("auth.nameRequired"));
+      appAlert(t("common.warning"), t("auth.nameRequired"));
       return;
     }
 
     if (!product?.id) {
-      Alert.alert(t("common.error"), t("errors.notFound"));
+      appAlert(t("common.error"), t("errors.notFound"));
       return;
     }
 
@@ -526,9 +621,9 @@ export default function ProductDetails() {
 
       setProduct((prev) => (prev ? { ...prev, ...updated } : updated));
       setIsEditModalVisible(false);
-      Alert.alert(t("common.success"), t("common.success"));
+      appAlert(t("common.success"), t("common.success"));
     } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+      appAlert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setSavingEdit(false);
     }
@@ -536,11 +631,11 @@ export default function ProductDetails() {
 
   const handleDeleteProduct = () => {
     if (!product?.id) {
-      Alert.alert(t("common.warning"), t("errors.notFound"));
+      appAlert(t("common.warning"), t("errors.notFound"));
       return;
     }
 
-    Alert.alert(
+    appAlert(
       t("productDetails.deleteProduct"),
       t("productDetails.deleteProductConfirm"),
       [
@@ -551,14 +646,14 @@ export default function ProductDetails() {
           onPress: async () => {
             try {
               await deleteProduct(product.id!);
-              Alert.alert(t("common.success"), t("common.success"), [
+              appAlert(t("common.success"), t("common.success"), [
                 {
                   text: t("common.ok"),
                   onPress: () => router.back(),
                 },
               ]);
             } catch (err: any) {
-              Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+              appAlert(t("common.error"), err.message || t("errors.genericError"));
             }
           },
         },
@@ -576,7 +671,7 @@ export default function ProductDetails() {
 
   const handleOpenReport = () => {
     if (!product?.id) {
-      Alert.alert(t("common.warning"), t("errors.notFound"));
+      appAlert(t("common.warning"), t("errors.notFound"));
       return;
     }
     setSelectedReportReason("price");
@@ -611,9 +706,9 @@ export default function ProductDetails() {
       } catch {}
 
       setIsReportModalVisible(false);
-      Alert.alert(t("common.success"), t("productDetails.reportSuccess"));
+      appAlert(t("common.success"), t("productDetails.reportSuccess"));
     } catch (err: any) {
-      Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+      appAlert(t("common.error"), err.message || t("errors.genericError"));
     } finally {
       setSubmittingReport(false);
     }
@@ -623,7 +718,7 @@ export default function ProductDetails() {
     if (!product?.id) return;
 
     if (!isAuthenticated) {
-      Alert.alert(
+      appAlert(
         t("auth.loginRequired"),
         t("auth.loginToVote") || "Você precisa estar conectado para realizar esta ação.",
         [
@@ -636,7 +731,7 @@ export default function ProductDetails() {
                 await loginAsTestUser("user");
                 await submitReportExecution();
               } catch (err: any) {
-                Alert.alert(t("common.error"), err.message || t("errors.genericError"));
+                appAlert(t("common.error"), err.message || t("errors.genericError"));
               } finally {
                 setSubmittingReport(false);
               }
@@ -683,7 +778,7 @@ export default function ProductDetails() {
   const history = product.priceHistory || EMPTY_HISTORY;
 
   return (
-    <View testID="product-details-screen" style={[styles.container, themeStyles.bg]}>
+    <AnimatedScreenContainer testID="product-details-screen" style={[styles.container, themeStyles.bg]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
@@ -908,7 +1003,8 @@ export default function ProductDetails() {
                 </Text>
               </View>
             ) : (
-              occurrences.map((occ) => {
+              <>
+                {(showAllOccurrences ? occurrences : occurrences.slice(0, 8)).map((occ) => {
                 const isOwnOccurrence = Boolean(user?.id && occ.userId === user.id);
                 const isUpvoted = occ.userVote === true;
                 const isDownvoted = occ.userVote === false;
@@ -1031,7 +1127,30 @@ export default function ProductDetails() {
                     </View>
                   </View>
                 );
-              })
+              })}
+                {occurrences.length > 8 && (
+                  <TouchableOpacity
+                    onPress={() => setShowAllOccurrences((prev) => !prev)}
+                    style={{
+                      paddingVertical: 10,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ color: accent, fontWeight: "600", fontSize: 13 }}>
+                      {showAllOccurrences ? "Ver menos" : `Ver mais (${occurrences.length - 8})`}
+                    </Text>
+                    <Ionicons
+                      name={showAllOccurrences ? "chevron-up" : "chevron-down"}
+                      size={16}
+                      color={accent}
+                    />
+                  </TouchableOpacity>
+                )}
+              </>
             )}
           </View>
           </>
@@ -1107,47 +1226,14 @@ export default function ProductDetails() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              testID="btn-register-price"
-              style={[
-                styles.primaryActionBtn,
-                isCooldownActive
-                  ? [styles.disabledActionBtn, themeStyles.inputBg, themeStyles.border]
-                  : { backgroundColor: accent },
-              ]}
-              activeOpacity={isCooldownActive ? 1 : 0.85}
+            <CooldownBanner
+              cooldownUntilMs={cooldownUntilMs}
               onPress={handleRegisterPrice}
-              disabled={isCooldownActive}
-            >
-              <Ionicons
-                name={isCooldownActive ? "time-outline" : "pricetag-outline"}
-                size={20}
-                color={isCooldownActive ? semantic.colors.text.tertiary : semantic.colors.text.inverse}
-                style={styles.btnIcon}
-              />
-              <Text
-                style={[
-                  styles.primaryActionText,
-                  isCooldownActive
-                    ? { color: semantic.colors.text.tertiary }
-                    : { color: semantic.colors.text.inverse },
-                ]}
-                numberOfLines={1}
-              >
-                {isCooldownActive
-                  ? `${t("productDetails.addPrice")} (${formatCooldownTime(cooldownRemainingSeconds)})`
-                  : t("productDetails.addPrice")}
-              </Text>
-            </TouchableOpacity>
-
-            {isCooldownActive && (
-              <View style={[styles.cooldownNoticeBox, themeStyles.inputBg, themeStyles.border]}>
-                <Ionicons name="hourglass-outline" size={15} color="#E6A100" />
-                <Text style={[styles.cooldownNoticeText, themeStyles.subText]}>
-                  {t("products.cooldownNotice")} ({formatCooldownTime(cooldownRemainingSeconds)})
-                </Text>
-              </View>
-            )}
+              accent={accent}
+              semantic={semantic}
+              themeStyles={themeStyles}
+              t={t}
+            />
 
             {isAdmin ? (
               <View style={styles.secondaryActionsRow}>
@@ -1192,6 +1278,7 @@ export default function ProductDetails() {
       </ScrollView>
 
       {/* Edit Product Modal */}
+      {isEditModalVisible && (
       <Modal visible={isEditModalVisible} animationType="slide" transparent>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <KeyboardAvoidingView
@@ -1271,8 +1358,10 @@ export default function ProductDetails() {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+      )}
 
       {/* Report Product Modal */}
+      {isReportModalVisible && (
       <Modal visible={isReportModalVisible} animationType="slide" transparent>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <KeyboardAvoidingView
@@ -1375,22 +1464,25 @@ export default function ProductDetails() {
           </KeyboardAvoidingView>
         </TouchableWithoutFeedback>
       </Modal>
+      )}
 
-      <TwoFactorModal
-        visible={isTwoFactorModalVisible}
-        onClose={() => {
-          setIsTwoFactorModalVisible(false);
-          setPending2FAAction(null);
-        }}
-        onSuccess={() => {
-          setIsTwoFactorModalVisible(false);
-          const action = pending2FAAction;
-          setPending2FAAction(null);
-          if (action) action();
-        }}
-        actionDescription={twoFactorActionDescription}
-      />
-    </View>
+      {isTwoFactorModalVisible && (
+        <TwoFactorModal
+          visible={isTwoFactorModalVisible}
+          onClose={() => {
+            setIsTwoFactorModalVisible(false);
+            setPending2FAAction(null);
+          }}
+          onSuccess={() => {
+            setIsTwoFactorModalVisible(false);
+            const action = pending2FAAction;
+            setPending2FAAction(null);
+            if (action) action();
+          }}
+          actionDescription={twoFactorActionDescription}
+        />
+      )}
+    </AnimatedScreenContainer>
   );
 }
 
@@ -1407,7 +1499,7 @@ interface PriceHistorySectionProps {
   language?: string;
 }
 
-const PriceHistorySection = ({
+const PriceHistorySection = React.memo(({
   productId,
   history,
   accent,
@@ -1683,7 +1775,7 @@ const PriceHistorySection = ({
       )}
     </View>
   );
-};
+});
 
 // --- Estilos ---
 const styles = StyleSheet.create({

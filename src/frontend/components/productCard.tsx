@@ -13,6 +13,7 @@ interface ProductCardProps {
   brand?: string | null;
   isPromotion?: boolean;
   imageUri?: string;
+  animationIndex?: number;
   children?: ReactNode;
 }
 

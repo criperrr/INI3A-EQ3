@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  Alert,
   Modal,
+  InteractionManager,
 } from "react-native";
 import { Image } from "expo-image";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -19,6 +19,8 @@ import { useI18n } from "../content/i18nContext";
 import { useAuth } from "../content/authContext";
 import TwoFactorModal from "../components/TwoFactorModal";
 import type { BadgeItem } from "../services/auth";
+import { AnimatedScreenContainer, AnimatedSection } from "../components/AnimatedMotion";
+import { appAlert } from "../components/AppAlertProvider";
 import {
   fetchCustomizationCatalog,
   buyCustomizationItem,
@@ -124,9 +126,11 @@ export default function ProfileScreen() {
   }, [refreshProfile, isAuthenticated, user]);
 
   useEffect(() => {
-    if (isAuthenticated || user) {
+    if (!isAuthenticated && !user) return;
+    const handle = InteractionManager.runAfterInteractions(() => {
       loadData();
-    }
+    });
+    return () => handle.cancel();
   }, [loadData, isAuthenticated, user]);
 
   const onRefresh = () => {
@@ -144,7 +148,7 @@ export default function ProfileScreen() {
       const data = await fetchCustomizationCatalog();
       setCatalog(data);
     } catch (e: any) {
-      Alert.alert(
+      appAlert(
         t("common.error") || "Erro",
         e?.message || "Não foi possível carregar a loja de personalizações.",
       );
@@ -158,7 +162,7 @@ export default function ProfileScreen() {
     try {
       await loginAsTestUser(type);
     } catch (e: any) {
-      Alert.alert(
+      appAlert(
         t("common.error") || "Erro",
         e?.message || "Falha ao conectar ao usuário de teste.",
       );
@@ -168,7 +172,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    appAlert(
       t("auth.logout") || "Sair da Conta",
       t("auth.logoutConfirm") || "Deseja realmente encerrar a sessão?",
       [
@@ -233,7 +237,7 @@ export default function ProfileScreen() {
   const equippedCustomizations = profile?.equippedCustomizations || catalog?.equipped;
 
   return (
-    <View style={[styles.container, themeStyles.bg]}>
+    <AnimatedScreenContainer style={[styles.container, themeStyles.bg]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -246,16 +250,18 @@ export default function ProfileScreen() {
           />
         }
       >
-        <ProfileHeader
-          name={displayName}
-          email={displayEmail}
-          roleTitle={displayRole}
-          level={displayLevel}
-          isAdmin={isAdmin}
-          accent={accent}
-          equipped={equippedCustomizations}
-          t={t}
-        />
+        <AnimatedSection delay={0}>
+          <ProfileHeader
+            name={displayName}
+            email={displayEmail}
+            roleTitle={displayRole}
+            level={displayLevel}
+            isAdmin={isAdmin}
+            accent={accent}
+            equipped={equippedCustomizations}
+            t={t}
+          />
+        </AnimatedSection>
 
         {isAdmin && <AdminPrivilegesBanner accent={accent} themeStyles={themeStyles} t={t} />}
 
@@ -351,31 +357,35 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* Interactive Customization Shop Modal */}
-      <CustomizationShopModal
-        visible={shopModalVisible}
-        onClose={() => setShopModalVisible(false)}
-        catalog={catalog}
-        loading={loadingShop}
-        userPoints={userPoints}
-        userLevel={displayLevel}
-        displayName={displayName}
-        isAdmin={isAdmin}
-        accent={accent}
-        onRefreshProfile={refreshProfile}
-        setCatalog={setCatalog}
-        t={t}
-      />
+      {shopModalVisible && (
+        <CustomizationShopModal
+          visible={shopModalVisible}
+          onClose={() => setShopModalVisible(false)}
+          catalog={catalog}
+          loading={loadingShop}
+          userPoints={userPoints}
+          userLevel={displayLevel}
+          displayName={displayName}
+          isAdmin={isAdmin}
+          accent={accent}
+          onRefreshProfile={refreshProfile}
+          setCatalog={setCatalog}
+          t={t}
+        />
+      )}
 
-      <TwoFactorModal
-        visible={isTwoFactorModalVisible}
-        onClose={() => setIsTwoFactorModalVisible(false)}
-        onSuccess={() => {
-          setIsTwoFactorModalVisible(false);
-          refreshProfile();
-        }}
-        actionDescription="Confirme o código enviado para seu e-mail para ativar a segurança em 2 etapas."
-      />
-    </View>
+      {isTwoFactorModalVisible && (
+        <TwoFactorModal
+          visible={isTwoFactorModalVisible}
+          onClose={() => setIsTwoFactorModalVisible(false)}
+          onSuccess={() => {
+            setIsTwoFactorModalVisible(false);
+            refreshProfile();
+          }}
+          actionDescription="Confirme o código enviado para seu e-mail para ativar a segurança em 2 etapas."
+        />
+      )}
+    </AnimatedScreenContainer>
   );
 }
 
@@ -818,16 +828,22 @@ const BadgesSection = memo(function BadgesSection({
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<BadgeItem | null>(null);
 
+  const unlockedCount = useMemo(
+    () => (badges ? badges.filter((b) => b.isUnlocked).length : 0),
+    [badges],
+  );
+  const lockedCount = (badges?.length ?? 0) - unlockedCount;
+
+  const filteredBadges = useMemo(() => {
+    if (!badges) return [];
+    return badges.filter((b) => {
+      if (activeFilter === "unlocked") return b.isUnlocked;
+      if (activeFilter === "locked") return !b.isUnlocked;
+      return true;
+    });
+  }, [badges, activeFilter]);
+
   if (!badges || badges.length === 0) return null;
-
-  const unlockedCount = badges.filter((b) => b.isUnlocked).length;
-  const lockedCount = badges.length - unlockedCount;
-
-  const filteredBadges = badges.filter((b) => {
-    if (activeFilter === "unlocked") return b.isUnlocked;
-    if (activeFilter === "locked") return !b.isUnlocked;
-    return true;
-  });
 
   const visibleBadges = isExpanded ? filteredBadges : filteredBadges.slice(0, 6);
 
@@ -1022,12 +1038,13 @@ const BadgesSection = memo(function BadgesSection({
       )}
 
       {/* Interactive Achievement Detail Modal */}
-      <Modal
-        visible={!!selectedBadge}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSelectedBadge(null)}
-      >
+      {selectedBadge && (
+        <Modal
+          visible={!!selectedBadge}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedBadge(null)}
+        >
         <View style={styles.badgeModalOverlay}>
           <TouchableOpacity
             style={StyleSheet.absoluteFill}
@@ -1134,7 +1151,8 @@ const BadgesSection = memo(function BadgesSection({
             </View>
           )}
         </View>
-      </Modal>
+        </Modal>
+      )}
     </View>
   );
 });
@@ -1346,9 +1364,9 @@ function CustomizationShopModal({
       setCatalog(res.catalog);
       setPreviewCustomizations(res.catalog.equipped);
       await onRefreshProfile();
-      Alert.alert(t("profile.customizationShop"), t("profile.itemPurchasedSuccess"));
+      appAlert(t("profile.customizationShop"), t("profile.itemPurchasedSuccess"));
     } catch (e: any) {
-      Alert.alert(t("common.error") || "Erro", e?.message || "Falha ao comprar item.");
+      appAlert(t("common.error") || "Erro", e?.message || "Falha ao comprar item.");
     } finally {
       setActionLoadingId(null);
     }
@@ -1362,9 +1380,9 @@ function CustomizationShopModal({
       setCatalog(res.catalog);
       setPreviewCustomizations(res.catalog.equipped);
       await onRefreshProfile();
-      Alert.alert(t("profile.customizationShop"), t("profile.itemEquippedSuccess"));
+      appAlert(t("profile.customizationShop"), t("profile.itemEquippedSuccess"));
     } catch (e: any) {
-      Alert.alert(t("common.error") || "Erro", e?.message || "Falha ao equipar item.");
+      appAlert(t("common.error") || "Erro", e?.message || "Falha ao equipar item.");
     } finally {
       setActionLoadingId(null);
     }
@@ -1380,7 +1398,7 @@ function CustomizationShopModal({
       setPreviewCustomizations(res.catalog.equipped);
       await onRefreshProfile();
     } catch (e: any) {
-      Alert.alert(t("common.error") || "Erro", e?.message || "Falha ao desequipar item.");
+      appAlert(t("common.error") || "Erro", e?.message || "Falha ao desequipar item.");
     }
   };
 
@@ -1852,7 +1870,8 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
         </Text>
       </View>
 
-      {/* Quick Test Connection Box */}
+      {/* Quick Test Connection Box (Dev builds only, never production) */}
+      {__DEV__ && process.env.EXPO_PUBLIC_APP_VARIANT !== "production" && (
       <View
         style={[
           styles.quickConnectBox,
@@ -1928,6 +1947,7 @@ const UnauthenticatedProfileView = memo(function UnauthenticatedProfileView({
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
       {/* Standard Actions */}
       <View style={styles.standardActions}>

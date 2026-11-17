@@ -20,6 +20,7 @@ import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import { ScalePressable } from "../components/AnimatedMotion";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -33,7 +34,7 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const isDevBuild = __DEV__;
+  const isDevBuild = __DEV__ && process.env.EXPO_PUBLIC_APP_VARIANT !== "production";
 
   const handleLogin = async (overrideEmail?: string, overridePass?: string) => {
     const targetEmail = overrideEmail || email;
@@ -178,14 +179,13 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            <ScalePressable
               testID="login-submit-btn"
               style={[
                 styles.loginButton,
                 { backgroundColor: accent, shadowColor: accent },
                 isLoading && styles.loginButtonDisabled,
               ]}
-              activeOpacity={0.8}
               onPress={() => handleLogin()}
               disabled={isLoading}
               accessible={true}
@@ -198,7 +198,7 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.loginButtonText}>{t("auth.loginButton")}</Text>
               )}
-            </TouchableOpacity>
+            </ScalePressable>
           </View>
 
           <FooterLinks

@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -16,6 +15,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
+import { appAlert } from "../components/AppAlertProvider";
 import {
   fetchPendingOccurrences,
   approveOccurrence,
@@ -29,6 +29,7 @@ import {
   PendingProductItem,
 } from "../services/productService";
 import { formatDisplayDate } from "../utils/dateUtils";
+import { AnimatedScreenContainer } from "../components/AnimatedMotion";
 
 export default function AdminModerationScreen() {
   const [activeTab, setActiveTab] = useState<"prices" | "products">("products");
@@ -54,7 +55,7 @@ export default function AdminModerationScreen() {
       setPendingProducts(Array.isArray(productsData) ? productsData : []);
     } catch (err: any) {
       console.warn("[AdminModeration] Erro ao carregar itens pendentes:", err);
-      Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+      appAlert(t("common.error"), err?.message || t("errors.genericError"));
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -63,7 +64,7 @@ export default function AdminModerationScreen() {
 
   useEffect(() => {
     if (!isAdmin) {
-      Alert.alert(t("common.error"), t("admin.adminOnly") || "Acesso restrito para administradores.");
+      appAlert(t("common.error"), t("admin.adminOnly") || "Acesso restrito para administradores.");
       router.back();
       return;
     }
@@ -82,13 +83,13 @@ export default function AdminModerationScreen() {
       await approveOccurrence(id);
       setItems((prev) => prev.filter((item) => item.id !== id));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      appAlert(
         t("common.success"),
         t("admin.approvedSuccess") || "Preço aprovado com sucesso! A ocorrência agora é pública e os 15 XP foram concedidos ao usuário.",
       );
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+      appAlert(t("common.error"), err?.message || t("errors.genericError"));
     } finally {
       setActionLoadingId(null);
     }
@@ -96,7 +97,7 @@ export default function AdminModerationScreen() {
 
   const handleReject = async (id: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
+    appAlert(
       t("admin.rejectPromptTitle") || "Rejeitar Preço",
       t("admin.rejectPromptBody") || "Deseja realmente rejeitar este preço? O registro permanecerá suspenso e não será exibido para a comunidade.",
       [
@@ -110,10 +111,10 @@ export default function AdminModerationScreen() {
               await rejectOccurrence(id);
               setItems((prev) => prev.filter((item) => item.id !== id));
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert(t("common.success"), t("admin.rejectedSuccess") || "Ocorrência rejeitada com sucesso.");
+              appAlert(t("common.success"), t("admin.rejectedSuccess") || "Ocorrência rejeitada com sucesso.");
             } catch (err: any) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              appAlert(t("common.error"), err?.message || t("errors.genericError"));
             } finally {
               setActionLoadingId(null);
             }
@@ -130,13 +131,13 @@ export default function AdminModerationScreen() {
       await approveProduct(id);
       setPendingProducts((prev) => prev.filter((p) => p.id !== id));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
+      appAlert(
         t("common.success"),
         "Produto aprovado! Ele saiu da quarentena, agora aparece nas buscas públicas e concedeu +25 XP aos colaboradores.",
       );
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+      appAlert(t("common.error"), err?.message || t("errors.genericError"));
     } finally {
       setActionLoadingId(null);
     }
@@ -144,7 +145,7 @@ export default function AdminModerationScreen() {
 
   const handleRejectProduct = async (id: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
+    appAlert(
       "Rejeitar Produto em Quarentena",
       "Deseja remover este produto da fila de quarentena? Ele será excluído e não aparecerá nas buscas.",
       [
@@ -158,10 +159,10 @@ export default function AdminModerationScreen() {
               await rejectProduct(id);
               setPendingProducts((prev) => prev.filter((p) => p.id !== id));
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              Alert.alert(t("common.success"), "Produto rejeitado e removido da quarentena.");
+              appAlert(t("common.success"), "Produto rejeitado e removido da quarentena.");
             } catch (err: any) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert(t("common.error"), err?.message || t("errors.genericError"));
+              appAlert(t("common.error"), err?.message || t("errors.genericError"));
             } finally {
               setActionLoadingId(null);
             }
@@ -178,7 +179,7 @@ export default function AdminModerationScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+    <AnimatedScreenContainer style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: semantic.colors.border.subtle }]}>
         <TouchableOpacity
@@ -818,7 +819,7 @@ export default function AdminModerationScreen() {
           })}
         </ScrollView>
       )}
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 

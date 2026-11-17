@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { StyleSheet, View, Platform, Dimensions } from "react-native";
+import { StyleSheet, Platform, Dimensions } from "react-native";
 import { usePathname } from "expo-router";
 import { GestureDetector, Gesture } from "react-native-gesture-handler";
 import Animated, {
@@ -42,15 +42,21 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
   const isDragging = useSharedValue(false);
   const isBusy = useSharedValue(false);
 
-  // Sincroniza a entrada fluida da nova tela quando o pathname muda
+  // Sincroniza a entrada fluida da nova tela apenas quando há deslocamento ativo de swipe
   useEffect(() => {
     isBusy.value = false;
     isDragging.value = false;
-    translateX.value = withTiming(0, {
-      duration: 180,
-      easing: Easing.out(Easing.cubic),
-    });
-  }, [pathname, isBusy, isDragging, translateX]);
+    if (!isMainTab) {
+      translateX.value = 0;
+      return;
+    }
+    if (translateX.value !== 0) {
+      translateX.value = withTiming(0, {
+        duration: 140,
+        easing: Easing.out(Easing.cubic),
+      });
+    }
+  }, [pathname, isMainTab, isBusy, isDragging, translateX]);
 
   const triggerHaptic = () => {
     if (Platform.OS !== "web") {
@@ -165,14 +171,6 @@ export default function SwipeTabNavigator({ children }: SwipeTabNavigatorProps) 
       opacity,
     };
   });
-
-  if (!isSwipeEnabled) {
-    return (
-      <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
-        {children}
-      </View>
-    );
-  }
 
   return (
     <GestureDetector gesture={panGesture}>
