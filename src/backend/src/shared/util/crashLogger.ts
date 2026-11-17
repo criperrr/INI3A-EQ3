@@ -1,16 +1,61 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const MAX_CRASH_LOG_BYTES = 2 * 1024 * 1024; // 2 MiB cap
+
+function isStagingEnvironment(): boolean {
+  if (process.env.PRESCO_ENV === "staging") return true;
+  if (process.env.NODE_ENV === "development") {
+    const cwd = process.cwd();
+    if (cwd.includes("/staging") || __dirname.includes("/staging/")) return true;
+  }
+  const cwd = process.cwd();
+  return cwd.includes("/26-presco/staging") || __dirname.includes("/26-presco/staging/");
+}
 
 function getLogDir(): string {
-  if (process.env.LOG_DIR) {
-    return path.resolve(process.env.LOG_DIR);
+  const configured = process.env.LOG_DIR?.trim();
+  if (configured) {
+    return path.resolve(configured);
   }
-  // If running in production on remote server
-  if (fs.existsSync("/var/www/equipes/26-presco")) {
-    return "/var/www/equipes/26-presco/logs";
+
+  if (isStagingEnvironment()) {
+    if (fs.existsSync("/var/www/equipes/26-presco/staging/shared/logs")) {
+      return "/var/www/equipes/26-presco/staging/shared/logs";
+    }
+    if (fs.existsSync("/var/www/equipes/26-presco/staging")) {
+      return "/var/www/equipes/26-presco/staging/logs";
+    }
+    return path.resolve(process.cwd(), "logs");
   }
-  // Default to logs directory relative to project root or backend
+
+  if (process.env.NODE_ENV === "production") {
+    if (fs.existsSync("/var/www/equipes/26-presco/shared/logs")) {
+      return "/var/www/equipes/26-presco/shared/logs";
+    }
+    if (fs.existsSync("/var/www/equipes/26-presco/logs")) {
+      return "/var/www/equipes/26-presco/logs";
+    }
+  }
+
   return path.resolve(process.cwd(), "logs");
+}
+
+function rotateCrashLogIfOversized(logFile: string): void {
+  try {
+    if (!fs.existsSync(logFile)) return;
+    const stats = fs.statSync(logFile);
+    if (stats.size >= MAX_CRASH_LOG_BYTES) {
+      const backupFile = `${logFile}.1`;
+      fs.renameSync(logFile, backupFile);
+    }
+  } catch {
+    // Ignore rotation errors to avoid masking the fatal crash log
+  }
 }
 
 export function logFatalError(context: string, error: unknown): void {
@@ -37,6 +82,7 @@ export function logFatalError(context: string, error: unknown): void {
     ].join("\n");
 
     const logFile = path.join(logDir, "crash.log");
+    rotateCrashLogIfOversized(logFile);
     fs.appendFileSync(logFile, logEntry, "utf8");
     console.error(`[CRASH-LOGGER] Catastrophic error written to: ${logFile}`);
   } catch (loggingError) {

@@ -1,77 +1,15 @@
-import "dotenv/config";
+import "../config/env";
+import path from "node:path";
 import { hash } from "bcrypt";
 import { eq, sql } from "drizzle-orm";
-import { db, pool } from "./database";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import { db, pool, createCliPool } from "./database";
+import * as schema from "./schema";
 import { role, user, badge, userBadge, market, customizationItem, userCustomization, product, ocurrency } from "./schema";
 
-export async function seedDatabase() {
+export async function seedDatabase(targetDb: NodePgDatabase<typeof schema> = db) {
   console.log("[Seed] Checking and seeding database initial data...");
-
-  // 0. Ensure Customization Tables & User Columns exist
-  await db.execute(sql`
-    ALTER TABLE "badge" ADD COLUMN IF NOT EXISTS description TEXT;
-
-    CREATE TABLE IF NOT EXISTS customization_item (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL UNIQUE,
-      category VARCHAR(30) NOT NULL,
-      description TEXT,
-      price INTEGER NOT NULL DEFAULT 0,
-      min_level INTEGER NOT NULL DEFAULT 1,
-      preview_value TEXT NOT NULL,
-      config TEXT,
-      is_default BOOLEAN NOT NULL DEFAULT FALSE,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-    );
-
-    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_banner_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
-    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_avatar_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
-    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_level_frame_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
-    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS equipped_title_id INTEGER REFERENCES customization_item(id) ON DELETE SET NULL;
-    ALTER TABLE "user" ADD COLUMN IF NOT EXISTS two_factor_verified BOOLEAN DEFAULT FALSE;
-
-    CREATE TABLE IF NOT EXISTS user_customization (
-      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-      item_id INTEGER NOT NULL REFERENCES customization_item(id) ON DELETE CASCADE,
-      purchased_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_id, item_id)
-    );
-
-    CREATE TABLE IF NOT EXISTS product_report (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-      product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-      reason VARCHAR(100) NOT NULL,
-      description TEXT,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-    );
-
-    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL;
-
-    CREATE TABLE IF NOT EXISTS product_submission (
-      product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
-      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (product_id, user_id)
-    );
-
-    UPDATE "product" p
-    SET is_suspended = TRUE
-    WHERE (p.icon IS NULL OR TRIM(p.icon) = '')
-      AND NOT EXISTS (SELECT 1 FROM ocurrency o WHERE o.product_id = p.id AND o.is_suspended = FALSE);
-
-    INSERT INTO product_submission (product_id, user_id)
-    SELECT p.id, p.created_by_user_id
-    FROM "product" p
-    WHERE p.is_suspended = TRUE AND p.created_by_user_id IS NOT NULL
-    ON CONFLICT (product_id, user_id) DO NOTHING;
-
-    ALTER TABLE "ocurrency" ADD COLUMN IF NOT EXISTS is_promotion BOOLEAN DEFAULT FALSE;
-    ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
-    ALTER TABLE "user" ALTER COLUMN points SET DEFAULT 0;
-    ALTER TABLE "user" ALTER COLUMN danger_flag SET DEFAULT FALSE;
-  `);
 
   // 1. Seed Roles
   const defaultRoles = [
@@ -83,13 +21,13 @@ export async function seedDatabase() {
   ];
 
   for (const r of defaultRoles) {
-    const existing = await db.query.role.findFirst({
+    const existing = await targetDb.query.role.findFirst({
       where: (table, { eq }) => eq(table.id, r.id),
     });
     if (!existing) {
-      await db.insert(role).values(r);
+      await targetDb.insert(role).values(r);
     } else if (existing.authority !== r.authority || existing.name !== r.name) {
-      await db.update(role).set({ authority: r.authority, name: r.name, minPoints: r.minPoints }).where(eq(role.id, r.id));
+      await targetDb.update(role).set({ authority: r.authority, name: r.name, minPoints: r.minPoints }).where(eq(role.id, r.id));
     }
   }
 
@@ -200,16 +138,23 @@ export async function seedDatabase() {
       description: "Lenda viva eterna com contribuições históricas na plataforma.",
       minPoints: 10000,
     },
+    {
+      id: 16,
+      name: "Guardião 2FA",
+      icon: "shield-checkmark",
+      description: "Conta protegida com verificação de duas etapas ativa.",
+      minPoints: 0,
+    },
   ];
 
   for (const b of defaultBadges) {
-    const existing = await db.query.badge.findFirst({
+    const existing = await targetDb.query.badge.findFirst({
       where: (table, { eq }) => eq(table.id, b.id),
     });
     if (!existing) {
-      await db.insert(badge).values(b);
+      await targetDb.insert(badge).values(b);
     } else {
-      await db
+      await targetDb
         .update(badge)
         .set({ name: b.name, icon: b.icon, description: b.description, minPoints: b.minPoints })
         .where(eq(badge.id, b.id));
@@ -679,13 +624,13 @@ export async function seedDatabase() {
   ];
 
   for (const item of defaultCustomizationItems) {
-    const existing = await db.query.customizationItem.findFirst({
+    const existing = await targetDb.query.customizationItem.findFirst({
       where: (table, { eq }) => eq(table.id, item.id),
     });
     if (!existing) {
-      await db.insert(customizationItem).values(item);
+      await targetDb.insert(customizationItem).values(item);
     } else {
-      await db
+      await targetDb
         .update(customizationItem)
         .set({
           name: item.name,
@@ -702,7 +647,7 @@ export async function seedDatabase() {
   }
 
   // 4. Dynamic HERE Location Services Market Discovery (Purge invalid street address names, non-markets and defunct stores)
-  await db.execute(sql`
+  await targetDb.execute(sql`
     DELETE FROM ocurrency WHERE market_id IN (
       SELECT id FROM market WHERE 
         name ILIKE 'Rua %' OR
@@ -728,138 +673,119 @@ export async function seedDatabase() {
   `);
   console.log("[Seed] Markets checked: invalid address street names and non-markets purged.");
 
-  // 5. Seed Admin Test User: admin@admin.org / admin
-  const adminEmail = "admin@admin.org";
-  const existingAdmin = await db.query.user.findFirst({
-    where: (table, { eq }) => eq(table.email, adminEmail),
-  });
+  const isProdOrStaging =
+    process.env.NODE_ENV === "production" || process.env.PRESCO_ENV === "staging";
+  let adminUserId: number | null = null;
 
-  const adminPassHash = await hash("admin", 10);
+  if (!isProdOrStaging) {
+    // 5. Seed Admin Test User: admin@admin.org / admin (strictly non-prod/non-staging)
+    const adminEmail = "admin@admin.org";
+    const existingAdmin = await targetDb.query.user.findFirst({
+      where: (table, { eq }) => eq(table.email, adminEmail),
+    });
 
-  let adminUserId = existingAdmin?.id || 1;
+    const adminPassHash = await hash("admin", 10);
+    adminUserId = existingAdmin?.id ?? null;
 
-  if (!existingAdmin) {
-    const [newAdmin] = await db
-      .insert(user)
-      .values({
-        name: "Admin Master",
-        email: adminEmail,
-        passHash: adminPassHash,
-        roleId: 5,
-        points: 9999,
-        equippedBannerId: 6, // Ouro Imperial
-        equippedAvatarFrameId: 16, // Coroa Mítica
-        equippedLevelFrameId: 25, // Soberano Supremo
-        equippedTitleId: 50, // Administrador Master
-        twoFactorVerified: true,
-      })
-      .returning();
+    if (!existingAdmin) {
+      const [newAdmin] = await targetDb
+        .insert(user)
+        .values({
+          name: "Admin Master",
+          email: adminEmail,
+          passHash: adminPassHash,
+          roleId: 5,
+          points: 9999,
+          equippedBannerId: 6, // Ouro Imperial
+          equippedAvatarFrameId: 16, // Coroa Mítica
+          equippedLevelFrameId: 25, // Soberano Supremo
+          equippedTitleId: 50, // Administrador Master
+          twoFactorVerified: true,
+        })
+        .returning();
 
-    if (newAdmin) {
-      adminUserId = newAdmin.id;
+      if (newAdmin) {
+        adminUserId = newAdmin.id;
+        for (const b of defaultBadges) {
+          await targetDb.insert(userBadge).values({ userId: newAdmin.id, badgeId: b.id }).onConflictDoNothing();
+        }
+        for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
+          await targetDb.insert(userCustomization).values({ userId: newAdmin.id, itemId }).onConflictDoNothing();
+        }
+      }
+      console.log("[OK] [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
+    } else {
+      adminUserId = existingAdmin.id;
+      await targetDb
+        .update(user)
+        .set({
+          roleId: 5,
+          points: existingAdmin.points > 0 ? existingAdmin.points : 9999,
+          equippedBannerId: existingAdmin.equippedBannerId || 6,
+          equippedAvatarFrameId: existingAdmin.equippedAvatarFrameId || 16,
+          equippedLevelFrameId: existingAdmin.equippedLevelFrameId || 25,
+          equippedTitleId: existingAdmin.equippedTitleId || 50,
+        })
+        .where(eq(user.id, existingAdmin.id));
+
       for (const b of defaultBadges) {
-        await db.insert(userBadge).values({ userId: newAdmin.id, badgeId: b.id }).onConflictDoNothing();
+        await targetDb.insert(userBadge).values({ userId: existingAdmin.id, badgeId: b.id }).onConflictDoNothing();
       }
       for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
-        await db.insert(userCustomization).values({ userId: newAdmin.id, itemId }).onConflictDoNothing();
+        await targetDb.insert(userCustomization).values({ userId: existingAdmin.id, itemId }).onConflictDoNothing();
       }
     }
-    console.log("[OK] [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
-  } else {
-    adminUserId = existingAdmin.id;
-    await db
-      .update(user)
-      .set({
-        roleId: 5,
-        points: existingAdmin.points > 0 ? existingAdmin.points : 9999,
-        equippedBannerId: existingAdmin.equippedBannerId || 6,
-        equippedAvatarFrameId: existingAdmin.equippedAvatarFrameId || 16,
-        equippedLevelFrameId: existingAdmin.equippedLevelFrameId || 25,
-        equippedTitleId: existingAdmin.equippedTitleId || 50,
-      })
-      .where(eq(user.id, existingAdmin.id));
 
-    for (const b of defaultBadges) {
-      await db.insert(userBadge).values({ userId: existingAdmin.id, badgeId: b.id }).onConflictDoNothing();
-    }
-    for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
-      await db.insert(userCustomization).values({ userId: existingAdmin.id, itemId }).onConflictDoNothing();
-    }
-  }
+    // 6. Seed Regular Test User: usuario@presco.com / user123 (strictly non-prod/non-staging)
+    const userEmail = "usuario@presco.com";
+    const existingUser = await targetDb.query.user.findFirst({
+      where: (table, { eq }) => eq(table.email, userEmail),
+    });
 
-  // 5.1 Ensure aventureiromax1 is always Admin
-  const targetAdmin = await db.query.user.findFirst({
-    where: (table, { or, eq }) => or(eq(table.name, "aventureiromax1"), eq(table.email, "aventureiromax1@test.com"), eq(table.email, "aventureiromax1@presco.com")),
-  });
-  if (targetAdmin) {
-    await db
-      .update(user)
-      .set({
-        roleId: 5,
-        points: targetAdmin.points ?? 0,
-        equippedBannerId: targetAdmin.equippedBannerId || 6,
-        equippedAvatarFrameId: targetAdmin.equippedAvatarFrameId || 16,
-        equippedLevelFrameId: targetAdmin.equippedLevelFrameId || 25,
-        equippedTitleId: targetAdmin.equippedTitleId || 50,
-      })
-      .where(eq(user.id, targetAdmin.id));
+    if (!existingUser) {
+      const userPassHash = await hash("user123", 10);
+      const [newRegularUser] = await targetDb
+        .insert(user)
+        .values({
+          name: "Usuário Comum",
+          email: userEmail,
+          passHash: userPassHash,
+          roleId: 1,
+          points: 150,
+          equippedBannerId: 1, // Presco Selva
+          equippedAvatarFrameId: 10, // Clássico
+          equippedLevelFrameId: 20, // Distintivo Âmbar
+          equippedTitleId: 30, // Iniciante
+        })
+        .returning();
 
-    for (const b of defaultBadges) {
-      await db.insert(userBadge).values({ userId: targetAdmin.id, badgeId: b.id }).onConflictDoNothing();
-    }
-    for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
-      await db.insert(userCustomization).values({ userId: targetAdmin.id, itemId }).onConflictDoNothing();
-    }
-    console.log("[OK] [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
-  }
+      if (newRegularUser) {
+        for (const b of defaultBadges) {
+          if (b.id !== 16 && newRegularUser.points >= b.minPoints) {
+            await targetDb.insert(userBadge).values({ userId: newRegularUser.id, badgeId: b.id }).onConflictDoNothing();
+          }
+        }
 
-  // 6. Seed Regular Test User: usuario@presco.com / user123
-  const userEmail = "usuario@presco.com";
-  const existingUser = await db.query.user.findFirst({
-    where: (table, { eq }) => eq(table.email, userEmail),
-  });
-
-  if (!existingUser) {
-    const userPassHash = await hash("user123", 10);
-    const [newRegularUser] = await db
-      .insert(user)
-      .values({
-        name: "Usuário Comum",
-        email: userEmail,
-        passHash: userPassHash,
-        roleId: 1,
-        points: 150,
-        equippedBannerId: 1, // Presco Selva
-        equippedAvatarFrameId: 10, // Clássico
-        equippedLevelFrameId: 20, // Distintivo Âmbar
-        equippedTitleId: 30, // Iniciante
-      })
-      .returning();
-
-    if (newRegularUser) {
+        await targetDb.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 1 }).onConflictDoNothing();
+        await targetDb.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 10 }).onConflictDoNothing();
+        await targetDb.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
+        await targetDb.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 30 }).onConflictDoNothing();
+      }
+      console.log("[OK] [Seed] Created regular test user: usuario@presco.com / user123");
+    } else {
       for (const b of defaultBadges) {
-        if (newRegularUser.points >= b.minPoints) {
-          await db.insert(userBadge).values({ userId: newRegularUser.id, badgeId: b.id }).onConflictDoNothing();
+        if (b.id !== 16 && existingUser.points >= b.minPoints) {
+          await targetDb.insert(userBadge).values({ userId: existingUser.id, badgeId: b.id }).onConflictDoNothing();
         }
       }
 
-      await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 1 }).onConflictDoNothing();
-      await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 10 }).onConflictDoNothing();
-      await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
-      await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 30 }).onConflictDoNothing();
+      await targetDb.insert(userCustomization).values({ userId: existingUser.id, itemId: 1 }).onConflictDoNothing();
+      await targetDb.insert(userCustomization).values({ userId: existingUser.id, itemId: 10 }).onConflictDoNothing();
+      await targetDb.insert(userCustomization).values({ userId: existingUser.id, itemId: 20 }).onConflictDoNothing();
+      await targetDb.insert(userCustomization).values({ userId: existingUser.id, itemId: 30 }).onConflictDoNothing();
     }
-    console.log("[OK] [Seed] Created regular test user: usuario@presco.com / user123");
   } else {
-    for (const b of defaultBadges) {
-      if (existingUser.points >= b.minPoints) {
-        await db.insert(userBadge).values({ userId: existingUser.id, badgeId: b.id }).onConflictDoNothing();
-      }
-    }
-
-    await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 1 }).onConflictDoNothing();
-    await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 10 }).onConflictDoNothing();
-    await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 20 }).onConflictDoNothing();
-    await db.insert(userCustomization).values({ userId: existingUser.id, itemId: 30 }).onConflictDoNothing();
+    console.log("[INFO] [Seed] Skipping test users in production/staging environment.");
   }
 
   // 7. Seed Rich Catalog of Products (Zero phantom markets or occurrences)
@@ -1485,7 +1411,7 @@ export async function seedDatabase() {
     },
   ];
 
-  let availableMarkets = await db.select().from(market).limit(10);
+  let availableMarkets = await targetDb.select().from(market).limit(10);
   if (availableMarkets.length === 0) {
     console.log("[Seed] Discovering real markets via HERE API for initial data...");
     try {
@@ -1495,7 +1421,7 @@ export async function seedDatabase() {
     } catch (err: any) {
       console.warn("[AVISO] [Seed] HereMarketDiscovery error:", err?.message || err);
     }
-    availableMarkets = await db.select().from(market).limit(10);
+    availableMarkets = await targetDb.select().from(market).limit(10);
   }
 
   // Fallback baseline markets if discovery produced 0 markets (e.g. offline, CI without HERE_API_KEY, or test runner)
@@ -1507,9 +1433,9 @@ export async function seedDatabase() {
       { name: "Pão de Açúcar Paulista", location: { lat: -23.5651, lng: -46.6517 } as any },
     ];
     for (const fm of fallbackMarkets) {
-      await db.insert(market).values(fm).onConflictDoNothing();
+      await targetDb.insert(market).values(fm).onConflictDoNothing();
     }
-    availableMarkets = await db.select().from(market).limit(10);
+    availableMarkets = await targetDb.select().from(market).limit(10);
   }
 
   // Synchronize catalog products when running tests/CI or when explicitly requested
@@ -1522,13 +1448,18 @@ export async function seedDatabase() {
     let insertedProductCount = 0;
     let insertedOccurrencesCount = 0;
 
+    if (!adminUserId) {
+      const fallbackUser = await targetDb.query.user.findFirst();
+      adminUserId = fallbackUser?.id ?? null;
+    }
+
     for (const item of catalogProducts) {
-      let targetProduct = await db.query.product.findFirst({
+      let targetProduct = await targetDb.query.product.findFirst({
         where: (table, { eq }) => eq(table.ean, item.ean),
       });
 
       if (!targetProduct) {
-        const [newProduct] = await db
+        const [newProduct] = await targetDb
           .insert(product)
           .values({
             ean: item.ean,
@@ -1541,7 +1472,7 @@ export async function seedDatabase() {
         targetProduct = newProduct;
         insertedProductCount++;
       } else {
-        await db
+        await targetDb
           .update(product)
           .set({
             name: item.name,
@@ -1552,19 +1483,19 @@ export async function seedDatabase() {
           .where(eq(product.id, targetProduct.id));
       }
 
-      if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
+      if (adminUserId && targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
         for (let i = 0; i < item.prices.length; i++) {
           const p = item.prices[i];
           const assignedMarket = availableMarkets[i % availableMarkets.length];
           if (!assignedMarket) continue;
 
-          const existingOcc = await db.query.ocurrency.findFirst({
+          const existingOcc = await targetDb.query.ocurrency.findFirst({
             where: (table, { and, eq }) =>
               and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
           });
 
           if (!existingOcc) {
-            await db.insert(ocurrency).values({
+            await targetDb.insert(ocurrency).values({
               userId: adminUserId,
               marketId: assignedMarket.id,
               productId: targetProduct.id,
@@ -1595,15 +1526,18 @@ export async function seedDatabase() {
 }
 
 // Standalone execution support
-if (process.argv[1]?.endsWith("seed.ts")) {
-  seedDatabase()
+const entryFile = process.argv[1] ? path.basename(process.argv[1]) : "";
+if (entryFile === "seed.ts" || entryFile === "seed.mjs") {
+  const cliPool = createCliPool();
+  const cliDb = drizzle(cliPool, { schema });
+  seedDatabase(cliDb)
     .then(async () => {
-      await pool.end();
+      await Promise.allSettled([cliPool.end(), pool.end()]);
       process.exit(0);
     })
     .catch(async (err) => {
       console.error("[FAIL] [Seed] Error:", err);
-      await pool.end();
+      await Promise.allSettled([cliPool.end(), pool.end()]);
       process.exit(1);
     });
 }

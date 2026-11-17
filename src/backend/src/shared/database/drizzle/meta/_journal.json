@@ -43,6 +43,13 @@
       "when": 1781170000000,
       "tag": "0005_structural_hardening_phase1",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781180000000,
+      "tag": "0006_consolidate_runtime_ddl",
+      "breakpoints": true
     }
   ]
 }

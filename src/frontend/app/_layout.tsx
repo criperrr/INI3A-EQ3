@@ -1,13 +1,12 @@
 // app/_layout.tsx
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Animated, Dimensions, StyleSheet, View, StatusBar, AppState, LogBox } from "react-native";
+import { Animated, Platform, StyleSheet, View, StatusBar, AppState, LogBox } from "react-native";
 
 LogBox.ignoreAllLogs(true);
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { usePathname, router } from "expo-router";
 import { Stack as JsStack } from "expo-router/js-stack";
 import {
-  TransitionSpecs,
   type StackCardStyleInterpolator,
   type StackNavigationOptions,
   type TransitionPreset,
@@ -26,8 +25,6 @@ import SwipeTabNavigator from "../components/SwipeTabNavigator";
 
 const MAIN_TAB_NAMES = new Set(["index", "search", "scannerProduct", "map", "profile"]);
 const UTILITY_ROUTES = new Set(["/cart", "/settings", "/about", "/help"]);
-
-const GESTURE_RESPONSE_DISTANCE = Math.round(Dimensions.get("window").width * 0.5);
 
 const INSTANT_SPEC: TransitionPreset["transitionSpec"]["open"] = {
   animation: "timing",
@@ -166,13 +163,11 @@ function LayoutContent() {
 
       return {
         headerShown: false,
-        gestureEnabled: true,
+        gestureEnabled: Platform.OS === "ios",
         gestureDirection: "horizontal",
-        gestureResponseDistance: GESTURE_RESPONSE_DISTANCE,
-        cardOverlayEnabled: true,
         transitionSpec: {
           open: FAST_FADE_SPEC,
-          close: TransitionSpecs.TransitionIOSSpec,
+          close: FAST_FADE_SPEC,
         },
         cardStyleInterpolator: hybridFadeAndEdgeSwipeInterpolator,
         cardStyle: { backgroundColor: semantic.colors.surface.background },

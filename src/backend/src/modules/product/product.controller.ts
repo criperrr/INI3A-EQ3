@@ -1,7 +1,9 @@
 import type { NextFunction, Request, Response } from "express";
 import { productService } from "./product.service";
 import { success } from "@/shared/helpers/response.helper";
-import { ValidationError } from "@/shared/errors/errors";
+import { ValidationError, TwoFactorRequiredError } from "@/shared/errors/errors";
+import { AuthRepository } from "@/shared/database/repositories/auth.repository";
+import { isAuthorizedTestBypass } from "@/shared/middlewares/rateLimiter";
 
 class ProductControllerClass {
   async getAllProducts(req: Request, res: Response, next: NextFunction) {
@@ -63,6 +65,16 @@ class ProductControllerClass {
 
       if (errors.length > 0) throw new ValidationError(errors);
 
+      const user = (req as any).user;
+      if (user && user.roleId < 5 && !user.twoFactorVerified) {
+        const quota = await AuthRepository.trackAndCheckProductViewQuota(user.id, numId, 10);
+        if (!quota.allowed) {
+          throw new TwoFactorRequiredError(
+            "Limite de 10 produtos diferentes atingido. Conclua a verificação em duas etapas por e-mail para continuar.",
+          );
+        }
+      }
+
       const product = await productService.getProductById(numId);
       return res.status(200).json(success(product));
     } catch (e) {
@@ -114,7 +126,7 @@ class ProductControllerClass {
 
   async createCustomProduct(req: Api.Request, res: Response, next: NextFunction) {
     try {
-      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt, strictExistenceCheck } = req.body;
+      const { name, category, categories, description, icon, ean, ncm, isPromotion, createdAt } = req.body;
 
       const errors: Array<{ field: string; message: string }> = [];
       if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -124,7 +136,7 @@ class ProductControllerClass {
       if (errors.length > 0) throw new ValidationError(errors);
 
       const userId = req.user?.id;
-      const isLoadTest = String(req.headers?.["user-agent"] || "").includes("Presco-k6-PerformanceTest");
+      const bypassQuarantine = isAuthorizedTestBypass(req);
 
       const product = await productService.createCustomProduct(
         {
@@ -138,7 +150,7 @@ class ProductControllerClass {
           isPromotion: Boolean(isPromotion),
           createdAt,
           createdByUserId: userId,
-          strictExistenceCheck: isLoadTest ? false : strictExistenceCheck !== undefined ? Boolean(strictExistenceCheck) : true,
+          strictExistenceCheck: !bypassQuarantine,
         },
         userId,
       );

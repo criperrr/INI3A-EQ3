@@ -1,9 +1,13 @@
-import "dotenv/config";
+import "../config/env";
+import path from "node:path";
 import { sql } from "drizzle-orm";
-import { db, pool } from "./database";
+import { drizzle } from "drizzle-orm/node-postgres";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import * as schema from "./schema";
+import { db, pool, createCliPool } from "./database";
 import { HereMarketDiscovery } from "../services/hereMarketDiscovery.service";
 
-export async function executeReallocation() {
+export async function executeReallocation(targetDb: NodePgDatabase<typeof schema> = db) {
   console.log("[Reallocation] Starting market reallocation to HERE API markets...");
 
   // 1. Ensure latest HERE API markets are populated for active areas (Bauru & São Paulo)
@@ -13,38 +17,38 @@ export async function executeReallocation() {
   await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 15000); // São Paulo
 
   // 1.1 Ensure real Oba Hortifruti at Av. Getúlio Vargas 23-2 is present and clean up extinct Jardim América unit
-  await db.execute(sql`
+  await targetDb.execute(sql`
     DELETE FROM market
     WHERE name ILIKE '%oba%'
-      AND ST_DWithin(location, ST_GeographyFromText('POINT(-49.05957 -22.34598)'), 600)
+      AND public.ST_DWithin(location, public.ST_GeographyFromText('POINT(-49.05957 -22.34598)'), 600)
       AND id NOT IN (SELECT DISTINCT market_id FROM ocurrency)
   `);
 
-  const realOba = await db.execute(sql`
+  const realOba = await targetDb.execute(sql`
     SELECT id, name FROM market
     WHERE name ILIKE '%oba%'
-      AND ST_DWithin(location, ST_GeographyFromText('POINT(-49.04929 -22.35451)'), 600)
+      AND public.ST_DWithin(location, public.ST_GeographyFromText('POINT(-49.04929 -22.35451)'), 600)
     LIMIT 1
   `);
   const realObaRow = realOba.rows[0];
   if (realObaRow) {
-    await db.execute(sql`
+    await targetDb.execute(sql`
       UPDATE market
       SET name = 'Oba Hortifruti',
-          location = ST_GeographyFromText('POINT(-49.04929 -22.35451)')
+          location = public.ST_GeographyFromText('POINT(-49.04929 -22.35451)')
       WHERE id = ${realObaRow.id}
     `);
     console.log(`[OK] [Reallocation] Updated genuine Oba Hortifruti on Av. Getúlio Vargas 23-2 (ID ${realObaRow.id})`);
   } else {
-    await db.execute(sql`
+    await targetDb.execute(sql`
       INSERT INTO market (name, location)
-      VALUES ('Oba Hortifruti', ST_GeographyFromText('POINT(-49.04929 -22.35451)'))
+      VALUES ('Oba Hortifruti', public.ST_GeographyFromText('POINT(-49.04929 -22.35451)'))
     `);
     console.log(`[OK] [Reallocation] Inserted genuine Oba Hortifruti on Av. Getúlio Vargas 23-2`);
   }
 
   // 2. Clean up non-retail noise in markets with 0 occurrences (preserving Trigal ID 1)
-  await db.execute(sql`
+  await targetDb.execute(sql`
     DELETE FROM market
     WHERE id != 1
       AND id NOT IN (SELECT DISTINCT market_id FROM ocurrency)
@@ -75,8 +79,8 @@ export async function executeReallocation() {
   `);
 
   // 3. Find candidate target markets (authentic HERE API supermarkets)
-  const targetMarkets = await db.execute(sql`
-    SELECT id, name, ST_AsGeoJson(location) as geo
+  const targetMarkets = await targetDb.execute(sql`
+    SELECT id, name, public.ST_AsGeoJson(location) as geo
     FROM market
     WHERE id >= 125
       AND (
@@ -125,8 +129,8 @@ export async function executeReallocation() {
   }
 
   // 4. Find all non-API / legacy / fictitious markets that have occurrences (ID < 125)
-  const oldMarketsWithOcc = await db.execute(sql`
-    SELECT m.id, m.name, ST_AsGeoJson(m.location) as geo, count(o.id) as oc_count
+  const oldMarketsWithOcc = await targetDb.execute(sql`
+    SELECT m.id, m.name, public.ST_AsGeoJson(m.location) as geo, count(o.id) as oc_count
     FROM market m
     JOIN ocurrency o ON o.market_id = m.id
     WHERE m.id < 125
@@ -160,12 +164,12 @@ export async function executeReallocation() {
     let brandMatch: any = null;
     const matchingBrand = brands.find(b => oldName.includes(b.key));
     if (matchingBrand) {
-      const bRes = await db.execute(sql`
-        SELECT m.id, m.name, ST_Distance(m.location, ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')') ) as dist
+      const bRes = await targetDb.execute(sql`
+        SELECT m.id, m.name, public.ST_Distance(m.location, public.ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')') ) as dist
         FROM market m
         WHERE m.id IN (${sql.join(targetIds.map(id => sql`${id}`), sql`, `)})
           AND m.name ILIKE ${matchingBrand.pattern}
-          AND ST_DWithin(m.location, ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')'), 10000)
+          AND public.ST_DWithin(m.location, public.ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')'), 10000)
         ORDER BY dist ASC
         LIMIT 1
       `);
@@ -178,8 +182,8 @@ export async function executeReallocation() {
     let strategy = "BRAND MATCH";
     if (!target) {
       strategy = "NEAREST SPATIAL";
-      const closest = await db.execute(sql`
-        SELECT m.id, m.name, ST_Distance(m.location, ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')') ) as dist
+      const closest = await targetDb.execute(sql`
+        SELECT m.id, m.name, public.ST_Distance(m.location, public.ST_GeographyFromText('POINT(' || ${geo.coordinates[0]} || ' ' || ${geo.coordinates[1]} || ')') ) as dist
         FROM market m
         WHERE m.id IN (${sql.join(targetIds.map(id => sql`${id}`), sql`, `)})
         ORDER BY dist ASC
@@ -189,10 +193,10 @@ export async function executeReallocation() {
     }
 
     const distKm = (Number(target.dist) / 1000).toFixed(2);
-    console.log(`  ↪ Moving ${count} occurrences: "${old.name}" (ID ${old.id}) -> "${target.name}" (ID ${target.id}) [${distKm} km, ${strategy}]`);
+    console.log(`  -> Moving ${count} occurrences: "${old.name}" (ID ${old.id}) -> "${target.name}" (ID ${target.id}) [${distKm} km, ${strategy}]`);
 
     // Execute reallocation in database
-    await db.execute(sql`
+    await targetDb.execute(sql`
       UPDATE ocurrency
       SET market_id = ${target.id}
       WHERE market_id = ${old.id}
@@ -204,7 +208,7 @@ export async function executeReallocation() {
   console.log(`[OK] [Reallocation] Successfully migrated ${totalReallocated} occurrences!`);
 
   // 5. Delete all legacy / non-API markets (all IDs < 125, preserving Trigal ID 1)
-  const deletedOld = await db.execute(sql`
+  const deletedOld = await targetDb.execute(sql`
     DELETE FROM market
     WHERE id < 125 AND id != 1
     RETURNING id
@@ -213,7 +217,7 @@ export async function executeReallocation() {
   console.log(`[Reallocation] Purged ${deletedOld.rows.length} legacy/inexistent markets from database (Trigal ID 1 preserved).`);
 
   // 6. Verify that 100% of remaining markets are HERE API markets (ID >= 125)
-  const remainingMarkets = await db.execute(sql`
+  const remainingMarkets = await targetDb.execute(sql`
     SELECT count(*) as total,
            count(CASE WHEN id >= 125 THEN 1 END) as here_count,
            count(CASE WHEN id < 125 THEN 1 END) as legacy_count
@@ -226,20 +230,23 @@ export async function executeReallocation() {
   }
 
   // Verify total occurrences preserved
-  const totalOcc = await db.execute(sql`SELECT count(*) as total FROM ocurrency`);
+  const totalOcc = await targetDb.execute(sql`SELECT count(*) as total FROM ocurrency`);
   const occCount = totalOcc.rows[0]?.total;
   console.log(`[Verification] Total active occurrences in database: ${occCount}`);
 }
 
-if (process.argv[1]?.endsWith("reallocateMarkets.ts")) {
-  executeReallocation()
+const entryFile = process.argv[1] ? path.basename(process.argv[1]) : "";
+if (entryFile === "reallocateMarkets.ts" || entryFile === "reallocateMarkets.mjs") {
+  const cliPool = createCliPool();
+  const cliDb = drizzle(cliPool, { schema });
+  executeReallocation(cliDb)
     .then(async () => {
-      await pool.end();
+      await Promise.allSettled([cliPool.end(), pool.end()]);
       process.exit(0);
     })
     .catch(async (err) => {
       console.error("[FAIL] [Reallocation] Error:", err);
-      await pool.end();
+      await Promise.allSettled([cliPool.end(), pool.end()]);
       process.exit(1);
     });
 }

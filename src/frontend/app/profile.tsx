@@ -93,7 +93,10 @@ const BADGE_FALLBACK_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 function resolveBadgeIcon(iconName?: string | null): keyof typeof Ionicons.glyphMap {
   if (!iconName) return "ribbon-outline";
   if (BADGE_FALLBACK_ICONS[iconName]) return BADGE_FALLBACK_ICONS[iconName];
-  return (iconName as any) || "ribbon-outline";
+  if (Ionicons.glyphMap && iconName in Ionicons.glyphMap) {
+    return iconName as keyof typeof Ionicons.glyphMap;
+  }
+  return "ribbon-outline";
 }
 
 export default function ProfileScreen() {
@@ -257,6 +260,9 @@ export default function ProfileScreen() {
             roleTitle={displayRole}
             level={displayLevel}
             isAdmin={isAdmin}
+            isAuthenticated={isAuthenticated}
+            isTwoFactorVerified={isTwoFactorVerified}
+            onVerifyPress={() => setIsTwoFactorModalVisible(true)}
             accent={accent}
             equipped={equippedCustomizations}
             t={t}
@@ -264,61 +270,6 @@ export default function ProfileScreen() {
         </AnimatedSection>
 
         {isAdmin && <AdminPrivilegesBanner accent={accent} themeStyles={themeStyles} t={t} />}
-
-        {isAuthenticated && (
-          <View
-            style={[
-              styles.twoFactorBanner,
-              themeStyles.card,
-              themeStyles.border,
-              {
-                borderColor: isTwoFactorVerified
-                  ? "#10B98150"
-                  : accent + "50",
-              },
-            ]}
-          >
-            <View style={styles.twoFactorBannerLeft}>
-              <View
-                style={[
-                  styles.twoFactorIconWrap,
-                  {
-                    backgroundColor: isTwoFactorVerified
-                      ? "#10B98120"
-                      : accent + "20",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={isTwoFactorVerified ? "shield-checkmark" : "shield-outline"}
-                  size={20}
-                  color={isTwoFactorVerified ? "#10B981" : accent}
-                />
-              </View>
-              <View style={styles.twoFactorTextCol}>
-                <Text style={[styles.twoFactorTitle, themeStyles.text]}>
-                  {isTwoFactorVerified
-                    ? "Verificação em 2 Etapas Ativa"
-                    : "Verificação de 2 Etapas Pendente"}
-                </Text>
-                <Text style={[styles.twoFactorSubtitle, themeStyles.subText]}>
-                  {isTwoFactorVerified
-                    ? "Sua conta está protegida por e-mail e habilitada para postagens e avaliações."
-                    : "Confirme seu e-mail para poder publicar ofertas e interagir com a comunidade."}
-                </Text>
-              </View>
-            </View>
-            {!isTwoFactorVerified && (
-              <TouchableOpacity
-                style={[styles.twoFactorVerifyBtn, { backgroundColor: accent }]}
-                activeOpacity={0.8}
-                onPress={() => setIsTwoFactorModalVisible(true)}
-              >
-                <Text style={styles.twoFactorVerifyBtnText}>Verificar</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
 
         {/* Customization Store & Points Action Button */}
         <CustomizationBar
@@ -591,6 +542,9 @@ const ProfileHeader = memo(function ProfileHeader({
   roleTitle,
   level,
   isAdmin,
+  isAuthenticated,
+  isTwoFactorVerified,
+  onVerifyPress,
   accent,
   equipped,
   t,
@@ -600,6 +554,9 @@ const ProfileHeader = memo(function ProfileHeader({
   roleTitle: string;
   level: number;
   isAdmin: boolean;
+  isAuthenticated: boolean;
+  isTwoFactorVerified: boolean;
+  onVerifyPress?: () => void;
   accent: string;
   equipped?: EquippedCustomizations | null;
   t: (key: any) => string;
@@ -633,9 +590,39 @@ const ProfileHeader = memo(function ProfileHeader({
         />
       </View>
 
-      <Text style={[styles.userName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
-        {name}
-      </Text>
+      <View style={styles.userNameRow}>
+        <Text style={[styles.userName, themeStyles.text]} numberOfLines={1} ellipsizeMode="tail">
+          {name}
+        </Text>
+        {isTwoFactorVerified && (
+          <Ionicons
+            name="checkmark-circle"
+            size={18}
+            color="#10B981"
+            accessibilityLabel="Conta verificada"
+          />
+        )}
+      </View>
+      {!isTwoFactorVerified && isAuthenticated && (
+        <TouchableOpacity
+          style={[
+            styles.verifyAccountPill,
+            {
+              backgroundColor: accent + "15",
+              borderColor: accent + "50",
+            },
+          ]}
+          activeOpacity={0.75}
+          onPress={onVerifyPress}
+          accessibilityRole="button"
+          accessibilityLabel="Verificar conta"
+        >
+          <Ionicons name="shield-outline" size={13} color={accent} />
+          <Text style={[styles.verifyAccountPillText, { color: accent }]}>
+            Verificar conta
+          </Text>
+        </TouchableOpacity>
+      )}
       <Text
         style={[styles.userRole, { color: isAdmin ? COLORS.adminGlow : accent }]}
         numberOfLines={1}
@@ -2093,7 +2080,26 @@ const styles = StyleSheet.create({
     zIndex: 12,
   },
   levelBadgeText: { fontSize: 11, fontWeight: "bold" },
-  userName: { fontSize: 20, fontWeight: "bold", marginTop: 14 },
+  userNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 14,
+    paddingHorizontal: 16,
+  },
+  userName: { fontSize: 20, fontWeight: "bold", flexShrink: 1 },
+  verifyAccountPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  verifyAccountPillText: { fontSize: 12, fontWeight: "600" },
   userRole: { fontSize: 14, fontWeight: "600", marginTop: 2 },
   userEmail: { fontSize: 12, marginTop: 2 },
   customizationBar: {
@@ -2820,53 +2826,4 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   actionBadgeText: { fontSize: 11, fontWeight: "600" },
-  twoFactorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    padding: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
-  },
-  twoFactorBannerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    flex: 1,
-  },
-  twoFactorIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  twoFactorTextCol: {
-    flex: 1,
-  },
-  twoFactorTitle: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  twoFactorSubtitle: {
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  twoFactorVerifyBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  twoFactorVerifyBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
 });

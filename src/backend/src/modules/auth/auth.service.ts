@@ -14,7 +14,7 @@ import {
   ValidationError,
   NotFoundError,
 } from "@/shared/errors/errors";
-import { emailService } from "@/shared/services/email.service";
+import { emailService, type TwoFactorEmailTheme } from "@/shared/services/email.service";
 import type * as Services from "@/shared/types/services";
 import type * as Repositories from "@/shared/types/repositories";
 
@@ -275,16 +275,22 @@ class AuthServiceClass {
     const contributionGrid = await OcurrencyRepository.getUserContributionGrid(Number(userId));
     const recentContributions = await OcurrencyRepository.findByUser(Number(userId), 5);
 
+    const twoFactorVerified = Boolean(user.twoFactorVerified || isSuperAdmin);
+
     const badgesWithStatus = allBadges.map((b) => {
       const awarded = userBadges.find((ub) => ub.id === b.id);
+      const isTwoFactorBadge = b.id === 16 || b.name === "Guardião 2FA";
+      const isUnlocked = isTwoFactorBadge
+        ? twoFactorVerified
+        : Boolean(awarded || isSuperAdmin || points >= b.minPoints);
       return {
         id: b.id,
         name: b.name,
         icon: b.icon,
         description: b.description || null,
         minPoints: b.minPoints,
-        isUnlocked: !!awarded || isSuperAdmin || points >= b.minPoints,
-        awardedAt: awarded?.awardedAt || null,
+        isUnlocked,
+        awardedAt: isUnlocked ? awarded?.awardedAt || null : null,
       };
     });
 
@@ -312,7 +318,7 @@ class AuthServiceClass {
         badgesCount: badgesWithStatus.filter((b) => b.isUnlocked).length,
       },
       badges: badgesWithStatus,
-      twoFactorVerified: Boolean(user.twoFactorVerified || isSuperAdmin),
+      twoFactorVerified,
       contributionsGrid: contributionGrid,
       recentContributions,
       createdAt: user.createdAt,
@@ -322,7 +328,7 @@ class AuthServiceClass {
   /**
    * Gera e despacha um código de segurança de 6 dígitos via e-mail (Resend)
    */
-  async sendTwoFactorCode(userId: number | string) {
+  async sendTwoFactorCode(userId: number | string, theme?: TwoFactorEmailTheme) {
     const user = await UserRepository.getUserById(userId);
     if (!user) {
       throw new NotFoundError("Usuário não encontrado.");
@@ -354,8 +360,8 @@ class AuthServiceClass {
     await AuthRepository.storeTwoFactorCode(userId, code, 600);
     await AuthRepository.setTwoFactorCooldown(userId, 60);
 
-    // Envia o e-mail via Resend
-    await emailService.sendTwoFactorCode(user.email, user.name, code);
+    // Envia o e-mail via SMTP/Resend
+    await emailService.sendTwoFactorCode(user.email, user.name, code, theme);
 
     return {
       success: true,
@@ -387,9 +393,10 @@ class AuthServiceClass {
       ]);
     }
 
-    // Código correto: apaga do Redis e atualiza no PostgreSQL
+    // Código correto: apaga do Redis, atualiza no PostgreSQL e concede badge 2FA idempotentemente
     await AuthRepository.deleteTwoFactorCode(userId);
     await UserRepository.updateUser(userId, { twoFactorVerified: true });
+    await UserRepository.awardTwoFactorBadge(userId).catch(() => {});
 
     const updatedUser = await UserRepository.getUserById(userId);
 

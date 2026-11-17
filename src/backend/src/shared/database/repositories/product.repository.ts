@@ -905,35 +905,35 @@ class ProductRepositoryClass {
           MAX(loc_occ.value::numeric) AS max_price,
           AVG(loc_occ.value::numeric) AS avg_price,
           COUNT(loc_occ.id)::int AS occurrences_count,
-          MIN(ST_Distance(loc_occ.location, ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
+          MIN(public.ST_Distance(loc_occ.location, public.ST_GeographyFromText(${wktPoint}))) AS min_distance_meters,
           (
             SELECT m2.name 
             FROM ocurrency o2
             JOIN market m2 ON o2.market_id = m2.id
             WHERE o2.product_id = p.id 
               AND o2.is_suspended = false
-              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
-            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+              AND public.ST_DWithin(m2.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY public.ST_Distance(m2.location, public.ST_GeographyFromText(${wktPoint})) ASC
             LIMIT 1
           ) AS nearest_market_name,
           (
-            SELECT ST_Y(m2.location::geometry)
+            SELECT public.ST_Y(m2.location::public.geometry)
             FROM ocurrency o2
             JOIN market m2 ON o2.market_id = m2.id
             WHERE o2.product_id = p.id 
               AND o2.is_suspended = false
-              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
-            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+              AND public.ST_DWithin(m2.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY public.ST_Distance(m2.location, public.ST_GeographyFromText(${wktPoint})) ASC
             LIMIT 1
           ) AS nearest_market_lat,
           (
-            SELECT ST_X(m2.location::geometry)
+            SELECT public.ST_X(m2.location::public.geometry)
             FROM ocurrency o2
             JOIN market m2 ON o2.market_id = m2.id
             WHERE o2.product_id = p.id 
               AND o2.is_suspended = false
-              AND ST_DWithin(m2.location, ST_GeographyFromText(${wktPoint}), ${radius})
-            ORDER BY ST_Distance(m2.location, ST_GeographyFromText(${wktPoint})) ASC
+              AND public.ST_DWithin(m2.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY public.ST_Distance(m2.location, public.ST_GeographyFromText(${wktPoint})) ASC
             LIMIT 1
           ) AS nearest_market_lng,
           (
@@ -942,8 +942,8 @@ class ProductRepositoryClass {
             JOIN market m3 ON o3.market_id = m3.id
             WHERE o3.product_id = p.id
               AND o3.is_suspended = false
-              AND ST_DWithin(m3.location, ST_GeographyFromText(${wktPoint}), ${radius})
-            ORDER BY o3.value::numeric ASC, ST_Distance(m3.location, ST_GeographyFromText(${wktPoint})) ASC
+              AND public.ST_DWithin(m3.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
+            ORDER BY o3.value::numeric ASC, public.ST_Distance(m3.location, public.ST_GeographyFromText(${wktPoint})) ASC
             LIMIT 1
           ) AS best_market_name,
           CASE 
@@ -960,7 +960,7 @@ class ProductRepositoryClass {
           FROM ocurrency o
           JOIN market m ON o.market_id = m.id
           WHERE o.is_suspended = false
-            AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+            AND public.ST_DWithin(m.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
         ) loc_occ ON loc_occ.product_id = p.id
         GROUP BY p.id
       )
@@ -1089,7 +1089,7 @@ class ProductRepositoryClass {
             FROM ocurrency o
             JOIN market m ON o.market_id = m.id
             WHERE o.is_suspended = false
-              AND ST_DWithin(m.location, ST_GeographyFromText(${wktPoint}), ${radius})
+              AND public.ST_DWithin(m.location, public.ST_GeographyFromText(${wktPoint}), ${radius})
           ) loc_occ ON loc_occ.product_id = p.id
           GROUP BY p.id
         )

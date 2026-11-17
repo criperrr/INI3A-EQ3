@@ -30,6 +30,27 @@ export interface OptimizedRouteResult {
 class RoutingServiceClass {
   private distanceCache = new Map<string, { distanceMeters: number; durationSeconds: number; timestamp: number }>();
   private CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+  private readonly MAX_DISTANCE_CACHE_ENTRIES = 500;
+
+  private setDistanceCache(key: string, distanceMeters: number, durationSeconds: number): void {
+    const now = Date.now();
+    if (this.distanceCache.has(key)) {
+      this.distanceCache.delete(key);
+    }
+    if (this.distanceCache.size >= this.MAX_DISTANCE_CACHE_ENTRIES) {
+      for (const [k, entry] of this.distanceCache.entries()) {
+        if (now - entry.timestamp >= this.CACHE_TTL_MS) {
+          this.distanceCache.delete(k);
+        }
+      }
+      while (this.distanceCache.size >= this.MAX_DISTANCE_CACHE_ENTRIES) {
+        const oldestKey = this.distanceCache.keys().next().value;
+        if (!oldestKey) break;
+        this.distanceCache.delete(oldestKey);
+      }
+    }
+    this.distanceCache.set(key, { distanceMeters, durationSeconds, timestamp: now });
+  }
 
   /**
    * Calculates straight-line Haversine distance in meters between two coordinates.
@@ -67,12 +88,17 @@ class RoutingServiceClass {
   ): Promise<{ distanceMeters: number; durationSeconds: number; source: "here_routing_v8" | "haversine_fallback" }> {
     const cacheKey = `${from.lat.toFixed(4)},${from.lng.toFixed(4)}->${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
     const cached = this.distanceCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
-      return {
-        distanceMeters: cached.distanceMeters,
-        durationSeconds: cached.durationSeconds,
-        source: "here_routing_v8",
-      };
+    if (cached) {
+      if (Date.now() - cached.timestamp < this.CACHE_TTL_MS) {
+        this.distanceCache.delete(cacheKey);
+        this.distanceCache.set(cacheKey, cached);
+        return {
+          distanceMeters: cached.distanceMeters,
+          durationSeconds: cached.durationSeconds,
+          source: "here_routing_v8",
+        };
+      }
+      this.distanceCache.delete(cacheKey);
     }
 
     const apiKey = env.HERE_API_KEY || process.env.HERE_API_KEY || "";
@@ -95,7 +121,7 @@ class RoutingServiceClass {
         if (summary && typeof summary.length === "number") {
           const distanceMeters = summary.length;
           const durationSeconds = summary.duration || Math.round(distanceMeters / 9); // default ~32km/h
-          this.distanceCache.set(cacheKey, { distanceMeters, durationSeconds, timestamp: Date.now() });
+          this.setDistanceCache(cacheKey, distanceMeters, durationSeconds);
           return { distanceMeters, durationSeconds, source: "here_routing_v8" };
         }
       }

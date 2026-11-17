@@ -1,67 +1,256 @@
 import nodemailer from "nodemailer";
 import { env } from "../config/env";
 
-class EmailServiceClass {
-  /**
-   * Envia o código de 6 dígitos de verificação de duas etapas para o e-mail do usuário via SMTP (primário) ou Resend API (fallback).
-   */
-  async sendTwoFactorCode(toEmail: string, userName: string, code: string): Promise<boolean> {
-    const fromAddress = env.SMTP_FROM || env.RESEND_FROM || "Presco <noreply@presco.app>";
-    const subject = `Seu código de verificação Presco: ${code}`;
+export interface TwoFactorEmailThemeColors {
+  primary?: string;
+  background?: string;
+  surface?: string;
+  surfaceSecondary?: string;
+  text?: string;
+  textMuted?: string;
+  border?: string;
+}
 
-    const html = `
+export interface TwoFactorEmailTheme extends TwoFactorEmailThemeColors {
+  mode?: "light" | "dark" | "amoled";
+  amoled?: boolean;
+  monet?: boolean;
+  colors?: TwoFactorEmailThemeColors;
+}
+
+const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
+
+function sanitizeHexColor(value: unknown, fallback: string): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (HEX_COLOR_REGEX.test(trimmed)) {
+      return trimmed.toUpperCase();
+    }
+  }
+  return fallback;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function mixHex(hexA: string, hexB: string, weightA: number): string {
+  const w = Math.max(0, Math.min(1, weightA));
+  const parse = (h: string): [number, number, number] => [
+    parseInt(h.slice(1, 3), 16),
+    parseInt(h.slice(3, 5), 16),
+    parseInt(h.slice(5, 7), 16),
+  ];
+  const [r1, g1, b1] = parse(hexA);
+  const [r2, g2, b2] = parse(hexB);
+  const toHex = (n: number) => Math.round(n).toString(16).padStart(2, "0").toUpperCase();
+  return `#${toHex(r1 * w + r2 * (1 - w))}${toHex(g1 * w + g2 * (1 - w))}${toHex(b1 * w + b2 * (1 - w))}`;
+}
+
+function getRelativeLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+
+function getContrastTextColor(hex: string): string {
+  return getRelativeLuminance(hex) > 0.36 ? "#0F172A" : "#FFFFFF";
+}
+
+function formatOtpCode(code: string): string {
+  const trimmed = code.trim();
+  if (/^[A-Za-z0-9]{6}$/.test(trimmed)) {
+    return `${trimmed.slice(0, 3)} ${trimmed.slice(3)}`;
+  }
+  return trimmed;
+}
+
+function resolveEmailPalette(theme?: TwoFactorEmailTheme) {
+  const isAmoled = theme?.mode === "amoled" || theme?.amoled === true;
+  const isDark = !isAmoled && theme?.mode === "dark";
+
+  const defaults = isAmoled
+    ? {
+        background: "#000000",
+        surface: "#0A0A0A",
+        surfaceSecondary: "#141414",
+        text: "#FFFFFF",
+        textMuted: "#A1A1AA",
+        border: "#1F1F23",
+      }
+    : isDark
+      ? {
+          background: "#0B1220",
+          surface: "#111827",
+          surfaceSecondary: "#1E293B",
+          text: "#F8FAFC",
+          textMuted: "#94A3B8",
+          border: "#1F2937",
+        }
+      : {
+          background: "#F4F7F5",
+          surface: "#FFFFFF",
+          surfaceSecondary: "#F1F5F9",
+          text: "#0F172A",
+          textMuted: "#64748B",
+          border: "#E2E8F0",
+        };
+
+  const c = theme?.colors;
+  const primary = sanitizeHexColor(c?.primary ?? theme?.primary, "#10B981");
+  const isDarkSurface = isAmoled || isDark;
+
+  return {
+    isDarkSurface,
+    background: sanitizeHexColor(c?.background ?? theme?.background, defaults.background),
+    surface: sanitizeHexColor(c?.surface ?? theme?.surface, defaults.surface),
+    surfaceSecondary: sanitizeHexColor(c?.surfaceSecondary ?? theme?.surfaceSecondary, defaults.surfaceSecondary),
+    text: sanitizeHexColor(c?.text ?? theme?.text, defaults.text),
+    textMuted: sanitizeHexColor(c?.textMuted ?? theme?.textMuted, defaults.textMuted),
+    border: sanitizeHexColor(c?.border ?? theme?.border, defaults.border),
+    primary,
+    primaryContrast: getContrastTextColor(primary),
+  };
+}
+
+export function renderTwoFactorEmailHtml(
+  userName: string,
+  code: string,
+  theme?: TwoFactorEmailTheme,
+): string {
+  const palette = resolveEmailPalette(theme);
+  const apiBaseUrl = (process.env.PUBLIC_URL || "https://eq.projetoscti.com.br/26-presco").replace(/\/+$/, "");
+  const logoUrl = `${apiBaseUrl}/images/brand-logo?mode=${palette.isDarkSurface ? "dark" : "light"}`;
+  const safeName = escapeHtml(userName?.trim() || "Economizador");
+  const safeCode = escapeHtml(formatOtpCode(code));
+  const currentYear = new Date().getFullYear();
+
+  const badgeBg = mixHex(palette.primary, palette.surface, palette.isDarkSurface ? 0.16 : 0.12);
+  const badgeBorder = mixHex(palette.primary, palette.surface, palette.isDarkSurface ? 0.36 : 0.28);
+  const badgeText = palette.isDarkSurface
+    ? getRelativeLuminance(palette.primary) > 0.2
+      ? palette.primary
+      : mixHex(palette.primary, "#FFFFFF", 0.55)
+    : getRelativeLuminance(palette.primary) < 0.22
+      ? palette.primary
+      : mixHex(palette.primary, "#0F172A", 0.55);
+
+  const otpBorder = mixHex(palette.primary, palette.border, palette.isDarkSurface ? 0.42 : 0.35);
+  const otpBg = mixHex(palette.primary, palette.surfaceSecondary, palette.isDarkSurface ? 0.06 : 0.04);
+  const codeTextColor = palette.isDarkSurface
+    ? getRelativeLuminance(palette.primary) > 0.22
+      ? palette.primary
+      : palette.text
+    : palette.text;
+
+  return `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verificação de Duas Etapas - Presco</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0F172A; color: #F8FAFC; margin: 0; padding: 24px; }
-    .container { max-width: 520px; margin: 0 auto; background-color: #1E293B; border-radius: 16px; border: 1px solid #334155; overflow: hidden; }
-    .header { background: linear-gradient(135deg, #10B981, #059669); padding: 32px 24px; text-align: center; }
-    .logo { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; color: #FFFFFF; margin: 0; }
-    .logo span { color: #A7F3D0; }
-    .subtitle { color: #ECFDF5; font-size: 14px; margin-top: 6px; }
-    .content { padding: 32px 24px; text-align: center; }
-    .greeting { font-size: 18px; font-weight: 600; color: #F1F5F9; margin-bottom: 12px; }
-    .text { font-size: 14px; line-height: 1.6; color: #94A3B8; margin-bottom: 24px; }
-    .code-box { background-color: #0F172A; border: 2px dashed #10B981; border-radius: 12px; padding: 18px 24px; margin: 0 auto 24px; display: inline-block; }
-    .code { font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #10B981; margin: 0; }
-    .badge { display: inline-block; background-color: rgba(16, 185, 129, 0.15); color: #34D399; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; margin-bottom: 20px; }
-    .warning { font-size: 12px; color: #64748B; border-top: 1px solid #334155; padding-top: 20px; margin-top: 24px; }
-    .footer { text-align: center; padding: 16px; font-size: 12px; color: #64748B; }
-  </style>
+  <title>Verificação em 2 Etapas - Presco</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 class="logo">P<span>resco</span></h1>
-      <p class="subtitle">Comparador Colaborativo de Preços</p>
-    </div>
-    <div class="content">
-      <div class="badge">Autenticação em 2 Etapas</div>
-      <div class="greeting">Olá, ${userName || "Economizador"}!</div>
-      <p class="text">
-        Recebemos uma solicitação de verificação de segurança para sua conta. Use o código abaixo para habilitar publicações e interações na plataforma:
-      </p>
-      <div class="code-box">
-        <p class="code">${code}</p>
-      </div>
-      <p class="text" style="font-size: 13px;">
-        Este código expira em <strong>10 minutos</strong>. Se você não solicitou este código, ignore este e-mail com segurança.
-      </p>
-      <div class="warning">
-        Por motivos de segurança, nunca compartilhe este código com ninguém. A equipe Presco nunca solicitará este código.
-      </div>
-    </div>
-  </div>
-  <div class="footer">
-    &copy; ${new Date().getFullYear()} Presco - Todos os direitos reservados.
-  </div>
+<body style="margin:0;padding:32px 16px;background-color:${palette.background};color:${palette.text};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:${palette.background};">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;background-color:${palette.surface};border:1px solid ${palette.border};border-radius:20px;overflow:hidden;">
+          <tr>
+            <td height="3" style="background-color:${palette.primary};font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+          <tr>
+            <td style="padding:24px 32px 20px 32px;border-bottom:1px solid ${palette.border};">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+                <tr>
+                  <td align="left" valign="middle">
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                      <tr>
+                        <td valign="middle" style="padding-right:10px;">
+                          <img src="${logoUrl}" width="28" height="28" alt="" style="display:block;width:28px;height:28px;border:0;outline:none;text-decoration:none;border-radius:7px;" />
+                        </td>
+                        <td valign="middle">
+                          <span style="font-size:20px;font-weight:800;letter-spacing:-0.03em;line-height:1;color:${palette.text};">Presco</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right" valign="middle">
+                    <span style="display:inline-block;background-color:${badgeBg};border:1px solid ${badgeBorder};color:${badgeText};font-size:11px;font-weight:700;letter-spacing:0.02em;line-height:1.2;padding:5px 12px;border-radius:999px;white-space:nowrap;">Verificação em 2 Etapas</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 32px 28px 32px;">
+              <h1 style="margin:0 0 10px 0;font-size:22px;font-weight:700;letter-spacing:-0.02em;line-height:1.3;color:${palette.text};">Olá, ${safeName}</h1>
+              <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;color:${palette.textMuted};">
+                Use o código abaixo para confirmar sua identidade e concluir a verificação em duas etapas da sua conta Presco.
+              </p>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 20px 0;">
+                <tr>
+                  <td align="center" style="background-color:${otpBg};border:1.5px solid ${otpBorder};border-radius:16px;padding:20px 16px 24px 16px;">
+                    <div style="margin:0 0 10px 0;font-size:11px;font-weight:700;letter-spacing:0.09em;text-transform:uppercase;color:${palette.textMuted};">
+                      Código de verificação
+                    </div>
+                    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:36px;font-weight:800;letter-spacing:6px;line-height:1.1;font-variant-numeric:tabular-nums;color:${codeTextColor};padding-left:6px;">
+                      ${safeCode}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 22px 0;background-color:${palette.surfaceSecondary};border:1px solid ${palette.border};border-radius:10px;">
+                <tr>
+                  <td align="left" style="padding:10px 14px;font-size:12px;line-height:1.4;color:${palette.textMuted};">
+                    Válido por <strong style="color:${palette.text};font-weight:600;">10 minutos</strong>
+                  </td>
+                  <td align="right" style="padding:10px 14px;font-size:12px;line-height:1.4;color:${palette.textMuted};">
+                    <strong style="color:${palette.text};font-weight:600;">Uso único</strong>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0;padding-top:18px;border-top:1px solid ${palette.border};font-size:12px;line-height:1.6;color:${palette.textMuted};">
+                Se você não solicitou esta verificação, pode ignorar este e-mail com segurança. Nunca compartilhe este código com terceiros.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:480px;">
+          <tr>
+            <td align="center" style="padding:18px 16px 0 16px;font-size:12px;line-height:1.5;color:${palette.textMuted};">
+              &copy; ${currentYear} Presco. Todos os direitos reservados.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
-    `.trim();
+  `.trim();
+}
+
+class EmailServiceClass {
+  /**
+   * Envia o código de 6 dígitos de verificação de duas etapas para o e-mail do usuário via SMTP (primário) ou Resend API (fallback).
+   */
+  async sendTwoFactorCode(
+    toEmail: string,
+    userName: string,
+    code: string,
+    theme?: TwoFactorEmailTheme,
+  ): Promise<boolean> {
+    const fromAddress = env.SMTP_FROM || env.RESEND_FROM || "Presco <noreply@presco.app>";
+    const subject = `Seu código de verificação Presco: ${code}`;
+    const html = renderTwoFactorEmailHtml(userName, code, theme);
 
     // In test environments, mock delivery to avoid external network latency and rate limits
     if (env.NODE_ENV === "test") {

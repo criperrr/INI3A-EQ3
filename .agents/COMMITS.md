@@ -4740,3 +4740,12 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`, `src/frontend/android/app/src/main/AndroidManifest.xml`, `package.json`, `src/frontend/package.json`, `src/backend/package.json`
   - `src/backend/src/modules/auth/auth.service.ts`, `src/backend/src/shared/middlewares/authMiddleware.ts`, `src/backend/src/shared/services/email.service.ts`, `src/backend/src/shared/config/env.ts`
 - **Impact / Next Steps:** Version bumped to `v1.6.1` (`versionCode: 36`). Ready for atomic commits, PR to `dev`, PR to `main`, and GitHub Release `v1.6.1`.
+
+## `2026-11-17 13:45` - `feat(auth,deploy,ui)`: 2FA radical, e-mail Monet temático, hardening CTI e ajustes de UX (`v1.7.0`)
+
+- **Description:** Implementação de cotas 2FA (10 produtos / 20 preços distintos + bloqueio de postagem), conquista `Guardião 2FA`, check discreto no perfil, redesign do e-mail 2FA baseado no tema ativo do usuário com SMTP Gmail e `GET /images/brand-logo`, hardening completo do servidor CTI (`esbuild` bundle, `releases/` + `current`, `pg_dump`, rollback, `umask 0077`, `127.0.0.1`, `self_heal.sh`, `logrotate`), proxy OpenFoodFacts (`15s` + retry + `sharp`) e ajustes de UX/i18n no frontend.
+- **Files Modified:**
+  - `src/backend/src/**`, `src/backend/tests/{twoFactor,runtimeHardening}.test.ts`
+  - `src/frontend/app/**`, `src/frontend/components/**`, `src/frontend/content/**`, `src/frontend/services/**`, `src/frontend/utils/**`, `src/frontend/i18n/locales/**`
+  - `deploy/**`, `ecosystem.config.cjs`, `scripts/deploy_remote.sh`
+- **Impact / Next Steps:** 61/61 testes do backend aprovados, typecheck frontend/backend sem erros e deploy em produção validado (`HTTP 200 /health`). Versionado em `v1.7.0` e enviado para `dev` via PR.

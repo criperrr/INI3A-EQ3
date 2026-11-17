@@ -118,12 +118,12 @@ class OcurrencyRepositoryClass {
 
     if (hasCoords) {
       whereConditions.push(
-        sql`ST_DWithin(${Market.location}, ST_GeographyFromText(${wktPoint}), ${radius})`
+        sql`public.ST_DWithin(${Market.location}, public.ST_GeographyFromText(${wktPoint}), ${radius})`
       );
     }
 
     const distanceExpr = hasCoords
-      ? sql<number | null>`ROUND(ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})))::int`
+      ? sql<number | null>`ROUND(public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})))::int`
       : sql<number | null>`NULL`;
 
     const selectFields = {
@@ -142,8 +142,8 @@ class OcurrencyRepositoryClass {
       isPromotion: Ocurrency.isPromotion,
       createdAt: Ocurrency.createdAt,
       distanceMeters: distanceExpr,
-      marketLat: sql<number | null>`ST_Y(${Market.location}::geometry)`,
-      marketLng: sql<number | null>`ST_X(${Market.location}::geometry)`,
+      marketLat: sql<number | null>`public.ST_Y(${Market.location}::public.geometry)`,
+      marketLng: sql<number | null>`public.ST_X(${Market.location}::public.geometry)`,
     };
 
     let rows = [];
@@ -160,7 +160,7 @@ class OcurrencyRepositoryClass {
         .where(and(...whereConditions))
         .orderBy(
           hasCoords
-            ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            ? sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
             : desc(Ocurrency.createdAt)
         );
 
@@ -180,7 +180,7 @@ class OcurrencyRepositoryClass {
           .leftJoin(Cured, and(eq(Cured.ocurrencyId, Ocurrency.id), eq(Cured.userId, currentUserId)))
           .where(and(...fallbackConditions))
           .orderBy(
-            sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
           );
       }
     } else {
@@ -195,7 +195,7 @@ class OcurrencyRepositoryClass {
         .where(and(...whereConditions))
         .orderBy(
           hasCoords
-            ? sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            ? sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
             : desc(Ocurrency.createdAt)
         );
 
@@ -214,7 +214,7 @@ class OcurrencyRepositoryClass {
           .leftJoin(Market, eq(Ocurrency.marketId, Market.id))
           .where(and(...fallbackConditions))
           .orderBy(
-            sql`ST_Distance(${Market.location}, ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
+            sql`public.ST_Distance(${Market.location}, public.ST_GeographyFromText(${wktPoint})) ASC, ${desc(Ocurrency.createdAt)}`
           );
       }
     }

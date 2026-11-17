@@ -38,3 +38,62 @@ test("2FA Validation - non-existent code returns null and validates expired", as
   assert.equal(code, null, "Code for user without 2FA request should be null");
 });
 
+test("2FA Product View Quota - allows 10 distinct products, re-views, and blocks 11th", async () => {
+  const testUserId = 77771;
+
+  for (let productId = 1; productId <= 10; productId++) {
+    const res = await AuthRepository.trackAndCheckProductViewQuota(testUserId, productId);
+    assert.deepEqual(res, { allowed: true, count: productId, limit: 10 });
+  }
+
+  // Re-viewing an already viewed product should still be allowed without increasing count
+  const reviewRes = await AuthRepository.trackAndCheckProductViewQuota(testUserId, 5);
+  assert.deepEqual(reviewRes, { allowed: true, count: 10, limit: 10 });
+
+  // 11th distinct product should be blocked
+  const blockedRes = await AuthRepository.trackAndCheckProductViewQuota(testUserId, 11);
+  assert.deepEqual(blockedRes, { allowed: false, count: 10, limit: 10 });
+});
+
+test("2FA Price Views Quota - allows up to 20 distinct prices, re-views, and blocks 21st", async () => {
+  const testUserId = 77772;
+
+  // View first 15 prices
+  const firstBatch = Array.from({ length: 15 }, (_, i) => i + 1);
+  const firstRes = await AuthRepository.trackAndCheckPriceViewsQuota(testUserId, firstBatch);
+  assert.deepEqual(firstRes, {
+    allowedIds: firstBatch,
+    quotaExceeded: false,
+    count: 15,
+    limit: 20,
+  });
+
+  // Re-view some existing prices + 5 new prices (16..20) + 2 over-limit prices (21, 22)
+  const secondBatch = [1, 2, 16, 17, 18, 19, 20, 21, 22];
+  const secondRes = await AuthRepository.trackAndCheckPriceViewsQuota(testUserId, secondBatch);
+  assert.deepEqual(secondRes, {
+    allowedIds: [1, 2, 16, 17, 18, 19, 20],
+    quotaExceeded: true,
+    count: 20,
+    limit: 20,
+  });
+
+  // Re-viewing only existing prices when at limit should succeed with quotaExceeded: false
+  const reviewRes = await AuthRepository.trackAndCheckPriceViewsQuota(testUserId, [1, 10, 20]);
+  assert.deepEqual(reviewRes, {
+    allowedIds: [1, 10, 20],
+    quotaExceeded: false,
+    count: 20,
+    limit: 20,
+  });
+
+  // Viewing a 21st distinct price alone should be blocked
+  const blockedRes = await AuthRepository.trackAndCheckPriceViewsQuota(testUserId, [21]);
+  assert.deepEqual(blockedRes, {
+    allowedIds: [],
+    quotaExceeded: true,
+    count: 20,
+    limit: 20,
+  });
+});
+

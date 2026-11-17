@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
 import { ocurrencyService } from "./ocurrency.service";
 import { success } from "@/shared/helpers/response.helper";
-import { ValidationError } from "@/shared/errors/errors";
+import { ValidationError, TwoFactorRequiredError } from "@/shared/errors/errors";
+import { AuthRepository } from "@/shared/database/repositories/auth.repository";
 
 class OcurrencyControllerClass {
   async create(req: Api.Request, res: Response, next: NextFunction) {
@@ -63,7 +64,22 @@ class OcurrencyControllerClass {
           ? { lat, lng, radius: rad && !isNaN(rad) ? rad : 25000 }
           : undefined
       );
-      return res.status(200).json(success(occurrences));
+
+      let filteredOccurrences = occurrences;
+      const user = (req as any).user;
+      if (user && user.roleId < 5 && !user.twoFactorVerified) {
+        const priceIds = occurrences.map((o: any) => Number(o.id)).filter(Number.isFinite);
+        const quota = await AuthRepository.trackAndCheckPriceViewsQuota(user.id, priceIds, 20);
+        if (quota.quotaExceeded && quota.allowedIds.length === 0 && priceIds.length > 0) {
+          throw new TwoFactorRequiredError(
+            "Limite de 20 preços diferentes atingido. Conclua a verificação em duas etapas por e-mail para continuar.",
+          );
+        }
+        const allowedSet = new Set(quota.allowedIds);
+        filteredOccurrences = occurrences.filter((o: any) => allowedSet.has(Number(o.id)));
+      }
+
+      return res.status(200).json(success(filteredOccurrences));
     } catch (e) {
       next(e);
     }
