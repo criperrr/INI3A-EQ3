@@ -16,6 +16,9 @@ const LOCAL_HTTP_HOST_REGEX =
 const OFF_SELECTED_IMAGE_FULL_REGEX =
   /\/(front|ingredients|nutrition|packaging)(_[a-z]{2})?\.\d+\.full\.jpg$/i;
 
+const OPEN_FACTS_HOST_REGEX =
+  /^https?:\/\/([^/]+\.)?(openfoodfacts|openbeautyfacts|openproductsfacts|openpetfoodfacts)\.org(\/|$)/i;
+
 /**
  * Retorna uma URL otimizada para dispositivos móveis com largura alvo e formato moderno.
  *
@@ -71,12 +74,23 @@ export function getOptimizedImageUrl(
 
   // 2. OpenFoodFacts: só converte .full.jpg -> .400.jpg se seguir o padrão de corte oficial
   // (uploads brutos como /1.full.jpg não possuem variante .400.jpg e retornariam 404)
+  let resolvedUrl = normalizedUrl;
   if (
-    normalizedUrl.includes("images.openfoodfacts.org") &&
-    OFF_SELECTED_IMAGE_FULL_REGEX.test(normalizedUrl)
+    resolvedUrl.includes("images.openfoodfacts.org") &&
+    OFF_SELECTED_IMAGE_FULL_REGEX.test(resolvedUrl)
   ) {
-    return normalizedUrl.replace(/\.full\.jpg$/i, ".400.jpg");
+    resolvedUrl = resolvedUrl.replace(/\.full\.jpg$/i, ".400.jpg");
   }
 
-  return normalizedUrl;
+  const apiBase = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, "");
+  if (
+    apiBase &&
+    !LOCAL_HTTP_HOST_REGEX.test(apiBase) &&
+    !resolvedUrl.includes("/images/optimize") &&
+    OPEN_FACTS_HOST_REGEX.test(resolvedUrl)
+  ) {
+    return `${apiBase}/images/optimize?url=${encodeURIComponent(resolvedUrl)}&w=${targetWidth}&q=${quality}`;
+  }
+
+  return resolvedUrl;
 }

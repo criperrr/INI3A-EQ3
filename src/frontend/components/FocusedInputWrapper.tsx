@@ -107,5 +107,7 @@ export const FocusedInputWrapper: React.FC<FocusedInputWrapperProps> = ({
 const styles = StyleSheet.create({
   defaultWrapper: {
     width: "100%",
+    borderWidth: 1.5,
+    borderColor: "transparent",
   },
 });

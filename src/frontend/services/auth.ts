@@ -195,10 +195,25 @@ export async function fetchUserProfile(): Promise<UserProfileData | null> {
   }
 }
 
+export interface TwoFactorEmailTheme {
+  mode: "light" | "dark";
+  amoled: boolean;
+  monet: boolean;
+  colors: {
+    primary: string;
+    background: string;
+    surface: string;
+    surfaceSecondary: string;
+    text: string;
+    textMuted: string;
+    border: string;
+  };
+}
+
 /**
  * Solicita o envio do código de verificação de 2 etapas por e-mail (Resend)
  */
-export async function sendTwoFactorCode(): Promise<{
+export async function sendTwoFactorCode(theme?: TwoFactorEmailTheme): Promise<{
   success: boolean;
   message: string;
   cooldown?: boolean;
@@ -213,6 +228,7 @@ export async function sendTwoFactorCode(): Promise<{
     email?: string;
   }>("/auth/2fa/send", {
     method: "POST",
+    ...(theme ? { body: JSON.stringify({ theme }) } : {}),
   });
 }
 

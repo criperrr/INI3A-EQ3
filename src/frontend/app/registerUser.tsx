@@ -9,7 +9,6 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,9 +18,6 @@ import { useAuth, ApiError } from "../content/authContext";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
 import { AnimatedSection, ScalePressable } from "../components/AnimatedMotion";
-
-const DEFAULT_AVATAR =
-  "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
 export default function RegisterUser() {
   const insets = useSafeAreaInsets();
@@ -79,12 +75,12 @@ export default function RegisterUser() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, themeStyles.bg]}>
+      <View style={[styles.container, themeStyles.bg, { paddingTop: insets.top }]}>
         <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingTop: Math.max(insets.top + 16, 24),
+              paddingTop: 16,
               paddingBottom: Math.max(insets.bottom + 24, 32),
             },
           ]}
@@ -125,7 +121,7 @@ export default function RegisterUser() {
               </View>
             )}
 
-            <AvatarPicker imageUri={DEFAULT_AVATAR} accent={accent} />
+            <AvatarPreview name={name} accent={accent} />
 
             <InputField
               icon="person-outline"
@@ -206,33 +202,36 @@ export default function RegisterUser() {
 
 // --- Componentes Internos ---
 
-const AvatarPicker = ({
-  imageUri,
+const AvatarPreview = ({
+  name,
   accent,
 }: {
-  imageUri: string;
+  name: string;
   accent: string;
 }) => {
-  const { themeStyles } = useTheme();
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+
   return (
     <View style={styles.avatarContainer}>
-      <View style={styles.avatarWrapper}>
-        <Image
-          source={{ uri: imageUri }}
-          style={[styles.avatarImage, themeStyles.border]}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-          transition={200}
-        />
-        <TouchableOpacity
-          style={[styles.cameraBadge, { backgroundColor: accent }]}
-          activeOpacity={0.8}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Change avatar"
-        >
-          <Ionicons name="camera" size={16} color="#FFFFFF" />
-        </TouchableOpacity>
+      <View
+        style={[
+          styles.avatarCircle,
+          { backgroundColor: accent + "18", borderColor: accent },
+        ]}
+      >
+        {initials ? (
+          <Text style={[styles.avatarInitials, { color: accent }]}>
+            {initials}
+          </Text>
+        ) : (
+          <Ionicons name="person-outline" size={40} color={accent} />
+        )}
       </View>
     </View>
   );
@@ -249,7 +248,11 @@ const InputField = ({
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
   return (
-    <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <FocusedInputWrapper
+      borderRadius={16}
+      extraOffset={100}
+      style={{ marginBottom: 16 }}
+    >
       <View
         style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
       >
@@ -288,7 +291,11 @@ const PasswordField = ({
   const { themeStyles, isDark } = useTheme();
   const placeholderColor = isDark ? "#9CA3AF" : "#8E8E93";
   return (
-    <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+    <FocusedInputWrapper
+      borderRadius={16}
+      extraOffset={100}
+      style={{ marginBottom: 16 }}
+    >
       <View
         style={[styles.inputContainer, themeStyles.inputBg, themeStyles.border]}
       >
@@ -393,32 +400,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: { alignItems: "center", marginBottom: 24 },
-  avatarWrapper: { position: "relative" },
-  avatarImage: { width: 100, height: 100, borderRadius: 50, borderWidth: 2 },
-  cameraBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  avatarCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+  },
+  avatarInitials: {
+    fontSize: 32,
+    fontWeight: "700",
+    letterSpacing: 1,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 15,
     paddingHorizontal: 16,
     height: 56,
-    marginBottom: 16,
     borderWidth: 1,
   },
   inputIcon: { marginRight: 12 },

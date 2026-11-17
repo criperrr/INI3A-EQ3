@@ -62,6 +62,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
   const isHomeScreen = !pathname || pathname === "/";
   const isCartScreen = pathname === "/cart";
   const isSettingsScreen = pathname === "/settings";
+  const hideRightActions = isCartScreen || isSettingsScreen;
 
   const handleLeftPress = useCallback(() => {
     if (Platform.OS !== "web") {
@@ -138,7 +139,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
       <LogoBrand isDark={isDark} onPress={handleLogoPress} />
 
       <View style={styles.rightButtonsRow}>
-        {!isCartScreen ? (
+        {!hideRightActions ? (
           <TouchableOpacity
             activeOpacity={0.7}
             testID="header-cart-btn"
@@ -162,7 +163,7 @@ const Header = memo(function Header({ onPressMenu, onPressSettings }: HeaderProp
           <View style={styles.iconButton} />
         )}
 
-        {!isSettingsScreen ? (
+        {!hideRightActions ? (
           <TouchableOpacity
             activeOpacity={0.7}
             testID="header-settings-btn"

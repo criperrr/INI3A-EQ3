@@ -73,12 +73,12 @@ export default function LoginScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, themeStyles.bg]}>
+      <View style={[styles.container, themeStyles.bg, { paddingTop: insets.top }]}>
         <KeyboardAwareScrollView
           contentContainerStyle={[
             styles.scrollContent,
             {
-              paddingTop: Math.max(insets.top + 16, 24),
+              paddingTop: 16,
               paddingBottom: Math.max(insets.bottom + 24, 32),
             },
           ]}
@@ -227,7 +227,7 @@ const InputField = ({
   isDark,
   editable = true,
 }: any) => (
-  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+  <FocusedInputWrapper borderRadius={16} extraOffset={100} style={{ marginBottom: 16 }}>
     <View style={[styles.inputContainer, themeStyles.inputBg]}>
       <Ionicons
         name={icon}
@@ -263,7 +263,7 @@ const PasswordField = ({
   isDark,
   editable = true,
 }: any) => (
-  <FocusedInputWrapper borderRadius={12} extraOffset={100}>
+  <FocusedInputWrapper borderRadius={16} extraOffset={100} style={{ marginBottom: 16 }}>
     <View style={[styles.inputContainer, themeStyles.inputBg]}>
       <Ionicons
         name="lock-closed-outline"
@@ -378,10 +378,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 15,
     paddingHorizontal: 16,
     height: 56,
-    marginBottom: 16,
     borderWidth: 1,
   },
   inputIcon: {

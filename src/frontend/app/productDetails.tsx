@@ -186,6 +186,7 @@ export default function ProductDetails() {
   const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
   const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
+  const [twoFactorGateMessage, setTwoFactorGateMessage] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
   const [showAllOccurrences, setShowAllOccurrences] = useState(false);
 
@@ -224,7 +225,17 @@ export default function ProductDetails() {
     }
   }, []);
 
+  const isTwoFactorError = useCallback((err: any): boolean => {
+    if (!err) return false;
+    return (
+      err?.code === "TWO_FACTOR_REQUIRED" ||
+      (err?.status === 403 &&
+        String(err?.message || "").toLowerCase().includes("duas etapas"))
+    );
+  }, []);
+
   const loadProductData = useCallback(async () => {
+    setTwoFactorGateMessage(null);
     // Immediate pre-population from route params for zero-latency initial paint
     if (params.name) {
       setProduct((prev) => {
@@ -255,7 +266,10 @@ export default function ProductDetails() {
         setLoadingOccurrences(true);
         const [productData, occurrencesList] = await Promise.all([
           fetchProductById(targetId),
-          fetchProductOccurrences(targetId).catch(() => []),
+          fetchProductOccurrences(targetId).catch((err) => {
+            if (isTwoFactorError(err)) throw err;
+            return [];
+          }),
         ]);
         data = productData;
         setOccurrences(occurrencesList);
@@ -282,8 +296,14 @@ export default function ProductDetails() {
             const resolvedId = byBarcode.id;
             setLoadingOccurrences(true);
             const [fullDetails, occurrencesList] = await Promise.all([
-              fetchProductById(resolvedId).catch(() => byBarcode),
-              fetchProductOccurrences(resolvedId).catch(() => []),
+              fetchProductById(resolvedId).catch((err) => {
+                if (isTwoFactorError(err)) throw err;
+                return byBarcode;
+              }),
+              fetchProductOccurrences(resolvedId).catch((err) => {
+                if (isTwoFactorError(err)) throw err;
+                return [];
+              }),
             ]);
             if (fullDetails) data = fullDetails;
             setOccurrences(occurrencesList);
@@ -323,13 +343,23 @@ export default function ProductDetails() {
         setEditCategory(params.category || "");
         setEditEan(targetBarcode || "");
       }
-    } catch (err) {
-      console.error("[ProductDetails] Error loading details:", err);
+    } catch (err: any) {
+      if (isTwoFactorError(err)) {
+        const gateMsg =
+          err?.message ||
+          "Verificação em duas etapas (2FA) necessária para visualizar mais produtos e preços.";
+        setTwoFactorGateMessage(gateMsg);
+        setTwoFactorActionDescription(gateMsg);
+        setPending2FAAction(() => () => loadProductData());
+        setIsTwoFactorModalVisible(true);
+      } else {
+        console.error("[ProductDetails] Error loading details:", err);
+      }
     } finally {
       setLoading(false);
       setLoadingOccurrences(false);
     }
-  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, t]);
+  }, [targetId, targetBarcode, params.name, params.category, params.imageUri, params.lastPrice, t, isTwoFactorError]);
 
   useEffect(() => {
     loadProductData();
@@ -760,6 +790,81 @@ export default function ProductDetails() {
   }
 
   if (!product) {
+    if (twoFactorGateMessage) {
+      return (
+        <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
+          <View
+            style={[
+              styles.mainCard,
+              themeStyles.card,
+              themeStyles.border,
+              { width: "100%", maxWidth: 380, alignItems: "center", padding: 24 },
+            ]}
+          >
+            <View
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: accent + "20",
+                justifyContent: "center",
+                alignItems: "center",
+                marginBottom: 14,
+              }}
+            >
+              <Ionicons name="shield-checkmark-outline" size={30} color={accent} />
+            </View>
+            <Text style={[styles.errorTitle, themeStyles.text, { textAlign: "center", marginBottom: 8 }]}>
+              Verificação em 2 Etapas
+            </Text>
+            <Text
+              style={[
+                themeStyles.subText,
+                { textAlign: "center", fontSize: 14, lineHeight: 20, marginBottom: 20 },
+              ]}
+            >
+              {twoFactorGateMessage}
+            </Text>
+            <TouchableOpacity
+              style={[styles.backBtn, { backgroundColor: accent, width: "100%", alignItems: "center", paddingVertical: 13 }]}
+              onPress={() => {
+                setTwoFactorActionDescription(twoFactorGateMessage);
+                setPending2FAAction(() => () => loadProductData());
+                setIsTwoFactorModalVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.backBtnText}>Verificar E-mail (2FA)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ marginTop: 14, paddingVertical: 6 }}
+              onPress={() => router.back()}
+              activeOpacity={0.7}
+            >
+              <Text style={[themeStyles.subText, { fontWeight: "600" }]}>{t("common.back")}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {isTwoFactorModalVisible && (
+            <TwoFactorModal
+              visible={isTwoFactorModalVisible}
+              onClose={() => {
+                setIsTwoFactorModalVisible(false);
+                setPending2FAAction(null);
+              }}
+              onSuccess={() => {
+                setIsTwoFactorModalVisible(false);
+                const action = pending2FAAction;
+                setPending2FAAction(null);
+                if (action) action();
+              }}
+              actionDescription={twoFactorActionDescription}
+            />
+          )}
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.container, styles.centerContent, themeStyles.bg]}>
         <Ionicons name="alert-circle-outline" size={64} color={accent} />
@@ -780,6 +885,49 @@ export default function ProductDetails() {
   return (
     <AnimatedScreenContainer testID="product-details-screen" style={[styles.container, themeStyles.bg]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {Boolean(twoFactorGateMessage) && (
+          <View
+            style={[
+              styles.mainCard,
+              themeStyles.card,
+              themeStyles.border,
+              { marginBottom: 14, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 },
+            ]}
+          >
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 21,
+                backgroundColor: accent + "20",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Ionicons name="shield-checkmark-outline" size={22} color={accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[themeStyles.text, { fontWeight: "700", fontSize: 14, marginBottom: 2 }]}>
+                Verificação em 2 Etapas
+              </Text>
+              <Text style={[themeStyles.subText, { fontSize: 12, lineHeight: 17 }]}>
+                {twoFactorGateMessage}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.backBtn, { backgroundColor: accent, paddingHorizontal: 12, paddingVertical: 8 }]}
+              onPress={() => {
+                setTwoFactorActionDescription(twoFactorGateMessage || "");
+                setPending2FAAction(() => () => loadProductData());
+                setIsTwoFactorModalVisible(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Text style={[styles.backBtnText, { fontSize: 12 }]}>Verificar E-mail (2FA)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Main Card Header */}
         <View style={[styles.mainCard, themeStyles.card, themeStyles.border]}>
           <View style={styles.topHeaderControlsRow}>

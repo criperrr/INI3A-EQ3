@@ -15,6 +15,7 @@ import {
   sendTwoFactorCode,
   verifyTwoFactorCode,
   type AuthUser,
+  type TwoFactorEmailTheme,
   type UserProfileData,
 } from "../services/auth";
 import { ApiError } from "../services/api";
@@ -31,7 +32,7 @@ interface AuthContextData {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<UserProfileData | null>;
-  requestTwoFactorCode: () => Promise<{
+  requestTwoFactorCode: (theme?: TwoFactorEmailTheme) => Promise<{
     success: boolean;
     message: string;
     cooldown?: boolean;
@@ -109,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: payload.email,
               roleId: payload.roleId,
               isAdmin: payload.roleId === 5,
+              twoFactorVerified: Boolean(payload.twoFactorVerified),
             });
 
             // Fetch complete profile asynchronously in background
@@ -129,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   currentXp: p.currentXp,
                   maxXp: p.maxXp,
                   levelTitle: p.levelTitle,
-                  twoFactorVerified: p.twoFactorVerified,
+                  twoFactorVerified: Boolean(p.twoFactorVerified),
                 }));
               } else {
                 getStoredTokens().then((t) => {
@@ -176,11 +178,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (name: string, email: string, password: string) => {
       const result = await registerUser(name, email, password);
-      setUser(result.user);
+      setUser({
+        ...result.user,
+        twoFactorVerified: Boolean(result.user?.twoFactorVerified),
+      });
       const p = await fetchUserProfile();
       if (p) {
         setProfile(p);
-        setUser(p);
+        setUser({
+          ...p,
+          twoFactorVerified: Boolean(p.twoFactorVerified),
+        });
       }
     },
     [],
@@ -205,8 +213,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile?.twoFactorVerified === true
   );
 
-  const requestTwoFactorCode = useCallback(async () => {
-    return await sendTwoFactorCode();
+  const requestTwoFactorCode = useCallback(async (theme?: TwoFactorEmailTheme) => {
+    return await sendTwoFactorCode(theme);
   }, []);
 
   const confirmTwoFactorCode = useCallback(async (code: string) => {
