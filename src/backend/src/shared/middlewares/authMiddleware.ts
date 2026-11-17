@@ -91,6 +91,13 @@ export async function optionalAuth(
           );
 
           if (!isBlacklisted) {
+            let userObj: Awaited<ReturnType<typeof UserRepository.getUserById>> | null = null;
+            try {
+              userObj = await UserRepository.getUserById(decoded.id);
+            } catch {
+              // Ignore user lookup errors gracefully
+            }
+
             req.user = {
               id: decoded.id,
               email: decoded.email,
@@ -98,7 +105,9 @@ export async function optionalAuth(
               roleId: decoded.roleId,
               jti: decoded.jti,
               exp: decoded.exp!,
-            };
+              dangerFlag: Boolean(userObj?.dangerFlag),
+              twoFactorVerified: Boolean(userObj?.twoFactorVerified),
+            } as any;
           }
         }
       }
