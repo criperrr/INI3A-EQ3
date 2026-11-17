@@ -73,7 +73,7 @@ class UserRepositoryClass {
     // Check if new badges should be awarded automatically based on points
     const eligibleBadges = await this.db.query.badge.findMany();
     for (const b of eligibleBadges) {
-      if (newPoints >= b.minPoints) {
+      if (b.id !== 16 && b.name !== "Guardião 2FA" && newPoints >= b.minPoints) {
         await this.awardBadge(id, b.id).catch(() => {});
       }
     }
@@ -138,6 +138,14 @@ class UserRepositoryClass {
         badgeId,
       })
       .onConflictDoNothing();
+  }
+
+  async awardTwoFactorBadge(userId: string | number) {
+    const twoFactorBadge = await this.db.query.badge.findFirst({
+      where: (table, { eq }) => eq(table.name, "Guardião 2FA"),
+    });
+    const badgeId = twoFactorBadge?.id ?? 16;
+    return this.awardBadge(userId, badgeId);
   }
 
   async getUserRank(userId: string | number) {

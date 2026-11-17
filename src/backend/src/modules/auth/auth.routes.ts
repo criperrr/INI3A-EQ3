@@ -7,7 +7,7 @@ const r = Router();
 
 r.post("/register", authRateLimiter, authController.register);
 r.post("/login", authRateLimiter, authController.login);
-r.post("/refresh", authController.refresh);
+r.post("/refresh", authRateLimiter, authController.refresh);
 r.get("/me", requireAuth as any, authController.getMe);
 r.post("/logout", requireAuth as any, authController.logout);
 r.post("/2fa/send", requireAuth as any, authRateLimiter, authController.sendTwoFactorCode as any);

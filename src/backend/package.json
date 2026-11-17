@@ -1,6 +1,6 @@
 {
   "name": "backend",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "type": "module",
   "dependencies": {
     "@libsql/client": "^0.17.3",
@@ -24,6 +24,7 @@
     "dev:tunnel": "tsx --watch ./src/server.ts",
     "start": "tsx ./src/server.ts",
     "build": "tsc -p tsconfig.json --noEmit",
+    "build:bundle": "node ./scripts/build_bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:migrate": "tsx ./src/shared/database/migrate.ts",
@@ -41,6 +42,7 @@
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.20.0",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "^0.27.7",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

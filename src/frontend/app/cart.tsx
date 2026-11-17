@@ -26,6 +26,7 @@ import {
 import { fetchProductById } from "../services/productService";
 import { getUserLocation } from "../utils/userLocation";
 import { shareCartList } from "../utils/mapNavigation";
+import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { SavingsHeroCard } from "../components/cart/SavingsHeroCard";
 import { appAlert } from "../components/AppAlertProvider";
 
@@ -854,11 +855,14 @@ export default function CartScreen() {
                   ]}
                 >
                   <View style={[styles.rawItemImageWrap, { backgroundColor: semantic.colors.surface.input }]}>
-                    {item.icon ? (
-                      <Image source={{ uri: item.icon }} style={styles.rawItemImage} contentFit="contain" cachePolicy="memory-disk" />
-                    ) : (
-                      <Ionicons name="cube-outline" size={24} color={semantic.colors.icon.secondary} />
-                    )}
+                    {(() => {
+                      const optimizedUri = getOptimizedImageUrl(item.icon, 120, 70);
+                      return optimizedUri ? (
+                        <Image source={{ uri: optimizedUri }} style={styles.rawItemImage} contentFit="contain" cachePolicy="memory-disk" />
+                      ) : (
+                        <Ionicons name="cube-outline" size={24} color={semantic.colors.icon.secondary} />
+                      );
+                    })()}
                   </View>
 
                   <View style={styles.rawItemInfo}>

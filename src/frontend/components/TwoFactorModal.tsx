@@ -31,7 +31,7 @@ export default function TwoFactorModal({
   onSuccess,
   actionDescription,
 }: TwoFactorModalProps) {
-  const { themeStyles, accent, isDark, tokens } = useTheme();
+  const { theme, accent, isDark, amoledEnabled, monetEnabled, tokens } = useTheme();
   const { semantic } = tokens;
   const { user, profile, requestTwoFactorCode, confirmTwoFactorCode } = useAuth();
   const { t } = useI18n();
@@ -75,7 +75,38 @@ export default function TwoFactorModal({
     setSuccessMessage("");
 
     try {
-      const res = await requestTwoFactorCode();
+      const primaryColor =
+        typeof accent === "string" ? accent : semantic.colors.text.accent;
+
+      const res = await requestTwoFactorCode({
+        mode: theme,
+        amoled: isDark && amoledEnabled,
+        monet: monetEnabled,
+        colors: {
+          primary: primaryColor,
+          background: semantic.colors.surface.background,
+          surface: semantic.colors.surface.card,
+          surfaceSecondary: semantic.colors.surface.input,
+          text: semantic.colors.text.primary,
+          textMuted: semantic.colors.text.secondary,
+          border: semantic.colors.border.default,
+        },
+      });
+      if (res.alreadyVerified) {
+        setSuccessMessage(res.message || "Sua conta já está verificada.");
+        setTimeout(() => {
+          onClose();
+          onSuccess?.();
+        }, 400);
+        return;
+      }
+      if (res.cooldown) {
+        setErrorMessage(
+          res.message || "Aguarde alguns instantes antes de solicitar outro código.",
+        );
+        setCountdown(60);
+        return;
+      }
       if (res.success) {
         setSuccessMessage(res.message || "Código enviado para seu e-mail.");
         setCountdown(60);
@@ -83,7 +114,14 @@ export default function TwoFactorModal({
         setErrorMessage(res.message || "Não foi possível enviar o código.");
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "Erro ao solicitar código de verificação.");
+      if (err?.status === 429 || err?.code === "TOO_MANY_REQUESTS") {
+        setErrorMessage(
+          err?.message || "Aguarde alguns instantes antes de solicitar outro código.",
+        );
+        setCountdown(60);
+      } else {
+        setErrorMessage(err?.message || "Erro ao solicitar código de verificação.");
+      }
     } finally {
       setIsSending(false);
     }

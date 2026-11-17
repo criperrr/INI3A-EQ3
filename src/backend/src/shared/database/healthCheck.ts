@@ -1,6 +1,6 @@
-import "dotenv/config";
-import { pool } from "./database";
-import { connectRedis, redisClient } from "../redis/server";
+import "../config/env";
+import { checkDatabaseHealth, pool } from "./database";
+import { connectRedis, redisClient, withRedisTimeout } from "../redis/server";
 
 async function runHealthCheck() {
   console.log("Checking Database and Redis health...\n");
@@ -10,12 +10,14 @@ async function runHealthCheck() {
   // 1. Check PostgreSQL
   try {
     const start = Date.now();
-    const client = await pool.connect();
-    await client.query("SELECT 1");
-    client.release();
+    const ok = await checkDatabaseHealth();
     const duration = Date.now() - start;
-    console.log(`[OK] PostgreSQL: Connected successfully (${duration}ms)`);
-    pgSuccess = true;
+    if (ok) {
+      console.log(`[OK] PostgreSQL: Connected successfully (${duration}ms)`);
+      pgSuccess = true;
+    } else {
+      console.error(`[FAIL] PostgreSQL: Connection check returned false`);
+    }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`[FAIL] PostgreSQL: Connection failed -> ${msg}`);
@@ -24,14 +26,14 @@ async function runHealthCheck() {
   // 2. Check Redis
   try {
     const start = Date.now();
-    const isConnected = await connectRedis(2, 500);
-    if (isConnected && redisClient.isOpen) {
-      const pingResponse = await redisClient.ping();
+    const isConnected = await connectRedis(1, 500);
+    if (isConnected && redisClient.isReady) {
+      const pingResponse = await withRedisTimeout(redisClient.ping(), 1500);
       const duration = Date.now() - start;
       console.log(`[OK] Redis: Connected successfully (${pingResponse}, ${duration}ms)`);
       redisSuccess = true;
     } else {
-      console.log(`[INFO] Redis: Server offline -> In-Memory Fallback active (OK for local dev)`);
+      console.log("[INFO] Redis: Server offline -> In-Memory Fallback active (OK for local dev)");
       redisSuccess = true;
     }
   } catch (error) {
@@ -42,8 +44,23 @@ async function runHealthCheck() {
   // Clean shutdown
   try {
     await pool.end();
-    if (redisClient.isOpen) {
-      await redisClient.quit();
+    if (redisClient.isReady) {
+      await Promise.race([
+        redisClient.quit(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis quit timeout")), 2000)),
+      ]).catch(() => {
+        try {
+          if (redisClient.isOpen) redisClient.destroy();
+        } catch {
+          // Ignore destroy errors
+        }
+      });
+    } else if (redisClient.isOpen) {
+      try {
+        redisClient.destroy();
+      } catch {
+        // Ignore destroy errors
+      }
     }
   } catch {
     // Ignore cleanup errors

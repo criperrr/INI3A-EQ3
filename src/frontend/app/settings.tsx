@@ -33,6 +33,7 @@ import { resetTutorialStatus } from "../utils/tutorialStorage";
 import { Image as ExpoImage } from "expo-image";
 import { fetchPendingOccurrences } from "../services/ocurrencyService";
 import { fetchPendingProducts } from "../services/productService";
+import TwoFactorModal from "../components/TwoFactorModal";
 
 const OpenFoodFactsStatusTab = React.lazy(
   () => import("../components/OpenFoodFactsStatusTab"),
@@ -45,7 +46,6 @@ interface LocalSettingsState {
   notifications: boolean;
   emailNotifications: boolean;
   privacy: "public" | "private";
-  twoFactorAuth: boolean;
   dataCollection: boolean;
   hapticsEnabled: boolean;
   autoConfirmScan: boolean;
@@ -57,7 +57,6 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettingsState = {
   notifications: true,
   emailNotifications: false,
   privacy: "private",
-  twoFactorAuth: false,
   dataCollection: false,
   hapticsEnabled: true,
   autoConfirmScan: false,
@@ -76,10 +75,6 @@ function buildLocalSettingsFromCache(): LocalSettingsState {
         ? cached.emailNotifications
         : DEFAULT_LOCAL_SETTINGS.emailNotifications,
     privacy: cached.privacy === "public" ? "public" : "private",
-    twoFactorAuth:
-      typeof cached.twoFactorAuth === "boolean"
-        ? cached.twoFactorAuth
-        : DEFAULT_LOCAL_SETTINGS.twoFactorAuth,
     dataCollection:
       typeof cached.dataCollection === "boolean"
         ? cached.dataCollection
@@ -558,10 +553,10 @@ const PrivacySection = React.memo(
     t,
     isAuthenticated,
     isPrivate,
-    twoFactorAuth,
+    isTwoFactorVerified,
     dataCollection,
     onTogglePrivate,
-    onToggleTwoFactor,
+    onOpenTwoFactor,
     onToggleDataCollection,
   }: {
     accent: string;
@@ -569,10 +564,10 @@ const PrivacySection = React.memo(
     t: ReturnType<typeof useI18n>["t"];
     isAuthenticated: boolean;
     isPrivate: boolean;
-    twoFactorAuth: boolean;
+    isTwoFactorVerified: boolean;
     dataCollection: boolean;
     onTogglePrivate: (val: boolean) => void;
-    onToggleTwoFactor: (val: boolean) => void;
+    onOpenTwoFactor: () => void;
     onToggleDataCollection: (val: boolean) => void;
   }) => (
     <View style={[styles.section, themeStyles.card, themeStyles.border]}>
@@ -601,18 +596,44 @@ const PrivacySection = React.memo(
             />
           </View>
 
-          <View style={styles.row}>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={onOpenTwoFactor}
+            disabled={isTwoFactorVerified}
+            activeOpacity={isTwoFactorVerified ? 1 : 0.7}
+          >
             <View style={{ flex: 1, paddingRight: 10 }}>
               <Text style={[styles.rowLabel, themeStyles.text]} numberOfLines={1}>
                 {t("settings.twoFactor")}
               </Text>
+              <Text
+                style={[
+                  styles.rowSubLabel,
+                  isTwoFactorVerified ? { color: "#10B981" } : themeStyles.subText,
+                ]}
+              >
+                {isTwoFactorVerified
+                  ? "Verificado por e-mail"
+                  : "Pendente — Verificar por e-mail"}
+              </Text>
             </View>
-            <Switch
-              value={twoFactorAuth}
-              trackColor={{ false: "#D4DCC8", true: accent }}
-              onValueChange={onToggleTwoFactor}
-            />
-          </View>
+            {isTwoFactorVerified ? (
+              <Ionicons name="shield-checkmark" size={22} color="#10B981" />
+            ) : (
+              <View
+                style={{
+                  backgroundColor: accent,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 8,
+                }}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 12, fontWeight: "700" }}>
+                  Verificar
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
         </>
       )}
 
@@ -809,51 +830,49 @@ const AboutSection = React.memo(
         </View>
 
         {__DEV__ && (
-          <>
-            <View style={styles.infoRow}>
-              <Text
-                style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
-                numberOfLines={1}
-              >
-                {t("common.environment")}
-              </Text>
-              <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-                {Platform.OS.toUpperCase()} • Expo SDK 57 (RN 0.86)
-              </Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text
-                style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
-                numberOfLines={1}
-              >
-                {t("settings.backendStatus")}
-              </Text>
-              <View style={styles.badgeContainer}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    {
-                      backgroundColor:
-                        apiStatus === "online"
-                          ? "#10B981"
-                          : apiStatus === "offline"
-                          ? "#EF4444"
-                          : "#F59E0B",
-                    },
-                  ]}
-                />
-                <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
-                  {apiStatus === "online"
-                    ? t("settings.connected")
-                    : apiStatus === "offline"
-                    ? t("settings.offline")
-                    : t("settings.connecting")}
-                </Text>
-              </View>
-            </View>
-          </>
+          <View style={styles.infoRow}>
+            <Text
+              style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
+              numberOfLines={1}
+            >
+              {t("common.environment")}
+            </Text>
+            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+              {Platform.OS.toUpperCase()} • Expo SDK 57 (RN 0.86)
+            </Text>
+          </View>
         )}
+
+        <View style={styles.infoRow}>
+          <Text
+            style={[styles.infoLabel, themeStyles.subText, { flex: 1, marginRight: 8 }]}
+            numberOfLines={1}
+          >
+            {t("settings.backendStatus")}
+          </Text>
+          <View style={styles.badgeContainer}>
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor:
+                    apiStatus === "online"
+                      ? "#10B981"
+                      : apiStatus === "offline"
+                      ? "#EF4444"
+                      : "#F59E0B",
+                },
+              ]}
+            />
+            <Text style={[styles.infoValue, themeStyles.text]} numberOfLines={1}>
+              {apiStatus === "online"
+                ? t("settings.connected")
+                : apiStatus === "offline"
+                ? t("settings.offline")
+                : t("settings.connecting")}
+            </Text>
+          </View>
+        </View>
 
         <TouchableOpacity
           testID="btn-about"
@@ -1070,7 +1089,7 @@ const SettingsScreen: React.FC = () => {
   const router = useRouter();
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { isAdmin, isAuthenticated } = useAuth();
+  const { isAdmin, isAuthenticated, isTwoFactorVerified, refreshProfile } = useAuth();
   const [localSettings, setLocalSettings] = useState<LocalSettingsState>(
     buildLocalSettingsFromCache,
   );
@@ -1086,6 +1105,7 @@ const SettingsScreen: React.FC = () => {
   const [clearCacheModalOpen, setClearCacheModalOpen] = useState(false);
   const [languageModalOpen, setLanguageModalOpen] = useState(false);
   const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
   const [pendingModerationCount, setPendingModerationCount] = useState(0);
 
   // i18n
@@ -1192,7 +1212,6 @@ const SettingsScreen: React.FC = () => {
   }, [isAdmin]);
 
   useEffect(() => {
-    if (!__DEV__) return;
     let isMounted = true;
     const checkApiHealth = async () => {
       try {
@@ -1429,7 +1448,6 @@ const SettingsScreen: React.FC = () => {
           incoming.emailNotifications ?? localSettings.emailNotifications,
         ),
         privacy: incoming.privacy === "public" ? "public" : "private",
-        twoFactorAuth: Boolean(incoming.twoFactorAuth ?? localSettings.twoFactorAuth),
         dataCollection: Boolean(
           incoming.dataCollection ?? localSettings.dataCollection,
         ),
@@ -1552,10 +1570,11 @@ const SettingsScreen: React.FC = () => {
     (val: boolean) => handleSettingChange("privacy", val ? "private" : "public"),
     [handleSettingChange],
   );
-  const handleToggleTwoFactor = useCallback(
-    (val: boolean) => handleSettingChange("twoFactorAuth", val),
-    [handleSettingChange],
-  );
+  const handleOpenTwoFactor = useCallback(() => {
+    if (isTwoFactorVerified) return;
+    triggerHaptic();
+    setTwoFactorModalOpen(true);
+  }, [isTwoFactorVerified, triggerHaptic]);
   const handleToggleDataCollection = useCallback(
     (val: boolean) => handleSettingChange("dataCollection", val),
     [handleSettingChange],
@@ -1789,10 +1808,10 @@ const SettingsScreen: React.FC = () => {
                   t={t}
                   isAuthenticated={isAuthenticated}
                   isPrivate={localSettings.privacy === "private"}
-                  twoFactorAuth={localSettings.twoFactorAuth}
+                  isTwoFactorVerified={isTwoFactorVerified}
                   dataCollection={localSettings.dataCollection}
                   onTogglePrivate={handleTogglePrivate}
-                  onToggleTwoFactor={handleToggleTwoFactor}
+                  onOpenTwoFactor={handleOpenTwoFactor}
                   onToggleDataCollection={handleToggleDataCollection}
                 />
 
@@ -2287,6 +2306,18 @@ const SettingsScreen: React.FC = () => {
             onClose={() => setShowTutorialModal(false)}
           />
         </Suspense>
+      )}
+
+      {twoFactorModalOpen && (
+        <TwoFactorModal
+          visible={twoFactorModalOpen}
+          onClose={() => setTwoFactorModalOpen(false)}
+          onSuccess={() => {
+            setTwoFactorModalOpen(false);
+            refreshProfile();
+          }}
+          actionDescription="Confirme o código enviado para seu e-mail para ativar a verificação em duas etapas na sua conta."
+        />
       )}
       </ScrollView>
     </AnimatedScreenContainer>

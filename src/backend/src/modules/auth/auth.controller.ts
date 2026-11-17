@@ -146,7 +146,7 @@ class AuthControllerClass {
   async sendTwoFactorCode(req: Api.Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.user;
-      const result = await authService.sendTwoFactorCode(id);
+      const result = await authService.sendTwoFactorCode(id, req.body?.theme);
       return res.status(200).json(success(result));
     } catch (e) {
       next(e);
