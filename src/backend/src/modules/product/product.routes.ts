@@ -7,9 +7,13 @@ import { cacheResponse } from "@/shared/middlewares/cacheMiddleware";
 const router = Router();
 
 router.get("/", cacheResponse({ ttlSeconds: 60, clientMaxAge: 30 }), productController.getAllProducts);
+router.get("/admin/pending", requireAuth as any, requireAdmin as any, productController.getPendingProducts as any);
+router.post("/:id/approve", requireAuth as any, requireAdmin as any, productController.approveProduct as any);
+router.post("/:id/reject", requireAuth as any, requireAdmin as any, productController.rejectProduct as any);
 router.get("/categories", cacheResponse({ ttlSeconds: 3600, clientMaxAge: 1800 }), productController.getCategories);
 router.get("/categories/details", cacheResponse({ ttlSeconds: 3600, clientMaxAge: 1800 }), productController.getPredefinedCategories);
 router.get("/types", cacheResponse({ ttlSeconds: 3600, clientMaxAge: 1800 }), productController.getPredefinedCategories);
+router.get("/validate-existence", searchRateLimiter, productController.validateProductExistence);
 router.get("/barcode/:ean", searchRateLimiter, productController.getProductByBarcode);
 router.get("/barcode", searchRateLimiter, productController.getProductByBarcode);
 router.get("/:id", cacheResponse({ ttlSeconds: 120, clientMaxAge: 60 }), productController.getProductById);

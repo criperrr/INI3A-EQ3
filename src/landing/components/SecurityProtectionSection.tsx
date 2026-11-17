@@ -4,10 +4,17 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
     Image,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgShieldIcon,
+    SvgLockIcon,
+    SvgMapPinIcon,
+    SvgScaleIcon,
+    SvgCheckIcon,
+} from "./SvgIcons";
 
 interface SecurityProtectionSectionProps {
     theme: SemanticTheme;
@@ -18,27 +25,27 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
     theme,
     onOpenPolicies,
 }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     const protectionPillars = [
         {
-            icon: "🛡️",
-            title: "Quórum Comunitário Anti-Fraude",
-            desc: "Cada preço reportado passa por votação e validação de outros consumidores locais. Ocorrências suspeitas ou destoantes são marcadas e suspensas preventivamente pelo algoritmo de confiança.",
+            Icon: SvgShieldIcon,
+            title: "Proteção Comunitária Anti-Fraude",
+            desc: "Cada preço informado é avaliado pela própria comunidade de consumidores locais. Informações suspeitas são suspensas preventivamente pelo sistema colaborativo de confiança.",
         },
         {
-            icon: "🔐",
-            title: "2FA com Resend OTP",
-            desc: "Autenticação em duas etapas via código criptográfico de uso único no seu email, blindando as edições de catálogo e ações de moderação contra robôs e invasores.",
+            Icon: SvgLockIcon,
+            title: "Autenticação em Duas Etapas (2FA)",
+            desc: "Verificação de identidade com código seguro enviado ao seu e-mail, protegendo o catálogo e a comunidade contra robôs e ações não autorizadas.",
         },
         {
-            icon: "📍",
-            title: "Geofencing & Rate Limiting Atômico",
-            desc: "Validação espacial das coordenadas do supermercado via PostGIS aliada a cooldowns em memória no Redis, impedindo spam e manipulação coordenada de ofertas.",
+            Icon: SvgMapPinIcon,
+            title: "Geolocalização & Proteção Anti-Spam",
+            desc: "Validação por geolocalização e raio espacial seguro dos supermercados, garantindo dados reais e impedindo manipulação de ofertas.",
         },
         {
-            icon: "⚖️",
+            Icon: SvgScaleIcon,
             title: "Conformidade Rígida com a LGPD",
             desc: "Total respeito à Lei 13.709/2018. Permissões de GPS e câmera sob demanda, sem rastreamento de anúncios de terceiros e com direito à exclusão definitiva da conta com 1 toque.",
         },
@@ -105,7 +112,9 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                                 },
                             ]}
                         >
-                            <Text style={styles.pillarIcon}>{p.icon}</Text>
+                            <View style={[styles.pillarIconWrap, { backgroundColor: theme.accent + "18" }]}>
+                                <p.Icon size={22} color={theme.accent} />
+                            </View>
                             <Text
                                 style={[
                                     styles.pillarTitle,
@@ -144,8 +153,9 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                                 { backgroundColor: theme.accent + "18" },
                             ]}
                         >
+                            <SvgLockIcon size={12} color={theme.accent} />
                             <Text style={[styles.calloutBadgeText, { color: theme.accent }]}>
-                                🔒 PRIVACIDADE & SEGURANÇA VERIFICÁVEL
+                                PRIVACIDADE & SEGURANÇA VERIFICÁVEL
                             </Text>
                         </View>
 
@@ -159,15 +169,24 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                         </Text>
 
                         <View style={styles.complianceChecks}>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Autenticação em Duas Etapas (2FA) nativa com código descartável
-                            </Text>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
-                            </Text>
-                            <Text style={[styles.checkItem, { color: theme.text.primary }]}>
-                                ✅ Zero rastreamento publicitário ou venda de relatórios de consumo
-                            </Text>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Autenticação em Duas Etapas (2FA) nativa com código descartável
+                                </Text>
+                            </View>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Opção de perfil anônimo e exclusão definitiva de dados em 1 toque
+                                </Text>
+                            </View>
+                            <View style={styles.checkItemRow}>
+                                <SvgCheckIcon size={14} color={theme.accent} />
+                                <Text style={[styles.checkItem, { color: theme.text.primary }]}>
+                                    Zero rastreamento publicitário ou venda de relatórios de consumo
+                                </Text>
+                            </View>
                         </View>
 
                         <View style={styles.calloutActions}>
@@ -207,7 +226,7 @@ export const SecurityProtectionSection: React.FC<SecurityProtectionSectionProps>
                     </View>
 
                     {/* Screenshot Frame of App Settings */}
-                    <View style={styles.calloutRight}>
+                    <View style={[styles.calloutRight, isDesktop && styles.calloutRightDesktop]}>
                         <View
                             style={[
                                 styles.settingsPreviewFrame,
@@ -289,8 +308,12 @@ const styles = StyleSheet.create({
     pillarCardDesktop: {
         width: "48.5%",
     },
-    pillarIcon: {
-        fontSize: 32,
+    pillarIconWrap: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
         marginBottom: 14,
     },
     pillarTitle: {
@@ -309,6 +332,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         flexDirection: "column",
         gap: 28,
+        overflow: "hidden",
     },
     calloutCardDesktop: {
         flexDirection: "row",
@@ -319,7 +343,8 @@ const styles = StyleSheet.create({
         width: "100%",
     },
     calloutLeftDesktop: {
-        width: "60%",
+        width: "58%",
+        maxWidth: 620,
     },
     calloutBadge: {
         alignSelf: "flex-start",
@@ -348,6 +373,11 @@ const styles = StyleSheet.create({
         gap: 8,
         marginBottom: 24,
     },
+    checkItemRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
     checkItem: {
         fontSize: 13,
         lineHeight: 20,
@@ -363,6 +393,11 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         marginTop: 10,
+    },
+    calloutRightDesktop: {
+        width: "38%",
+        maxWidth: 300,
+        marginTop: 0,
     },
     settingsPreviewFrame: {
         width: 260,

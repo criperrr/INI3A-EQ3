@@ -37,6 +37,56 @@ export interface ProductData {
   matchScore?: number | null;
   isExactMatch?: boolean | null;
   scannedEan?: string | null;
+  isGs1Valid?: boolean;
+  isSuspended?: boolean;
+  pendingApproval?: boolean;
+  quorumUsersCount?: number;
+  quorumTarget?: number;
+  alreadySubmittedByUser?: boolean;
+  verificationStatus?:
+    | "verified_catalog"
+    | "verified_gs1"
+    | "community_verified"
+    | "community_submitted"
+    | "pending_review";
+}
+
+export interface PendingProductContributor {
+  userId: number;
+  userName: string | null;
+  userEmail: string | null;
+  points: number;
+  submittedAt: string;
+}
+
+export interface PendingProductItem {
+  id: number;
+  ean: string | null;
+  ncm: string | null;
+  name: string;
+  description: string | null;
+  category: string;
+  categories?: string[];
+  icon: string | null;
+  isSuspended: boolean;
+  isGs1Valid: boolean;
+  gs1Format?: string | null;
+  isBrazilianPrefix?: boolean;
+  isVariableWeightCode?: boolean;
+  pluCode?: string | null;
+  checkDigitExpected?: number | null;
+  checkDigitActual?: number | null;
+  quarantineReason?: string;
+  rewardXpPerUser?: number;
+  createdByUserId: number | null;
+  userName: string | null;
+  userEmail: string | null;
+  userPoints?: number;
+  quorumUsersCount: number;
+  quorumTarget: number;
+  contributors?: PendingProductContributor[];
+  pendingOccurrencesCount?: number;
+  createdAt: string;
 }
 
 export interface ProductDetailData extends ProductData {
@@ -54,6 +104,8 @@ export interface PaginatedProductsData {
 export interface FetchProductsParams {
   search?: string;
   category?: string;
+  marketId?: number;
+  marketName?: string;
   page?: number;
   limit?: number;
   sortBy?: "name" | "createdAt" | "id" | "distance" | "price" | "discount";
@@ -75,6 +127,40 @@ export interface CreateProductParams {
   isPromotion?: boolean;
   brand?: string;
   createdAt?: string;
+  strictExistenceCheck?: boolean;
+}
+
+export interface ProductExistenceValidationData {
+  exists: boolean;
+  isGs1Valid: boolean;
+  gs1Format: string | null;
+  isBrazilianPrefix: boolean;
+  isVariableWeightCode?: boolean;
+  pluCode?: string | null;
+  canRegisterAsPending?: boolean;
+  source:
+    | "local_database"
+    | "openfoodfacts"
+    | "brazilian_retail_catalog"
+    | "upcitemdb"
+    | "cosmos_official_api"
+    | "variable_weight_scale"
+    | "pending_review"
+    | "none";
+  sourceLabel: string;
+  confidence: "high" | "medium" | "low" | "none";
+  ean: string | null;
+  matchedProduct: {
+    id?: number;
+    name: string;
+    brand: string | null;
+    category: string;
+    categories: string[];
+    imageUri: string | null;
+    ncm: string | null;
+    referencePrice: number | null;
+  } | null;
+  reason?: string;
 }
 
 export interface UpdateProductParams {
@@ -97,6 +183,8 @@ export const fetchProducts = async (params?: FetchProductsParams): Promise<Pagin
   const queryParts: string[] = [];
   if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search.trim())}`);
   if (params?.category && params.category !== "Todos") queryParts.push(`category=${encodeURIComponent(params.category.trim())}`);
+  if (params?.marketId) queryParts.push(`marketId=${params.marketId}`);
+  if (params?.marketName && params.marketName.trim()) queryParts.push(`marketName=${encodeURIComponent(params.marketName.trim())}`);
   if (params?.page) queryParts.push(`page=${params.page}`);
   if (params?.limit) queryParts.push(`limit=${params.limit}`);
   if (params?.sortBy) queryParts.push(`sortBy=${params.sortBy}`);
@@ -221,6 +309,30 @@ export const createCustomProduct = async (data: CreateProductParams): Promise<Pr
   });
 };
 
+export const validateProductExistence = async (params: {
+  ean?: string;
+  name?: string;
+}): Promise<ProductExistenceValidationData | null> => {
+  const queryParts: string[] = [];
+  if (params.ean && params.ean.trim()) {
+    queryParts.push(`ean=${encodeURIComponent(params.ean.trim())}`);
+  }
+  if (params.name && params.name.trim()) {
+    queryParts.push(`name=${encodeURIComponent(params.name.trim())}`);
+  }
+  if (queryParts.length === 0) return null;
+
+  try {
+    return await apiRequest<ProductExistenceValidationData>(
+      `/products/validate-existence?${queryParts.join("&")}`,
+      { method: "GET" }
+    );
+  } catch (error: any) {
+    console.warn("[ProductService] Erro ao validar existência do produto:", error?.message);
+    return null;
+  }
+};
+
 export const updateProduct = async (id: number | string, data: UpdateProductParams): Promise<ProductData> => {
   return apiRequest<ProductData>(`/products/${id}`, {
     method: "PUT",
@@ -247,6 +359,31 @@ export const reportProduct = async (
   return apiRequest<{ reported: boolean; message: string }>(`/products/${id}/report`, {
     method: "POST",
     body: JSON.stringify(data),
+  });
+};
+
+export const fetchPendingProducts = async (): Promise<PendingProductItem[]> => {
+  const res = await apiRequest<PendingProductItem[]>("/products/admin/pending", {
+    method: "GET",
+  });
+  return Array.isArray(res) ? res : [];
+};
+
+export const approveProduct = async (
+  id: number | string,
+): Promise<{ approved: boolean; product: ProductData }> => {
+  memoryProductsCache = {};
+  return apiRequest<{ approved: boolean; product: ProductData }>(`/products/${id}/approve`, {
+    method: "POST",
+  });
+};
+
+export const rejectProduct = async (
+  id: number | string,
+): Promise<{ rejected: boolean; deleted: boolean; id: number }> => {
+  memoryProductsCache = {};
+  return apiRequest<{ rejected: boolean; deleted: boolean; id: number }>(`/products/${id}/reject`, {
+    method: "POST",
   });
 };
 

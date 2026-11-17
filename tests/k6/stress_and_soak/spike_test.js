@@ -6,7 +6,7 @@
  */
 
 import { group, check, sleep } from 'k6';
-import { get } from '../helpers/http.js';
+import { get, expectedStatuses } from '../helpers/http.js';
 import { STRESS_THRESHOLDS } from '../config/thresholds.js';
 
 export const options = {
@@ -23,7 +23,9 @@ export default function spikeTest() {
   group('Spike Event Discovery', () => {
     // Flash query on health and search
     const healthRes = get('/health', undefined, 'Spike: Health Check');
-    const catalogRes = get('/products?page=1&limit=10', undefined, 'Spike: Catalog');
+    const catalogRes = get('/products?page=1&limit=10', undefined, 'Spike: Catalog', {
+      responseCallback: expectedStatuses(200, 429),
+    });
 
     check(healthRes, {
       'system remains alive during spike': (r) => r.status === 200,

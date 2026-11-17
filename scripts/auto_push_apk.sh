@@ -11,9 +11,9 @@ if [ ! -f "$APK_PATH" ]; then
 fi
 
 echo "========================================================"
-echo " 🚀 Auto-Push APK: Monitorando dispositivos conectados"
-echo " 📦 Arquivo: presco-app-release.apk (134 MB)"
-echo " 📂 Destino: /sdcard/Download/presco-app-release.apk"
+echo " [INFO] Auto-Push APK: Monitorando dispositivos conectados"
+echo " [INFO] Arquivo: presco-app-release.apk (134 MB)"
+echo " [INFO] Destino: /sdcard/Download/presco-app-release.apk"
 echo "========================================================"
 
 # Conjunto de dispositivos já atendidos nesta sessão
@@ -27,14 +27,14 @@ while true; do
         if [ -z "${PROCESSED_DEVICES[$DEV]:-}" ]; then
             MODEL=$("$ADB" -s "$DEV" shell getprop ro.product.model 2>/dev/null | tr -d '\r\n')
             echo ""
-            echo "📱 [$(date '+%H:%M:%S')] Novo dispositivo detectado: $DEV ($MODEL)"
-            echo "⏳ Enviando APK para /sdcard/Download/..."
+            echo "[INFO] [$(date '+%H:%M:%S')] Novo dispositivo detectado: $DEV ($MODEL)"
+            echo "[INFO] Enviando APK para /sdcard/Download/..."
             
             if "$ADB" -s "$DEV" push "$APK_PATH" /sdcard/Download/presco-app-release.apk; then
-                echo "✅ [$(date '+%H:%M:%S')] Transferência concluída com sucesso no dispositivo $DEV ($MODEL)!"
+                echo "[OK] [$(date '+%H:%M:%S')] Transferência concluída com sucesso no dispositivo $DEV ($MODEL)!"
                 PROCESSED_DEVICES[$DEV]=1
             else
-                echo "❌ Falha ao enviar para o dispositivo $DEV. Tentará novamente no próximo ciclo."
+                echo "[ERRO] Falha ao enviar para o dispositivo $DEV. Tentará novamente no próximo ciclo."
             fi
         fi
     done
@@ -42,7 +42,7 @@ while true; do
     # Limpa da memória dispositivos que foram desconectados para permitir reconexão futura se necessário
     for KNOWN_DEV in "${!PROCESSED_DEVICES[@]}"; do
         if ! echo "$CURRENT_DEVICES" | grep -q "^$KNOWN_DEV$"; then
-            echo "🔌 Dispositivo desconectado: $KNOWN_DEV (removido do cache)"
+            echo "[INFO] Dispositivo desconectado: $KNOWN_DEV (removido do cache)"
             unset "PROCESSED_DEVICES[$KNOWN_DEV]"
         fi
     done

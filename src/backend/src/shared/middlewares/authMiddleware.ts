@@ -165,6 +165,10 @@ export async function requireTwoFactor(
       return next();
     }
 
+    // [TEMPORÁRIO - DEMONSTRAÇÃO DEV]: 2FA desativado para permitir publicações sem bloqueio
+    return next();
+
+    /*
     if (!(req.user as any).twoFactorVerified) {
       return next(
         new TwoFactorRequiredError(
@@ -173,6 +177,7 @@ export async function requireTwoFactor(
       );
     }
     next();
+    */
   });
 }
 

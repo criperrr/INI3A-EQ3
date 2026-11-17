@@ -3,16 +3,22 @@ import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgMoneyIcon,
+    SvgMapPinIcon,
+    SvgLeafIcon,
+    SvgShieldIcon,
+} from "./SvgIcons";
 
 interface ImpactStatsSectionProps {
     theme: SemanticTheme;
 }
 
 export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     const metrics = [
@@ -20,25 +26,25 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
             value: "R$ 38,70",
             label: "Economia Média Semanal",
             sub: "Calculada pelo otimizador já descontando o combustível",
-            icon: "💰",
+            Icon: SvgMoneyIcon,
         },
         {
             value: "15 km",
-            label: "Radar Espacial PostGIS",
+            label: "Radar de Proximidade",
             sub: "Pesquisa em tempo real de supermercados e atacados",
-            icon: "📍",
+            Icon: SvgMapPinIcon,
         },
         {
             value: "100%",
             label: "Livre & Aberto",
             sub: "Sem assinaturas, compras embutidas ou anúncios espiões",
-            icon: "🌱",
+            Icon: SvgLeafIcon,
         },
         {
             value: "2FA Ativo",
-            label: "Quórum Anti-Fraude",
-            sub: "Validação criptográfica via Resend e auditoria comunitária",
-            icon: "🛡️",
+            label: "Proteção Anti-Fraude",
+            sub: "Verificação segura por e-mail e moderação comunitária",
+            Icon: SvgShieldIcon,
         },
     ];
 
@@ -55,47 +61,52 @@ export const ImpactStatsSection: React.FC<ImpactStatsSectionProps> = ({ theme })
         >
             <View style={styles.inner}>
                 <View style={[styles.grid, isDesktop && styles.gridDesktop]}>
-                    {metrics.map((m, idx) => (
-                        <View
-                            key={idx}
-                            style={[
-                                styles.card,
-                                isDesktop && styles.cardDesktop,
-                                {
-                                    backgroundColor: theme.surface.card,
-                                    borderColor: theme.surface.border,
-                                },
-                            ]}
-                        >
-                            <View style={styles.cardTop}>
-                                <Text style={styles.icon}>{m.icon}</Text>
+                    {metrics.map((m, idx) => {
+                        const { Icon } = m;
+                        return (
+                            <View
+                                key={idx}
+                                style={[
+                                    styles.card,
+                                    isDesktop && styles.cardDesktop,
+                                    {
+                                        backgroundColor: theme.surface.card,
+                                        borderColor: theme.surface.border,
+                                    },
+                                ]}
+                            >
+                                <View style={styles.cardTop}>
+                                    <View style={styles.iconWrap}>
+                                        <Icon size={22} color={theme.accent} />
+                                    </View>
+                                    <Text
+                                        style={[
+                                            styles.value,
+                                            { color: theme.accent },
+                                        ]}
+                                    >
+                                        {m.value}
+                                    </Text>
+                                </View>
                                 <Text
                                     style={[
-                                        styles.value,
-                                        { color: theme.accent },
+                                        styles.label,
+                                        { color: theme.text.primary },
                                     ]}
                                 >
-                                    {m.value}
+                                    {m.label}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.sub,
+                                        { color: theme.text.secondary },
+                                    ]}
+                                >
+                                    {m.sub}
                                 </Text>
                             </View>
-                            <Text
-                                style={[
-                                    styles.label,
-                                    { color: theme.text.primary },
-                                ]}
-                            >
-                                {m.label}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.sub,
-                                    { color: theme.text.secondary },
-                                ]}
-                            >
-                                {m.sub}
-                            </Text>
-                        </View>
-                    ))}
+                        );
+                    })}
                 </View>
             </View>
         </View>
@@ -121,39 +132,39 @@ const styles = StyleSheet.create({
     },
     gridDesktop: {
         flexDirection: "row",
-        justifyContent: "space-between",
     },
     card: {
-        padding: 24,
+        flex: 1,
         borderRadius: 20,
         borderWidth: 1,
-        width: "100%",
+        padding: 24,
     },
     cardDesktop: {
-        width: "23.5%",
+        minWidth: 0,
     },
     cardTop: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
-        marginBottom: 8,
+        marginBottom: 12,
     },
-    icon: {
-        fontSize: 24,
+    iconWrap: {
+        padding: 8,
+        borderRadius: 12,
+        backgroundColor: "rgba(255, 183, 3, 0.1)",
     },
     value: {
-        fontSize: 22,
+        fontSize: 26,
         fontWeight: "900",
-        letterSpacing: -0.5,
+        letterSpacing: -0.6,
     },
     label: {
-        fontSize: 15,
+        fontSize: 16,
         fontWeight: "800",
-        marginBottom: 4,
-        letterSpacing: -0.2,
+        marginBottom: 6,
     },
     sub: {
-        fontSize: 12,
-        lineHeight: 16,
+        fontSize: 13,
+        lineHeight: 18,
     },
 });

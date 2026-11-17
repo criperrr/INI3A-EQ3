@@ -200,3 +200,13 @@ File to edit: UserService.ts
 > 🔴 **VIOLATION:** Auto-fixing without asking = Not allowed.
 > 🔴 **Rule:** Always READ output → SUMMARIZE → ASK → then fix.
 
+---
+
+## No Emojis Axiom (Global Policy)
+
+- **UI & Code:** Emojis are strictly forbidden in UI components, console logs, error messages, and workflows.
+- **Icons:** In graphical interfaces, always use vector SVG icons (`Ionicons`, `lucide-react-native`).
+- **Workflows:** Use text tags like `[OK]`, `[INFO]`, `[ERRO]`, `[AVISO]`.
+- **Sole Exception:** Plain-text messages exported/shared outside the application (e.g. WhatsApp shopping list share).
+
+

@@ -5,7 +5,7 @@ import { db, pool } from "./database";
 import { role, user, badge, userBadge, market, customizationItem, userCustomization, product, ocurrency } from "./schema";
 
 export async function seedDatabase() {
-  console.log("🌱 [Seed] Checking and seeding database initial data...");
+  console.log("[Seed] Checking and seeding database initial data...");
 
   // 0. Ensure Customization Tables & User Columns exist
   await db.execute(sql`
@@ -46,6 +46,27 @@ export async function seedDatabase() {
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
     );
 
+    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS is_suspended BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE "product" ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL;
+
+    CREATE TABLE IF NOT EXISTS product_submission (
+      product_id INTEGER NOT NULL REFERENCES product(id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (product_id, user_id)
+    );
+
+    UPDATE "product" p
+    SET is_suspended = TRUE
+    WHERE (p.icon IS NULL OR TRIM(p.icon) = '')
+      AND NOT EXISTS (SELECT 1 FROM ocurrency o WHERE o.product_id = p.id AND o.is_suspended = FALSE);
+
+    INSERT INTO product_submission (product_id, user_id)
+    SELECT p.id, p.created_by_user_id
+    FROM "product" p
+    WHERE p.is_suspended = TRUE AND p.created_by_user_id IS NOT NULL
+    ON CONFLICT (product_id, user_id) DO NOTHING;
+
     ALTER TABLE "ocurrency" ADD COLUMN IF NOT EXISTS is_promotion BOOLEAN DEFAULT FALSE;
     ALTER TABLE "user" ALTER COLUMN role_id SET DEFAULT 1;
     ALTER TABLE "user" ALTER COLUMN points SET DEFAULT 0;
@@ -77,105 +98,105 @@ export async function seedDatabase() {
     {
       id: 1,
       name: "Pioneiro",
-      icon: "🌱",
+      icon: "leaf-outline",
       description: "Primeiro passo na comunidade Presco.",
       minPoints: 0,
     },
     {
       id: 2,
       name: "Primeiro Olhar",
-      icon: "👁️",
+      icon: "eye-outline",
       description: "Primeiro produto ou preço consultado no app.",
       minPoints: 25,
     },
     {
       id: 3,
       name: "Caçador de Preços",
-      icon: "⭐",
+      icon: "star-outline",
       description: "Iniciou o monitoramento ativo de ofertas locais.",
       minPoints: 50,
     },
     {
       id: 4,
       name: "Sentinela do Bairro",
-      icon: "🏪",
+      icon: "storefront-outline",
       description: "Colaborador frequente mapeando comércios da vizinhança.",
       minPoints: 100,
     },
     {
       id: 5,
       name: "Economista Ativo",
-      icon: "💰",
+      icon: "cash-outline",
       description: "Ajudando a comunidade a economizar em compras diárias.",
       minPoints: 175,
     },
     {
       id: 6,
       name: "Auditor Comunitário",
-      icon: "🔍",
+      icon: "search-outline",
       description: "Verificando e confirmando a exatidão dos registros de preço.",
       minPoints: 250,
     },
     {
       id: 7,
       name: "Detetive de Ofertas",
-      icon: "🕵️",
+      icon: "finger-print-outline",
       description: "Especialista em identificar grandes descontos e pechinchas.",
       minPoints: 350,
     },
     {
       id: 8,
       name: "Guardião da Economia",
-      icon: "🛡️",
+      icon: "shield-checkmark-outline",
       description: "Defensor do bolso coletivo e da transparência de mercado.",
       minPoints: 500,
     },
     {
       id: 9,
       name: "Mestre das Ofertas",
-      icon: "🏆",
+      icon: "trophy-outline",
       description: "Contribuidor de alto impacto com ampla cobertura de preços.",
       minPoints: 750,
     },
     {
       id: 10,
       name: "Radar de Preços",
-      icon: "📡",
+      icon: "radio-outline",
       description: "Monitoramento constante e atualizações ágeis no catálogo.",
       minPoints: 1000,
     },
     {
       id: 11,
       name: "Lendário",
-      icon: "👑",
+      icon: "ribbon-outline",
       description: "Reconhecimento lendário por dedicação contínua à comunidade.",
       minPoints: 1500,
     },
     {
       id: 12,
       name: "Patrono do Consumo",
-      icon: "💎",
+      icon: "diamond-outline",
       description: "Patrono essencial que transforma a experiência de consumo.",
       minPoints: 2000,
     },
     {
       id: 13,
       name: "Oráculo dos Mercados",
-      icon: "🔮",
+      icon: "sparkles-outline",
       description: "Conhecimento profundo das tendências de preço e supermercados.",
       minPoints: 3000,
     },
     {
       id: 14,
       name: "Soberano Supremo",
-      icon: "⚡",
+      icon: "flash-outline",
       description: "Autoridade e prestígio máximo em colaboração de preços.",
       minPoints: 5000,
     },
     {
       id: 15,
       name: "Mito Presco",
-      icon: "🌌",
+      icon: "planet-outline",
       description: "Lenda viva eterna com contribuições históricas na plataforma.",
       minPoints: 10000,
     },
@@ -705,7 +726,7 @@ export async function seedDatabase() {
       name ILIKE '%Pronto Socorro da Casa%' OR
       name ILIKE '%Casa Company%';
   `);
-  console.log("🗺️ [Seed] Markets checked: invalid address street names and non-markets purged.");
+  console.log("[Seed] Markets checked: invalid address street names and non-markets purged.");
 
   // 5. Seed Admin Test User: admin@admin.org / admin
   const adminEmail = "admin@admin.org";
@@ -743,7 +764,7 @@ export async function seedDatabase() {
         await db.insert(userCustomization).values({ userId: newAdmin.id, itemId }).onConflictDoNothing();
       }
     }
-    console.log("✅ [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
+    console.log("[OK] [Seed] Created test admin: admin@admin.org / admin (role: admin, authority: 10)");
   } else {
     adminUserId = existingAdmin.id;
     await db
@@ -789,7 +810,7 @@ export async function seedDatabase() {
     for (const itemId of [1, 10, 20, 30, 6, 16, 25, 50]) {
       await db.insert(userCustomization).values({ userId: targetAdmin.id, itemId }).onConflictDoNothing();
     }
-    console.log("✅ [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
+    console.log("[OK] [Seed] Guaranteed admin role for aventureiromax1 (roleId: 5)");
   }
 
   // 6. Seed Regular Test User: usuario@presco.com / user123
@@ -827,7 +848,7 @@ export async function seedDatabase() {
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 20 }).onConflictDoNothing();
       await db.insert(userCustomization).values({ userId: newRegularUser.id, itemId: 30 }).onConflictDoNothing();
     }
-    console.log("✅ [Seed] Created regular test user: usuario@presco.com / user123");
+    console.log("[OK] [Seed] Created regular test user: usuario@presco.com / user123");
   } else {
     for (const b of defaultBadges) {
       if (existingUser.points >= b.minPoints) {
@@ -1466,16 +1487,111 @@ export async function seedDatabase() {
 
   let availableMarkets = await db.select().from(market).limit(10);
   if (availableMarkets.length === 0) {
-    console.log("🌐 [Seed] Discovering real markets via HERE API for initial data...");
-    const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
-    await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
-    await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
+    console.log("[Seed] Discovering real markets via HERE API for initial data...");
+    try {
+      const { HereMarketDiscovery } = await import("../services/hereMarketDiscovery.service");
+      await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 15000);
+      await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 10000);
+    } catch (err: any) {
+      console.warn("[AVISO] [Seed] HereMarketDiscovery error:", err?.message || err);
+    }
     availableMarkets = await db.select().from(market).limit(10);
   }
 
-  // Purged catalog: Do not auto-seed predefined products to keep database clean as requested by user.
-  console.log("ℹ️ [Seed] Skipping predefined products catalog auto-insertion (purged).");
-  console.log("✨ [Seed] Database initial seed completed successfully.");
+  // Fallback baseline markets if discovery produced 0 markets (e.g. offline, CI without HERE_API_KEY, or test runner)
+  if (availableMarkets.length === 0) {
+    console.log("[Seed] Seeding baseline fallback markets for offline/CI environments...");
+    const fallbackMarkets = [
+      { name: "Supermercado Confiança Max", location: { lat: -22.3432, lng: -49.0587 } as any },
+      { name: "Tauste Supermercados Bauru", location: { lat: -22.3325, lng: -49.0682 } as any },
+      { name: "Pão de Açúcar Paulista", location: { lat: -23.5651, lng: -46.6517 } as any },
+    ];
+    for (const fm of fallbackMarkets) {
+      await db.insert(market).values(fm).onConflictDoNothing();
+    }
+    availableMarkets = await db.select().from(market).limit(10);
+  }
+
+  // Synchronize catalog products when running tests/CI or when explicitly requested
+  const shouldSeedCatalog =
+    process.env.SEED_CATALOG === "true" ||
+    process.env.NODE_ENV === "test" ||
+    process.env.CI === "true";
+
+  if (shouldSeedCatalog) {
+    let insertedProductCount = 0;
+    let insertedOccurrencesCount = 0;
+
+    for (const item of catalogProducts) {
+      let targetProduct = await db.query.product.findFirst({
+        where: (table, { eq }) => eq(table.ean, item.ean),
+      });
+
+      if (!targetProduct) {
+        const [newProduct] = await db
+          .insert(product)
+          .values({
+            ean: item.ean,
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
+          })
+          .returning();
+        targetProduct = newProduct;
+        insertedProductCount++;
+      } else {
+        await db
+          .update(product)
+          .set({
+            name: item.name,
+            description: item.description,
+            icon: item.icon,
+            ...(item.createdAt ? { createdAt: new Date(item.createdAt).toISOString() } : {}),
+          })
+          .where(eq(product.id, targetProduct.id));
+      }
+
+      if (targetProduct && item.prices && item.prices.length > 0 && availableMarkets.length > 0) {
+        for (let i = 0; i < item.prices.length; i++) {
+          const p = item.prices[i];
+          const assignedMarket = availableMarkets[i % availableMarkets.length];
+          if (!assignedMarket) continue;
+
+          const existingOcc = await db.query.ocurrency.findFirst({
+            where: (table, { and, eq }) =>
+              and(eq(table.productId, targetProduct.id), eq(table.marketId, assignedMarket.id)),
+          });
+
+          if (!existingOcc) {
+            await db.insert(ocurrency).values({
+              userId: adminUserId,
+              marketId: assignedMarket.id,
+              productId: targetProduct.id,
+              value: p.value,
+              trustFlag: p.trustFlag ?? true,
+              isPromotion: Boolean(p.isPromotion),
+              upvoteCount: p.upvotes ?? 0,
+              downvoteCount: p.downvotes ?? 0,
+              createdAt: p.createdAt
+                ? new Date(p.createdAt).toISOString()
+                : new Date(Date.now() - 3600000).toISOString(),
+            });
+            insertedOccurrencesCount++;
+          }
+        }
+      }
+    }
+
+    console.log(
+      `[OK] [Seed] Test catalog seeded: ${catalogProducts.length} items checked (${insertedProductCount} newly inserted products, ${insertedOccurrencesCount} price occurrences seeded).`
+    );
+  } else {
+    // Purged catalog: Do not auto-seed predefined products in dev/prod to keep database clean as requested by user.
+    console.log("[INFO] [Seed] Skipping predefined products catalog auto-insertion (purged).");
+  }
+
+  console.log("[OK] [Seed] Database initial seed completed successfully.");
 }
 
 // Standalone execution support
@@ -1486,7 +1602,7 @@ if (process.argv[1]?.endsWith("seed.ts")) {
       process.exit(0);
     })
     .catch(async (err) => {
-      console.error("❌ [Seed] Error:", err);
+      console.error("[FAIL] [Seed] Error:", err);
       await pool.end();
       process.exit(1);
     });

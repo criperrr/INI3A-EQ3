@@ -50,6 +50,18 @@ No ecossistema do Presco, o incremento de versão **NUNCA** deve ser aplicado em
    - `expo.version`: mesmo valor SemVer (ex: `"1.2.0"`).
    - `expo.android.versionCode`: incrementado obrigatoriamente em `+1` (inteiro incremental exigido pelo Google Play e builds nativas).
 
+### 2.1. Regra Mandatória de Escopo: Apenas Front-end ou Back-end
+
+- **Escopo Autorizado:** O SemVer DEVE ser alterado SOMENTE quando houver modificação de código de aplicação em `src/frontend/` ou `src/backend/`.
+- **Escopos Proibidos:** É terminantemente proibido incrementar versão quando as alterações forem isoladas em:
+  - CI/CD (`.github/workflows/`)
+  - Testes de estresse/carga (`tests/k6/`)
+  - Scripts utilitários de dev (`scripts/`)
+  - Documentação (`docs/`, `*.md`, `.agents/`)
+  - Landing page estática (`src/landing/`)
+  - Linters ou ferramentas de desenvolvimento.
+- O utilitário `scripts/bump_version.ts` valida automaticamente se há modificações em `src/frontend/` ou `src/backend/` antes de aplicar qualquer bump (use `--force` apenas para exceções manuais justificadas).
+
 ---
 
 ## 3. Comandos de Versionamento Automatizado

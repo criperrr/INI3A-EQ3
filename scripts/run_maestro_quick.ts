@@ -3,14 +3,14 @@ import fs from "fs";
 import path from "path";
 
 async function main() {
-  console.log("🚀 Iniciando execução autônoma do Maestro...");
+  console.log("[INFO] Iniciando execução autônoma do Maestro...");
 
   // 1. Detectar dispositivo conectado via adb (priorizando emulator se houver múltiplos)
   let devicesOutput = "";
   try {
     devicesOutput = execSync("adb devices", { encoding: "utf8" });
   } catch (e) {
-    console.error("❌ Falha ao executar adb:", e);
+    console.error("[ERRO] Falha ao executar adb:", e);
     process.exit(1);
   }
 
@@ -20,7 +20,7 @@ async function main() {
     .filter((l) => l.includes("\tdevice"));
 
   if (lines.length === 0) {
-    console.error("❌ Nenhum emulador ou dispositivo Android conectado em estado 'device'.");
+    console.error("[ERRO] Nenhum emulador ou dispositivo Android conectado em estado 'device'.");
     process.exit(1);
   }
 
@@ -34,10 +34,10 @@ async function main() {
     serial = (emulatorDevice || lines[0]).split("\t")[0];
   }
 
-  console.log(`📱 Dispositivo selecionado: ${serial}`);
+  console.log(`[INFO] Dispositivo selecionado: ${serial}`);
 
   // 2. Garantir permissões do sistema
-  console.log("🔑 Concedendo permissões do sistema...");
+  console.log("[INFO] Concedendo permissões do sistema...");
   try {
     execSync(`adb -s ${serial} shell pm grant com.presco.app android.permission.ACCESS_FINE_LOCATION 2>/dev/null || true`);
     execSync(`adb -s ${serial} shell pm grant com.presco.app android.permission.ACCESS_COARSE_LOCATION 2>/dev/null || true`);
@@ -54,7 +54,7 @@ async function main() {
 
   // 4. Executar o fluxo smoke_suite.yaml com --device <serial>
   const flowPath = path.join(process.cwd(), "tests/maestro/flows/smoke_suite.yaml");
-  console.log(`🧪 Executando suíte rápida no dispositivo ${serial}: ${flowPath}`);
+  console.log(`[INFO] Executando suíte rápida no dispositivo ${serial}: ${flowPath}`);
 
   const child = spawn(maestroBin, ["--device", serial, "test", flowPath], {
     stdio: "inherit",
@@ -63,10 +63,10 @@ async function main() {
 
   child.on("close", (code) => {
     if (code === 0) {
-      console.log("\n✅ Maestro finalizou com sucesso todos os testes autônomos!");
+      console.log("\n[OK] Maestro finalizou com sucesso todos os testes autônomos!");
       process.exit(0);
     } else {
-      console.error(`\n❌ Maestro encerrou com código ${code}`);
+      console.error(`\n[ERRO] Maestro encerrou com código ${code}`);
       process.exit(code || 1);
     }
   });

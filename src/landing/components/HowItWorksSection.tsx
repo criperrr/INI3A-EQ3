@@ -3,31 +3,36 @@ import {
     View,
     Text,
     StyleSheet,
-    Dimensions,
     Image,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import {
+    SvgMapPinIcon,
+    SvgCameraIcon,
+    SvgCarIcon,
+} from "./SvgIcons";
 
 interface HowItWorksSectionProps {
     theme: SemanticTheme;
 }
 
 export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) => {
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     const steps = [
         {
             stepNumber: "01",
-            icon: "📍",
+            Icon: SvgMapPinIcon,
             title: "Descubra no Radar 15km",
             desc: "Abra o app e consulte supermercados, atacados e feiras na sua região. O Presco mapeia as menores cotações registradas pela comunidade.",
-            tag: "GEOPROCESSAMENTO POSTGIS",
+            tag: "RADAR INTELIGENTE DE PROXIMIDADE",
             image: require("../assets/prints/print-home.jpg"),
         },
         {
             stepNumber: "02",
-            icon: "📸",
+            Icon: SvgCameraIcon,
             title: "Aponte na Gôndola",
             desc: "Escaneie o código de barras EAN-13 direto pela câmera. O Presco valida o histórico e premia você com XP no ranking comunitário.",
             tag: "SCANNER ÓPTICO INSTANTÂNEO",
@@ -35,7 +40,7 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
         },
         {
             stepNumber: "03",
-            icon: "🚗",
+            Icon: SvgCarIcon,
             title: "Economize no Caixa & Gasolina",
             desc: "O motor matemático calcula a rota ideal e só sugere dividir a lista se o desconto total cobrir com folga o combustível gasto.",
             tag: "OTIMIZADOR MULTILOJAS",
@@ -112,7 +117,9 @@ export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ theme }) =
                                 >
                                     <Text style={styles.stepNumText}>{s.stepNumber}</Text>
                                 </View>
-                                <Text style={styles.stepIcon}>{s.icon}</Text>
+                                <View style={[styles.stepIconWrap, { backgroundColor: theme.surface.badgeBg, borderColor: theme.accent + "40" }]}>
+                                    <s.Icon size={18} color={theme.accent} />
+                                </View>
                             </View>
 
                             <View
@@ -243,8 +250,13 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: "900",
     },
-    stepIcon: {
-        fontSize: 28,
+    stepIconWrap: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        alignItems: "center",
+        justifyContent: "center",
     },
     tagPill: {
         alignSelf: "flex-start",

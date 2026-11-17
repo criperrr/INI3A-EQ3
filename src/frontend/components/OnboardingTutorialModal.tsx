@@ -204,14 +204,17 @@ export default function OnboardingTutorialModal({
 
             {/* Chips de categorias desenhados */}
             <View style={styles.chipsRow}>
-              <View style={[styles.sketchChip, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight }]}>
-                <Text style={[styles.sketchChipText, { color: colors.emeraldDark }]}>🥖 Padaria</Text>
+              <View style={[styles.sketchChip, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight, flexDirection: "row", alignItems: "center" }]}>
+                <Ionicons name="basket-outline" size={13} color={colors.emeraldDark} style={{ marginRight: 4 }} />
+                <Text style={[styles.sketchChipText, { color: colors.emeraldDark }]}>Padaria</Text>
               </View>
-              <View style={[styles.sketchChip, { borderColor: colors.amber, backgroundColor: colors.amberLight }]}>
-                <Text style={[styles.sketchChipText, { color: colors.amberDark }]}>🥩 Carnes</Text>
+              <View style={[styles.sketchChip, { borderColor: colors.amber, backgroundColor: colors.amberLight, flexDirection: "row", alignItems: "center" }]}>
+                <Ionicons name="restaurant-outline" size={13} color={colors.amberDark} style={{ marginRight: 4 }} />
+                <Text style={[styles.sketchChipText, { color: colors.amberDark }]}>Carnes</Text>
               </View>
-              <View style={[styles.sketchChip, { borderColor: colors.cardBorder, backgroundColor: colors.surfaceCard }]}>
-                <Text style={[styles.sketchChipText, { color: colors.textSecondary }]}>🥛 Laticínios</Text>
+              <View style={[styles.sketchChip, { borderColor: colors.cardBorder, backgroundColor: colors.surfaceCard, flexDirection: "row", alignItems: "center" }]}>
+                <Ionicons name="water-outline" size={13} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={[styles.sketchChipText, { color: colors.textSecondary }]}>Laticínios</Text>
               </View>
             </View>
 
@@ -241,9 +244,10 @@ export default function OnboardingTutorialModal({
             </View>
 
             {/* Post-it amarelo inclinado */}
-            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-2deg" }] }]}>
+            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-2deg" }], flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="pin-outline" size={14} color={colors.postItText} style={{ marginRight: 6 }} />
               <Text style={[styles.postItText, { color: colors.postItText }]}>
-                📌 Compare preços antes de sair de casa!
+                Compare preços antes de sair de casa!
               </Text>
             </View>
           </View>
@@ -270,10 +274,11 @@ export default function OnboardingTutorialModal({
               </View>
 
               {/* Balão de fala doodle */}
-              <View style={[styles.speechBubble, { backgroundColor: colors.amberLight, borderColor: colors.amber }]}>
+              <View style={[styles.speechBubble, { backgroundColor: colors.amberLight, borderColor: colors.amber, flexDirection: "row", alignItems: "center" }]}>
                 <Text style={[styles.speechText, { color: colors.amberDark }]}>
-                  Aponte na gôndola! 🎯
+                  Aponte na gôndola!
                 </Text>
+                <Ionicons name="scan-outline" size={13} color={colors.amberDark} style={{ marginLeft: 4 }} />
               </View>
             </View>
 
@@ -355,9 +360,10 @@ export default function OnboardingTutorialModal({
             </View>
 
             {/* Post-it amarelo explicativo */}
-            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-1.8deg" }] }]}>
+            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-1.8deg" }], flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="speedometer-outline" size={14} color={colors.postItText} style={{ marginRight: 6 }} />
               <Text style={[styles.postItText, { color: colors.postItText }]}>
-                ⛽ O Presco calcula se dividir lojas compensa a gasolina!
+                O Presco calcula se dividir lojas compensa a gasolina!
               </Text>
             </View>
           </View>
@@ -399,9 +405,10 @@ export default function OnboardingTutorialModal({
             </View>
 
             {/* Post-it de geolocalização PostGIS */}
-            <View style={[styles.postItNote, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald, transform: [{ rotate: "1.5deg" }] }]}>
+            <View style={[styles.postItNote, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald, transform: [{ rotate: "1.5deg" }], flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="navigate-circle-outline" size={14} color={colors.emeraldDark} style={{ marginRight: 6 }} />
               <Text style={[styles.postItText, { color: colors.emeraldDark }]}>
-                📍 Raio inteligente: economize tempo e combustível!
+                Raio inteligente: economize tempo e combustível!
               </Text>
             </View>
           </View>
@@ -423,7 +430,7 @@ export default function OnboardingTutorialModal({
               {/* Carimbo de bônus de novo produto */}
               <View style={[styles.stampBox, { borderColor: colors.stampRed }]}>
                 <Text style={[styles.stampText, { color: colors.stampRed }]}>
-                  ★ +25 XP SE O PRODUTO FOR NOVO ★
+                  +25 XP SE O PRODUTO FOR NOVO
                 </Text>
               </View>
             </View>
@@ -431,9 +438,12 @@ export default function OnboardingTutorialModal({
             {/* Post-it amarelo vibrante com +15 XP */}
             <View style={[styles.postItNoteLarge, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-2.5deg" }] }]}>
               <View style={styles.postItTape} />
-              <Text style={[styles.postItTitle, { color: colors.postItText }]}>
-                🎉 +15 XP Garantidos!
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="sparkles" size={14} color={colors.postItText} style={{ marginRight: 6 }} />
+                <Text style={[styles.postItTitle, { color: colors.postItText }]}>
+                  +15 XP Garantidos!
+                </Text>
+              </View>
               <Text style={[styles.postItSubtitle, { color: colors.postItText }]}>
                 Toda oferta informada ajuda quem mais precisa e sobe seu ranking.
               </Text>
@@ -475,9 +485,10 @@ export default function OnboardingTutorialModal({
             </View>
 
             {/* Post-it com recompensa por voto */}
-            <View style={[styles.postItNote, { backgroundColor: colors.amberLight, borderColor: colors.amber, transform: [{ rotate: "2deg" }] }]}>
+            <View style={[styles.postItNote, { backgroundColor: colors.amberLight, borderColor: colors.amber, transform: [{ rotate: "2deg" }], flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="star-outline" size={14} color={colors.amberDark} style={{ marginRight: 6 }} />
               <Text style={[styles.postItText, { color: colors.amberDark }]}>
-                ⭐ Ganhe +5 XP por cada auditoria justa!
+                Ganhe +5 XP por cada auditoria justa!
               </Text>
             </View>
           </View>
@@ -534,9 +545,10 @@ export default function OnboardingTutorialModal({
             </View>
 
             {/* Post-it final motivacional */}
-            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-1deg" }] }]}>
+            <View style={[styles.postItNote, { backgroundColor: colors.postItBg, borderColor: colors.postItBorder, transform: [{ rotate: "-1deg" }], flexDirection: "row", alignItems: "center" }]}>
+              <Ionicons name="bag-handle-outline" size={14} color={colors.postItText} style={{ marginRight: 6 }} />
               <Text style={[styles.postItText, { color: colors.postItText }]}>
-                🛍️ Desbloqueie molduras épicas e banners na Loja!
+                Desbloqueie molduras épicas e banners na Loja!
               </Text>
             </View>
           </View>

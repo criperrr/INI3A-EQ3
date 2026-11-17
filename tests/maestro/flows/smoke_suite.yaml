@@ -16,6 +16,18 @@ tags:
 - runFlow:
     file: "../subflows/dismiss_tutorial.yaml"
 
+# Recovery if dev-client first-launch dialog closed or backgrounded the activity
+- runFlow:
+    when:
+      notVisible:
+        id: ".*(dismiss-tutorial-button|tab-home).*"
+    commands:
+      - openLink: "presco://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081"
+      - waitForAnimationToEnd:
+          timeout: 4000
+      - runFlow:
+          file: "../subflows/dismiss_tutorial.yaml"
+
 # Wait for either tutorial modal or home screen to load
 - extendedWaitUntil:
     visible:

@@ -4,10 +4,10 @@ import { db, pool } from "./database";
 import { HereMarketDiscovery } from "../services/hereMarketDiscovery.service";
 
 export async function executeReallocation() {
-  console.log("🚀 [Reallocation] Starting market reallocation to HERE API markets...");
+  console.log("[Reallocation] Starting market reallocation to HERE API markets...");
 
   // 1. Ensure latest HERE API markets are populated for active areas (Bauru & São Paulo)
-  console.log("📍 [Reallocation] Ensuring HERE API markets are discovered for Bauru and São Paulo...");
+  console.log("[Reallocation] Ensuring HERE API markets are discovered for Bauru and São Paulo...");
   await HereMarketDiscovery.discoverNearbyMarkets(-22.3145, -49.0587, 20000); // Bauru Centro / Norte
   await HereMarketDiscovery.discoverNearbyMarkets(-22.3545, -49.0493, 10000); // Bauru Sul (Vila Aviação / Getúlio Vargas)
   await HereMarketDiscovery.discoverNearbyMarkets(-23.5505, -46.6333, 15000); // São Paulo
@@ -34,13 +34,13 @@ export async function executeReallocation() {
           location = ST_GeographyFromText('POINT(-49.04929 -22.35451)')
       WHERE id = ${realObaRow.id}
     `);
-    console.log(`✅ [Reallocation] Updated genuine Oba Hortifruti on Av. Getúlio Vargas 23-2 (ID ${realObaRow.id})`);
+    console.log(`[OK] [Reallocation] Updated genuine Oba Hortifruti on Av. Getúlio Vargas 23-2 (ID ${realObaRow.id})`);
   } else {
     await db.execute(sql`
       INSERT INTO market (name, location)
       VALUES ('Oba Hortifruti', ST_GeographyFromText('POINT(-49.04929 -22.35451)'))
     `);
-    console.log(`✅ [Reallocation] Inserted genuine Oba Hortifruti on Av. Getúlio Vargas 23-2`);
+    console.log(`[OK] [Reallocation] Inserted genuine Oba Hortifruti on Av. Getúlio Vargas 23-2`);
   }
 
   // 2. Clean up non-retail noise in markets with 0 occurrences (preserving Trigal ID 1)
@@ -118,7 +118,7 @@ export async function executeReallocation() {
   `);
 
   const targetIds = targetMarkets.rows.map(r => r.id as number);
-  console.log(`✅ [Reallocation] Found ${targetIds.length} verified genuine HERE API Supermarket targets.`);
+  console.log(`[OK] [Reallocation] Found ${targetIds.length} verified genuine HERE API Supermarket targets.`);
 
   if (targetIds.length === 0) {
     throw new Error("No target HERE API supermarkets found! Aborting reallocation.");
@@ -134,7 +134,7 @@ export async function executeReallocation() {
     ORDER BY oc_count DESC
   `);
 
-  console.log(`📦 [Reallocation] Found ${oldMarketsWithOcc.rows.length} non-API markets with occurrences to reallocate.`);
+  console.log(`[Reallocation] Found ${oldMarketsWithOcc.rows.length} non-API markets with occurrences to reallocate.`);
 
   const brands = [
     { key: "tauste", pattern: "%tauste%" },
@@ -201,7 +201,7 @@ export async function executeReallocation() {
     totalReallocated += count;
   }
 
-  console.log(`🎉 [Reallocation] Successfully migrated ${totalReallocated} occurrences!`);
+  console.log(`[OK] [Reallocation] Successfully migrated ${totalReallocated} occurrences!`);
 
   // 5. Delete all legacy / non-API markets (all IDs < 125, preserving Trigal ID 1)
   const deletedOld = await db.execute(sql`
@@ -210,7 +210,7 @@ export async function executeReallocation() {
     RETURNING id
   `);
 
-  console.log(`🗑️ [Reallocation] Purged ${deletedOld.rows.length} legacy/inexistent markets from database (Trigal ID 1 preserved).`);
+  console.log(`[Reallocation] Purged ${deletedOld.rows.length} legacy/inexistent markets from database (Trigal ID 1 preserved).`);
 
   // 6. Verify that 100% of remaining markets are HERE API markets (ID >= 125)
   const remainingMarkets = await db.execute(sql`
@@ -222,13 +222,13 @@ export async function executeReallocation() {
 
   const summary = remainingMarkets.rows[0];
   if (summary) {
-    console.log(`📊 [Verification] Total markets: ${summary.total} (HERE API: ${summary.here_count}, Legacy: ${summary.legacy_count})`);
+    console.log(`[Verification] Total markets: ${summary.total} (HERE API: ${summary.here_count}, Legacy: ${summary.legacy_count})`);
   }
 
   // Verify total occurrences preserved
   const totalOcc = await db.execute(sql`SELECT count(*) as total FROM ocurrency`);
   const occCount = totalOcc.rows[0]?.total;
-  console.log(`📊 [Verification] Total active occurrences in database: ${occCount}`);
+  console.log(`[Verification] Total active occurrences in database: ${occCount}`);
 }
 
 if (process.argv[1]?.endsWith("reallocateMarkets.ts")) {
@@ -238,7 +238,7 @@ if (process.argv[1]?.endsWith("reallocateMarkets.ts")) {
       process.exit(0);
     })
     .catch(async (err) => {
-      console.error("❌ [Reallocation] Error:", err);
+      console.error("[FAIL] [Reallocation] Error:", err);
       await pool.end();
       process.exit(1);
     });

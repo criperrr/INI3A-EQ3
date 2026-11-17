@@ -372,7 +372,10 @@ function generateLocalFallbackOptimization(
   const fuelPrice = Math.max(0, settings.fuelPrice || 5.8);
   const isRoundTrip = settings.isRoundTrip ?? true;
 
-  if (rawItems.length === 0) {
+  const pricedItems = rawItems.filter((it) => it.estimatedPrice && it.estimatedPrice > 0);
+  const unpricedItems = rawItems.filter((it) => !it.estimatedPrice || it.estimatedPrice <= 0);
+
+  if (rawItems.length === 0 || pricedItems.length === 0) {
     return {
       strategy: settings.strategy,
       recommendedType: "single_store",
@@ -384,7 +387,18 @@ function generateLocalFallbackOptimization(
       netSavingsVsSingleStore: 0,
       storeGroups: [],
       singleStoreComparison: null,
-      unassignedItems: [],
+      singleStoreOptions: {
+        hasCompleteStore: false,
+        bestStoreCoveredCount: 0,
+        totalCartItemsCount: rawItems.length,
+        stores: [],
+      },
+      unassignedItems: unpricedItems.map((c) => ({
+        productId: c.productId,
+        productName: c.name || `Produto #${c.productId}`,
+        quantity: c.quantity,
+        reason: "Sem preço recente nos mercados candidatos.",
+      })),
       parametersUsed: {
         userLocation: loc,
         fuelEfficiency,
@@ -400,14 +414,10 @@ function generateLocalFallbackOptimization(
   }
 
   const getItemPrice = (it: CartProductItem, storeFactor = 1.0) => {
-    if (it.estimatedPrice && it.estimatedPrice > 0) {
-      return Math.round(it.estimatedPrice * storeFactor * 100) / 100;
-    }
-    const pseudoRand = ((it.productId * 13) % 18) + 6.5;
-    return Math.round(pseudoRand * storeFactor * 100) / 100;
+    return Math.round((it.estimatedPrice || 0) * storeFactor * 100) / 100;
   };
 
-  const isMulti = settings.strategy !== "single_store" && rawItems.length >= 2;
+  const isMulti = settings.strategy !== "single_store" && pricedItems.length >= 2;
 
   if (!isMulti) {
     const storeDist = 2.4;
@@ -415,7 +425,7 @@ function generateLocalFallbackOptimization(
     const travelDist = isRoundTrip ? storeDist * 2 : storeDist;
     const travelCost = Math.round(((travelDist / fuelEfficiency) * fuelPrice) * 100) / 100;
 
-    // Simulate single store options when rawItems > 1
+    // Simulate single store options when pricedItems > 0
     const candidateStores = [
       { id: 1, name: "Supermercado Econômico", dist: 2.4, factor: 1.0 },
       { id: 2, name: "Atacadão das Ofertas", dist: 3.8, factor: 0.94 },
@@ -428,7 +438,7 @@ function generateLocalFallbackOptimization(
     }
 
     let groceryCost = 0;
-    const items = rawItems.map((it) => {
+    const items = pricedItems.map((it) => {
       const unitPrice = getItemPrice(it, chosenStore.factor);
       const subtotal = Math.round(unitPrice * it.quantity * 100) / 100;
       groceryCost += subtotal;
@@ -461,14 +471,14 @@ function generateLocalFallbackOptimization(
       marketId: s.id,
       marketName: s.name,
       coordinate: { lat: loc.lat + 0.01, lng: loc.lng + 0.01 },
-      coveredCount: rawItems.length,
+      coveredCount: pricedItems.length,
       totalCount: rawItems.length,
       distanceKm: s.dist,
       groceryCost: Math.round(groceryCost * 100) / 100,
       travelCost,
       combinedCost: Math.round((groceryCost + travelCost) * 100) / 100,
-      coveredProductIds: rawItems.map((c) => c.productId),
-      missingProductIds: [],
+      coveredProductIds: pricedItems.map((c) => c.productId),
+      missingProductIds: unpricedItems.map((c) => c.productId),
     }));
 
     return {
@@ -488,16 +498,21 @@ function generateLocalFallbackOptimization(
         travelCost,
         combinedCost: Math.round((groceryCost + travelCost) * 100) / 100,
         distanceKm: travelDist,
-        availableItemCount: rawItems.length,
+        availableItemCount: pricedItems.length,
         totalItemCount: rawItems.length,
       },
       singleStoreOptions: {
-        hasCompleteStore: true,
-        bestStoreCoveredCount: rawItems.length,
+        hasCompleteStore: unpricedItems.length === 0,
+        bestStoreCoveredCount: pricedItems.length,
         totalCartItemsCount: rawItems.length,
         stores: singleStoreOptionsList,
       },
-      unassignedItems: [],
+      unassignedItems: unpricedItems.map((c) => ({
+        productId: c.productId,
+        productName: c.name || `Produto #${c.productId}`,
+        quantity: c.quantity,
+        reason: "Sem preço recente nos mercados candidatos.",
+      })),
       parametersUsed: {
         userLocation: loc,
         fuelEfficiency,
@@ -512,9 +527,9 @@ function generateLocalFallbackOptimization(
     };
   }
 
-  const mid = Math.ceil(rawItems.length / 2);
-  const items1 = rawItems.slice(0, mid);
-  const items2 = rawItems.slice(mid);
+  const mid = Math.ceil(pricedItems.length / 2);
+  const items1 = pricedItems.slice(0, mid);
+  const items2 = pricedItems.slice(mid);
 
   let subtotal1 = 0;
   const mapped1 = items1.map((it) => {
@@ -570,7 +585,7 @@ function generateLocalFallbackOptimization(
   const totalGrocery = Math.round((subtotal1 + subtotal2) * 100) / 100;
   const totalCombined = Math.round((totalGrocery + totalTravelCost) * 100) / 100;
 
-  const singleStoreGrocery = Math.round(rawItems.reduce((sum, it) => sum + getItemPrice(it, 1.05) * it.quantity, 0) * 100) / 100;
+  const singleStoreGrocery = Math.round(pricedItems.reduce((sum, it) => sum + getItemPrice(it, 1.05) * it.quantity, 0) * 100) / 100;
   const singleStoreTravel = Math.round(((2.8 * (isRoundTrip ? 2 : 1) / fuelEfficiency) * fuelPrice) * 100) / 100;
   const singleStoreCombined = Math.round((singleStoreGrocery + singleStoreTravel) * 100) / 100;
   const netSavings = Math.max(0, Math.round((singleStoreCombined - totalCombined) * 100) / 100);
@@ -618,10 +633,15 @@ function generateLocalFallbackOptimization(
       travelCost: singleStoreTravel,
       combinedCost: singleStoreCombined,
       distanceKm: isRoundTrip ? 5.6 : 2.8,
-      availableItemCount: rawItems.length,
+      availableItemCount: pricedItems.length,
       totalItemCount: rawItems.length,
     },
-    unassignedItems: [],
+    unassignedItems: unpricedItems.map((c) => ({
+      productId: c.productId,
+      productName: c.name || `Produto #${c.productId}`,
+      quantity: c.quantity,
+      reason: "Sem preço recente nos mercados candidatos.",
+    })),
     parametersUsed: {
       userLocation: loc,
       fuelEfficiency,

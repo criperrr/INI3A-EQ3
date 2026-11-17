@@ -17,7 +17,7 @@ export const options = {
 export default function imageOptimizationScenario() {
   group('Image Optimization Pipeline', () => {
     const sampleImageUrl = encodeURIComponent(
-      'https://images.openfoodfacts.org/images/products/789/100/010/0103/front_pt.4.400.jpg'
+      'https://images.openfoodfacts.org/images/products/789/100/010/0103/front_pt.34.400.jpg'
     );
 
     // 1. Image Transcoding Request: WebP conversion with resizing

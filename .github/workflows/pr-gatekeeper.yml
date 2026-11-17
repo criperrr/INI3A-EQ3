@@ -27,18 +27,18 @@ jobs:
           echo "Validando branch: $BRANCH_NAME"
           # Permite branch 'dev' para PRs de promoção/release apontando para 'main'
           if [[ "${{ github.base_ref }}" == "main" && "$BRANCH_NAME" == "dev" ]]; then
-            echo "✅ Promoção de release de 'dev' para 'main' autorizada."
+            echo "[OK] Promoção de release de 'dev' para 'main' autorizada."
             exit 0
           fi
           # Permite branches seguindo a regex: ^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$
           REGEX="^(feat|fix|test|refactor|chore|docs)/[a-z0-9-]+$"
           if [[ ! "$BRANCH_NAME" =~ $REGEX ]]; then
-            echo "❌ ERRO: A branch '$BRANCH_NAME' viola o Axioma de Criação de Branches."
+            echo "[ERRO] A branch '$BRANCH_NAME' viola o Axioma de Criação de Branches."
             echo "Formato esperado: <categoria>/<nome-da-task>"
             echo "Categorias permitidas: feat, fix, test, refactor, chore, docs (apenas letras minúsculas, números e hífens)."
             exit 1
           fi
-          echo "✅ Nomenclatura de branch válida: $BRANCH_NAME"
+          echo "[OK] Nomenclatura de branch válida: $BRANCH_NAME"
 
       - name: Validar Sintaxe das Mensagens de Commits
         run: |
@@ -50,7 +50,7 @@ jobs:
             if [ -n "$msg" ]; then
               echo "Verificando commit: $msg"
               if [[ ! "$msg" =~ $COMMIT_REGEX ]]; then
-                echo "⚠️ AVISO / ERRO: Mensagem de commit fora da especificação: '$msg'"
+                echo "[AVISO] Mensagem de commit fora da especificação: '$msg'"
                 echo "Formato esperado: <category>/<short-description> ou <category>(<scope>): <short-description>"
               fi
             fi
@@ -82,18 +82,18 @@ jobs:
         run: |
           echo "Executando suíte de testes com medição de cobertura..."
           npm test
-          echo "✅ Todos os testes unitários e de integração passaram com 100% de sucesso."
+          echo "[OK] Todos os testes unitários e de integração passaram com 100% de sucesso."
 
       - name: "Validar Bundle Expo Mobile (Condicional: apenas se src/frontend foi modificado)"
         run: |
           echo "Verificando se houve alterações no frontend..."
           MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
           if echo "$MODIFIED_FILES" | grep -qE '^src/frontend/'; then
-            echo "📱 Alterações detectadas em 'src/frontend/'. Validando bundle Expo Android..."
+            echo "[INFO] Alterações detectadas em 'src/frontend/'. Validando bundle Expo Android..."
             cd src/frontend
             npx expo export --platform android --no-bytecode
             rm -rf dist
-            echo "✅ Bundle Expo compilado com 100% de sucesso! Nenhum erro de módulo, rota, fonte ou imagem."
+            echo "[OK] Bundle Expo compilado com 100% de sucesso! Nenhum erro de módulo, rota, fonte ou imagem."
           else
-            echo "⏩ Nenhuma alteração detectada em 'src/frontend/'. Pulando validação de bundle Expo."
+            echo "[INFO] Nenhuma alteração detectada em 'src/frontend/'. Pulando validação de bundle Expo."
           fi

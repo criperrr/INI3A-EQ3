@@ -584,7 +584,7 @@ export const en: TranslationSchema = {
     faq12Question: "How do I equip banners, avatar frames, and level badges?",
     faq12Answer: "Open the 'Profile' tab, tap 'Customize' to open the Shop. In 'My Inventory' or the catalog tabs, select any owned item and tap 'Equip'. Changes are synced and updated immediately.",
     faq13Question: "How do I audit and verify prices submitted by others?",
-    faq13Answer: "In the Product Details screen, view the list of store occurrences and use the curation buttons (Thumbs Up 👍 / Thumbs Down 👎). Each valid audit awards +5 XP and helps keep the database accurate.",
+    faq13Answer: "In the Product Details screen, view the list of store occurrences and use the curation buttons (Thumbs Up + / Thumbs Down -). Each valid audit awards +5 XP and helps keep the database accurate.",
     faq14Question: "What happens if someone submits an incorrect or abusive price?",
     faq14Answer: "Our community curation algorithm analyzes user votes. Occurrences with high negative downvotes are automatically flagged and suspended, and abusive accounts may face restriction.",
     faq15Question: "What do the 'Best Price' and 'Promotion' badges mean?",

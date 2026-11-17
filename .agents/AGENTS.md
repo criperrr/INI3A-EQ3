@@ -236,17 +236,26 @@ After any file modification or addition:
   - `MAJOR`: Quebras de compatibilidade de API ou arquitetura (`feat!:`, `fix!:`, `BREAKING CHANGE:`).
   - `MINOR`: Novas funcionalidades compatíveis com versões anteriores (`feat:`).
   - `PATCH`: Correções de bugs, ajustes de estilo e melhorias de performance (`fix:`, `perf:`).
+- **Escopo Estrito de Alteração de SemVer (Front-end ou Back-end Obrigatório):**
+  - **REGRA MANDATORIA:** A versao do projeto (SemVer) **DEVE ser alterada SOMENTE E EXCLUSIVAMENTE quando houver alteracoes em codigo-fonte de aplicacao no Front-end (`src/frontend/**`) ou no Back-end (`src/backend/**`)**.
+  - **PROIBICAO ABSOLUTA DE BUMP PARA DEMAIS ESCOPOS:** E terminantemente proibido alterar o SemVer (`package.json`, `app.json`, etc.) quando as modificacoes forem restritas a:
+    - CI/CD (`.github/**`, workflows)
+    - Testes isolados de infraestrutura ou carga (`tests/k6/**`, testes que nao toquem no codigo de producao)
+    - Scripts utilitarios de dev ou ferramentas (`scripts/**`, exceto se integrar diretamente ao build da aplicacao)
+    - Documentacao (`docs/**`, `*.md`, `.agents/**`)
+    - Landing page isolada (`src/landing/**`)
+    - Ferramentas, linters ou tarefas de manutencao (`chore`, `build`, etc.) sem impacto no app ou API.
 - **Instruções Obrigatórias para Modelos Agenticos (IA):**
-  - **O agente deve alterar a versão após a modificação:** Sempre que concluir uma modificação de código (seja adição de feature, correção de bug ou refatoração estrutural), o modelo agentico **DEVE atualizar a versão do projeto** nos arquivos de manifesto de acordo com a skill `@[skills/semantic-versioning]`.
-  - **Sem scripts no nome do APK:** O nome ou artefato do APK gerado não deve depender de scripts mágicos de concatenação de versão em tempo de execução; a versão oficial é lida diretamente dos arquivos de manifesto versionados (`package.json` e `app.json`).
-  - **Protocolo de Atualização Direta pelo Agente:**
-    1. Analisar a natureza da alteração segundo o Conventional Commits (`fix` → Patch, `feat` → Minor, breaking → Major).
+  - **O agente deve alterar a versao SOMENTE apos modificacao de front ou back:** Sempre que concluir uma modificacao de codigo em `src/frontend/` ou `src/backend/`, o modelo agentico **DEVE atualizar a versao do projeto** nos arquivos de manifesto de acordo com a skill `@[skills/semantic-versioning]`. Se a tarefa tocar apenas em CI, testes de carga, documentacao ou scripts, **NAO altere a versao**.
+  - **Sem scripts no nome do APK:** O nome ou artefato do APK gerado nao deve depender de scripts magicos de concatenacao de versao em tempo de execucao; a versao oficial e lida diretamente dos arquivos de manifesto versionados (`package.json` e `app.json`).
+  - **Protocolo de Atualizacao Direta pelo Agente:**
+    1. Analisar a natureza da alteracao segundo o Conventional Commits (`fix` -> Patch, `feat` -> Minor, breaking -> Major).
     2. Atualizar simultaneamente:
        - `package.json` (raiz): campo `"version"`.
        - `src/backend/package.json`: campo `"version"`.
        - `src/frontend/package.json`: campo `"version"`.
        - `src/frontend/app.json`: campo `expo.version` (mesmo valor SemVer) e incrementar `expo.android.versionCode` (+1 inteiro).
-    3. Alternativamente, o agente pode invocar `npm run version:bump` (Patch), `npm run version:bump:minor` (Minor) ou `npm run version:bump:major` (Major) para sincronização automática.
+    3. Alternativamente, o agente pode invocar `npm run version:bump` (Patch), `npm run version:bump:minor` (Minor) ou `npm run version:bump:major` (Major) para sincronizacao automatica. O script valida automaticamente se ha modificacoes em `src/frontend/` ou `src/backend/`.
 - **Pipeline de Release & GitHub Actions:**
   - Releases e builds autônomas do APK Android são acionadas via GitHub Actions (`.github/workflows/release.yml`).
   - Todo push de tag `v*.*.*` ou disparo manual via `workflow_dispatch` executa a suíte de testes (`npm test`, `npm run typecheck`), gera o APK release nativo e publica automaticamente o artefato no **GitHub Releases** com changelog gerado dinamicamente.
@@ -330,5 +339,11 @@ After any file modification or addition:
   `feat(ci): add conditional expo bundle check to gatekeeper`
 - **Exemplo de Body (`--body`):**
   `added conditional expo export step in pr-gatekeeper.yml that only triggers when src/frontend files are changed, bumped semver patch to 1.2.2 and cleaned up tests branch from workflows`
+
+### 8.6. Axioma Fundamental de Erradicação de Emojis (Proibição Absoluta e Ícones Vetoriais SVG)
+- **Proibição Total na Interface Gráfica (UI):** O uso de emojis como ícones, marcadores, ilustrações ou avatares em qualquer componente ou tela do frontend é estritamente proibido. Todas as representações visuais devem utilizar bibliotecas de ícones vetoriais SVG (`@expo/vector-icons` como `Ionicons`, ou `lucide-react-native`).
+- **Proibição em Workflows e Pipelines de CI/CD:** Nenhum workflow do GitHub Actions deve conter emojis em nomes de jobs, steps, mensagens de log ou echoes de validação. Use identificadores textuais padronizados (`[OK]`, `[INFO]`, `[ERRO]`, `[AVISO]`).
+- **Proibição no Backend e Banco de Dados:** Proibido o uso de emojis em logs de servidor, mensagens de erro de API, seed data ou identificadores de tabelas.
+- **Exceção Exclusiva para Mensagens Externas de Compartilhamento:** A única e exclusiva exceção aceita é o formato de texto plano voltado ao compartilhamento externo para outros aplicativos (como mensagens de texto da lista de compras enviadas para WhatsApp ou copiadas para a área de transferência via `src/frontend/utils/mapQueryBuilder.ts`).
 
 

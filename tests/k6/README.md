@@ -4,7 +4,7 @@ Esta suíte de testes de alta fidelidade utiliza o **Grafana k6** (`k6.io`) para
 
 ---
 
-## 🏗️ Arquitetura da Suíte k6
+## Arquitetura da Suíte k6
 
 ```
 tests/k6/
@@ -40,7 +40,7 @@ tests/k6/
 
 ---
 
-## 🚀 Como Executar os Testes k6
+## Como Executar os Testes k6
 
 ### Pré-requisitos
 - k6 instalado (`k6 version`).

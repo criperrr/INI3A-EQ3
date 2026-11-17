@@ -4,9 +4,10 @@ import {
     Text,
     TouchableOpacity,
     StyleSheet,
-    Dimensions,
+    useWindowDimensions,
 } from "react-native";
 import { SemanticTheme } from "../theme";
+import { SvgChevronDownIcon } from "./SvgIcons";
 
 interface FaqSectionProps {
     theme: SemanticTheme;
@@ -14,7 +15,7 @@ interface FaqSectionProps {
 
 export const FaqSection: React.FC<FaqSectionProps> = ({ theme }) => {
     const [openIndex, setOpenIndex] = useState<number | null>(0); // First open by default
-    const { width } = Dimensions.get("window");
+    const { width } = useWindowDimensions();
     const isDesktop = width >= 860;
 
     const faqs = [
@@ -37,6 +38,18 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ theme }) => {
         {
             q: "Como meus dados de GPS e Câmera são protegidos sob a LGPD?",
             a: "O GPS é acionado exclusivamente sob demanda para calcular o raio de até 15km e rotas, sem guardar histórico de trajetos. A câmera é usada puramente para a leitura óptica do código de barras EAN-13, sem envio de vídeos ou fotos para a nuvem.",
+        },
+        {
+            q: "Como instalo o aplicativo APK no meu celular Android?",
+            a: "É simples, direto e seguro! Clique no botão 'Baixar APK Gratuito' ou aponte a câmera do celular para o QR Code da página. Ao abrir o arquivo baixado, seu navegador pode exibir um aviso de segurança sobre aplicativos de fora da loja. Basta autorizar a instalação para concluir em menos de 1 minuto.",
+        },
+        {
+            q: "Existe versão para iPhone (iOS) ou acesso pelo navegador?",
+            a: "Atualmente, a versão estável está disponível para download nativo no Android (8.0+). A versão para iOS está em desenvolvimento ativo. Você pode acompanhar todas as novidades e releases pelo repositório oficial no GitHub.",
+        },
+        {
+            q: "Como funciona o sistema comunitário de XP e recompensas?",
+            a: "Cada colaboração gera pontos de experiência: registrar um novo produto na base vale +25 XP, e atualizar ou confirmar o preço na gôndola vale +15 XP. Ao subir de nível, você conquista distintivos de reputação (como 'Detetive de Ofertas') e desbloqueia temas e cosméticos visuais no seu perfil.",
         },
     ];
 
@@ -62,12 +75,12 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ theme }) => {
                             styles.badge,
                             {
                                 backgroundColor: theme.surface.badgeBg,
-                                borderColor: theme.accent + "40",
+                                borderColor: theme.accent + "80",
                             },
                         ]}
                     >
-                        <Text style={[styles.badgeText, { color: theme.accent }]}>
-                            DÚVIDAS FREQUENTES
+                        <Text style={[styles.badgeText, { color: theme.accent, fontWeight: "900" }]}>
+                            FAQ • DÚVIDAS FREQUENTES
                         </Text>
                     </View>
 
@@ -81,7 +94,8 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ theme }) => {
                             },
                         ]}
                     >
-                        Perguntas & Respostas
+                        Perguntas Frequentes sobre{" "}
+                        <Text style={{ color: theme.accent }}>o Presco</Text>
                     </Text>
                     <Text style={[styles.subtitle, { color: theme.text.secondary }]}>
                         Tudo o que você precisa saber sobre o funcionamento, segurança e economia no Presco.
@@ -116,14 +130,18 @@ export const FaqSection: React.FC<FaqSectionProps> = ({ theme }) => {
                                     >
                                         {faq.q}
                                     </Text>
-                                    <Text
+                                    <View
                                         style={[
-                                            styles.chevron,
-                                            { color: isOpen ? theme.accent : theme.text.secondary },
+                                            styles.chevronWrap,
+                                            isOpen && styles.chevronWrapOpen,
                                         ]}
                                     >
-                                        {isOpen ? "▲" : "▼"}
-                                    </Text>
+                                        <SvgChevronDownIcon
+                                            size={18}
+                                            color={isOpen ? theme.accent : theme.text.secondary}
+                                            style={isOpen ? { transform: "rotate(180deg)" } : undefined}
+                                        />
+                                    </View>
                                 </TouchableOpacity>
 
                                 {isOpen && (
@@ -183,13 +201,15 @@ const styles = StyleSheet.create({
     title: {
         fontWeight: "900",
         textAlign: "center",
-        marginBottom: 12,
+        marginBottom: 16,
         letterSpacing: -0.8,
     },
     subtitle: {
         fontSize: 16,
         lineHeight: 24,
         textAlign: "center",
+        maxWidth: 640,
+        marginHorizontal: "auto",
     },
     faqList: {
         flexDirection: "column",
@@ -207,14 +227,20 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
     },
     faqQuestion: {
-        fontSize: 16,
-        fontWeight: "700",
+        fontSize: 17,
+        fontWeight: "800",
         flex: 1,
         paddingRight: 16,
+        letterSpacing: -0.2,
     },
-    chevron: {
-        fontSize: 14,
-        fontWeight: "700",
+    chevronWrap: {
+        width: 28,
+        height: 28,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    chevronWrapOpen: {
+        transform: [{ rotate: "180deg" }],
     },
     faqAnswerBox: {
         paddingHorizontal: 20,

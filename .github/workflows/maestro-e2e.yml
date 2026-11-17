@@ -47,7 +47,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
           ls -la /dev/kvm
-          echo "✅ KVM habilitado com sucesso no runner."
+          echo "[OK] KVM habilitado com sucesso no runner."
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -121,7 +121,7 @@ jobs:
           echo "Iniciando servidor backend em segundo plano..."
           npm run --prefix src/backend start &
           timeout 30 bash -c 'until curl -s http://localhost:3333/health; do sleep 1; done'
-          echo "✅ Backend respondendo com sucesso em http://localhost:3333"
+          echo "[OK] Backend respondendo com sucesso em http://localhost:3333"
 
       - name: Configurar Ambiente do Frontend
         run: |

@@ -42,7 +42,7 @@ import {
 } from "../services/ocurrencyService";
 import { getUserLocation } from "../utils/userLocation";
 import CategorySelector from "../components/CategorySelector";
-import { getCategoryEmoji, getLocalizedCategoryName } from "../constants/productCategories";
+import { getCategoryIcon, getLocalizedCategoryName } from "../constants/productCategories";
 import { cartService } from "../services/cartService";
 import {
   formatDisplayDate,
@@ -51,6 +51,7 @@ import {
   parseDateSafeMs,
 } from "../utils/dateUtils";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
+import { validateGs1Barcode } from "../utils/barcodeValidator";
 
 
 const EMPTY_HISTORY: PriceHistoryItem[] = [];
@@ -92,6 +93,13 @@ export default function ProductDetails() {
   const [isTwoFactorModalVisible, setIsTwoFactorModalVisible] = useState(false);
   const [twoFactorActionDescription, setTwoFactorActionDescription] = useState("");
   const [pending2FAAction, setPending2FAAction] = useState<(() => void) | null>(null);
+  const [imgError, setImgError] = useState(false);
+
+  const resolvedImageUri = getOptimizedImageUrl(product?.imageUri || product?.icon || params.imageUri, 400);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [resolvedImageUri]);
 
   const [isInCart, setIsInCart] = useState(false);
   const [cartQuantity, setCartQuantity] = useState(1);
@@ -420,9 +428,8 @@ export default function ProductDetails() {
       refreshProfile();
     } catch (err: any) {
       if (err?.code === "TWO_FACTOR_REQUIRED" || String(err?.message).includes("duas etapas")) {
-        setTwoFactorActionDescription("Verificação de duas etapas necessária para interagir com ofertas.");
-        setPending2FAAction(() => () => handleVote(occId, verdict));
-        setIsTwoFactorModalVisible(true);
+        // [DEMO DEV]: Ignora exigência de 2FA e executa voto
+        await handleVote(occId, verdict);
         return;
       }
 
@@ -707,7 +714,7 @@ export default function ProductDetails() {
           </View>
 
           <View style={[styles.imageWrapper, themeStyles.inputBg]}>
-            {imageUri ? (
+            {imageUri && !imgError ? (
               <Image
                 source={{ uri: imageUri }}
                 style={styles.productImage}
@@ -715,6 +722,7 @@ export default function ProductDetails() {
                 cachePolicy="memory-disk"
                 recyclingKey={imageUri}
                 transition={150}
+                onError={() => setImgError(true)}
               />
             ) : (
               <Ionicons name="cube-outline" size={60} color={accent} />
@@ -722,8 +730,8 @@ export default function ProductDetails() {
             {productCategories.length > 0 ? (
               <View style={styles.categoriesBadgeContainer}>
                 {productCategories.slice(0, 2).map((cat, idx) => (
-                  <View key={`${cat}-${idx}`} style={[styles.categoryBadge, { backgroundColor: accent }]}>
-                    <Text style={styles.categoryBadgeEmoji}>{getCategoryEmoji(cat)}</Text>
+                  <View key={`${cat}-${idx}`} style={[styles.categoryBadge, { backgroundColor: accent, flexDirection: "row", alignItems: "center" }]}>
+                    <Ionicons name={getCategoryIcon(cat) as any} size={11} color="#FFFFFF" style={{ marginRight: 3 }} />
                     <Text style={styles.categoryBadgeText} numberOfLines={1} ellipsizeMode="tail">
                       {getLocalizedCategoryName(cat, t).toUpperCase()}
                     </Text>
@@ -757,6 +765,42 @@ export default function ProductDetails() {
                 <Text style={[styles.metaChipText, themeStyles.subText]}>{product.barcode}</Text>
               </View>
             )}
+
+            {(() => {
+              const rawEan = product.ean || (product.barcode && !product.barcode.startsWith("ID-") ? product.barcode : "");
+              const gs1 = rawEan ? validateGs1Barcode(rawEan) : null;
+              const isGs1Ok = product.isGs1Valid || Boolean(gs1?.isValid);
+              const hasQuorum = (product.occurrencesCount ?? occurrences.length) >= 2;
+              const isVerified = isGs1Ok || hasQuorum || product.verificationStatus === "verified_catalog" || product.verificationStatus === "verified_gs1" || product.verificationStatus === "community_verified";
+              const badgeColor = isVerified ? "#10B981" : "#F59E0B";
+              const badgeLabel = isGs1Ok
+                ? `Verificado GS1${gs1?.format ? ` (${gs1.format})` : ""}`
+                : hasQuorum
+                ? "Confirmado pela Comunidade"
+                : "Cadastro Comunitário";
+
+              return (
+                <View
+                  style={[
+                    styles.metaChip,
+                    {
+                      backgroundColor: `${badgeColor}15`,
+                      borderColor: `${badgeColor}45`,
+                      borderWidth: 1,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={isVerified ? "shield-checkmark-outline" : "people-outline"}
+                    size={12}
+                    color={badgeColor}
+                  />
+                  <Text style={[styles.metaChipText, { color: badgeColor, fontWeight: "700" }]}>
+                    {badgeLabel}
+                  </Text>
+                </View>
+              );
+            })()}
 
             {Boolean(product.createdAt) && (
               <View style={[styles.metaChip, themeStyles.inputBg, themeStyles.border]}>

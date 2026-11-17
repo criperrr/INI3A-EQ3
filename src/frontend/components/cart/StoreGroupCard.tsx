@@ -1,4 +1,4 @@
-import React, { memo, useState } from "react";
+import React, { memo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,36 @@ import { useTheme } from "../../theme";
 import { useI18n } from "../../content/i18nContext";
 import type { OptimizedStoreGroupDisplay, OptimizedItemDisplay } from "../../services/cartService";
 import { openMarketInGoogleMaps } from "../../utils/mapNavigation";
+import { getOptimizedImageUrl } from "../../utils/imageUtils";
+
+const CartItemThumbnail = memo(function CartItemThumbnail({
+  productIcon,
+  fallbackColor,
+}: {
+  productIcon?: string | null;
+  fallbackColor: string;
+}) {
+  const optimizedUri = getOptimizedImageUrl(productIcon, 120, 70);
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [optimizedUri]);
+
+  if (!optimizedUri || imgError) {
+    return <Ionicons name="cube-outline" size={22} color={fallbackColor} />;
+  }
+
+  return (
+    <Image
+      source={{ uri: optimizedUri }}
+      style={styles.productImg}
+      contentFit="contain"
+      transition={150}
+      onError={() => setImgError(true)}
+    />
+  );
+});
 
 interface StoreGroupCardProps {
   group: OptimizedStoreGroupDisplay;
@@ -163,16 +193,10 @@ export const StoreGroupCard = memo(function StoreGroupCard({
                     { backgroundColor: semantic.colors.surface.input, borderColor: semantic.colors.border.default },
                   ]}
                 >
-                  {item.productIcon ? (
-                    <Image
-                      source={{ uri: item.productIcon }}
-                      style={styles.productImg}
-                      contentFit="contain"
-                      transition={150}
-                    />
-                  ) : (
-                    <Ionicons name="cube-outline" size={22} color={semantic.colors.icon.secondary} />
-                  )}
+                  <CartItemThumbnail
+                    productIcon={item.productIcon}
+                    fallbackColor={semantic.colors.icon.secondary}
+                  />
                 </View>
 
                 {/* Product Info */}

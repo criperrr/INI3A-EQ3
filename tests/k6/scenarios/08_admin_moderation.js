@@ -5,7 +5,7 @@
  */
 
 import { group, check } from 'k6';
-import { get, post, safeJson } from '../helpers/http.js';
+import { get, post, safeJson, expectedStatuses } from '../helpers/http.js';
 import { getAdminAuth, getUserAuth, authHeaders } from '../helpers/auth.js';
 import { SMOKE_THRESHOLDS } from '../config/thresholds.js';
 
@@ -30,7 +30,8 @@ export default function adminModerationScenario(data) {
       const forbiddenRes = get(
         '/ocurrency/admin/pending',
         authHeaders(regularUser.accessToken),
-        'GET /ocurrency/admin/pending [regular user]'
+        'GET /ocurrency/admin/pending [regular user]',
+        { responseCallback: expectedStatuses(403) }
       );
       check(forbiddenRes, {
         'non-admin access rejected with 403 Forbidden': (r) => r.status === 403,

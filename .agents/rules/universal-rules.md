@@ -31,3 +31,13 @@ When user's prompt is NOT in English:
 - **Infra/Safety**: 5-Phase Deployment. Verify secrets security.
 
 ---
+
+## 🚫 Axioma Fundamental de Erradicação de Emojis (No Emojis Policy)
+
+**Proibição Absoluta de Emojis em Código, Interface e Workflows:**
+- **Interface Gráfica (UI):** É terminantemente proibido utilizar emojis como ícones ou elementos visuais na UI. Qualquer representação visual/ícone DEVE utilizar bibliotecas vetoriais SVG (`@expo/vector-icons` como `Ionicons`, ou `lucide-react-native`).
+- **Workflows e CI/CD:** É expressamente proibido usar emojis em logs, passos, nomes de steps ou saídas de pipelines de CI/CD do GitHub Actions. Utilize prefixos textuais claros como `[OK]`, `[INFO]`, `[ERRO]`, `[AVISO]`.
+- **Backend e Logs:** Proibido o uso de emojis em logs de console, mensagens de erro, seeds de banco de dados ou documentação interna.
+- **Única Exceção Permitida:** Mensagens externas destinadas a compartilhamento para fora do aplicativo (ex.: texto de lista de compras copiado para a área de transferência ou enviado via WhatsApp em `formatCartShareMessage`). Qualquer outro elemento visual interno deve ser estritamente textual ou com ícones vetoriais SVG.
+
+---

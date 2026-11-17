@@ -126,7 +126,7 @@ jobs:
 
       - name: Resumo do Deploy no GitHub Actions
         run: |
-          echo "## 🚀 Landing Page Publicada com Sucesso!" >> $GITHUB_STEP_SUMMARY
+          echo "## Landing Page Publicada com Sucesso!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Propriedade | Valor |" >> $GITHUB_STEP_SUMMARY
           echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
@@ -146,7 +146,7 @@ jobs:
             const envLabel = process.env.ENV_LABEL;
             const commitSha = context.sha.substring(0, 7);
 
-            const body = `### 🌐 Preview da Landing Page Disponível!\n\nEsta alteração foi compilada e hospedada de forma isolada no GitHub Pages:\n\n👉 **[Acessar Preview da Landing Page](${deployUrl})**\n\n- **Ambiente:** \`${envLabel}\`\n- **Commit:** \`${commitSha}\`\n\n*Atualizado automaticamente pelo fluxo de CI/CD.*`;
+            const body = `### Preview da Landing Page Disponível!\n\nEsta alteração foi compilada e hospedada de forma isolada no GitHub Pages:\n\n**[Acessar Preview da Landing Page](${deployUrl})**\n\n- **Ambiente:** \`${envLabel}\`\n- **Commit:** \`${commitSha}\`\n\n*Atualizado automaticamente pelo fluxo de CI/CD.*`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,

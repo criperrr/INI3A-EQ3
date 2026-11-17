@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseSemver, computeNextVersion } from "../scripts/bump_version.ts";
+import { parseSemver, computeNextVersion, checkAppChanges, applyVersionBump } from "../scripts/bump_version.ts";
+import { checkFrontendChanges } from "../scripts/check_frontend_changes.ts";
 
 test("Semver - parseSemver valid versions", () => {
   assert.deepEqual(parseSemver("1.0.0"), { major: 1, minor: 0, patch: 0 });
@@ -21,4 +22,24 @@ test("Semver - computeNextVersion patch, minor, major", () => {
   assert.equal(computeNextVersion("1.5.9", "minor"), "1.6.0");
 
   assert.equal(computeNextVersion("1.2.3", "major"), "2.0.0");
+});
+
+test("Semver - checkAppChanges detects repository scope", () => {
+  const result = checkAppChanges();
+  assert.equal(typeof result.hasAppChanges, "boolean");
+  assert.equal(typeof result.frontend, "boolean");
+  assert.equal(typeof result.backend, "boolean");
+  assert.ok(Array.isArray(result.files));
+});
+
+test("Semver - applyVersionBump with skipScopeCheck dryRun", () => {
+  const res = applyVersionBump("patch", { dryRun: true, skipScopeCheck: true });
+  assert.ok(res.currentVersion);
+  assert.ok(res.nextVersion);
+  assert.equal(res.nextVersionCode, res.currentVersionCode + 1);
+});
+
+test("Frontend Changes - checkFrontendChanges recognizes identical refs", () => {
+  const res = checkFrontendChanges("HEAD", "HEAD");
+  assert.equal(res.hasChanges, false);
 });

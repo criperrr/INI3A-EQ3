@@ -697,25 +697,29 @@ export default function CartScreen() {
                 )}
 
               {/* Grouped Stores List */}
-              <View style={styles.sectionHeader}>
-                <Ionicons name="git-merge-outline" size={16} color={accent} />
-                <Text style={[styles.sectionTitle, { color: semantic.colors.text.primary }]}>
-                  Distribuição por Supermercado
-                </Text>
-              </View>
+              {optimization.storeGroups.length > 0 && (
+                <>
+                  <View style={styles.sectionHeader}>
+                    <Ionicons name="git-merge-outline" size={16} color={accent} />
+                    <Text style={[styles.sectionTitle, { color: semantic.colors.text.primary }]}>
+                      Distribuição por Supermercado
+                    </Text>
+                  </View>
 
-              {optimization.storeGroups.map((group) => (
-                <StoreGroupCard
-                  key={group.marketId}
-                  group={group}
-                  otherStores={optimization.storeGroups
-                    .filter((g) => g.marketId !== group.marketId)
-                    .map((g) => ({ marketId: g.marketId, marketName: g.marketName }))}
-                  onUpdateItemQty={handleUpdateItemQty}
-                  onRemoveItem={handleRemoveItem}
-                  onReallocateItem={handleReallocateItem}
-                />
-              ))}
+                  {optimization.storeGroups.map((group) => (
+                    <StoreGroupCard
+                      key={group.marketId}
+                      group={group}
+                      otherStores={optimization.storeGroups
+                        .filter((g) => g.marketId !== group.marketId)
+                        .map((g) => ({ marketId: g.marketId, marketName: g.marketName }))}
+                      onUpdateItemQty={handleUpdateItemQty}
+                      onRemoveItem={handleRemoveItem}
+                      onReallocateItem={handleReallocateItem}
+                    />
+                  ))}
+                </>
+              )}
 
               {/* Unassigned / Missing items banner */}
               {optimization.unassignedItems.length > 0 && (() => {
@@ -893,8 +897,12 @@ export default function CartScreen() {
 
                 <TouchableOpacity
                   testID="cart-navigate-route-btn"
-                  style={[styles.routeBtn, { backgroundColor: accent }]}
+                  style={[
+                    styles.routeBtn,
+                    { backgroundColor: accent, opacity: optimization.storeGroups.length === 0 ? 0.5 : 1 },
+                  ]}
                   activeOpacity={0.85}
+                  disabled={optimization.storeGroups.length === 0}
                   onPress={() => setIsRouteModalVisible(true)}
                 >
                   <Ionicons name="navigate" size={17} color="#FFFFFF" />

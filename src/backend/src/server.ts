@@ -31,9 +31,13 @@ async function bootstrap() {
   await seedDatabase().catch((e) => console.error("SEED WARNING:", e));
 
 
-  const server = app.listen(Number(PORT), HOST, () => {
+  const listenCallback = () => {
     console.log(`SERVER: Running on http://${HOST}:${PORT}`);
-  });
+  };
+  const server =
+    HOST === "0.0.0.0" || HOST === "::"
+      ? app.listen(Number(PORT), listenCallback)
+      : app.listen(Number(PORT), HOST, listenCallback);
 
   const shutdown = async (signal: string) => {
     console.log(`SERVER: Received ${signal}, closing gracefully...`);

@@ -3,7 +3,7 @@ import { pool } from "./database";
 import { connectRedis, redisClient } from "../redis/server";
 
 async function runHealthCheck() {
-  console.log("🔍 Checking Database and Redis health...\n");
+  console.log("Checking Database and Redis health...\n");
   let pgSuccess = false;
   let redisSuccess = false;
 
@@ -14,11 +14,11 @@ async function runHealthCheck() {
     await client.query("SELECT 1");
     client.release();
     const duration = Date.now() - start;
-    console.log(`✅ PostgreSQL: Connected successfully (${duration}ms)`);
+    console.log(`[OK] PostgreSQL: Connected successfully (${duration}ms)`);
     pgSuccess = true;
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`❌ PostgreSQL: Connection failed -> ${msg}`);
+    console.error(`[FAIL] PostgreSQL: Connection failed -> ${msg}`);
   }
 
   // 2. Check Redis
@@ -28,15 +28,15 @@ async function runHealthCheck() {
     if (isConnected && redisClient.isOpen) {
       const pingResponse = await redisClient.ping();
       const duration = Date.now() - start;
-      console.log(`✅ Redis: Connected successfully (${pingResponse}, ${duration}ms)`);
+      console.log(`[OK] Redis: Connected successfully (${pingResponse}, ${duration}ms)`);
       redisSuccess = true;
     } else {
-      console.log(`ℹ️ Redis: Server offline -> In-Memory Fallback active (OK for local dev)`);
+      console.log(`[INFO] Redis: Server offline -> In-Memory Fallback active (OK for local dev)`);
       redisSuccess = true;
     }
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Redis: Connection failed -> ${msg}`);
+    console.error(`[FAIL] Redis: Connection failed -> ${msg}`);
   }
 
   // Clean shutdown
@@ -50,10 +50,10 @@ async function runHealthCheck() {
   }
 
   if (pgSuccess && redisSuccess) {
-    console.log("\n🚀 All services are healthy and responsive!");
+    console.log("\n[OK] All services are healthy and responsive!");
     process.exit(0);
   } else {
-    console.error("\n⚠️ One or more services are unavailable.");
+    console.error("\n[WARN] One or more services are unavailable.");
     process.exit(1);
   }
 }
