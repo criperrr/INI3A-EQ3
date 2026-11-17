@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react";
-import { StyleSheet, Platform, PlatformColor } from "react-native";
+import { StyleSheet, Platform, PlatformColor, Appearance } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ThemeContextValue,
@@ -19,8 +19,23 @@ import {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
+let cachedAppSettings: Record<string, any> | null = null;
+
+export function getCachedAppSettings(): Record<string, any> | null {
+  return cachedAppSettings;
+}
+
+export function setCachedAppSettings(settings: Record<string, any> | null): void {
+  cachedAppSettings = settings;
+}
+
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<ThemeMode>("light");
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (cachedAppSettings?.theme === "dark" || cachedAppSettings?.theme === "light") {
+      return cachedAppSettings.theme;
+    }
+    return Appearance.getColorScheme() === "dark" ? "dark" : "light";
+  });
   const [amoledEnabled, setAmoledEnabledState] = useState(false);
   const [monetEnabled, setMonetEnabledState] = useState(false);
   const [syncWithSystemAndroid, setSyncWithSystemAndroidState] = useState(false);
@@ -33,6 +48,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const savedSettings = await AsyncStorage.getItem("app_settings");
         if (savedSettings) {
           const parsed = JSON.parse(savedSettings);
+          cachedAppSettings = parsed;
           if (parsed.theme) setTheme(parsed.theme);
           if (parsed.amoledEnabled !== undefined) setAmoledEnabledState(parsed.amoledEnabled);
           if (parsed.monetEnabled !== undefined) setMonetEnabledState(parsed.monetEnabled);
@@ -49,8 +65,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const persistSetting = useCallback(async (key: string, value: any) => {
     try {
       const saved = await AsyncStorage.getItem("app_settings");
-      const parsed = saved ? JSON.parse(saved) : {};
+      const parsed = saved
+        ? JSON.parse(saved)
+        : cachedAppSettings
+        ? { ...cachedAppSettings }
+        : {};
       parsed[key] = value;
+      cachedAppSettings = parsed;
       await AsyncStorage.setItem("app_settings", JSON.stringify(parsed));
     } catch (error) {
       console.error("Erro ao persistir configuração:", error);
@@ -99,8 +120,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       try {
         const saved = await AsyncStorage.getItem("app_settings");
-        const parsed = saved ? JSON.parse(saved) : {};
+        const parsed = saved
+          ? JSON.parse(saved)
+          : cachedAppSettings
+          ? { ...cachedAppSettings }
+          : {};
         const updated = { ...parsed, ...batch };
+        cachedAppSettings = updated;
         await AsyncStorage.setItem("app_settings", JSON.stringify(updated));
       } catch (error) {
         console.error("Erro ao aplicar configurações em lote:", error);

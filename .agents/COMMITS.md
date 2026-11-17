@@ -4728,3 +4728,15 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unverified products are isolated in quarantine until 3 distinct users register them or an Admin approves them; PR #49 checks updated for merge into `dev`.
+
+## `2026-11-17 01:57` - `feat(frontend,auth)`: Navigation 1:1 edge-swipe, tab congruence, Monet alerts, performance overhaul & 2FA (`v1.6.1`)
+
+- **Description:** Migrated Expo Router stack to `JsStack` with 90ms fade and 1:1 Android edge-swipe back, fixed Footer/Sidebar selection congruence and single-utility-screen routing, replaced all 81 `Alert.alert` calls with Monet-styled `AppAlertProvider`, fixed Settings mount latency (>300ms -> progressive 2-phase mount + `Ionicons`), fixed Home banner layout shift, eliminated 1s HTTP polling in `registerProduct.tsx` and 2FA infinite recursion in `productDetails.tsx`, gated production settings properly, and restored 2FA + email verification.
+- **Files Modified:**
+  - `src/frontend/app/_layout.tsx`, `src/frontend/components/AppAlertProvider.tsx`, `src/frontend/components/AnimatedMotion.tsx`
+  - `src/frontend/components/Header.tsx`, `src/frontend/components/Footer.tsx`, `src/frontend/components/Sidebar.tsx`, `src/frontend/components/SwipeTabNavigator.tsx`
+  - `src/frontend/app/settings.tsx`, `src/frontend/app/index.tsx`, `src/frontend/app/productDetails.tsx`, `src/frontend/app/registerProduct.tsx`, `src/frontend/app/cart.tsx`, `src/frontend/app/search.tsx`, `src/frontend/app/map.native.tsx`, `src/frontend/app/profile.tsx`, `src/frontend/app/customRegisterProduct.tsx`, `src/frontend/app/adminModeration.tsx`, `src/frontend/app/manualEanSearch.tsx`, `src/frontend/app/scannerProduct.tsx`, `src/frontend/app/scannerConfirmation.tsx`, `src/frontend/app/login.tsx`, `src/frontend/app/registerUser.tsx`
+  - `src/frontend/theme/themeContext.tsx`, `src/frontend/content/tabNavigationContext.tsx`, `src/frontend/content/i18nContext.tsx`, `src/frontend/content/authContext.tsx`, `src/frontend/components/TwoFactorModal.tsx`, `src/frontend/components/productCard.tsx`
+  - `src/frontend/app.json`, `src/frontend/android/app/src/main/AndroidManifest.xml`, `package.json`, `src/frontend/package.json`, `src/backend/package.json`
+  - `src/backend/src/modules/auth/auth.service.ts`, `src/backend/src/shared/middlewares/authMiddleware.ts`, `src/backend/src/shared/services/email.service.ts`, `src/backend/src/shared/config/env.ts`
+- **Impact / Next Steps:** Version bumped to `v1.6.1` (`versionCode: 36`). Ready for atomic commits, PR to `dev`, PR to `main`, and GitHub Release `v1.6.1`.

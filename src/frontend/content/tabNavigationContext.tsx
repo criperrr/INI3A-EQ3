@@ -9,8 +9,6 @@ import React, {
 } from "react";
 import { useRouter, usePathname } from "expo-router";
 
-export type StackAnimationType = "slide_from_right" | "slide_from_left" | "default";
-
 export interface TabItem {
   key: string;
   route: string;
@@ -26,15 +24,14 @@ export const MAIN_TABS: readonly TabItem[] = [
 
 export const getTabIndex = (path: string | null | undefined): number => {
   if (!path || path === "/") return 0;
-  if (path.includes("/search")) return 1;
-  if (path.includes("/scannerProduct")) return 2;
-  if (path.includes("/map")) return 3;
-  if (path.includes("/profile")) return 4;
+  if (path === "/search") return 1;
+  if (path === "/scannerProduct") return 2;
+  if (path === "/map") return 3;
+  if (path === "/profile") return 4;
   return -1;
 };
 
 interface TabNavigationContextData {
-  animationType: StackAnimationType;
   navigateToTab: (
     targetRoute: string,
     forcedDirection?: "left" | "right",
@@ -50,7 +47,6 @@ const TabNavigationContext = createContext<TabNavigationContextData>(
 );
 
 export function TabNavigationProvider({ children }: { children: ReactNode }) {
-  const [animationType, setAnimationType] = useState<StackAnimationType>("slide_from_right");
   const [resetHomeTrigger, setResetHomeTrigger] = useState<number>(0);
   const router = useRouter();
   const pathname = usePathname();
@@ -66,14 +62,10 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
   const navigateToTab = useCallback(
     (
       targetRoute: string,
-      forcedDirection?: "left" | "right",
+      _forcedDirection?: "left" | "right",
       forceReset?: boolean
     ) => {
       const currentPath = currentPathRef.current;
-
-      if (targetRoute === "/" || targetRoute === "") {
-        triggerHomeReset();
-      }
 
       if (currentPath === targetRoute) {
         if (targetRoute === "/" && forceReset) {
@@ -87,32 +79,24 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const currentIndex = getTabIndex(currentPath);
-      const targetIndex = getTabIndex(targetRoute);
-
-      let nextAnimation: StackAnimationType = "slide_from_right";
-
-      if (forcedDirection === "left") {
-        nextAnimation = "slide_from_left";
-      } else if (forcedDirection === "right") {
-        nextAnimation = "slide_from_right";
-      } else if (currentIndex !== -1 && targetIndex !== -1) {
-        if (targetIndex < currentIndex) {
-          nextAnimation = "slide_from_left";
-        } else {
-          nextAnimation = "slide_from_right";
-        }
-      } else if (targetRoute === "/") {
-        nextAnimation = "slide_from_left";
+      if (targetRoute === "/" || targetRoute === "") {
+        triggerHomeReset();
       }
 
-      setAnimationType(nextAnimation);
+      const currentIndex = getTabIndex(currentPath);
+      const isMainTab = currentIndex !== -1;
 
-      try {
-        if (router.canDismiss && router.canDismiss()) {
-          router.dismissAll();
-        }
-      } catch {}
+      if (!isMainTab) {
+        try {
+          if (router.canDismiss && router.canDismiss()) {
+            router.dismissAll();
+          }
+        } catch {}
+        requestAnimationFrame(() => {
+          router.replace(targetRoute as any);
+        });
+        return;
+      }
 
       router.replace(targetRoute as any);
     },
@@ -121,13 +105,12 @@ export function TabNavigationProvider({ children }: { children: ReactNode }) {
 
   const contextValue = React.useMemo<TabNavigationContextData>(
     () => ({
-      animationType,
       navigateToTab,
       getTabIndex,
       resetHomeTrigger,
       triggerHomeReset,
     }),
-    [animationType, navigateToTab, resetHomeTrigger, triggerHomeReset]
+    [navigateToTab, resetHomeTrigger, triggerHomeReset]
   );
 
   return (

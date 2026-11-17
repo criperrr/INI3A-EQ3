@@ -21,9 +21,11 @@ appId: com.presco.app
     commands:
       - tapOn:
           id: "login-email-input"
+      - eraseText: 50
       - inputText: "admin@admin.org"
       - tapOn:
           id: "login-password-input"
+      - eraseText: 50
       - inputText: "admin"
       - hideKeyboard
       - tapOn:

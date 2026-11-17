@@ -377,6 +377,13 @@ tags:
       - runFlow:
           when:
             visible:
+              id: "app-alert-confirm-btn"
+          commands:
+            - tapOn:
+                id: "app-alert-confirm-btn"
+      - runFlow:
+          when:
+            visible:
               id: "android:id/button1"
           commands:
             - tapOn:

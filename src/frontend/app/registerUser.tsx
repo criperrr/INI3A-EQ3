@@ -18,6 +18,7 @@ import { useI18n } from "../content/i18nContext";
 import { useAuth, ApiError } from "../content/authContext";
 import { KeyboardAwareScrollView } from "../components/KeyboardAwareScrollView";
 import { FocusedInputWrapper } from "../components/FocusedInputWrapper";
+import { AnimatedSection, ScalePressable } from "../components/AnimatedMotion";
 
 const DEFAULT_AVATAR =
   "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
@@ -90,7 +91,8 @@ export default function RegisterUser() {
           showsVerticalScrollIndicator={false}
           extraScrollHeight={100}
         >
-          <View
+          <AnimatedSection
+            delay={40}
             style={[styles.formContainer, themeStyles.card, themeStyles.border]}
           >
             <TouchableOpacity
@@ -173,14 +175,13 @@ export default function RegisterUser() {
               editable={!isLoading}
             />
 
-            <TouchableOpacity
+            <ScalePressable
               testID="register-submit-btn"
               style={[
                 styles.saveButton,
                 { backgroundColor: accent, shadowColor: accent },
                 isLoading && styles.saveButtonDisabled,
               ]}
-              activeOpacity={0.8}
               onPress={handleSaveUser}
               disabled={isLoading}
               accessible={true}
@@ -193,8 +194,8 @@ export default function RegisterUser() {
               ) : (
                 <Text style={styles.saveButtonText}>{t("auth.registerButton")}</Text>
               )}
-            </TouchableOpacity>
-          </View>
+            </ScalePressable>
+          </AnimatedSection>
 
           <FooterLinks onGoToLogin={handleGoToLogin} accent={accent} t={t} />
         </KeyboardAwareScrollView>

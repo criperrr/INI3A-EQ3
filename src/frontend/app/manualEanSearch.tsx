@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Keyboard,
   TouchableWithoutFeedback
 } from "react-native";
@@ -15,6 +14,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useI18n } from "../content/i18nContext";
 import { fetchProductByEan } from "../services/productService";
+import { appAlert } from "../components/AppAlertProvider";
 
 export default function ManualEanSearch() {
   const [ean, setEan] = useState("");
@@ -26,14 +26,14 @@ export default function ManualEanSearch() {
   const handleSearch = async () => {
     const trimmedEan = ean.trim();
     if (!trimmedEan) {
-      Alert.alert(t("common.warning"), t("scanner.alignBarcode"));
+      appAlert(t("common.warning"), t("scanner.alignBarcode"));
       return;
     }
 
     setLoading(true);
 
     const showNotFoundAlert = () => {
-      Alert.alert(
+      appAlert(
         t("scanner.productNotFoundTitle"),
         t("scanner.productNotFoundManualMessage"),
         [
@@ -94,7 +94,7 @@ export default function ManualEanSearch() {
         return;
       }
 
-      Alert.alert(t("common.error"), error.message || t("errors.networkError"));
+      appAlert(t("common.error"), error.message || t("errors.networkError"));
     }
   };
 

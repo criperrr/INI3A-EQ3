@@ -1,5 +1,5 @@
-import React from "react";
-import { StyleSheet, View, TouchableOpacity } from "react-native";
+import React, { memo } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../theme";
@@ -43,7 +43,7 @@ const NAV_TABS: TabConfig[] = [
   },
 ];
 
-export default function Footer({ activeTab }: FooterProps) {
+const Footer = memo(function Footer({ activeTab }: FooterProps) {
   const insets = useSafeAreaInsets();
   const { tokens, accent } = useTheme();
   const { semantic } = tokens;
@@ -79,13 +79,13 @@ export default function Footer({ activeTab }: FooterProps) {
 
         if (tab.isCenter) {
           return (
-            <TouchableOpacity
+            <Pressable
               key={tab.key}
               testID={`tab-${tab.key}`}
               accessibilityRole="button"
               accessibilityLabel="Escanear produto"
+              accessibilityState={{ selected: isActive }}
               style={styles.centerItem}
-              activeOpacity={0.8}
               onPress={() => handleTabPress(tab, isActive)}
             >
               <View
@@ -104,18 +104,18 @@ export default function Footer({ activeTab }: FooterProps) {
                   color={semantic.colors.icon.inverse}
                 />
               </View>
-            </TouchableOpacity>
+            </Pressable>
           );
         }
 
         return (
-          <TouchableOpacity
+          <Pressable
             key={tab.key}
             testID={`tab-${tab.key}`}
             accessibilityRole="button"
             accessibilityLabel={tab.key}
+            accessibilityState={{ selected: isActive }}
             style={styles.navItem}
-            activeOpacity={0.7}
             onPress={() => handleTabPress(tab, isActive)}
           >
             {isActive ? (
@@ -133,12 +133,14 @@ export default function Footer({ activeTab }: FooterProps) {
                 color={semantic.colors.icon.secondary}
               />
             )}
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>
   );
-}
+});
+
+export default Footer;
 
 const styles = StyleSheet.create({
   container: {

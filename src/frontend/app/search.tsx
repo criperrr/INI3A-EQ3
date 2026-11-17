@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import {
   View,
   StyleSheet,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  InteractionManager,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -28,6 +29,11 @@ import {
   getLocalizedCategoryName,
 } from "../constants/productCategories";
 import { getUserLocation } from "../utils/userLocation";
+import {
+  AnimatedScreenContainer,
+  AnimatedSection,
+  ScalePressable,
+} from "../components/AnimatedMotion";
 import { getOptimizedImageUrl } from "../utils/imageUtils";
 import { openMarketInGoogleMaps } from "../utils/mapNavigation";
 
@@ -94,9 +100,31 @@ export default function SearchScreen() {
     }
   }, [params.marketId, params.marketName]);
 
+  const userLocationRef = useRef<{ latitude: number; longitude: number } | null | undefined>(undefined);
+  const locationPromiseRef = useRef<Promise<{ latitude: number; longitude: number } | null> | null>(null);
+  const hasMountedRef = useRef(false);
+
+  const resolveUserLocation = useCallback(async () => {
+    if (userLocationRef.current !== undefined) {
+      return userLocationRef.current;
+    }
+    if (!locationPromiseRef.current) {
+      locationPromiseRef.current = getUserLocation()
+        .then((loc) => {
+          userLocationRef.current = loc;
+          return loc;
+        })
+        .catch(() => {
+          userLocationRef.current = null;
+          return null;
+        });
+    }
+    return locationPromiseRef.current;
+  }, []);
+
   const loadMarkets = useCallback(async () => {
     try {
-      const loc = await getUserLocation();
+      const loc = await resolveUserLocation();
       const list = await fetchMarkets({
         latitude: loc?.latitude,
         longitude: loc?.longitude,
@@ -108,7 +136,7 @@ export default function SearchScreen() {
     } catch {
       // Ignore market filter fetch errors
     }
-  }, []);
+  }, [resolveUserLocation]);
 
   const loadProducts = useCallback(
     async (
@@ -127,7 +155,7 @@ export default function SearchScreen() {
 
       try {
         const isAll = category === allCategoryLabel || category === "Todos" || category === "All";
-        const loc = await getUserLocation();
+        const loc = await resolveUserLocation();
 
         const response = await fetchProducts({
           search: searchTerm.trim() || undefined,
@@ -164,18 +192,27 @@ export default function SearchScreen() {
         setLoadingMore(false);
       }
     },
-    [allCategoryLabel]
+    [allCategoryLabel, resolveUserLocation]
   );
 
   useEffect(() => {
-    loadCategories();
-    loadMarkets();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      loadCategories();
+      loadMarkets();
+    });
+    return () => handle.cancel();
   }, [loadCategories, loadMarkets]);
 
   useEffect(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
+    if (!hasMountedRef.current && searchText === "") {
+      hasMountedRef.current = true;
+      loadProducts(searchText, selectedCategory, selectedMarketId, selectedMarketName, false, 1);
+      return;
+    }
+    hasMountedRef.current = true;
     debounceTimer.current = setTimeout(() => {
       loadProducts(searchText, selectedCategory, selectedMarketId, selectedMarketName, false, 1);
     }, 280);
@@ -259,64 +296,10 @@ export default function SearchScreen() {
     []
   );
 
-  const ListHeader = (
+  const handleClearSearch = useCallback(() => setSearchText(""), []);
+
+  const ListHeader = useMemo(() => (
     <View style={styles.headerContainer}>
-      <View style={styles.headerRow}>
-        <View style={styles.titleColumn}>
-          <Text
-            style={[
-              styles.screenTitle,
-              { color: semantic.colors.text.primary, ...semantic.typography.sectionTitle },
-            ]}
-            numberOfLines={1}
-          >
-            {t("search.title")}
-          </Text>
-          <Text
-            style={[
-              styles.screenSubtitle,
-              { color: semantic.colors.text.secondary, ...semantic.typography.caption },
-            ]}
-            numberOfLines={1}
-          >
-            {loading && !refreshing
-              ? t("common.loading")
-              : t("search.resultsCount", { count: totalCount || products.length })}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          testID="search-add-custom-btn"
-          style={[
-            styles.addCustomBtn,
-            {
-              backgroundColor: accent,
-              borderRadius: semantic.radius.button,
-            },
-          ]}
-          activeOpacity={0.8}
-          onPress={handleCreateCustom}
-          accessibilityRole="button"
-          accessibilityLabel={t("products.customProductTitle")}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={styles.addCustomText} numberOfLines={1}>
-            {t("products.customProductTitle")}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <SearchBar
-        value={searchText}
-        onChangeText={setSearchText}
-        onClear={() => setSearchText("")}
-        onScanBarcode={handleScanBarcode}
-        accent={accent}
-        tokens={tokens}
-        isDark={isDark}
-        t={t}
-      />
-
       <CategoryFilterChips
         categories={categories}
         selectedCategory={selectedCategory}
@@ -469,19 +452,47 @@ export default function SearchScreen() {
         </View>
       ) : null}
     </View>
-  );
+  ), [
+    semantic,
+    t,
+    loading,
+    refreshing,
+    accent,
+    tokens,
+    isDark,
+    categories,
+    selectedCategory,
+    allCategoryLabel,
+    markets,
+    selectedMarketId,
+    selectedMarketName,
+  ]);
 
-  const ListEmpty = !loading && !refreshing ? (
-    <EmptyResults
-      searchTerm={searchText}
-      selectedCategory={selectedCategory}
-      onCreateCustom={handleCreateCustom}
-      onScanBarcode={handleScanBarcode}
-      tokens={tokens}
-      accent={accent}
-      t={t}
-    />
-  ) : null;
+  const ListEmpty = useMemo(
+    () =>
+      !loading && !refreshing ? (
+        <EmptyResults
+          searchTerm={searchText}
+          selectedCategory={selectedCategory}
+          onCreateCustom={handleCreateCustom}
+          onScanBarcode={handleScanBarcode}
+          tokens={tokens}
+          accent={accent}
+          t={t}
+        />
+      ) : null,
+    [
+      loading,
+      refreshing,
+      searchText,
+      selectedCategory,
+      handleCreateCustom,
+      handleScanBarcode,
+      tokens,
+      accent,
+      t,
+    ]
+  );
 
   const ListFooter = loadingMore ? (
     <View style={styles.footerLoader}>
@@ -490,9 +501,67 @@ export default function SearchScreen() {
   ) : null;
 
   return (
-    <View style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+    <AnimatedScreenContainer style={[styles.container, { backgroundColor: semantic.colors.surface.background }]}>
+      <View style={styles.topSearchHeader}>
+        <View style={styles.headerRow}>
+          <View style={styles.titleColumn}>
+            <Text
+              style={[
+                styles.screenTitle,
+                { color: semantic.colors.text.primary, ...semantic.typography.sectionTitle },
+              ]}
+              numberOfLines={1}
+            >
+              {t("search.title")}
+            </Text>
+            <Text
+              style={[
+                styles.screenSubtitle,
+                { color: semantic.colors.text.secondary, ...semantic.typography.caption },
+              ]}
+              numberOfLines={1}
+            >
+              {loading && !refreshing
+                ? t("common.loading")
+                : t("search.resultsCount", { count: totalCount || products.length })}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            testID="search-add-custom-btn"
+            style={[
+              styles.addCustomBtn,
+              {
+                backgroundColor: accent,
+                borderRadius: semantic.radius.button,
+              },
+            ]}
+            activeOpacity={0.8}
+            onPress={handleCreateCustom}
+            accessibilityRole="button"
+            accessibilityLabel={t("products.customProductTitle")}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={styles.addCustomText} numberOfLines={1}>
+              {t("products.customProductTitle")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <SearchBar
+          value={searchText}
+          onChangeText={setSearchText}
+          onClear={handleClearSearch}
+          onScanBarcode={handleScanBarcode}
+          accent={accent}
+          tokens={tokens}
+          isDark={isDark}
+          t={t}
+        />
+      </View>
+
       <FlatList
-        data={loading && !refreshing ? [] : products}
+        data={products}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         numColumns={2}
@@ -519,7 +588,7 @@ export default function SearchScreen() {
           />
         }
       />
-    </View>
+    </AnimatedScreenContainer>
   );
 }
 
@@ -718,20 +787,21 @@ const ProductCardItem = memo(function ProductCardItem({
   const displayPrice = product.bestPrice || product.lastPrice;
 
   return (
-    <TouchableOpacity
-      testID="search-product-card"
-      style={[
-        styles.productCard,
-        {
-          backgroundColor: semantic.colors.surface.card,
-          borderColor: product.isPromotion ? accent + "80" : semantic.colors.border.default,
-          borderWidth: product.isPromotion ? 1.5 : 1,
-          borderRadius: semantic.radius.card,
-        },
-      ]}
-      activeOpacity={0.8}
-      onPress={() => onPress(product)}
-    >
+    <View style={styles.productCardWrapper}>
+      <ScalePressable
+        testID="search-product-card"
+        style={[
+          styles.productCard,
+          {
+            width: "100%",
+            backgroundColor: semantic.colors.surface.card,
+            borderColor: product.isPromotion ? accent + "80" : semantic.colors.border.default,
+            borderWidth: product.isPromotion ? 1.5 : 1,
+            borderRadius: semantic.radius.card,
+          },
+        ]}
+        onPress={() => onPress(product)}
+      >
       <View
         style={[
           styles.productImageContainer,
@@ -885,7 +955,8 @@ const ProductCardItem = memo(function ProductCardItem({
           ) : null}
         </View>
       </View>
-    </TouchableOpacity>
+      </ScalePressable>
+    </View>
   );
 });
 
@@ -909,7 +980,7 @@ const EmptyResults = ({
   const { semantic } = tokens;
 
   return (
-    <View style={styles.emptyContainer}>
+    <AnimatedSection style={styles.emptyContainer}>
       <View style={[styles.emptyIconCircle, { backgroundColor: semantic.colors.surface.input }]}>
         <Ionicons name="search" size={40} color={accent} />
       </View>
@@ -971,7 +1042,7 @@ const EmptyResults = ({
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </AnimatedSection>
   );
 };
 
@@ -980,9 +1051,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  topSearchHeader: {
+    paddingTop: 12,
+    paddingHorizontal: 16,
+  },
   content: {
     flexGrow: 1,
-    paddingTop: 12,
+    paddingTop: 4,
     paddingHorizontal: 16,
     paddingBottom: 48,
   },
@@ -1088,8 +1163,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  productCard: {
+  productCardWrapper: {
     width: "48.2%",
+  },
+  productCard: {
+    width: "100%",
     padding: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
