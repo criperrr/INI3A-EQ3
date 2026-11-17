@@ -16,6 +16,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "../theme";
 import { useAuth } from "../content/authContext";
 import { useI18n } from "../content/i18nContext";
+import { AnimatedModalContent } from "./AnimatedMotion";
 
 interface TwoFactorModalProps {
   visible: boolean;
@@ -126,7 +127,7 @@ export default function TwoFactorModal({
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.keyboardAvoid}
           >
-            <View
+            <AnimatedModalContent
               style={[
                 styles.modalCard,
                 {
@@ -292,7 +293,7 @@ export default function TwoFactorModal({
                   </Text>
                 )}
               </TouchableOpacity>
-            </View>
+            </AnimatedModalContent>
           </KeyboardAvoidingView>
         </View>
       </TouchableWithoutFeedback>

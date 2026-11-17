@@ -1,11 +1,12 @@
+import nodemailer from "nodemailer";
 import { env } from "../config/env";
 
 class EmailServiceClass {
   /**
-   * Envia o código de 6 dígitos de verificação de duas etapas para o e-mail do usuário via Resend API.
+   * Envia o código de 6 dígitos de verificação de duas etapas para o e-mail do usuário via SMTP (primário) ou Resend API (fallback).
    */
   async sendTwoFactorCode(toEmail: string, userName: string, code: string): Promise<boolean> {
-    const fromAddress = env.RESEND_FROM || "Presco <onboarding@resend.dev>";
+    const fromAddress = env.SMTP_FROM || env.RESEND_FROM || "Presco <noreply@presco.app>";
     const subject = `Seu código de verificação Presco: ${code}`;
 
     const html = `
@@ -62,10 +63,52 @@ class EmailServiceClass {
 </html>
     `.trim();
 
-    // In test environments or when API key is missing, mock delivery to avoid external network latency and rate limits
-    if (env.NODE_ENV === "test" || !env.RESEND_API_KEY) {
-      console.log(`[Resend] Mock dispatch in ${env.NODE_ENV || "development"} mode for: ${toEmail}`);
-      console.log(`🔑 [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+    // In test environments, mock delivery to avoid external network latency and rate limits
+    if (env.NODE_ENV === "test") {
+      console.log(`[Email] Mock dispatch in test mode for: ${toEmail}`);
+      console.log(`[AUTH] [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+      return true;
+    }
+
+    // Primary delivery: SMTP via nodemailer
+    if (env.SMTP_HOST) {
+      try {
+        console.log(`[SMTP] Dispatching 2FA verification email to: ${toEmail} via ${env.SMTP_HOST}:${env.SMTP_PORT}`);
+        const transporter = nodemailer.createTransport({
+          host: env.SMTP_HOST,
+          port: env.SMTP_PORT,
+          secure: env.SMTP_SECURE,
+          ...(env.SMTP_USER
+            ? {
+                auth: {
+                  user: env.SMTP_USER,
+                  pass: env.SMTP_PASS,
+                },
+              }
+            : {}),
+          ...(env.NODE_ENV !== "production" ? { tls: { rejectUnauthorized: false } } : {}),
+        });
+
+        const info = await transporter.sendMail({
+          from: fromAddress,
+          to: toEmail,
+          subject,
+          html,
+        });
+
+        console.log(`[SMTP] 2FA verification email successfully delivered. MessageId: ${info.messageId}`);
+        return true;
+      } catch (error) {
+        console.error("[SMTP] Error sending 2FA email:", error);
+        console.log(`[AUTH] [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
+        return false;
+      }
+    }
+
+    // Fallback delivery: Resend API if SMTP_HOST is unset
+    if (!env.RESEND_API_KEY) {
+      console.log(`[Email] Mock dispatch in ${env.NODE_ENV || "development"} mode for: ${toEmail}`);
+      console.log(`[AUTH] [2FA CODE LOG FOR TESTING] Email: ${toEmail} | Code: ${code}`);
       return true;
     }
 
@@ -78,7 +121,7 @@ class EmailServiceClass {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: fromAddress,
+          from: env.RESEND_FROM || fromAddress,
           to: [toEmail],
           subject,
           html,

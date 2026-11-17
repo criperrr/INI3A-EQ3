@@ -199,8 +199,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (profile?.authority !== undefined && profile.authority >= 10)
   );
 
-  // [TEMPORÁRIO - DEMONSTRAÇÃO DEV]: Verificação de 2FA sempre true no app
-  const isTwoFactorVerified = true;
+  const isTwoFactorVerified = !!(
+    isAdmin ||
+    user?.twoFactorVerified === true ||
+    profile?.twoFactorVerified === true
+  );
 
   const requestTwoFactorCode = useCallback(async () => {
     return await sendTwoFactorCode();
