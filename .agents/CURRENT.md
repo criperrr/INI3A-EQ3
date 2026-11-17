@@ -7,6 +7,14 @@ Executive summary and direct file index for token-efficient agent navigation. Re
 ## 1. Executive Summary
 
 **Status Recente:**
+- **Hardening de Seguranca, Confiabilidade e Determinismo de CI/CD (`fix/cicd-hardening`):**
+  - Eliminada condicao de corrida de deploy duplo removendo `push: branches: [main]` de `.github/workflows/deploy.yml` (agora exclusivo `workflow_dispatch`) e isolando o deploy via grupo `concurrency: backend-cti-server-deploy` compartilhado com `production.yml`.
+  - Corrigidas injecoes de script (`${{ github.* }}` e `${{ github.event.inputs.* }}` movidos para `env:` e referenciados com `"$VAR"`) em `pr-gatekeeper.yml`, `deploy-landing.yml`, `release.yml` e `nightly-audit.yml` (usando `--body-file app-bug-report.md`).
+  - Removidas chaves hardcoded (`HERE_API_KEY`, `GOOGLE_MAPS_API_KEY` e `JWT_SECRET` estatico) de `maestro-e2e.yml` e `nightly-audit.yml`, substituindo por `${{ secrets.* || fallback }}` e geracao efemera via `crypto.randomBytes(32)`.
+  - Aplicado principio de menor privilegio (`permissions`) em todos os 9 workflows e removidos `pages: write`, `id-token: write` e `issues: write` nao utilizados de `deploy-landing.yml`.
+  - Ajustados triggers (`paths: ['src/landing/**', '.github/workflows/deploy-landing.yml']`, `push` restrito a `[main, dev]`) e concorrencia por ref (`deploy-gh-pages-${{ github.ref_name }}`) em `deploy-landing.yml`.
+  - Corrigida confiabilidade do `nightly-audit.yml` e `scripts/audit_failure_analyzer.js` (captura garantida de `logs/backend-tests.log` e `logs/concurrency-tests.log` com `PIPESTATUS[0]` e distincao estrita entre exit codes `0`, `1` e `>=2`).
+  - Endurecidos `staging.yml`, `production.yml`, `pr-gatekeeper.yml`, `release.yml`, `build-ios.yml`, `maestro-e2e.yml`, `scripts/ci_run_maestro.sh`, `scripts/check_frontend_changes.ts` e `scripts/upload_release.ts` (`environment` restrito a jobs de deploy, descoberta dinamica de APK via `find`, `npm ci` onde ha lockfile, verificacao `"database":"connected"`, upload de logs de falha no Maestro, pre-aquecimento Metro fail-fast e erradicacao de emojis).
 - **Motor de Validação Existencial de Produtos em Cascata (Waterfall), Códigos de Balança PLU e Quarentena (`v1.6.0` - `feat/existential-product-validation`):**
   - **Arquitetura em Cascata (Waterfall) com Cache Local e Circuit Breaker (`product.repository.ts`, `product.service.ts`):**
     1. *Passo 0 (PostgreSQL Local + Cache em Memória LRU):* Consulta imediata em 0ms antes de qualquer chamada externa.

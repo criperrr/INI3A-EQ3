@@ -4728,3 +4728,24 @@ Allowed Types: `feat`, `fix`, `docs`, `refactor`, `style`, `chore`.
   - `src/frontend/app.json`
   - `.agents/CURRENT.md`
 - **Impact / Next Steps:** Unverified products are isolated in quarantine until 3 distinct users register them or an Admin approves them; PR #49 checks updated for merge into `dev`.
+
+## `2026-11-16 23:19` - `fix(ci)`: Hardening de seguranca, confiabilidade e determinismo nos workflows e scripts de CI/CD
+
+- **Description:** Eliminada condicao de corrida de deploy duplo entre `deploy.yml` e `production.yml`; eliminadas injecoes de script via `${{ github.* }}` em blocos `run:`; removidas chaves de API e segredos JWT hardcoded; aplicado `permissions` de menor privilegio em todos os workflows; restritos triggers e concorrencia de `deploy-landing.yml`; endurecidos `nightly-audit.yml`, `audit_failure_analyzer.js`, `staging.yml`, `production.yml`, `pr-gatekeeper.yml`, `release.yml`, `build-ios.yml`, `maestro-e2e.yml` e `ci_run_maestro.sh`; removidos emojis de `check_frontend_changes.ts` e `upload_release.ts` com metadados dinamicos de release.
+- **Files Modified:**
+  - `.github/workflows/build-ios.yml`
+  - `.github/workflows/deploy-landing.yml`
+  - `.github/workflows/deploy.yml`
+  - `.github/workflows/maestro-e2e.yml`
+  - `.github/workflows/nightly-audit.yml`
+  - `.github/workflows/pr-gatekeeper.yml`
+  - `.github/workflows/production.yml`
+  - `.github/workflows/release.yml`
+  - `.github/workflows/staging.yml`
+  - `scripts/audit_failure_analyzer.js`
+  - `scripts/check_frontend_changes.ts`
+  - `scripts/ci_run_maestro.sh`
+  - `scripts/upload_release.ts`
+  - `.agents/CURRENT.md`
+  - `.agents/COMMITS.md`
+- **Impact / Next Steps:** Todos os 9 workflows validados sintaticamente e auditados quanto a permissoes, segredos e injecoes; `npm run typecheck` e `npm test` (51/51 backend + 32/32 raiz/concorrencia) aprovados sem regressao na branch `fix/cicd-hardening`.
