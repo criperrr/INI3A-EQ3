@@ -11,6 +11,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 concurrency:
   group: production-pipeline
   cancel-in-progress: false
@@ -19,7 +22,6 @@ jobs:
   contract_and_type_check:
     name: API Contract & Strict Type Validation
     runs-on: ubuntu-latest
-    environment: production
     timeout-minutes: 10
 
     steps:
@@ -46,6 +48,9 @@ jobs:
     needs: [contract_and_type_check]
     runs-on: ubuntu-latest
     environment: production
+    concurrency:
+      group: backend-cti-server-deploy
+      cancel-in-progress: false
     timeout-minutes: 20
 
     steps:
@@ -161,9 +166,14 @@ jobs:
 
       - name: Renomear Artefato de Produção
         run: |
+          APK_PATH=$(find src/frontend/android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::Nenhum arquivo APK de produção encontrado!"
+            exit 1
+          fi
           mkdir -p build-artifacts
-          cp src/frontend/android/app/build/outputs/apk/release/app-release-unsigned.apk build-artifacts/Presco-Production-prodFlavor.apk || \
-          cp src/frontend/android/app/build/outputs/apk/release/app-release.apk build-artifacts/Presco-Production-prodFlavor.apk
+          cp "$APK_PATH" build-artifacts/Presco-Production-prodFlavor.apk
+          echo "[OK] APK de produção copiado de: $APK_PATH"
 
       - name: Publicar Artefato APK de Produção
         uses: actions/upload-artifact@v4

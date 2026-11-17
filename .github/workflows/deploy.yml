@@ -1,9 +1,10 @@
 # Deploy do backend Presco no servidor CTI.
 #
 # Nenhum dado do servidor vive neste arquivo: host, usuário, porta, caminho e
-# todas as credenciais vêm de GitHub Actions Secrets (Settings → Secrets and
-# variables → Actions). O job roda por dispatch manual ou push na branch main.
-name: Deploy Backend
+# todas as credenciais vêm de GitHub Actions Secrets (Settings -> Secrets and
+# variables -> Actions). O job roda exclusivamente por dispatch manual
+# (emergencial/sob demanda); deploys automáticos da main ocorrem via production.yml.
+name: Deploy Backend (Manual)
 
 on:
   workflow_dispatch:
@@ -12,17 +13,12 @@ on:
         description: "Branch a implantar no servidor"
         required: false
         default: ""
-  push:
-    branches: [main]
-    paths:
-      - "src/backend/**"
-      - "deploy/**"
-      - "ecosystem.config.cjs"
-      - "scripts/deploy_remote.sh"
-      - ".github/workflows/deploy.yml"
+
+permissions:
+  contents: read
 
 concurrency:
-  group: deploy-backend
+  group: backend-cti-server-deploy
   cancel-in-progress: false
 
 jobs:
@@ -45,7 +41,7 @@ jobs:
       - name: Typecheck do backend
         working-directory: src/backend
         run: |
-          npm install --omit=optional --no-audit --fund=false
+          npm ci --omit=optional --no-audit --fund=false
           npm run typecheck
 
       - name: Preparar chave SSH

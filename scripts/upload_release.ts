@@ -14,16 +14,72 @@ const colors = {
   bold: "\x1b[1m",
 };
 
-const REPO_OWNER = "criperrr";
-const REPO_NAME = "INI3A-EQ3";
-const TAG_NAME = "v1.0.0";
-const RELEASE_TITLE = "Presco v1.0.0 - Versão Oficial Android (APK)";
-const APK_FILENAME = "Presco-v1.0.0.apk";
-const LOCAL_APK_PATH = path.resolve(process.cwd(), "dist/Presco.apk");
+interface ReleaseMetadata {
+  repoOwner: string;
+  repoName: string;
+  tagName: string;
+  version: string;
+  versionCode: number | string;
+  releaseTitle: string;
+  apkFilename: string;
+  localApkPath: string;
+}
+
+function readJsonSafe(filePath: string): any {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function resolveArgValue(flag: string): string | undefined {
+  const prefix = `--${flag}=`;
+  const found = process.argv.slice(2).find((arg) => arg.startsWith(prefix));
+  return found ? found.slice(prefix.length).trim() : undefined;
+}
+
+function resolveReleaseMetadata(): ReleaseMetadata {
+  const rootPkg = readJsonSafe(path.resolve(process.cwd(), "package.json"));
+  const appJson = readJsonSafe(path.resolve(process.cwd(), "src/frontend/app.json"));
+
+  const pkgVersion = String(rootPkg.version || appJson?.expo?.version || "0.0.0").replace(/^v/, "");
+  const rawTag = resolveArgValue("tag") || process.env.RELEASE_TAG || `v${pkgVersion}`;
+  const tagName = rawTag.startsWith("v") ? rawTag : `v${rawTag}`;
+  const version = tagName.replace(/^v/, "");
+  const versionCode = appJson?.expo?.android?.versionCode ?? "N/A";
+
+  const repoOwner = process.env.GITHUB_REPOSITORY_OWNER || "criperrr";
+  const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "INI3A-EQ3";
+
+  const apkOverride = resolveArgValue("apk") || process.env.APK_PATH;
+  const defaultApk = path.resolve(process.cwd(), "dist/Presco.apk");
+  const releaseApk = path.resolve(
+    process.cwd(),
+    "src/frontend/android/app/build/outputs/apk/release/app-release.apk"
+  );
+  const localApkPath = apkOverride
+    ? path.resolve(process.cwd(), apkOverride)
+    : fs.existsSync(defaultApk)
+      ? defaultApk
+      : releaseApk;
+
+  return {
+    repoOwner,
+    repoName,
+    tagName,
+    version,
+    versionCode,
+    releaseTitle: `Presco ${tagName} - Versão Oficial Android (APK)`,
+    apkFilename: `Presco-${tagName}.apk`,
+    localApkPath,
+  };
+}
 
 function getGitHubToken(): string {
-  if (process.env.GITHUB_TOKEN) {
-    return process.env.GITHUB_TOKEN.trim();
+  const envToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  if (envToken) {
+    return envToken.trim();
   }
 
   try {
@@ -32,11 +88,11 @@ function getGitHubToken(): string {
     if (match && match[1]) {
       return match[1];
     }
-  } catch (err) {
+  } catch {
     // ignore
   }
 
-  throw new Error("Token do GitHub não encontrado em GITHUB_TOKEN nem na URL do git remote origin.");
+  throw new Error("Token do GitHub não encontrado em GITHUB_TOKEN/GH_TOKEN nem na URL do git remote origin.");
 }
 
 function calculateSha256(filePath: string): string {
@@ -51,31 +107,32 @@ function formatBytes(bytes: number): string {
   return `${mb} MB (${bytes.toLocaleString("pt-BR")} bytes)`;
 }
 
-const RELEASE_BODY = `
-# 🛒 Presco v1.0.0 — Versão Oficial para Android (APK)
+function buildReleaseBody(meta: ReleaseMetadata, sizeFormatted: string, sha256: string): string {
+  return `
+# Presco ${meta.tagName} — Versão Oficial para Android (APK)
 
-Bem-vindo à primeira release pública oficial do **Presco**! O Presco é um aplicativo móvel colaborativo desenvolvido para simplificar o seu dia a dia no supermercado: compare preços em tempo real, encontre os estabelecimentos mais próximos de você e economize com dados gerados e auditados pela própria comunidade.
-
----
-
-## 🚀 Principais Recursos e Destaques
-
-- 📷 **Scanner de Código de Barras Instantâneo:** Mira inteligente com linha laser e detecção de códigos EAN-13, EAN-8 e UPC via câmera com taxa de decodificação ultra rápida.
-- 🗺️ **Mapa Interativo com HERE Location Services:** Descoberta dinâmica de supermercados, atacadistas e comércios locais (padarias, açougues, mercearias) com filtros de distância, horário e categorias.
-- 💰 **Comparação e Histórico de Preços:** Gráficos interativos de evolução de preço, estatísticas de mín/méd/máx e identificação automática de promoções reais da sua região.
-- 🛡️ **Detecção Antifraude e Moderação Admin:** Sistema estatístico de desvio padrão adaptativo com quórum comunitário e painel de moderação para garantir a veracidade dos valores.
-- 🎮 **Gamificação & Recompensas Comunitárias:** Ganhe XP e pontos ao cadastrar produtos (+25 XP), reportar preços (+15 XP) e votar na confiabilidade das ofertas (+5 XP).
-- 🎨 **Customização de Perfil Dinâmica:** Banners exclusivos, molduras animadas de avatar com brilho neon, distintivos de nível e títulos desbloqueáveis na loja integrada.
-- 🌐 **Internacionalização Completa (7 Idiomas):** Suporte nativo e instantâneo a Português (pt-BR), Inglês (en-US), Espanhol (es-ES), Alemão (de-DE), Russo (ru-RU), Chinês (zh-CN) e Japonês (ja-JP).
-- 🎨 **Design System Monet & Dynamic Theme:** Modos Claro, Escuro e AMOLED verdadeiro, com suporte opcional a extração de cores dinâmicas do papel de parede do sistema Android.
+Release oficial do **Presco**! O Presco é um aplicativo móvel colaborativo desenvolvido para simplificar o seu dia a dia no supermercado: compare preços em tempo real, encontre os estabelecimentos mais próximos de você e economize com dados gerados e auditados pela própria comunidade.
 
 ---
 
-## 📱 Como Baixar e Instalar no Smartphone Android
+## Principais Recursos e Destaques
 
-1. Baixe o arquivo **[\`${APK_FILENAME}\`](https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${TAG_NAME}/${APK_FILENAME})** na seção de **Assets** abaixo.
+- **Scanner de Código de Barras Instantâneo:** Mira inteligente com linha laser e detecção de códigos EAN-13, EAN-8 e UPC via câmera.
+- **Mapa Interativo com HERE Location Services:** Descoberta dinâmica de supermercados, atacadistas e comércios locais com filtros de distância, horário e categorias.
+- **Comparação e Histórico de Preços:** Gráficos interativos de evolução de preço, estatísticas de mín/méd/máx e identificação automática de promoções reais da sua região.
+- **Detecção Antifraude e Moderação Admin:** Sistema estatístico de desvio padrão adaptativo com quórum comunitário e painel de moderação para garantir a veracidade dos valores.
+- **Gamificação & Recompensas Comunitárias:** Ganhe XP e pontos ao cadastrar produtos (+25 XP), reportar preços (+15 XP) e votar na confiabilidade das ofertas (+5 XP).
+- **Customização de Perfil Dinâmica:** Banners exclusivos, molduras animadas de avatar, distintivos de nível e títulos desbloqueáveis na loja integrada.
+- **Internacionalização Completa (7 Idiomas):** Suporte a Português (pt-BR), Inglês (en-US), Espanhol (es-ES), Alemão (de-DE), Russo (ru-RU), Chinês (zh-CN) e Japonês (ja-JP).
+- **Design System Monet & Dynamic Theme:** Modos Claro, Escuro e AMOLED verdadeiro, com suporte opcional a extração de cores dinâmicas do sistema Android.
+
+---
+
+## Como Baixar e Instalar no Smartphone Android
+
+1. Baixe o arquivo **[\`${meta.apkFilename}\`](https://github.com/${meta.repoOwner}/${meta.repoName}/releases/download/${meta.tagName}/${meta.apkFilename})** na seção de **Assets** abaixo.
 2. Abra o arquivo \`.apk\` baixado na barra de notificações ou no seu gerenciador de arquivos.
-3. Se for a primeira vez instalando fora da Google Play Store, o Android solicitará permissão para **"Instalar apps de fontes desconhecidas"**. Autorize o seu navegador ou gerenciador de arquivos.
+3. Se for a primeira vez instalando fora da Google Play Store, autorize **"Instalar apps de fontes desconhecidas"** para o seu navegador ou gerenciador de arquivos.
 4. Toque em **Instalar** e aguarde o término do processo.
 5. Abra o app **Presco** e conceda as permissões solicitadas:
    - **Câmera:** Necessária para escanear os códigos de barras das embalagens.
@@ -83,34 +140,34 @@ Bem-vindo à primeira release pública oficial do **Presco**! O Presco é um apl
 
 ---
 
-## 📋 Especificações Técnicas e Checksums
+## Especificações Técnicas e Checksums
 
 | Parâmetro | Detalhes |
 |---|---|
-| **Versão** | 1.0.0 (Build 1) |
+| **Versão** | ${meta.version} (Build ${meta.versionCode}) |
 | **Nome do Pacote** | \`com.presco.app\` |
 | **Sistema Mínimo** | Android 7.0 (Nougat - API 24) |
 | **Sistema Recomendado** | Android 10+ (API 29+) |
-| **Arquiteturas** | \`arm64-v8a\`, \`armeabi-v7a\`, \`x86_64\` |
 | **Engine JS / Runtime** | Hermes com React Native 0.86.3 & New Architecture |
 | **Frameworks** | Expo SDK 57, Expo Router 57, Reanimated 4, Drizzle ORM, Express 5 |
-| **Tamanho do Arquivo** | 134 MB (140.562.357 bytes) |
-| **Checksum SHA-256** | \`b84db6ffaaabf514e581c09a30c281c1282de2ca5186251a8e9beb4d7cf81018\` |
+| **Tamanho do Arquivo** | ${sizeFormatted} |
+| **Checksum SHA-256** | \`${sha256}\` |
 
 ---
 
-## 🌐 Conectividade & Backend
+## Conectividade & Backend
 
-O APK já vem configurado de fábrica para comunicar-se de forma segura via HTTPS com a infraestrutura oficial de backend hospedada no servidor CTI UNESP:
+O APK comunica-se via HTTPS com a infraestrutura oficial de backend hospedada no servidor CTI UNESP:
 - **API Endpoint:** \`https://eq.projetoscti.com.br/26-presco\`
 - Para desenvolvedores e testes locais, o app também suporta conexão via rede Wi-Fi local (LAN) e túneis de desenvolvimento configurados via scripts do repositório.
 
 ---
 
-## 👥 Equipe e Créditos
+## Equipe e Créditos
 
-Desenvolvido com excelência técnica pela **Equipe 26 (INI3A-EQ3)** no Colégio Técnico Industrial "Prof. Isaac Portal Roldán" - UNESP Bauru.
+Desenvolvido pela **Equipe 26 (INI3A-EQ3)** no Colégio Técnico Industrial "Prof. Isaac Portal Roldán" - UNESP Bauru.
 `.trim();
+}
 
 async function requestGitHub(
   pathUrl: string,
@@ -172,11 +229,10 @@ async function uploadAssetStream(
   const stat = fs.statSync(filePath);
   const totalBytes = stat.size;
 
-  // upload_url tem o formato: https://uploads.github.com/repos/.../releases/ID/assets{?name,label}
   const cleanUrl = uploadUrlTemplate.replace(/\{\?name,label\}$/, "") + `?name=${encodeURIComponent(assetName)}`;
   const url = new URL(cleanUrl);
 
-  console.log(`\n${colors.cyan}Iniciando upload de ${assetName} (${formatBytes(totalBytes)})...${colors.reset}`);
+  console.log(`\n${colors.cyan}[INFO] Iniciando upload de ${assetName} (${formatBytes(totalBytes)})...${colors.reset}`);
 
   return new Promise((resolve, reject) => {
     const req = https.request(
@@ -213,7 +269,7 @@ async function uploadAssetStream(
 
     req.on("error", reject);
 
-    const fileStream = fs.createReadStream(filePath, { highWaterMark: 1024 * 1024 }); // 1MB chunks
+    const fileStream = fs.createReadStream(filePath, { highWaterMark: 1024 * 1024 });
     let uploadedBytes = 0;
     let lastPercent = -1;
 
@@ -222,12 +278,14 @@ async function uploadAssetStream(
       const percent = Math.floor((uploadedBytes / totalBytes) * 100);
       if (percent !== lastPercent && percent % 10 === 0) {
         lastPercent = percent;
-        process.stdout.write(`\r${colors.yellow}Progresso do upload: ${percent}% (${(uploadedBytes / 1024 / 1024).toFixed(1)} MB / ${(totalBytes / 1024 / 1024).toFixed(1)} MB)${colors.reset}`);
+        process.stdout.write(
+          `\r${colors.yellow}[INFO] Progresso do upload: ${percent}% (${(uploadedBytes / 1024 / 1024).toFixed(1)} MB / ${(totalBytes / 1024 / 1024).toFixed(1)} MB)${colors.reset}`
+        );
       }
     });
 
     fileStream.on("end", () => {
-      process.stdout.write(`\r${colors.green}Upload concluído! Aguardando confirmação do GitHub...${colors.reset}\n`);
+      process.stdout.write(`\r${colors.green}[OK] Upload concluído! Aguardando confirmação do GitHub...${colors.reset}\n`);
     });
 
     fileStream.pipe(req);
@@ -235,99 +293,97 @@ async function uploadAssetStream(
 }
 
 async function main() {
-  console.log(`${colors.bold}${colors.cyan}=== Publicador Oficial de Releases GitHub - Presco APK ===${colors.reset}\n`);
+  const meta = resolveReleaseMetadata();
+  console.log(`${colors.bold}${colors.cyan}=== Publicador de Releases GitHub - Presco APK ===${colors.reset}\n`);
 
-  if (!fs.existsSync(LOCAL_APK_PATH)) {
-    console.error(`${colors.red}Erro: Arquivo do APK não encontrado em ${LOCAL_APK_PATH}${colors.reset}`);
+  if (!fs.existsSync(meta.localApkPath)) {
+    console.error(`${colors.red}[ERRO] Arquivo do APK não encontrado em ${meta.localApkPath}${colors.reset}`);
     process.exit(1);
   }
 
   const token = getGitHubToken();
-  const sha256 = calculateSha256(LOCAL_APK_PATH);
-  const stat = fs.statSync(LOCAL_APK_PATH);
+  const sha256 = calculateSha256(meta.localApkPath);
+  const stat = fs.statSync(meta.localApkPath);
+  const sizeFormatted = formatBytes(stat.size);
+  const releaseBody = buildReleaseBody(meta, sizeFormatted, sha256);
 
-  console.log(`${colors.green}✓ Token do GitHub autenticado com sucesso!${colors.reset}`);
-  console.log(`- Repositório: ${colors.bold}${REPO_OWNER}/${REPO_NAME}${colors.reset}`);
-  console.log(`- APK Local: ${LOCAL_APK_PATH}`);
-  console.log(`- Tamanho: ${formatBytes(stat.size)}`);
+  console.log(`${colors.green}[OK] Token do GitHub autenticado com sucesso!${colors.reset}`);
+  console.log(`- Repositório: ${colors.bold}${meta.repoOwner}/${meta.repoName}${colors.reset}`);
+  console.log(`- APK Local: ${meta.localApkPath}`);
+  console.log(`- Tamanho: ${sizeFormatted}`);
   console.log(`- SHA-256: ${sha256}`);
-  console.log(`- Release Tag: ${TAG_NAME}`);
+  console.log(`- Release Tag: ${meta.tagName} (Build ${meta.versionCode})`);
 
-  // 1. Verificar se release já existe
   let release: any = null;
   try {
-    console.log(`\nConsultando release ${TAG_NAME} no GitHub...`);
+    console.log(`\n[INFO] Consultando release ${meta.tagName} no GitHub...`);
     release = await requestGitHub(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/${TAG_NAME}`,
+      `https://api.github.com/repos/${meta.repoOwner}/${meta.repoName}/releases/tags/${meta.tagName}`,
       "GET",
       token
     );
-    console.log(`${colors.green}✓ Release existente encontrada: ID ${release.id}${colors.reset}`);
+    console.log(`${colors.green}[OK] Release existente encontrada: ID ${release.id}${colors.reset}`);
 
-    // Atualizar corpo e nome da release se já existir
     release = await requestGitHub(
-      `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/${release.id}`,
+      `https://api.github.com/repos/${meta.repoOwner}/${meta.repoName}/releases/${release.id}`,
       "PATCH",
       token,
       {
-        name: RELEASE_TITLE,
-        body: RELEASE_BODY,
+        name: meta.releaseTitle,
+        body: releaseBody,
         draft: false,
         prerelease: false,
       }
     );
-    console.log(`${colors.green}✓ Metadados e notas da release atualizados.${colors.reset}`);
+    console.log(`${colors.green}[OK] Metadados e notas da release atualizados.${colors.reset}`);
   } catch (err: any) {
     if (err.message.includes("404")) {
-      console.log(`Release ${TAG_NAME} não existe ainda. Criando nova release...`);
+      console.log(`[INFO] Release ${meta.tagName} não existe ainda. Criando nova release...`);
       release = await requestGitHub(
-        `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases`,
+        `https://api.github.com/repos/${meta.repoOwner}/${meta.repoName}/releases`,
         "POST",
         token,
         {
-          tag_name: TAG_NAME,
-          name: RELEASE_TITLE,
-          body: RELEASE_BODY,
+          tag_name: meta.tagName,
+          name: meta.releaseTitle,
+          body: releaseBody,
           draft: false,
           prerelease: false,
         }
       );
-      console.log(`${colors.green}✓ Release criada com sucesso! ID: ${release.id}${colors.reset}`);
+      console.log(`${colors.green}[OK] Release criada com sucesso! ID: ${release.id}${colors.reset}`);
     } else {
       throw err;
     }
   }
 
-  // 2. Verificar se o asset já existe na release
   if (release.assets && release.assets.length > 0) {
     for (const asset of release.assets) {
-      if (asset.name === APK_FILENAME || asset.name === "Presco.apk") {
-        console.log(`${colors.yellow}Removendo asset antigo '${asset.name}' (ID ${asset.id}) para substituição limpa...${colors.reset}`);
+      if (asset.name === meta.apkFilename || asset.name === "Presco.apk") {
+        console.log(`${colors.yellow}[INFO] Removendo asset antigo '${asset.name}' (ID ${asset.id}) para substituição limpa...${colors.reset}`);
         await requestGitHub(
-          `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/assets/${asset.id}`,
+          `https://api.github.com/repos/${meta.repoOwner}/${meta.repoName}/releases/assets/${asset.id}`,
           "DELETE",
           token
         );
-        console.log(`${colors.green}✓ Asset antigo removido.${colors.reset}`);
+        console.log(`${colors.green}[OK] Asset antigo removido.${colors.reset}`);
       }
     }
   }
 
-  // 3. Fazer upload do APK para a release
-  const uploadResult = await uploadAssetStream(release.upload_url, APK_FILENAME, LOCAL_APK_PATH, token);
-  console.log(`${colors.bold}${colors.green}✓ APK publicado com sucesso no GitHub Releases!${colors.reset}`);
+  const uploadResult = await uploadAssetStream(release.upload_url, meta.apkFilename, meta.localApkPath, token);
+  console.log(`${colors.bold}${colors.green}[OK] APK publicado com sucesso no GitHub Releases!${colors.reset}`);
   console.log(`- Download URL: ${colors.cyan}${uploadResult.browser_download_url}${colors.reset}`);
   console.log(`- Release URL: ${colors.cyan}${release.html_url}${colors.reset}`);
 
-  // Fazer upload de uma cópia com nome Presco.apk direto para conveniência
-  const uploadPlainResult = await uploadAssetStream(release.upload_url, "Presco.apk", LOCAL_APK_PATH, token);
-  console.log(`${colors.bold}${colors.green}✓ Asset adicional 'Presco.apk' publicado com sucesso!${colors.reset}`);
+  const uploadPlainResult = await uploadAssetStream(release.upload_url, "Presco.apk", meta.localApkPath, token);
+  console.log(`${colors.bold}${colors.green}[OK] Asset adicional 'Presco.apk' publicado com sucesso!${colors.reset}`);
   console.log(`- Download URL: ${colors.cyan}${uploadPlainResult.browser_download_url}${colors.reset}`);
 
-  console.log(`\n${colors.bold}${colors.green}🎉 Concluído com sucesso! O APK já está disponível publicamente para download.${colors.reset}\n`);
+  console.log(`\n${colors.bold}${colors.green}[OK] Concluído com sucesso! O APK já está disponível publicamente para download.${colors.reset}\n`);
 }
 
 main().catch((err) => {
-  console.error(`\n${colors.red}${colors.bold}Erro durante o processo:${colors.reset}`, err);
+  console.error(`\n${colors.red}${colors.bold}[ERRO] Erro durante o processo:${colors.reset}`, err);
   process.exit(1);
 });

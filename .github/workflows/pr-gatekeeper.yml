@@ -5,15 +5,18 @@ on:
     branches: [dev, main]
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+
 concurrency:
   group: pr-gatekeeper-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   gatekeeper:
-    name: Gatekeeper (Lint, SAST, Types, Tests & Coverage)
+    name: Gatekeeper (Lint, SAST, Types & Tests)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Código
@@ -22,11 +25,14 @@ jobs:
           fetch-depth: 0
 
       - name: Validar Nomenclatura da Branch (Axioma de Branches)
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          BRANCH_NAME="${{ github.head_ref }}"
+          BRANCH_NAME="$HEAD_REF"
           echo "Validando branch: $BRANCH_NAME"
           # Permite branch 'dev' para PRs de promoção/release apontando para 'main'
-          if [[ "${{ github.base_ref }}" == "main" && "$BRANCH_NAME" == "dev" ]]; then
+          if [[ "$BASE_REF" == "main" && "$BRANCH_NAME" == "dev" ]]; then
             echo "[OK] Promoção de release de 'dev' para 'main' autorizada."
             exit 0
           fi
@@ -41,11 +47,17 @@ jobs:
           echo "[OK] Nomenclatura de branch válida: $BRANCH_NAME"
 
       - name: Validar Sintaxe das Mensagens de Commits
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           echo "Validando mensagens de commit do PR..."
-          COMMITS=$(git log --no-merges origin/${{ github.base_ref }}..HEAD --pretty=format:"%s")
+          if ! git rev-parse --verify "origin/${BASE_REF}" >/dev/null 2>&1; then
+            echo "[INFO] Referência origin/${BASE_REF} não encontrada localmente; buscando..."
+            git fetch --no-tags --depth=1 origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          fi
+          COMMITS=$(git log --no-merges "origin/${BASE_REF}..HEAD" --pretty=format:"%s")
           COMMIT_REGEX="^(feat|fix|test|refactor|chore|docs)(\([a-zA-Z0-9_-]+\))?(\/|:)[[:space:]]*.+"
-          
+
           while IFS= read -r msg; do
             if [ -n "$msg" ]; then
               echo "Verificando commit: $msg"
@@ -78,16 +90,22 @@ jobs:
             p/javascript
             p/typescript
 
-      - name: Executar Testes com Validação de Cobertura (Mínimo 80%)
+      - name: Executar Suíte de Testes Unitários e de Concorrência
         run: |
-          echo "Executando suíte de testes com medição de cobertura..."
+          echo "Executando suíte de testes unitários e de concorrência..."
           npm test
-          echo "[OK] Todos os testes unitários e de integração passaram com 100% de sucesso."
+          echo "[OK] Todos os testes unitários e de concorrência passaram com 100% de sucesso."
 
       - name: "Validar Bundle Expo Mobile (Condicional: apenas se src/frontend foi modificado)"
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
           echo "Verificando se houve alterações no frontend..."
-          MODIFIED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD || true)
+          if ! git rev-parse --verify "origin/${BASE_REF}" >/dev/null 2>&1; then
+            echo "[INFO] Referência origin/${BASE_REF} não encontrada localmente; buscando..."
+            git fetch --no-tags --depth=1 origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+          fi
+          MODIFIED_FILES=$(git diff --name-only "origin/${BASE_REF}...HEAD")
           if echo "$MODIFIED_FILES" | grep -qE '^src/frontend/'; then
             echo "[INFO] Alterações detectadas em 'src/frontend/'. Validando bundle Expo Android..."
             cd src/frontend

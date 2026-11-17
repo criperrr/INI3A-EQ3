@@ -2,13 +2,17 @@ name: Deploy Landing Page (GitHub Pages)
 
 on:
   push:
-    branches:
-      - "**"
-      - "!gh-pages"
+    branches: [main, dev]
+    paths:
+      - "src/landing/**"
+      - ".github/workflows/deploy-landing.yml"
   pull_request:
     branches:
       - "**"
       - "!gh-pages"
+    paths:
+      - "src/landing/**"
+      - ".github/workflows/deploy-landing.yml"
   workflow_dispatch:
     inputs:
       target_env:
@@ -17,21 +21,20 @@ on:
         default: "auto"
 
 permissions:
-  contents: write
-  pages: write
-  id-token: write
-  pull-requests: write
-  issues: write
+  contents: read
 
 concurrency:
-  group: deploy-gh-pages
-  cancel-in-progress: false
+  group: deploy-gh-pages-${{ github.ref_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   deploy-landing:
     name: Build & Deploy Landing Page
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
 
     steps:
       - name: Checkout Código-Fonte
@@ -48,24 +51,25 @@ jobs:
 
       - name: Determinar Ambiente de Publicação
         id: env_detector
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          OVERRIDE_ENV: ${{ github.event.inputs.target_env || 'auto' }}
+          PR_NUM: ${{ github.event.pull_request.number }}
         run: |
-          REPO_NAME="${{ github.event.repository.name }}"
-          EVENT_NAME="${{ github.event_name }}"
-          REF_NAME="${{ github.ref_name }}"
-          OVERRIDE_ENV="${{ github.event.inputs.target_env || 'auto' }}"
-
-          if [ "${OVERRIDE_ENV}" == "main" ] || ( [ "${OVERRIDE_ENV}" == "auto" ] && [ "${REF_NAME}" == "main" ] && [ "${EVENT_NAME}" != "pull_request" ] ); then
+          if [ "$OVERRIDE_ENV" = "main" ] || ( [ "$OVERRIDE_ENV" = "auto" ] && [ "$REF_NAME" = "main" ] && [ "$EVENT_NAME" != "pull_request" ] ); then
             BASE_URL="/${REPO_NAME}"
             DEST_DIR=""
             ENV_LABEL="Produção (main)"
             IS_PR="false"
-          elif [ "${OVERRIDE_ENV}" == "dev" ] || ( [ "${OVERRIDE_ENV}" == "auto" ] && [ "${REF_NAME}" == "dev" ] && [ "${EVENT_NAME}" != "pull_request" ] ); then
+          elif [ "$OVERRIDE_ENV" = "dev" ] || ( [ "$OVERRIDE_ENV" = "auto" ] && [ "$REF_NAME" = "dev" ] && [ "$EVENT_NAME" != "pull_request" ] ); then
             BASE_URL="/${REPO_NAME}/dev"
             DEST_DIR="dev"
             ENV_LABEL="Desenvolvimento (dev)"
             IS_PR="false"
-          elif [ "${EVENT_NAME}" == "pull_request" ]; then
-            PR_NUM="${{ github.event.pull_request.number }}"
+          elif [ "$EVENT_NAME" = "pull_request" ]; then
             SLUG="pr-${PR_NUM}"
             BASE_URL="/${REPO_NAME}/preview/${SLUG}"
             DEST_DIR="preview/${SLUG}"
@@ -73,26 +77,32 @@ jobs:
             IS_PR="true"
           else
             # Branch de feature, fix ou testes isolada
-            SLUG=$(echo "${REF_NAME}" | sed 's/[^a-zA-Z0-9._-]/-/g')
+            SLUG=$(printf '%s' "$REF_NAME" | sed 's/[^a-zA-Z0-9._-]/-/g')
             BASE_URL="/${REPO_NAME}/preview/${SLUG}"
             DEST_DIR="preview/${SLUG}"
             ENV_LABEL="Preview Branch (${SLUG})"
             IS_PR="false"
           fi
 
-          DEPLOY_URL="https://${{ github.repository_owner }}.github.io${BASE_URL}/"
+          DEPLOY_URL="https://${REPO_OWNER}.github.io${BASE_URL}/"
 
-          echo "BASE_URL=${BASE_URL}" >> $GITHUB_ENV
-          echo "DEST_DIR=${DEST_DIR}" >> $GITHUB_ENV
-          echo "ENV_LABEL=${ENV_LABEL}" >> $GITHUB_ENV
-          echo "IS_PR=${IS_PR}" >> $GITHUB_ENV
-          echo "DEPLOY_URL=${DEPLOY_URL}" >> $GITHUB_ENV
+          # Strip CR/LF before writing to GITHUB_ENV to prevent multiline env injection
+          BASE_URL=$(printf '%s' "$BASE_URL" | tr -d '\r\n')
+          DEST_DIR=$(printf '%s' "$DEST_DIR" | tr -d '\r\n')
+          ENV_LABEL=$(printf '%s' "$ENV_LABEL" | tr -d '\r\n')
+          DEPLOY_URL=$(printf '%s' "$DEPLOY_URL" | tr -d '\r\n')
+
+          printf 'BASE_URL=%s\n' "$BASE_URL" >> "$GITHUB_ENV"
+          printf 'DEST_DIR=%s\n' "$DEST_DIR" >> "$GITHUB_ENV"
+          printf 'ENV_LABEL=%s\n' "$ENV_LABEL" >> "$GITHUB_ENV"
+          printf 'IS_PR=%s\n' "$IS_PR" >> "$GITHUB_ENV"
+          printf 'DEPLOY_URL=%s\n' "$DEPLOY_URL" >> "$GITHUB_ENV"
 
           echo "::notice title=Landing Page Target::Ambiente: ${ENV_LABEL} | Base URL: ${BASE_URL} | URL Final: ${DEPLOY_URL}"
 
       - name: Instalar Dependências da Landing Page
         run: |
-          npm --prefix src/landing install --no-audit --fund=false
+          npm --prefix src/landing ci --no-audit --fund=false
 
       - name: Exportar Aplicação Web Estática (Expo Metro)
         env:
@@ -105,6 +115,7 @@ jobs:
           touch src/landing/dist/.nojekyll
 
       - name: Deploy para GitHub Pages (branch gh-pages)
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -116,28 +127,36 @@ jobs:
           commit_message: "deploy(landing): ${{ env.ENV_LABEL }} [skip ci]"
 
       - name: Garantir GitHub Pages Habilitado no Repositório
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
         run: |
-          gh api -X POST "repos/${{ github.repository }}/pages" \
+          gh api -X POST "repos/${REPOSITORY}/pages" \
             -f "source[branch]=gh-pages" \
             -f "source[path]=/" || echo "Pages já configurado ou ativo."
 
       - name: Resumo do Deploy no GitHub Actions
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
-          echo "## Landing Page Publicada com Sucesso!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Propriedade | Valor |" >> $GITHUB_STEP_SUMMARY
-          echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Ambiente** | \`${{ env.ENV_LABEL }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **URL Pública** | [${{ env.DEPLOY_URL }}](${{ env.DEPLOY_URL }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Subpasta no Pages** | \`${{ env.DEST_DIR || '/' }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Disparado por** | \`${{ github.event_name }}\` (\`${{ github.ref_name }}\`) |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Commit** | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Landing Page Publicada com Sucesso!"
+            echo ""
+            echo "| Propriedade | Valor |"
+            echo "| :--- | :--- |"
+            printf '| **Ambiente** | `%s` |\n' "$ENV_LABEL"
+            printf '| **URL Pública** | [%s](%s) |\n' "$DEPLOY_URL" "$DEPLOY_URL"
+            printf '| **Subpasta no Pages** | `%s` |\n' "${DEST_DIR:-/}"
+            printf '| **Disparado por** | `%s` (`%s`) |\n' "$EVENT_NAME" "$REF_NAME"
+            printf '| **Commit** | `%s` |\n' "$COMMIT_SHA"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Notificar Link de Preview no Pull Request
-        if: env.IS_PR == 'true'
+        if: env.IS_PR == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |

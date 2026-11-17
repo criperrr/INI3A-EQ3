@@ -91,38 +91,47 @@ jobs:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dorg.gradle.parallel=true"
         run: ./gradlew assembleRelease -x lint -x test --no-daemon
 
-      - name: Localizar APK de Release
+      - name: Determinar Versão da Release
+        id: release_version
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag_name }}
+          GITHUB_REF_PATH: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ -n "$INPUT_TAG" ]; then
+            VERSION_TAG="$INPUT_TAG"
+          elif [[ "$GITHUB_REF_PATH" == refs/tags/* ]]; then
+            VERSION_TAG="$REF_NAME"
+          else
+            PKG_VERSION=$(node -p "require('./package.json').version")
+            VERSION_TAG="v${PKG_VERSION}"
+          fi
+          VERSION_TAG=$(printf '%s' "$VERSION_TAG" | tr -d '\r\n')
+          echo "tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
+          echo "Versão da Release: $VERSION_TAG"
+
+      - name: Localizar e Versionar APK de Release
         id: locate_apk
+        env:
+          VERSION_TAG: ${{ steps.release_version.outputs.tag }}
         run: |
           APK_PATH=$(find src/frontend/android/app/build/outputs/apk -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
             echo "::error::Nenhum arquivo APK de release encontrado!"
             exit 1
           fi
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "APK gerado com sucesso: $APK_PATH"
+          mkdir -p build-artifacts
+          VERSIONED_APK="build-artifacts/Presco-${VERSION_TAG}.apk"
+          cp "$APK_PATH" "$VERSIONED_APK"
+          echo "apk_path=$VERSIONED_APK" >> "$GITHUB_OUTPUT"
+          echo "[OK] APK gerado com sucesso: $VERSIONED_APK (origem: $APK_PATH)"
 
       - name: Publicar Artefato da Action
         uses: actions/upload-artifact@v4
         with:
-          name: Presco-Release-APK
+          name: Presco-${{ steps.release_version.outputs.tag }}.apk
           path: ${{ steps.locate_apk.outputs.apk_path }}
           retention-days: 14
-
-      - name: Determinar Versão da Release
-        id: release_version
-        run: |
-          INPUT_TAG="${{ github.event.inputs.tag_name }}"
-          if [ -n "$INPUT_TAG" ]; then
-            VERSION_TAG="$INPUT_TAG"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION_TAG="${{ github.ref_name }}"
-          else
-            PKG_VERSION=$(node -p "require('./package.json').version")
-            VERSION_TAG="v${PKG_VERSION}"
-          fi
-          echo "tag=$VERSION_TAG" >> $GITHUB_OUTPUT
-          echo "Versão da Release: $VERSION_TAG"
 
       - name: Criar GitHub Release e Publicar APK
         uses: softprops/action-gh-release@v2

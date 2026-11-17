@@ -22,8 +22,6 @@ jobs:
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
 
       - name: Configurar Node.js 22
         uses: actions/setup-node@v4
@@ -52,22 +50,29 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6380
           SERVER_PORT: 3333
           SERVER_HOST: 0.0.0.0
-          JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
           NODE_ENV: test
           SEED_CATALOG: "true"
-          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY || 'ci-dummy-here-key' }}
         run: |
+          if [ -z "$JWT_SECRET" ]; then
+            JWT_SECRET=$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
+            export JWT_SECRET
+            printf 'EPHEMERAL_JWT_SECRET=%s\n' "$JWT_SECRET" >> "$GITHUB_ENV"
+          fi
           mkdir -p src/backend
-          cat << 'EOF' > src/backend/.env
+          {
+            cat << 'EOF'
           DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
           REDIS_URL=redis://127.0.0.1:6380
           SERVER_PORT=3333
           SERVER_HOST=0.0.0.0
-          JWT_SECRET=3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
           NODE_ENV=test
           SEED_CATALOG=true
-          HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
           EOF
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'HERE_API_KEY=%s\n' "$HERE_API_KEY"
+          } > src/backend/.env
           cp src/backend/.env .env
 
           echo "Executando migrações com retry..."
@@ -82,8 +87,12 @@ jobs:
 
           echo "Iniciando servidor backend em segundo plano..."
           npm run --prefix src/backend start > backend-nightly.log 2>&1 &
-          timeout 30 bash -c 'until curl -s http://localhost:3333/health | grep -q "ok"; do sleep 1; done'
-          echo "[OK] Backend online e respondendo em http://localhost:3333"
+          if ! timeout 30 bash -c 'until curl -sf http://localhost:3333/health | grep -Eq "\"database\"[[:space:]]*:[[:space:]]*\"connected\""; do sleep 1; done'; then
+            echo "[ERRO] Backend não respondeu com database connected dentro de 30s!"
+            cat backend-nightly.log || true
+            exit 1
+          fi
+          echo "[OK] Backend online e respondendo (database connected) em http://localhost:3333"
 
       - name: Executar Simulação de Carga e Comportamento Real (Grafana k6)
         env:
@@ -102,13 +111,24 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5433/presco_db
           REDIS_URL: redis://127.0.0.1:6380
-          JWT_SECRET: nightly-audit-secret-key-32-chars-long
+          JWT_SECRET: ${{ secrets.JWT_SECRET || env.EPHEMERAL_JWT_SECRET || 'ci-ephemeral-test-jwt-secret-32chars' }}
           NODE_ENV: test
         run: |
           mkdir -p logs
+          set +e
           echo "Executando testes de concorrência e resiliência..."
-          npm run test:concurrency
+          npm run test:concurrency 2>&1 | tee logs/concurrency-tests.log
+          CONCURRENCY_EXIT=${PIPESTATUS[0]}
+
+          echo "Executando suíte completa de testes..."
           npm test 2>&1 | tee logs/backend-tests.log
+          TEST_EXIT=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$CONCURRENCY_EXIT" -ne 0 ] || [ "$TEST_EXIT" -ne 0 ]; then
+            echo "[ERRO] Falha na suíte de testes (test:concurrency=$CONCURRENCY_EXIT, npm test=$TEST_EXIT)."
+            exit 1
+          fi
 
       - name: Teste de Caos e Resiliência (Fallback In-Memory com Queda do Redis)
         timeout-minutes: 5
@@ -116,11 +136,11 @@ jobs:
           echo "[INFO] Iniciando teste de caos: parando container do Redis para simular falha de infraestrutura..."
           docker compose stop redis
           sleep 2
-          
+
           echo "[INFO] Testando se o backend continua respondendo via fallback em memória (InMemoryStore)..."
           curl -f --max-time 10 http://localhost:3333/health || (echo "[ERRO] Backend caiu após interrupção do Redis!" && exit 1)
           curl -f --max-time 10 "http://localhost:3333/products?limit=5" || (echo "[ERRO] Listagem de produtos falhou durante fallback do Redis!" && exit 1)
-          
+
           echo "[INFO] Restaurando Redis..."
           docker compose start redis
           sleep 3
@@ -161,7 +181,7 @@ jobs:
                 fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
                 console.log("[OK] Benchmark registrado no histórico:", entry);
               } catch (e) {
-                console.warn("Aviso ao processar histórico k6:", e.message);
+                console.warn("[AVISO] Erro ao processar histórico k6:", e.message);
               }
             '
           fi
@@ -186,19 +206,38 @@ jobs:
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERVER_URL: ${{ github.server_url }}
+          REPO_NAME: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          node scripts/audit_failure_analyzer.js || {
+          set +e
+          node scripts/audit_failure_analyzer.js
+          ANALYZER_EXIT=$?
+          set -e
+
+          if [ "$ANALYZER_EXIT" -eq 1 ]; then
             echo "[INFO] Auditoria encerrou com falha, mas a análise forense confirmou que NÃO se trata de um bug da aplicação (apenas instabilidade de ambiente/rede/SLA de teste). Nenhuma issue criada."
             exit 0
-          }
+          elif [ "$ANALYZER_EXIT" -ge 2 ]; then
+            echo "[ERRO] Falha interna ao executar scripts/audit_failure_analyzer.js (exit code: $ANALYZER_EXIT)."
+            exit "$ANALYZER_EXIT"
+          fi
 
           echo "[ERRO] Bug real confirmado no backend! Criando issue técnica..."
-          BUG_DETAILS=$(cat app-bug-report.md)
+          if [ ! -f app-bug-report.md ]; then
+            echo "[ERRO] Arquivo app-bug-report.md não encontrado após exit 0 do analisador."
+            exit 2
+          fi
+
+          {
+            echo "A auditoria noturna detectou uma falha real de execução no backend (erro 500, crash ou regressão de teste unitário):"
+            echo ""
+            cat app-bug-report.md
+            echo ""
+            printf '**Run URL:** %s/%s/actions/runs/%s\n' "$SERVER_URL" "$REPO_NAME" "$RUN_ID"
+          } > app-bug-report.tmp && mv app-bug-report.tmp app-bug-report.md
+
           gh issue create \
             --title "[BUG APLICAÇÃO] Falha confirmada no backend durante auditoria noturna" \
-            --body "A auditoria noturna detectou uma falha real de execução no backend (erro 500, crash ou regressão de teste unitário):
-
-          ${BUG_DETAILS}
-
-          **Run URL:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label "bug" || echo "Não foi possível abrir a issue automaticamente."
+            --body-file app-bug-report.md \
+            --label "bug" || echo "[AVISO] Não foi possível abrir a issue automaticamente."

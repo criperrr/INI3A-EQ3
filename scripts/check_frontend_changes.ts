@@ -13,7 +13,7 @@
  *   Exporta `frontend_changed=true|false` para $GITHUB_OUTPUT quando disponível.
  */
 
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 
 export interface FrontendChangeResult {
@@ -28,7 +28,7 @@ export function isValidCommit(ref: string): boolean {
     return false;
   }
   try {
-    execSync(`git rev-parse --verify ${ref}^{commit}`, { stdio: "ignore" });
+    execFileSync("git", ["rev-parse", "--verify", `${ref.trim()}^{commit}`], { stdio: "ignore" });
     return true;
   } catch {
     return false;
@@ -56,7 +56,7 @@ export function checkFrontendChanges(
   rawHeadRef: string = "HEAD"
 ): FrontendChangeResult {
   const baseRef = resolveBaseRef(rawBaseRef);
-  const headRef = rawHeadRef && isValidCommit(rawHeadRef) ? rawHeadRef : "HEAD";
+  const headRef = rawHeadRef && isValidCommit(rawHeadRef) ? rawHeadRef.trim() : "HEAD";
 
   const reasons: string[] = [];
 
@@ -66,7 +66,7 @@ export function checkFrontendChanges(
 
   let stdout = "";
   try {
-    stdout = execSync(`git diff --name-only ${baseRef} ${headRef}`, {
+    stdout = execFileSync("git", ["diff", "--name-only", baseRef, headRef], {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "ignore"],
     });
@@ -101,11 +101,11 @@ export function checkFrontendChanges(
   // 2. Modificações em src/frontend/package.json além do campo "version"
   if (changedFiles.includes("src/frontend/package.json")) {
     try {
-      const oldRaw = execSync(`git show ${baseRef}:src/frontend/package.json`, {
+      const oldRaw = execFileSync("git", ["show", `${baseRef}:src/frontend/package.json`], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "ignore"],
       });
-      const newRaw = execSync(`git show ${headRef}:src/frontend/package.json`, {
+      const newRaw = execFileSync("git", ["show", `${headRef}:src/frontend/package.json`], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "ignore"],
       });
@@ -126,11 +126,11 @@ export function checkFrontendChanges(
   // 3. Modificações em src/frontend/app.json além de "version" e "versionCode"
   if (changedFiles.includes("src/frontend/app.json")) {
     try {
-      const oldRaw = execSync(`git show ${baseRef}:src/frontend/app.json`, {
+      const oldRaw = execFileSync("git", ["show", `${baseRef}:src/frontend/app.json`], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "ignore"],
       });
-      const newRaw = execSync(`git show ${headRef}:src/frontend/app.json`, {
+      const newRaw = execFileSync("git", ["show", `${headRef}:src/frontend/app.json`], {
         encoding: "utf8",
         stdio: ["pipe", "pipe", "ignore"],
       });
@@ -170,18 +170,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
   const result = checkFrontendChanges(baseArg, headArg);
 
-  console.log(`🔍 Análise de Alterações no Front-end:`);
+  console.log("[INFO] Análise de Alterações no Front-end:");
   console.log(`   Base: ${result.baseRef}`);
   console.log(`   Head: ${result.headRef}`);
   console.log(`   Houve alterações no frontend: ${result.hasChanges ? "SIM" : "NÃO"}`);
 
   if (result.hasChanges) {
-    console.log(`   Motivos detectados:`);
+    console.log("   Motivos detectados:");
     for (const r of result.reasons) {
-      console.log(`     • ${r}`);
+      console.log(`     - ${r}`);
     }
   } else {
-    console.log(`   Nenhum arquivo de código, asset ou dependência de frontend foi alterado.`);
+    console.log("   Nenhum arquivo de código, asset ou dependência de frontend foi alterado.");
   }
 
   if (process.env.GITHUB_OUTPUT) {
@@ -190,6 +190,6 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       `frontend_changed=${result.hasChanges}\n`,
       "utf8"
     );
-    console.log(`📤 GITHUB_OUTPUT atualizado: frontend_changed=${result.hasChanges}`);
+    console.log(`[INFO] GITHUB_OUTPUT atualizado: frontend_changed=${result.hasChanges}`);
   }
 }

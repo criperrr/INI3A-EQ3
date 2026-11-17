@@ -27,6 +27,9 @@ on:
           - "quality"
           - "quick"
 
+permissions:
+  contents: read
+
 concurrency:
   group: maestro-e2e-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -93,20 +96,26 @@ jobs:
           REDIS_URL: redis://127.0.0.1:6380
           SERVER_PORT: 3333
           SERVER_HOST: 0.0.0.0
-          JWT_SECRET: 3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
           NODE_ENV: development
-          HERE_API_KEY: 4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY || 'ci-dummy-here-key' }}
         run: |
-          mkdir -p src/backend
-          cat << 'EOF' > src/backend/.env
+          if [ -z "$JWT_SECRET" ]; then
+            JWT_SECRET=$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')
+            export JWT_SECRET
+          fi
+          mkdir -p src/backend logs
+          {
+            cat << 'EOF'
           DATABASE_URL=postgres://postgres:postgres@127.0.0.1:5433/presco_db
           REDIS_URL=redis://127.0.0.1:6380
           SERVER_PORT=3333
           SERVER_HOST=0.0.0.0
-          JWT_SECRET=3c1985274d967dab44f0da74aaca52036742fd84cdd7c5181c9b819797e8fc3a
           NODE_ENV=development
-          HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
           EOF
+            printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+            printf 'HERE_API_KEY=%s\n' "$HERE_API_KEY"
+          } > src/backend/.env
           cp src/backend/.env .env
 
           echo "Executando migrações e seed com retry..."
@@ -119,19 +128,29 @@ jobs:
           done
 
           echo "Iniciando servidor backend em segundo plano..."
-          npm run --prefix src/backend start &
-          timeout 30 bash -c 'until curl -s http://localhost:3333/health; do sleep 1; done'
-          echo "[OK] Backend respondendo com sucesso em http://localhost:3333"
+          npm run --prefix src/backend start > logs/backend-maestro.log 2>&1 &
+          if ! timeout 30 bash -c 'until curl -sf http://localhost:3333/health | grep -Eq "\"database\"[[:space:]]*:[[:space:]]*\"connected\""; do sleep 1; done'; then
+            echo "[ERRO] Backend não respondeu com database connected dentro de 30s!"
+            cat logs/backend-maestro.log || true
+            exit 1
+          fi
+          echo "[OK] Backend respondendo com sucesso (database connected) em http://localhost:3333"
 
       - name: Configurar Ambiente do Frontend
+        env:
+          HERE_API_KEY: ${{ secrets.HERE_API_KEY || 'ci-dummy-here-key' }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY || 'ci-dummy-maps-key' }}
         run: |
-          cat << 'EOF' > src/frontend/.env
+          mkdir -p src/frontend
+          {
+            cat << 'EOF'
           APP_VARIANT=production
           EXPO_PUBLIC_APP_VARIANT=production
           EXPO_PUBLIC_API_URL=http://localhost:3333
-          EXPO_PUBLIC_HERE_API_KEY=4iVM0mZharjL6Copohpcwp7nwWf6BjrCs35qMZwlqe4
-          GOOGLE_MAPS_API_KEY=AIzaSyAAK_y1iiS6uYUPai5nK_Weue_B8Aaluvc
           EOF
+            printf 'EXPO_PUBLIC_HERE_API_KEY=%s\n' "$HERE_API_KEY"
+            printf 'GOOGLE_MAPS_API_KEY=%s\n' "$GOOGLE_MAPS_API_KEY"
+          } > src/frontend/.env
 
       - name: Gerar Projeto Nativo Android (Expo Prebuild)
         working-directory: src/frontend
@@ -150,6 +169,8 @@ jobs:
 
       - name: Executar Emulador Android e Suíte Maestro
         uses: reactivecircus/android-emulator-runner@v2
+        env:
+          TEST_SUITE: ${{ github.event.inputs.test_suite || 'quality' }}
         with:
           api-level: 31
           target: google_apis
@@ -160,7 +181,7 @@ jobs:
           disk-size: 8192M
           emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
-          script: ./scripts/ci_run_maestro.sh "${{ github.event.inputs.test_suite || 'quality' }}"
+          script: ./scripts/ci_run_maestro.sh "$TEST_SUITE"
 
       - name: Upload de Relatórios e Screenshots do Maestro
         if: always()
@@ -171,4 +192,15 @@ jobs:
             reports/maestro/
             ~/.maestro/tests/
           retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload de Logs do Metro e Backend em Caso de Falha
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-e2e-failure-logs-${{ github.run_id }}
+          path: |
+            /tmp/metro.log
+            logs/backend-maestro.log
+          retention-days: 7
           if-no-files-found: ignore

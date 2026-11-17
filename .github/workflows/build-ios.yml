@@ -11,6 +11,9 @@ on:
     tags:
       - "ios-v*"
 
+permissions:
+  contents: read
+
 concurrency:
   group: build-ios-${{ github.ref }}
   cancel-in-progress: true
@@ -52,11 +55,11 @@ jobs:
           sudo xcodebuild -downloadPlatform iOS || true
 
       - name: Instalar Dependências Raiz
-        run: npm install --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit
 
       - name: Instalar Dependências do Frontend
         working-directory: src/frontend
-        run: npm install --prefer-offline --no-audit
+        run: npm ci --prefer-offline --no-audit
 
       - name: Configurar Variáveis de Ambiente do Frontend
         env:

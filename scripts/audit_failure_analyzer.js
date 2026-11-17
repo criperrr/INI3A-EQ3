@@ -6,10 +6,28 @@
  *
  * Exit code 0: Real application bug detected (issue should be opened).
  * Exit code 1: No application bug found (do NOT open issue).
+ * Exit code >= 2: Analyzer execution error.
  */
 
 const fs = require('node:fs');
 const path = require('node:path');
+
+function inspectTestLog(findings, logRelPath, label) {
+  const testLogPath = path.resolve(logRelPath);
+  if (!fs.existsSync(testLogPath)) return;
+
+  const testLog = fs.readFileSync(testLogPath, 'utf8');
+  if (/\u2716\s+/i.test(testLog) || /fail\s+[1-9]\d*/i.test(testLog)) {
+    const failSnippet = testLog
+      .split('\n')
+      .filter((l) => /\u2716|fail|error/i.test(l))
+      .slice(0, 8)
+      .join('\n');
+    findings.push(
+      `### [${label}]\nFalha em testes de lógica de negócio:\n\`\`\`\n${failSnippet}\n\`\`\``
+    );
+  }
+}
 
 function analyzeFailure() {
   const findings = [];
@@ -86,21 +104,17 @@ function analyzeFailure() {
     }
   }
 
-  // 3. Inspect backend unit/integration test results log if exists
-  const backendTestLogPath = path.resolve('logs/backend-tests.log');
-  if (fs.existsSync(backendTestLogPath)) {
-    const testLog = fs.readFileSync(backendTestLogPath, 'utf8');
-    if (/✖\s+/i.test(testLog) || /fail\s+[1-9]\d*/i.test(testLog)) {
-      const failSnippet = testLog
-        .split('\n')
-        .filter((l) => /✖|fail|error/i.test(l))
-        .slice(0, 8)
-        .join('\n');
-      findings.push(
-        `### [Regressão em Testes Unitários/Integração do Backend]\nFalha em testes de lógica de negócio:\n\`\`\`\n${failSnippet}\n\`\`\``
-      );
-    }
-  }
+  // 3. Inspect backend unit/integration and concurrency test results logs if present
+  inspectTestLog(
+    findings,
+    'logs/backend-tests.log',
+    'Regressão em Testes Unitários/Integração do Backend'
+  );
+  inspectTestLog(
+    findings,
+    'logs/concurrency-tests.log',
+    'Regressão em Testes de Concorrência & Resiliência'
+  );
 
   // 4. Inspect database integrity check log
   const integrityLogPath = path.resolve('logs/integrity.log');
@@ -116,14 +130,19 @@ function analyzeFailure() {
   return findings;
 }
 
-const findings = analyzeFailure();
+try {
+  const findings = analyzeFailure();
 
-if (findings.length > 0) {
-  console.log('CONFIRMED_APPLICATION_BUG');
-  const report = findings.join('\n\n');
-  fs.writeFileSync('app-bug-report.md', report);
-  process.exit(0);
-} else {
-  console.log('NO_APPLICATION_BUG');
-  process.exit(1);
+  if (findings.length > 0) {
+    console.log('CONFIRMED_APPLICATION_BUG');
+    const report = findings.join('\n\n');
+    fs.writeFileSync('app-bug-report.md', report);
+    process.exit(0);
+  } else {
+    console.log('NO_APPLICATION_BUG');
+    process.exit(1);
+  }
+} catch (err) {
+  console.error('[ERRO] Falha interna em audit_failure_analyzer:', err);
+  process.exit(2);
 }

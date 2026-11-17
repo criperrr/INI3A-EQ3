@@ -11,6 +11,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 concurrency:
   group: staging-pipeline
   cancel-in-progress: false
@@ -19,7 +22,6 @@ jobs:
   concurrency_and_audit:
     name: Concurrency & Robust Test Validation
     runs-on: ubuntu-latest
-    environment: staging
     timeout-minutes: 10
     outputs:
       frontend_changed: ${{ steps.detect_frontend.outputs.frontend_changed }}
@@ -52,6 +54,7 @@ jobs:
 
       - name: Detectar Alterações no Frontend
         id: detect_frontend
+        if: github.event_name == 'push'
         env:
           EVENT_BEFORE: ${{ github.event.before }}
         run: |
@@ -128,8 +131,14 @@ jobs:
 
       - name: Renomear Artefato de Staging
         run: |
+          APK_PATH=$(find src/frontend/android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "::error::Nenhum arquivo APK de staging encontrado!"
+            exit 1
+          fi
           mkdir -p build-artifacts
-          cp src/frontend/android/app/build/outputs/apk/debug/app-debug.apk build-artifacts/Presco-Staging-devFlavor.apk
+          cp "$APK_PATH" build-artifacts/Presco-Staging-devFlavor.apk
+          echo "[OK] APK de staging copiado de: $APK_PATH"
 
       - name: Publicar Artefato APK de Staging
         uses: actions/upload-artifact@v4
